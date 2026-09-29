@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMS Study Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --ink: #1d1d1b; --ink-2: #55544f; --ink-3: #8b8a83; --line: #dddbd3;
+  --focus: #1f5fd6; --c-aai: #d2572c; --c-cls: #1d7a4a;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151514; --surface: #1f1f1d; --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
+    --focus: #7aa7ff; --c-aai: #ff9a6a; --c-cls: #5cc98d; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151514; --surface: #1f1f1d; --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
+  --focus: #7aa7ff; --c-aai: #ff9a6a; --c-cls: #5cc98d; --shadow: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 64px 24px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+h1 { font-size: 34px; line-height: 1.15; margin: 8px 0 10px; letter-spacing: -.01em; }
+.sub { color: var(--ink-2); max-width: 60ch; margin: 0 0 36px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+a.track {
+  display: block; text-decoration: none; color: inherit; background: var(--surface);
+  border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 12px; padding: 22px;
+  box-shadow: var(--shadow); transition: border-color .15s, transform .15s;
+}
+a.track:hover { border-color: var(--c); transform: translateY(-2px); }
+a.track:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.track h2 { margin: 0 0 6px; font-size: 20px; }
+.track p { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 12.5px "IBM Plex Mono", monospace; color: var(--ink-3); }
+.go { margin-top: 18px; font-weight: 600; font-size: 14px; color: var(--c); }
+.foot { font-size: 12px; color: var(--ink-3); margin-top: 40px; }
+.foot a { color: var(--ink-2); }
+@media (max-width: 600px) { .wrap { padding: 36px 16px; } h1 { font-size: 26px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation</div>
+  <h1>Study planner</h1>
+  <p class="sub">Every module of the full-time study plan, laid out by semester. Pick a track, click the modules you want, and the planner checks your credits against each requirement.</p>
+
+  <div class="grid">
+    <a class="track" href="aai.html" style="--c:var(--c-aai)">
+      <h2>Applied Artificial Intelligence</h2>
+      <p>Computer vision, robot learning, conversational AI and AI hardware — with a required course in digital circuit design and a team assignment.</p>
+      <div class="facts"><span>1 required</span><span>20 electives · 35 LP</span><span>team: 1 of 2</span></div>
+      <div class="go">Open planner →</div>
+    </a>
+    <a class="track" href="cls.html" style="--c:var(--c-cls)">
+      <h2>Computational Life Sciences</h2>
+      <p>Bioinformatics and modeling in biology, a life-science team project, and a broad elective pool from biophysics to visualization.</p>
+      <div class="facts"><span>3 required</span><span>6 of 24 electives</span><span>team project</span></div>
+      <div class="go">Open planner →</div>
+    </a>
+  </div>
+
+  <p class="foot">Based on the <a href="https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/SAPL_EN_aktualisiert_update.pdf?lang=en">Study Plan for the Full-Time Program</a>. Unofficial — check the <a href="https://tu-dresden.de/ing/informatik/studium/studienangebot/master-studiengaenge/computational-modeling-and-simulation/regulations">regulations page</a> for amendments. Selections are stored only in your browser.</p>
+</div>
+</body>
+</html>

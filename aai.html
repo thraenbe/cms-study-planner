@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMS Study Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede7;
+  --ink: #1d1d1b;
+  --ink-2: #55544f;
+  --ink-3: #8b8a83;
+  --line: #dddbd3;
+  --focus: #1f5fd6;
+  --ok: #1d7a4a;
+  --warn: #b25d00;
+  --c-req: #3b3a36;
+  --c-lang: #8a5a00;
+  --c-core: #1f5fd6;
+  --c-sem: #7a3fbf;
+  --c-trkreq: #c2362b;
+  --c-trk: #d2572c;
+  --c-team: #0f7f86;
+  --c-thesis: #2f6b2f;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27;
+    --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
+    --focus: #7aa7ff; --ok: #5cc98d; --warn: #f0a24a;
+    --c-req: #cfcdc4; --c-lang: #e0b050; --c-core: #7aa7ff; --c-sem: #b98cf0;
+    --c-trkreq: #ff7a6e; --c-trk: #ff9a6a; --c-team: #4fc7cf; --c-thesis: #7fcf7f;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27;
+  --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
+  --focus: #7aa7ff; --ok: #5cc98d; --warn: #f0a24a;
+  --c-req: #cfcdc4; --c-lang: #e0b050; --c-core: #7aa7ff; --c-sem: #b98cf0;
+  --c-trkreq: #ff7a6e; --c-trk: #ff9a6a; --c-team: #4fc7cf; --c-thesis: #7fcf7f;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 "IBM Plex Sans", system-ui, sans-serif;
+}
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 32px 24px 64px; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01em; }
+.sub { color: var(--ink-2); max-width: 62ch; margin: 0; }
+.tracks { display: inline-flex; gap: 4px; padding: 3px; background: var(--surface-2); border-radius: 10px; margin-bottom: 14px; }
+.tracks a { font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; padding: 5px 12px; border-radius: 7px; }
+.tracks a:hover { color: var(--ink); }
+.tracks a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button.btn {
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 12px; cursor: pointer;
+}
+button.btn:hover { border-color: var(--ink-3); }
+button.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Summary */
+.summary { display: grid; grid-template-columns: 280px 1fr; gap: 16px; margin-bottom: 28px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+.total-num { font-size: 44px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.total-num small { font-size: 18px; color: var(--ink-3); font-weight: 500; }
+.total-lbl { color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+.status { margin-top: 14px; font-size: 13px; font-weight: 500; }
+.status.ok { color: var(--ok); } .status.todo { color: var(--warn); }
+.sem-bars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+.sem-bar .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
+.sem-bar .lbl b { color: var(--ink); font-weight: 600; }
+.track { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; position: relative; }
+.track > i { display: block; height: 100%; background: var(--ink); border-radius: 99px; transition: width .25s; }
+.track > i.over { background: var(--warn); }
+.reqs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 20px; }
+.req { font-size: 13px; }
+.req .row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.req .name { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+.req .val { color: var(--ink-2); white-space: nowrap; }
+.req .val.done { color: var(--ok); font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.panel h2 { font-size: 13px; margin: 0 0 12px; color: var(--ink-2); font-weight: 600; letter-spacing: .02em; }
+
+/* Board */
+.board { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.board-head, .lane-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+.board-head { position: sticky; top: 0; z-index: 3; background: var(--surface); border-bottom: 1px solid var(--line); }
+.board-head > div { padding: 12px 14px; border-left: 1px solid var(--line); }
+.board-head > div:first-child { border-left: 0; }
+.sem-title { font-weight: 600; }
+.sem-meta { font-size: 12px; color: var(--ink-3); }
+.sem-meta .mob { color: var(--c-team); font-weight: 600; }
+
+.lane { border-bottom: 1px solid var(--line); }
+.lane:last-child { border-bottom: 0; }
+.lane-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 14px 14px 4px; }
+.lane-head h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.lane-head .rule { font-size: 12.5px; color: var(--ink-2); }
+.lane-head .prog { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); }
+.lane-head .prog.done { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.lane-grid > .cell { padding: 8px 10px 14px; border-left: 1px dashed var(--line); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lane-grid > .cell:first-child { border-left: 0; }
+.cell-sem { display: none; }
+
+.card {
+  --c: var(--ink-3);
+  position: relative; text-align: left; font: inherit; color: inherit; width: 100%;
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c);
+  border-radius: 8px; padding: 9px 10px 9px 11px; cursor: pointer;
+  transition: opacity .15s, border-color .15s, background .15s, transform .1s;
+}
+.card:hover { border-color: var(--c); border-left-color: var(--c); }
+.card:active { transform: scale(.99); }
+.card .code { font-size: 11px; color: var(--ink-3); display: flex; justify-content: space-between; gap: 6px; }
+.card .title { font-weight: 600; font-size: 13.5px; line-height: 1.3; margin: 2px 0 6px; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 11.5px; color: var(--ink-2); }
+.card .lp { font-weight: 700; color: var(--ink); }
+.card .check {
+  position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 5px;
+  border: 1.5px solid var(--line); display: grid; place-items: center; background: var(--surface);
+}
+.card .check svg { width: 12px; height: 12px; opacity: 0; }
+.card .code { padding-right: 24px; }
+.card.on { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+.card.on .check { background: var(--c); border-color: var(--c); }
+.card.on .check svg { opacity: 1; }
+.card.fixed { cursor: default; }
+.card.fixed .check { border-style: dashed; }
+.card.muted { opacity: .42; }
+.card.muted:hover { opacity: .85; }
+.card.hidden { display: none; }
+.card.dup .code::after { content: ""; }
+.also { font-size: 11px; color: var(--ink-3); }
+
+.sws { display: inline-flex; gap: 2px; align-items: center; }
+.sws i { display: inline-block; height: 8px; border-radius: 2px; }
+.sws .v { background: var(--ink-2); }
+.sws .u { background: var(--ink-3); }
+.sws .s { background: var(--c); }
+.sws .p { background: repeating-linear-gradient(45deg, var(--ink-2) 0 2px, transparent 2px 4px); outline: 1px solid var(--ink-3); outline-offset: -1px; }
+
+select.lang {
+  width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin-top: 4px;
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--ink-2); margin: 18px 2px 0; align-items: center; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.foot { font-size: 12px; color: var(--ink-3); margin-top: 24px; max-width: 90ch; }
+.foot a { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .summary { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .wrap { padding: 20px 16px 48px; }
+  h1 { font-size: 24px; }
+  .board-head { display: none; }
+  .lane-grid { grid-template-columns: 1fr; }
+  .lane-grid > .cell { border-left: 0; padding-top: 4px; }
+  .lane-grid > .cell:empty { display: none; }
+  .cell-sem { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+  .sem-bars { grid-template-columns: repeat(2, 1fr); }
+}
+@media print {
+  .actions { display: none; }
+  body { background: #fff; }
+  .board-head { position: static; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <nav class="tracks" aria-label="Track"><a href="aai.html" aria-current="page">Applied AI</a><a href="cls.html">Computational Life Sciences</a></nav>
+      <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation</div>
+      <h1>Study plan — Applied Artificial Intelligence track</h1>
+      <p class="sub">All modules open to you under the study plan (Appendix 2, full-time), laid out by the semester they are offered in. Click modules to build your own plan; the panel above the board keeps track of every requirement.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="onlyMine" aria-pressed="false">Show only my selection</button>
+      <button class="btn" id="theme">Toggle theme</button>
+      <button class="btn" id="reset">Reset</button>
+    </div>
+  </header>
+
+  <section class="summary">
+    <div class="panel">
+      <div class="total-num"><span id="total">0</span><small> / 120 LP</small></div>
+      <div class="total-lbl">credit points in your plan</div>
+      <div class="sem-bars" id="semBars"></div>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="panel">
+      <h2>Requirements</h2>
+      <div class="reqs" id="reqs"></div>
+    </div>
+  </section>
+
+  <section class="board" aria-label="Modules by semester">
+    <div class="board-head" id="boardHead"></div>
+    <div id="lanes"></div>
+  </section>
+
+  <div class="legend">
+    <span><b>SWS</b> (weekly hours):</span>
+    <span><span class="sws"><i class="v" style="width:14px"></i></span> Lecture (V)</span>
+    <span><span class="sws"><i class="u" style="width:14px"></i></span> Exercise (Ü)</span>
+    <span><span class="sws" style="--c:var(--c-sem)"><i class="s" style="width:14px"></i></span> Seminar (S)</span>
+    <span><span class="sws"><i class="p" style="width:14px"></i></span> Practical / project</span>
+    <span>· <b>PL</b> = number of exams · <b>LP</b> = credit points (ECTS)</span>
+  </div>
+
+  <p class="foot">
+    Source: <a href="https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/SAPL_EN_aktualisiert_update.pdf?lang=en">Study Plan for the Full-Time Program (SAPL, EN, updated)</a>.
+    Semester placement is the recommended one from the plan (semesters 1 and 3 are winter terms, 2 and 4 summer terms; semester 3 is the mobility window).
+    The research assignment runs at 12 SWS per year; the thesis topic is assigned at the end of semester 3 (1 LP there, 28 LP in semester 4).
+    The document itself warns that amendments are published separately — check the <a href="https://tu-dresden.de/ing/informatik/studium/studienangebot/master-studiengaenge/computational-modeling-and-simulation/regulations">regulations page</a> before registering.
+    Your selection is saved in this browser only.
+  </p>
+</div>
+
+<script>
+const SEMS = [
+  { n: 1, name: "1st semester", term: "Winter", plan: 32 },
+  { n: 2, name: "2nd semester", term: "Summer", plan: 28 },
+  { n: 3, name: "3rd semester", term: "Winter", plan: 31, mobility: true },
+  { n: 4, name: "4th semester", term: "Summer", plan: 29 },
+];
+
+// m(code, name, sem, lp, sws, pl, extra)
+const m = (code, name, sem, lp, sws, pl = 1, extra = "") => ({ code, name, sem, lp, sws, pl, extra });
+
+const LANGS = (() => {
+  const L = [];
+  const add = (lvl, lvlName, prefix, list) => list.forEach(([suf, lang]) => L.push({ code: `CMS-LN-${prefix}-${suf}`, name: `${lvlName} – ${lang}`, lvl }));
+  add("A1+", "A1 Advanced Level", "A1", [["1A","Arabic"],["1C","Chinese"],["1D","German as a Foreign Language"],["1FI","Finnish"],["1FR","French"],["1I","Italian"],["1J","Japanese"],["1PL","Polish"],["1PG","Portuguese"],["1RU","Russian"],["1SW","Swedish"],["1SP","Spanish"],["1T","Czech"]]);
+  add("A2", "A2", "A2", [["A","Arabic"],["C","Chinese"],["D","German as a Foreign Language"],["FI","Finnish"],["J","Japanese"],["PL","Polish"],["RU","Russian"],["T","Czech"]]);
+  add("A2+", "A2 Advanced Level", "A2", [["1A","Arabic"],["1D","German as a Foreign Language"],["1F","French"],["1I","Italian"],["1PL","Polish"],["1PG","Portuguese"],["1RU","Russian"],["1SW","Swedish"],["1SP","Spanish"],["1T","Czech"],["1C","Chinese"],["1J","Japanese"]]);
+  add("B1", "B1", "B1", [["A","Arabic"],["D","German as a Foreign Language"],["F","French"],["I","Italian"],["PG","Portuguese"],["RU","Russian"],["SP","Spanish"],["C","Chinese"],["J","Japanese"]]);
+  add("B1+", "B1 Advanced Level", "B1", [["1A","Arabic"],["1D","German as a Foreign Language"],["1FR","French"],["1I","Italian"],["1RU","Russian"],["1SW","Swedish"],["1SP","Spanish"],["1PG","Portuguese"],["1C","Chinese"],["1J","Japanese"]]);
+  add("B2", "B2", "B2", [["D","German as a Foreign Language"],["FR","French"],["I","Italian"],["PG","Portuguese"],["RU","Russian"],["SP","Spanish"],["SW","Swedish"]]);
+  add("B2 academic", "B2 Academic Competencies (Adv.)", "B2", [["1D","German as a Foreign Language"],["1F","French"],["1RU","Russian"],["1SP","Spanish"]]);
+  add("B2 professional", "B2 Professional Competencies (Adv.)", "B2B", [["D","German as a Foreign Language"],["FR","French"],["RU","Russian"],["SP","Spanish"]]);
+  add("C1 academic", "C1 Academic Competencies", "C1", [["D","German as a Foreign Language"],["FR","French"],["RU","Russian"],["SP","Spanish"]]);
+  add("C1 professional", "C1 Professional Competencies", "C1B", [["D","German as a Foreign Language"],["F","French"],["SP","Spanish"]]);
+  return L;
+})();
+
+const GROUPS = [
+  { id: "req", title: "Required courses", color: "--c-req", rule: { type: "all" }, ruleText: "Everyone takes these",
+    modules: [
+      m("CMS-SOF", "Soft Skills", 1, 2, "0/0/2/0"),
+      m("CMS-PRO", "Research Assignment", 3, 15, "", 1, "12 SWS per year"),
+    ] },
+  { id: "lang", title: "Basic language training", color: "--c-lang", rule: { type: "count", n: 1 }, ruleText: "Choose 1 of 74 language modules",
+    modules: [ { code: "CMS-LN", name: "Foreign language", sem: 2, lp: 5, sws: "", pl: 1, extra: "4 SWS language course", lang: true } ] },
+  { id: "core", title: "Basic professional training", color: "--c-core", rule: { type: "count", n: 3 }, ruleText: "Select 3 of 6",
+    modules: [
+      m("CMS-COR-HPC", "High-Performance Computing", 1, 5, "2/2/0/0"),
+      m("CMS-COR-ML", "Machine Learning", 1, 5, "2/2/0/0"),
+      m("CMS-COR-NUM", "Basic Numerical Methods", 1, 5, "2/2/0/0"),
+      m("CMS-COR-SAP", "Stochastics and Probability", 1, 5, "2/2/0/0"),
+      m("CMS-COR-SSE", "Scientific Software Engineering", 1, 5, "2/2/0/0"),
+      m("CMS-COR-VIZ", "Data Visualization", 1, 5, "2/2/0/0"),
+    ] },
+  { id: "sem", title: "Scientific methodology (literature studies)", color: "--c-sem", rule: { type: "count", n: 1 }, ruleText: "Select 1 of 13",
+    modules: [
+      m("CMS-SEM-DLAIA", "Deep Learning for Applied Image Analysis", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CE", "Computational Engineering", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CGV", "Computer Graphics and Visualization", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CIA", "Combinatorial Image Analysis", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CLS", "Computational Life Science", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CM", "Computational Metrology", 1, 3, "0/0/2/0"),
+      m("CMS-SEM-CP", "Computing", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-CV", "Computer Vision", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-KGRL", "Knowledge Graph Representation Learning", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-KR", "Knowledge Representation and Reasoning", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-MB", "Mathematical Biology", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-ML", "Machine Learning", 2, 3, "0/0/2/0"),
+      m("CMS-SEM-SP", "Software Methods & Technologies for Virtual Aircraft", 2, 3, "0/0/2/0"),
+    ] },
+  { id: "trkreq", title: "AAI track · required", color: "--c-trkreq", rule: { type: "all" }, ruleText: "Required in the Applied AI track",
+    modules: [ m("CMS-TRK-DCD", "Digital Circuit Design", 1, 5, "2/2/0/0") ] },
+  { id: "trk", title: "AAI track · electives", color: "--c-trk", rule: { type: "lp", n: 35 }, ruleText: "Modules totalling 35 LP",
+    modules: [
+      m("CMS-TRK-CV", "Computer Vision", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-MLSP", "Machine Learning in Signal Processing", 1, 5, "2/1/0/1", 2),
+      m("CMS-TRK-APSS", "Advanced Problem Solving and Search", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-CAI", "Conversational Artificial Intelligence", 1, 5, "0/0/2/0"),
+      m("CMS-TRK-FCG", "Foundations of Computer Graphics", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-DDA", "Digitization and Data Analytics", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-AL", "Adaptive Laser Systems", 2, 5, "2/1/0/1", 2),
+      m("CMS-TRK-CSD", "Circuit and System Design", 2, 5, "2/1/0/0", 1, "+ 2 SWS project"),
+      m("CMS-TRK-DNNH", "Deep Neural Network Hardware", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-VR", "Virtual Reality", 2, 5, "2/0/0/0", 1, "+ 20 h internship"),
+      m("CMS-TRK-HWSWC", "Hardware-Software Co-Design", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-ARCCAM", "Applied Robotics & Control for Cooperative and Autonomous Mobility", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-RL", "Robot Learning", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-SciVis", "Scientific Visualization", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-CRC", "Computer- and Robot-Assisted Surgery", 3, 5, "2/2/0/0"),
+      m("CMS-TRK-SD", "Sound Design", 3, 5, "2/0/0/0", 1, "+ 20 h project"),
+      m("CMS-TRK-CLS", "Computational Laser Systems", 3, 5, "3/1/0/0"),
+      m("CMS-TRK-TSP", "Touch Sensing and Processing", 3, 5, "2/2/0/0"),
+      m("CMS-TRK-TEA-CM", "Team Assignment: Computational Metrology", 3, 10, "", 1, "8 SWS project"),
+      m("CMS-TRK-DLVFA", "Deep Learning for Vision – Foundations and Applications", 3, 5, "2/2/0/0"),
+    ] },
+  { id: "team", title: "AAI track · team assignment", color: "--c-team", rule: { type: "count", n: 1 }, ruleText: "Choose 1 of 2",
+    modules: [
+      m("CMS-TRK-TEA-MLCV", "Team Assignment: Machine Learning and Computer Vision", 2, 10, "", 1, "8 SWS project"),
+      m("CMS-TRK-TEA-AIH", "Team Assignment: AI Hardware", 2, 10, "", 1, "8 SWS project"),
+    ] },
+  { id: "thesis", title: "Master's thesis", color: "--c-thesis", rule: { type: "all" }, ruleText: "Topic assigned at the end of semester 3",
+    modules: [
+      { ...m("CMS-MT", "Master's Thesis", 4, 29, "", 1, "1 LP in sem. 3 · 28 LP in sem. 4"), split: { 3: 1, 4: 28 } },
+      m("CMS-COL", "Colloquium", 4, 1, ""),
+    ] },
+];
+
+const TOTAL_TARGET = 120;
+const KEY = "cms-aai-plan-v1";
+
+let state = { sel: [], lang: "", onlyMine: false, theme: null };
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) state = { ...state, ...s }; } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+if (state.theme) document.documentElement.dataset.theme = state.theme;
+
+const sel = () => new Set(state.sel);
+const isOn = (g, mod) => g.rule.type === "all" || (mod.lang ? !!state.lang : sel().has(g.id + ":" + mod.code));
+
+function groupProgress(g) {
+  const on = g.modules.filter(mod => isOn(g, mod));
+  const lp = on.reduce((a, mod) => a + mod.lp, 0);
+  if (g.rule.type === "all") return { have: on.length, need: g.modules.length, done: true, lp, unit: "" };
+  if (g.rule.type === "count") return { have: on.length, need: g.rule.n, done: on.length >= g.rule.n, over: on.length > g.rule.n, lp, unit: "" };
+  return { have: lp, need: g.rule.n, done: lp >= g.rule.n, over: lp > g.rule.n, lp, unit: " LP" };
+}
+
+function swsBar(sws) {
+  if (!sws) return "";
+  const [v, u, s, p] = sws.split("/").map(Number);
+  const w = x => `style="width:${x * 7}px"`;
+  const parts = [v && `<i class="v" ${w(v)}></i>`, u && `<i class="u" ${w(u)}></i>`, s && `<i class="s" ${w(s)}></i>`, p && `<i class="p" ${w(p)}></i>`].filter(Boolean).join("");
+  const total = v + u + s + p;
+  return `<span class="sws" title="V/Ü/S/P = ${sws}">${parts}</span><span class="mono">${total} SWS</span>`;
+}
+
+const CHECK = `<svg viewBox="0 0 12 12" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>`;
+
+// modules that appear in multiple AAI groups? none, but track which appear in several CMS tracks isn't needed here
+function cardHTML(g, mod) {
+  const on = isOn(g, mod);
+  const fixed = g.rule.type === "all";
+  const langSel = mod.lang ? `<select class="lang" data-lang aria-label="Choose a language module">
+      <option value="">— pick a language module —</option>
+      ${[...new Set(LANGS.map(l => l.lvl))].map(lvl => `<optgroup label="${lvl}">${LANGS.filter(l => l.lvl === lvl).map(l => `<option value="${l.code}" ${state.lang === l.code ? "selected" : ""}>${l.name.replace(/^.*? – /, "")}</option>`).join("")}</optgroup>`).join("")}
+    </select>` : "";
+  const chosenLang = mod.lang && state.lang ? LANGS.find(l => l.code === state.lang) : null;
+  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${fixed || mod.lang ? "" : `role="button" tabindex="0" aria-pressed="${on}"`}>
+    <span class="check" aria-hidden="true">${CHECK}</span>
+    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span></div>
+    <div class="title">${chosenLang ? chosenLang.name : mod.name}</div>
+    <div class="meta"><span class="lp">${mod.lp} LP</span>${swsBar(mod.sws)}${mod.extra ? `<span>${mod.extra}</span>` : ""}<span>${mod.pl} PL</span></div>
+    ${langSel}
+  </div>`;
+}
+
+function render() {
+  // board head
+  document.getElementById("boardHead").innerHTML = SEMS.map(s =>
+    `<div><div class="sem-title">${s.name}</div><div class="sem-meta">${s.term} term${s.mobility ? ' · <span class="mob">mobility window</span>' : ""}</div></div>`).join("");
+
+  const lanes = GROUPS.map(g => {
+    const p = groupProgress(g);
+    const progTxt = g.rule.type === "all" ? `${p.lp} LP` : `${p.have}${p.unit} / ${p.need}${p.unit}`;
+    const cells = SEMS.map(s => {
+      const mods = g.modules.filter(mod => mod.sem === s.n);
+      const html = mods.map(mod => cardHTML(g, mod)).join("");
+      return `<div class="cell">${html ? `<div class="cell-sem">${s.name} · ${s.term}</div>` + html : ""}</div>`;
+    }).join("");
+    return `<div class="lane" data-lane="${g.id}">
+      <div class="lane-head">
+        <h3><span class="dot" style="background:var(${g.color})"></span>${g.title}</h3>
+        <span class="rule">${g.ruleText}</span>
+        <span class="prog ${p.done && !p.over ? "done" : ""}" data-prog>${progTxt}${p.over ? " · too many" : ""}</span>
+      </div>
+      <div class="lane-grid">${cells}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("lanes").innerHTML = lanes;
+  update();
+}
+
+function update() {
+  // card states
+  document.querySelectorAll(".card").forEach(el => {
+    const g = GROUPS.find(x => x.id === el.dataset.g);
+    const mod = g.modules.find(x => x.code === el.dataset.code);
+    const on = isOn(g, mod);
+    const p = groupProgress(g);
+    el.classList.toggle("on", on);
+    if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", on);
+    el.classList.toggle("muted", !on && p.done);
+    el.classList.toggle("hidden", state.onlyMine && !on);
+  });
+  document.querySelectorAll(".lane").forEach(el => {
+    const g = GROUPS.find(x => x.id === el.dataset.lane);
+    const p = groupProgress(g);
+    const prog = el.querySelector("[data-prog]");
+    prog.textContent = (g.rule.type === "all" ? `${p.lp} LP` : `${p.have}${p.unit} / ${p.need}${p.unit}`) + (p.over ? " · more than needed" : "");
+    prog.classList.toggle("done", p.done && !p.over);
+    el.querySelectorAll(".cell").forEach(c => {
+      const visible = c.querySelectorAll(".card:not(.hidden)").length;
+      c.querySelector(".cell-sem")?.style.setProperty("display", visible ? "" : "none");
+    });
+  });
+
+  // semester totals
+  const semLP = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  let total = 0;
+  GROUPS.forEach(g => g.modules.forEach(mod => {
+    if (!isOn(g, mod)) return;
+    total += mod.lp;
+    if (mod.split) Object.entries(mod.split).forEach(([s, v]) => semLP[s] += v);
+    else semLP[mod.sem] += mod.lp;
+  }));
+  document.getElementById("total").textContent = total;
+  document.getElementById("semBars").innerHTML = SEMS.map(s => {
+    const v = semLP[s.n];
+    return `<div class="sem-bar" title="Recommended in the study plan: ${s.plan} LP">
+      <div class="lbl"><span>Sem ${s.n}</span><b>${v}</b></div>
+      <div class="track"><i class="${v > 36 ? "over" : ""}" style="width:${Math.min(100, v / 36 * 100)}%"></i></div>
+      <div class="lbl" style="margin-top:3px"><span>plan ${s.plan}</span></div>
+    </div>`;
+  }).join("");
+
+  // requirements list
+  document.getElementById("reqs").innerHTML = GROUPS.map(g => {
+    const p = groupProgress(g);
+    const val = g.rule.type === "all" ? "✓ fixed" : `${p.have}${p.unit} / ${p.need}${p.unit}`;
+    const pct = g.rule.type === "all" ? 100 : Math.min(100, p.have / p.need * 100);
+    return `<div class="req">
+      <div class="row"><span class="name"><span class="dot" style="background:var(${g.color})"></span>${g.title}</span><span class="val ${p.done && !p.over ? "done" : ""}">${val}</span></div>
+      <div class="track"><i style="width:${pct}%;background:var(${g.color})"></i></div>
+    </div>`;
+  }).join("");
+
+  const open = GROUPS.filter(g => !groupProgress(g).done);
+  const over = GROUPS.filter(g => groupProgress(g).over);
+  const st = document.getElementById("status");
+  if (!open.length && !over.length && total === TOTAL_TARGET) { st.className = "status ok"; st.textContent = "Plan complete — all requirements met."; }
+  else if (over.length) { st.className = "status todo"; st.textContent = `More than required in: ${over.map(g => g.title).join(", ")}.`; }
+  else { st.className = "status todo"; st.textContent = `Still open: ${open.map(g => g.title).join(", ")}.`; }
+
+  document.getElementById("onlyMine").setAttribute("aria-pressed", state.onlyMine);
+}
+
+function toggle(el) {
+  const g = GROUPS.find(x => x.id === el.dataset.g);
+  if (!g || g.rule.type === "all") return;
+  const mod = g.modules.find(x => x.code === el.dataset.code);
+  if (mod.lang) return;
+  const key = g.id + ":" + mod.code;
+  const s = sel();
+  if (s.has(key)) s.delete(key);
+  else {
+    // single-choice groups: swap instead of stacking
+    if (g.rule.type === "count" && g.rule.n === 1) g.modules.forEach(x => s.delete(g.id + ":" + x.code));
+    s.add(key);
+  }
+  state.sel = [...s]; save(); update();
+}
+
+document.getElementById("lanes").addEventListener("click", e => {
+  if (e.target.closest("select")) return;
+  const el = e.target.closest(".card"); if (el) toggle(el);
+});
+document.getElementById("lanes").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) { e.preventDefault(); toggle(e.target); }
+});
+document.getElementById("lanes").addEventListener("change", e => {
+  if (!e.target.matches("[data-lang]")) return;
+  state.lang = e.target.value; save(); render();
+});
+document.getElementById("onlyMine").onclick = () => { state.onlyMine = !state.onlyMine; save(); update(); };
+document.getElementById("reset").onclick = () => { state.sel = []; state.lang = ""; save(); render(); };
+document.getElementById("theme").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  state.theme = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = state.theme; save();
+};
+
+render();
+</script>
+</body>
+</html>
