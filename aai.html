@@ -140,7 +140,7 @@ button.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); bord
 .card.on { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
 .card.on .check { background: var(--c); border-color: var(--c); }
 .card.on .check svg { opacity: 1; }
-.card.fixed { cursor: default; }
+.card.fixed:not(.has-details) { cursor: default; }
 .card.fixed .check { border-style: dashed; }
 .card.muted { opacity: .42; }
 .card.muted:hover { opacity: .85; }
@@ -183,6 +183,33 @@ select.lang {
   body { background: #fff; }
   .board-head { position: static; }
 }
+.card .more { display: inline-flex; align-items: center; gap: 3px; margin-top: 7px; font-size: 11.5px; font-weight: 600; color: var(--c); }
+.card .more svg { width: 10px; height: 10px; }
+button.check { padding: 0; cursor: pointer; font: inherit; }
+button.check:hover { border-color: var(--c); }
+
+dialog.details {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 12px;
+  background: var(--surface); color: var(--ink); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+dialog.details::backdrop { background: rgba(20,20,18,.45); }
+.dlg-body { padding: 20px 22px 18px; }
+.dlg-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.dlg-code { font-size: 12px; color: var(--ink-3); }
+dialog.details h2 { margin: 2px 0 10px; font-size: 20px; line-height: 1.25; }
+.dlg-close { flex: none; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.dlg-close:hover { color: var(--ink); border-color: var(--ink-3); }
+.dlg-desc { margin: 0 0 16px; font-size: 15px; line-height: 1.55; }
+.dlg-facts { display: grid; grid-template-columns: 120px 1fr; gap: 7px 14px; margin: 0; font-size: 13px; }
+.dlg-facts dt { color: var(--ink-3); }
+.dlg-facts dd { margin: 0; color: var(--ink-2); }
+.dlg-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.dlg-foot a { font-size: 13px; color: var(--ink-2); }
+.dlg-add { font: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--c); background: var(--c); color: var(--surface); }
+.dlg-add.on { background: transparent; color: var(--c); }
+.dlg-add:disabled { cursor: default; opacity: .7; }
+@media (max-width: 520px) { .dlg-facts { grid-template-columns: 1fr; gap: 2px; } .dlg-facts dd { margin-bottom: 8px; } }
 </style>
 </head>
 <body>
@@ -192,7 +219,7 @@ select.lang {
       <nav class="tracks" aria-label="Track"><a href="aai.html" aria-current="page">Applied AI</a><a href="cls.html">Computational Life Sciences</a></nav>
       <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation</div>
       <h1>Study plan — Applied Artificial Intelligence track</h1>
-      <p class="sub">All modules open to you under the study plan (Appendix 2, full-time), laid out by the semester they are offered in. Click modules to build your own plan; the panel above the board keeps track of every requirement.</p>
+      <p class="sub">All modules open to you under the study plan (Appendix 2, full-time), laid out by the semester they are offered in. Click a track module to read what it covers; tick the box on any card to add it to your plan; the panel above the board keeps track of every requirement.</p>
     </div>
     <div class="actions">
       <button class="btn" id="onlyMine" aria-pressed="false">Show only my selection</button>
@@ -233,9 +260,12 @@ select.lang {
     Semester placement is the recommended one from the plan (semesters 1 and 3 are winter terms, 2 and 4 summer terms; semester 3 is the mobility window).
     The research assignment runs at 12 SWS per year; the thesis topic is assigned at the end of semester 3 (1 LP there, 28 LP in semester 4).
     The document itself warns that amendments are published separately — check the <a href="https://tu-dresden.de/ing/informatik/studium/studienangebot/master-studiengaenge/computational-modeling-and-simulation/regulations">regulations page</a> before registering.
+    Track module descriptions summarise the official <a href="https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/ModuleDescriptions_EN.pdf">module descriptions</a>; lecturers for winter 2026/27 come from the Faculty of Computer Science <a href="https://wwwdek.inf.tu-dresden.de/lv/en.html">course offerings</a>.
     Your selection is saved in this browser only.
   </p>
 </div>
+
+<dialog class="details" id="details" aria-labelledby="dlgTitle"></dialog>
 
 <script>
 const SEMS = [
@@ -334,6 +364,117 @@ const GROUPS = [
     ] },
 ];
 
+// Track module details. Descriptions summarise the official module descriptions
+// (ModuleDescriptions_EN.pdf); "winter" lists who teaches the course in the
+// Faculty of Computer Science catalogue for winter 2026/27 (wwwdek.inf.tu-dresden.de/lv).
+const DETAILS = {
+  "CMS-TRK-DCD": {
+    desc: "How digital circuits work and how to design them, from CMOS gates and flip-flops up to ALUs, multipliers, finite-state machines and memory architectures such as DRAM and SRAM. It also covers mixed-signal parts like ADCs and DACs, and techniques for cutting power and raising speed in nanoscale CMOS.",
+    coord: "Prof. Dr. Christian Georg Mayr", freq: "Every winter semester", exam: "Written exam, 120 min",
+    prereq: "Bachelor-level electrical engineering, systems theory and mathematics",
+    winter: { who: "Prof. Dr. Christian Georg Mayr", q: "CMS-TRK-DCD" } },
+  "CMS-TRK-CV": {
+    desc: "The mathematical core of computer vision: image operators, color spaces, and image classification with neural and convolutional networks, including forward and backward propagation. Segmentation, object detection and tracking are each framed as optimization problems and solved with local search algorithms you implement yourself.",
+    coord: "Prof. Dr. Björn Andres", freq: "Every winter semester", exam: "Written exam, 90 min",
+    prereq: "Algorithms, theoretical computer science, analysis, linear algebra, probability and statistics",
+    winter: { who: "Prof. Dr. Björn Andres (as “Computer Vision I”)", q: "CMS-TRK-CV" } },
+  "CMS-TRK-MLSP": {
+    desc: "Machine learning seen through estimation theory and applied to signals: regression, classification, splines, wavelets, convex optimization, support vector machines and the basics of neural networks. A recurring theme is the trade-off between a model’s flexibility and how well it generalizes, especially in high dimensions.",
+    coord: "Prof. Dr. Gerhard Fettweis", freq: "Every winter semester", exam: "Written exam, 120 min, plus an ungraded portfolio (15 h)",
+    prereq: "Probability theory and linear algebra",
+    winter: { who: "Dr.-Ing. Meik Dörpinghaus", q: "CMS-TRK-MLSP" } },
+  "CMS-TRK-APSS": {
+    desc: "How to model and solve hard combinatorial and search problems formally. Covers informed and uninformed search, local search such as simulated annealing and tabu search, constraint satisfaction, evolutionary algorithms, answer set programming, and tree and hypertree decompositions.",
+    coord: "Dr. Sarah Alice Gaggl", freq: "Every winter semester", exam: "Written exam, 90 min",
+    prereq: "Algorithm design, formal languages, theoretical computer science, propositional and predicate logic",
+    winter: { who: "Dr. Sarah Alice Gaggl, Dr. habil. Hannes Straß, Dr. Timothy S. Lyon", q: "Advanced Problem Solving and Search" } },
+  "CMS-TRK-CAI": {
+    desc: "A seminar on dialogue-based AI: you work through the research literature on conversational AI on your own and present what you learned in English. There are no lectures; the grade comes from a written assignment.",
+    coord: "Hon.-Prof. Dr. Jens Lehmann", freq: "Every winter semester", exam: "Assignment (50 h)",
+    prereq: "None", winter: null },
+  "CMS-TRK-FCG": {
+    desc: "The building blocks of a graphics application: transformations, color, parametric curves and surfaces, and polygon meshes. You learn the rendering pipeline, lighting and texturing, how to implement a ray tracer, and animation with keyframes, particle systems and morphing.",
+    coord: "Prof. Dr. Stefan Gumhold", freq: "Every winter semester", exam: "Written exam, 90 min (exercises earn a bonus)",
+    prereq: "Vectors and matrices, imperative programming",
+    winter: { who: "Prof. Dr. Stefan Gumhold (as “Computer Graphics I”)", q: "CMS-TRK-FCG" } },
+  "CMS-TRK-DDA": {
+    desc: "Managing and analysing large datasets: storage and metadata strategies, preprocessing, exploratory analysis, statistics and machine learning. You apply the methods with current frameworks both locally and on high-performance computing (HPC) systems.",
+    coord: "Prof. Dr. Wolfgang Nagel", freq: "Every summer semester", exam: "Written exam, 90 min",
+    prereq: "Statistics, linear algebra, Python" },
+  "CMS-TRK-AL": {
+    desc: "The physics and system design of adaptive laser sensors: Gaussian beams, interferometry, ultrashort-pulse lasers, Fourier optics and fiber-optic sensing. Applications range from biophotonics and medical technology to optical information and energy technology.",
+    coord: "Prof. Dr. Jürgen Czarske", freq: "Every summer semester", exam: "Oral exam, 20 min (weight 3) + portfolio, 20 h (weight 1)",
+    prereq: "Physics, systems theory, optics and photonics" },
+  "CMS-TRK-CSD": {
+    desc: "A hands-on module in designing application-specific chips (ASICs). You turn a numerical algorithm of your choice into a data-dependency graph, schedule and allocate it, build the datapath and control logic in a hardware description language such as Verilog, then verify and simulate it.",
+    coord: "Prof. Dr. Christian Georg Mayr", freq: "Every summer semester", exam: "Assignment (40 h)",
+    prereq: "Systems theory and Digital Circuit Design (CMS-TRK-DCD)", lang: "German or English" },
+  "CMS-TRK-DNNH": {
+    desc: "How hardware accelerators for deep neural networks are designed, from the overall architecture down to arithmetic building blocks. Covers hardware–software co-design, the steps needed to run a network on an accelerator, and current optimization techniques.",
+    coord: "Prof. Dr. Christian Georg Mayr", freq: "Every summer semester", exam: "Written exam, 90 min",
+    prereq: "None" },
+  "CMS-TRK-VR": {
+    desc: "The technology behind virtual environments and the role of AI in them, with a focus on the senses: spatial audio (binaural, ambisonics, wave-field synthesis), sound synthesis, haptic devices and perception, and displays from headsets to CAVEs. Includes a 20-hour project; applications span education, industry, telesurgery and care.",
+    coord: "Prof. Dr. Ercan Altinsoy", freq: "Every summer semester", exam: "Assignment (20 h)",
+    prereq: "None" },
+  "CMS-TRK-HWSWC": {
+    desc: "How hardware and software are designed together for embedded systems, especially for signal processing in communications. You compare hardware platforms by flexibility and power use, derive hardware requirements from algorithms, and learn strategies for more performance at lower power.",
+    coord: "Prof. Dr. Gerhard Fettweis", freq: "Every summer semester", exam: "Written exam, 120 min",
+    prereq: "Computer architecture, digital signal processing algorithms" },
+  "CMS-TRK-ARCCAM": {
+    desc: "Robotics and control theory applied to traffic: the architecture of autonomous driving systems, their sensors and communication, and cooperative adaptive cruise control. You program and test small mobile robots in the MiniCCAM lab and design a controller for a traffic problem. Limited to 15 students, chosen by lottery.",
+    coord: "Prof. Dr. Meng Wang", freq: "Every summer semester", exam: "Assignment (70 h)",
+    prereq: "Python, control theory, linear algebra" },
+  "CMS-TRK-RL": {
+    desc: "Machine learning for robots: classical control foundations, optimization, supervised learning and reinforcement learning. Applied to navigation, manipulation, locomotion and multi-agent systems, with your own implementations evaluated empirically.",
+    coord: "Prof. Dr. Roberto Calandra", freq: "Every summer semester", exam: "Written exam, 90 min",
+    prereq: "None" },
+  "CMS-TRK-SciVis": {
+    desc: "Advanced visualization of scientific data: stereoscopy, particle, terrain and volume visualization, plus topological methods and vector and tensor fields. The focus is on data structures and rendering algorithms that keep very large datasets interactive.",
+    coord: "Prof. Dr. Stefan Gumhold", freq: "Every summer semester", exam: "Written exam, 90 min (exercises earn a bonus)",
+    prereq: "Foundations of Computer Graphics (CMS-TRK-FCG) and Data Visualization (CMS-COR-VIZ)" },
+  "CMS-TRK-CRC": {
+    desc: "The methods behind computer- and robot-assisted surgery: medical image acquisition, processing, segmentation and registration, robotic and navigation systems, intraoperative assistance and augmented reality. Includes current research and clinical application examples.",
+    coord: "Prof. Dr. Stefanie Speidel", freq: "Every winter semester", exam: "Oral exam, 30 min",
+    prereq: "Calculus, linear algebra, programming",
+    winter: { who: "Prof. Dr. Stefanie Speidel", q: "CMS-TRK-CRC" } },
+  "CMS-TRK-SD": {
+    desc: "Designing sounds that carry information or evoke a reaction, based on how acoustic signals relate to what we perceive. Covers perceptual aspects of sound and generative AI tools for audio, with a 20-hour project in interdisciplinary teams.",
+    coord: "Prof. Dr. Ercan Altinsoy", freq: "Every winter semester", exam: "Assignment (20 h)",
+    prereq: "None",
+    winter: { who: "Prof. Dr. Ercan Altinsoy", q: "CMS-TRK-SD" } },
+  "CMS-TRK-CLS": {
+    desc: "Computer-aided optical imaging that combines laser physics, signal processing and Fourier optics. Topics include digital holography and image processing, biomedical laser systems and optogenetics, adaptive optics, and diffractive neural networks that compute with light.",
+    coord: "Prof. Dr. Jürgen Czarske", freq: "Every winter semester", exam: "Oral exam, 30 min (German or English)",
+    prereq: "Physics, systems theory, optics and photonics", lang: "German or English",
+    winter: { who: "Prof. Dr. Jürgen Czarske, Dr. Nektarios Koukourakis (two courses: “Biomedical Laser Systems and Optogenetics” and “Digital holography and image processing”)", q: "CMS-TRK-CLS" } },
+  "CMS-TRK-TSP": {
+    desc: "Giving machines a sense of touch: the psychology of touch, tactile sensing hardware, touch simulation and processing, and touch-based control. You implement the algorithms on real sensor hardware and evaluate them quantitatively.",
+    coord: "Prof. Dr. Roberto Calandra", freq: "Every winter semester", exam: "Portfolio (10 h)",
+    prereq: "None",
+    winter: { who: "Prof. Dr. Roberto Calandra", q: "CMS-TRK-TSP" } },
+  "CMS-TRK-TEA-CM": {
+    desc: "A team research project in computer-based measurement technology, for example solving an inverse problem with deep neural networks in physical or numerical experiments. Alongside the subject, it trains literature research, project management and teamwork.",
+    coord: "Prof. Dr. Jürgen Czarske", freq: "Every semester", exam: "Assignment (60 h)",
+    prereq: "None",
+    winter: { who: "Prof. Dr. Jürgen Czarske", q: "CMS-TRK-TEA-CM" } },
+  "CMS-TRK-DLVFA": {
+    desc: "Deep learning for image data: architectures such as CNNs and vision transformers, supervised and unsupervised training, and tasks like object recognition, tracking and segmentation. The focus is on implementing and training models for your own scientific imaging problems.",
+    coord: "Prof. Dr. Martin Weigert", freq: "Every winter semester", exam: "Written exam, 90 min",
+    prereq: "Linear algebra, programming, machine learning",
+    winter: { who: "Prof. Dr. Martin Weigert", q: "CMS-TRK-DLVFA" } },
+  "CMS-TRK-TEA-MLCV": {
+    desc: "A team project on an optimization problem from machine learning or computer vision. You define an exact or approximate algorithm, analyse its complexity and approximation guarantees, and test it empirically on real data.",
+    coord: "Prof. Dr. Björn Andres", freq: "Every summer semester", exam: "Assignment (60 h)",
+    prereq: "Algorithms, theoretical computer science, analysis, linear algebra, probability and statistics" },
+  "CMS-TRK-TEA-AIH": {
+    desc: "A team project that brings a machine-learning problem onto a given accelerator architecture and optimizes it there, for example through sparsity, data flow or quantization. You then measure how each optimization affects the result.",
+    coord: "Prof. Dr. Christian Georg Mayr", freq: "Every summer semester", exam: "Assignment (60 h)",
+    prereq: "Algorithms, linear algebra, accelerator architectures (e.g. from Deep Neural Network Hardware), embedded programming" },
+};
+const CATALOGUE = "https://wwwdek.inf.tu-dresden.de/lv/en.html";
+const HANDBOOK = "https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/ModuleDescriptions_EN.pdf";
+
 const TOTAL_TARGET = 120;
 const KEY = "cms-aai-plan-v1";
 
@@ -364,7 +505,8 @@ function swsBar(sws) {
 
 const CHECK = `<svg viewBox="0 0 12 12" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>`;
 
-// modules that appear in multiple AAI groups? none, but track which appear in several CMS tracks isn't needed here
+const ARROW = `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5L7 5 3.5 8.5"/></svg>`;
+
 function cardHTML(g, mod) {
   const on = isOn(g, mod);
   const fixed = g.rule.type === "all";
@@ -373,12 +515,20 @@ function cardHTML(g, mod) {
       ${[...new Set(LANGS.map(l => l.lvl))].map(lvl => `<optgroup label="${lvl}">${LANGS.filter(l => l.lvl === lvl).map(l => `<option value="${l.code}" ${state.lang === l.code ? "selected" : ""}>${l.name.replace(/^.*? – /, "")}</option>`).join("")}</optgroup>`).join("")}
     </select>` : "";
   const chosenLang = mod.lang && state.lang ? LANGS.find(l => l.code === state.lang) : null;
-  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${fixed || mod.lang ? "" : `role="button" tabindex="0" aria-pressed="${on}"`}>
-    <span class="check" aria-hidden="true">${CHECK}</span>
+  const det = DETAILS[mod.code];
+  // Cards with details open a dialog; their checkbox is a separate toggle button.
+  const attrs = det ? `role="button" tabindex="0" aria-haspopup="dialog" aria-label="Details: ${mod.name}"`
+    : fixed || mod.lang ? "" : `role="button" tabindex="0" aria-pressed="${on}"`;
+  const check = det && !fixed
+    ? `<button class="check" data-toggle aria-pressed="${on}" aria-label="Add ${mod.name} to plan">${CHECK}</button>`
+    : `<span class="check" aria-hidden="true">${CHECK}</span>`;
+  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""} ${det ? "has-details" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${attrs}>
+    ${check}
     <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span></div>
     <div class="title">${chosenLang ? chosenLang.name : mod.name}</div>
     <div class="meta"><span class="lp">${mod.lp} LP</span>${swsBar(mod.sws)}${mod.extra ? `<span>${mod.extra}</span>` : ""}<span>${mod.pl} PL</span></div>
     ${langSel}
+    ${det ? `<span class="more">Details ${ARROW}</span>` : ""}
   </div>`;
 }
 
@@ -417,6 +567,7 @@ function update() {
     const p = groupProgress(g);
     el.classList.toggle("on", on);
     if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", on);
+    el.querySelector("[data-toggle]")?.setAttribute("aria-pressed", on);
     el.classList.toggle("muted", !on && p.done);
     el.classList.toggle("hidden", state.onlyMine && !on);
   });
@@ -486,14 +637,68 @@ function toggle(el) {
     s.add(key);
   }
   state.sel = [...s]; save(); update();
+  if (dlg.open && dlg.dataset.code === mod.code) renderDialog(g, mod);
 }
+
+const dlg = document.getElementById("details");
+function renderDialog(g, mod) {
+  const d = DETAILS[mod.code];
+  const on = isOn(g, mod);
+  const fixed = g.rule.type === "all";
+  const sem = SEMS.find(s => s.n === mod.sem);
+  const fmt = [mod.sws && `${mod.sws} (V/Ü/S/P)`, mod.extra].filter(Boolean).join(" ");
+  const winter = d.winter
+    ? `${d.winter.who} — <a href="${CATALOGUE}?q=${encodeURIComponent(d.winter.q)}" target="_blank" rel="noopener">times &amp; rooms</a>`
+    : sem.term === "Summer" ? "Summer module — not in the winter catalogue" : "Not listed in the Faculty of Computer Science catalogue";
+  dlg.style.setProperty("--c", `var(${g.color})`);
+  dlg.dataset.code = mod.code;
+  dlg.innerHTML = `<div class="dlg-body">
+      <div class="dlg-top">
+        <div><div class="dlg-code mono">${mod.code} · ${g.title}</div><h2 id="dlgTitle">${mod.name}</h2></div>
+        <button class="dlg-close" data-close aria-label="Close">×</button>
+      </div>
+      <p class="dlg-desc">${d.desc}</p>
+      <dl class="dlg-facts">
+        <dt>Credits &amp; format</dt><dd>${mod.lp} LP · ${fmt || "—"}${d.lang ? ` · taught in ${d.lang}` : " · taught in English"}</dd>
+        <dt>Offered</dt><dd>${d.freq} · planned for ${sem.name.toLowerCase()}</dd>
+        <dt>Exam</dt><dd>${d.exam}</dd>
+        <dt>Prerequisites</dt><dd>${d.prereq}</dd>
+        <dt>Coordinator</dt><dd>${d.coord}</dd>
+        <dt>Winter 2026/27</dt><dd>${winter}</dd>
+      </dl>
+    </div>
+    <div class="dlg-foot">
+      <a href="${HANDBOOK}" target="_blank" rel="noopener">Full module description (PDF)</a>
+      <button class="dlg-add ${on ? "on" : ""}" data-dlg-toggle ${fixed ? "disabled" : ""}>${fixed ? "Required — always in your plan" : on ? "Remove from plan" : "Add to plan"}</button>
+    </div>`;
+}
+function openDetails(el) {
+  const g = GROUPS.find(x => x.id === el.dataset.g);
+  const mod = g.modules.find(x => x.code === el.dataset.code);
+  renderDialog(g, mod);
+  dlg.returnFocus = el;
+  dlg.showModal();
+}
+dlg.addEventListener("click", e => {
+  if (e.target === dlg || e.target.closest("[data-close]")) dlg.close();
+  else if (e.target.closest("[data-dlg-toggle]")) {
+    const card = document.querySelector(`.card[data-code="${dlg.dataset.code}"]`);
+    if (card) toggle(card);
+  }
+});
+dlg.addEventListener("close", () => dlg.returnFocus?.focus());
 
 document.getElementById("lanes").addEventListener("click", e => {
   if (e.target.closest("select")) return;
-  const el = e.target.closest(".card"); if (el) toggle(el);
+  const el = e.target.closest(".card"); if (!el) return;
+  if (e.target.closest("[data-toggle]") || !el.classList.contains("has-details")) toggle(el);
+  else openDetails(el);
 });
 document.getElementById("lanes").addEventListener("keydown", e => {
-  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) { e.preventDefault(); toggle(e.target); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) {
+    e.preventDefault();
+    e.target.classList.contains("has-details") ? openDetails(e.target) : toggle(e.target);
+  }
 });
 document.getElementById("lanes").addEventListener("change", e => {
   if (!e.target.matches("[data-lang]")) return;
