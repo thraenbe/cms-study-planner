@@ -3,50 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CMS Life Sciences Planner</title>
+<title>CMS Study Plan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
 <style>
-:root {
-  --bg: #f6f5f1;
-  --surface: #ffffff;
-  --surface-2: #efede7;
-  --ink: #1d1d1b;
-  --ink-2: #55544f;
-  --ink-3: #8b8a83;
-  --line: #dddbd3;
-  --focus: #1f5fd6;
-  --ok: #1d7a4a;
-  --warn: #b25d00;
-  --c-req: #3b3a36;
-  --c-lang: #8a5a00;
-  --c-core: #1f5fd6;
-  --c-sem: #7a3fbf;
-  --c-trkreq: #c2362b;
-  --c-trk: #d2572c;
-  --c-team: #0f7f86;
-  --c-thesis: #2f6b2f;
-  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27;
-    --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
-    --focus: #7aa7ff; --ok: #5cc98d; --warn: #f0a24a;
-    --c-req: #cfcdc4; --c-lang: #e0b050; --c-core: #7aa7ff; --c-sem: #b98cf0;
-    --c-trkreq: #ff7a6e; --c-trk: #ff9a6a; --c-team: #4fc7cf; --c-thesis: #7fcf7f;
-    --shadow: none;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #151514; --surface: #1f1f1d; --surface-2: #2a2a27;
-  --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
-  --focus: #7aa7ff; --ok: #5cc98d; --warn: #f0a24a;
-  --c-req: #cfcdc4; --c-lang: #e0b050; --c-core: #7aa7ff; --c-sem: #b98cf0;
-  --c-trkreq: #ff7a6e; --c-trk: #ff9a6a; --c-team: #4fc7cf; --c-thesis: #7fcf7f;
-  --shadow: none;
-}
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -54,16 +18,12 @@ body {
   font: 15px/1.45 "IBM Plex Sans", system-ui, sans-serif;
 }
 .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
-.wrap { max-width: 1320px; margin: 0 auto; padding: 32px 24px 64px; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 24px 64px; }
 
 header.top { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 28px; }
 .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01em; }
 .sub { color: var(--ink-2); max-width: 62ch; margin: 0; }
-.tracks { display: inline-flex; gap: 4px; padding: 3px; background: var(--surface-2); border-radius: 10px; margin-bottom: 14px; }
-.tracks a { font-size: 13px; font-weight: 500; color: var(--ink-2); text-decoration: none; padding: 5px 12px; border-radius: 7px; }
-.tracks a:hover { color: var(--ink); }
-.tracks a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 button.btn {
   font: inherit; font-size: 13px; font-weight: 500; color: var(--ink);
@@ -140,7 +100,7 @@ button.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); bord
 .card.on { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
 .card.on .check { background: var(--c); border-color: var(--c); }
 .card.on .check svg { opacity: 1; }
-.card.fixed { cursor: default; }
+.card.fixed:not(.has-details) { cursor: default; }
 .card.fixed .check { border-style: dashed; }
 .card.muted { opacity: .42; }
 .card.muted:hover { opacity: .85; }
@@ -169,7 +129,7 @@ select.lang {
   .summary { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
-  .wrap { padding: 20px 16px 48px; }
+  .wrap { padding: 0 16px 48px; }
   h1 { font-size: 24px; }
   .board-head { display: none; }
   .lane-grid { grid-template-columns: 1fr; }
@@ -183,20 +143,52 @@ select.lang {
   body { background: #fff; }
   .board-head { position: static; }
 }
+.card .more { display: inline-flex; align-items: center; gap: 3px; margin-top: 7px; font-size: 11.5px; font-weight: 600; color: var(--c); }
+.card .more svg { width: 10px; height: 10px; }
+button.check { padding: 0; cursor: pointer; font: inherit; }
+button.check:hover { border-color: var(--c); }
+
+dialog.details {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 12px;
+  background: var(--surface); color: var(--ink); box-shadow: 0 12px 40px rgba(0,0,0,.25);
+}
+dialog.details::backdrop { background: rgba(20,20,18,.45); }
+.dlg-body { padding: 20px 22px 18px; }
+.dlg-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.dlg-code { font-size: 12px; color: var(--ink-3); }
+dialog.details h2 { margin: 2px 0 10px; font-size: 20px; line-height: 1.25; }
+.dlg-close { flex: none; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.dlg-close:hover { color: var(--ink); border-color: var(--ink-3); }
+.dlg-desc { margin: 0 0 16px; font-size: 15px; line-height: 1.55; }
+.dlg-facts { display: grid; grid-template-columns: 120px 1fr; gap: 7px 14px; margin: 0; font-size: 13px; }
+.dlg-facts dt { color: var(--ink-3); }
+.dlg-facts dd { margin: 0; color: var(--ink-2); }
+.dlg-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.dlg-foot a { font-size: 13px; color: var(--ink-2); }
+.dlg-add { font: inherit; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--c); background: var(--c); color: var(--surface); }
+.dlg-add.on { background: transparent; color: var(--c); }
+.dlg-add:disabled { cursor: default; opacity: .7; }
+@media (max-width: 520px) { .dlg-facts { grid-template-columns: 1fr; gap: 2px; } .dlg-facts dd { margin-bottom: 8px; } }
+.card .badge { font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
+.card.enrolled .check { background: var(--ok); border-color: var(--ok); }
+.card.enrolled .check svg { opacity: 1; }
+.card.enrolled { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.lane.extra .lane-head h3 .dot { background: var(--ok); }
+.extra-note { font-size: 12px; color: var(--ink-2); margin-top: 6px; line-height: 1.4; }
 </style>
 </head>
 <body>
+<header class="sitebar" data-page="plan"></header>
 <div class="wrap">
   <header class="top">
     <div>
-      <nav class="tracks" aria-label="Track"><a href="aai.html">Applied AI</a><a href="cls.html" aria-current="page">Computational Life Sciences</a></nav>
       <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation</div>
-      <h1>Study plan — Computational Life Sciences track</h1>
-      <p class="sub">All modules open to you under the study plan (Appendix 2, full-time), laid out by the semester they are offered in. Click modules to build your own plan; the panel above the board keeps track of every requirement.</p>
+      <h1>Study plan — Applied Artificial Intelligence track</h1>
+      <p class="sub">All modules open to you under the study plan (Appendix 2, full-time), laid out by the semester they are offered in. Click a module to read what it covers; tick the box on any card to add it to your plan; the panel above the board keeps track of every requirement.</p>
     </div>
     <div class="actions">
       <button class="btn" id="onlyMine" aria-pressed="false">Show only my selection</button>
-      <button class="btn" id="theme">Toggle theme</button>
       <button class="btn" id="reset">Reset</button>
     </div>
   </header>
@@ -233,9 +225,12 @@ select.lang {
     Semester placement is the recommended one from the plan (semesters 1 and 3 are winter terms, 2 and 4 summer terms; semester 3 is the mobility window).
     The research assignment runs at 12 SWS per year; the thesis topic is assigned at the end of semester 3 (1 LP there, 28 LP in semester 4).
     The document itself warns that amendments are published separately — check the <a href="https://tu-dresden.de/ing/informatik/studium/studienangebot/master-studiengaenge/computational-modeling-and-simulation/regulations">regulations page</a> before registering.
+    Track module descriptions summarise the official <a href="https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/ModuleDescriptions_EN.pdf">module descriptions</a>; lecturers for winter 2026/27 come from the Faculty of Computer Science <a href="https://wwwdek.inf.tu-dresden.de/lv/en.html">course offerings</a>.
     Your selection is saved in this browser only.
   </p>
 </div>
+
+<dialog class="details" id="details" aria-labelledby="dlgTitle"></dialog>
 
 <script>
 const SEMS = [
@@ -297,38 +292,35 @@ const GROUPS = [
       m("CMS-SEM-ML", "Machine Learning", 2, 3, "0/0/2/0"),
       m("CMS-SEM-SP", "Software Methods & Technologies for Virtual Aircraft", 2, 3, "0/0/2/0"),
     ] },
-  { id: "trkreq", title: "CLS track · required area", color: "--c-trkreq", rule: { type: "all" }, ruleText: "Required in the Computational Life Sciences track",
+  { id: "trkreq", title: "AAI track · required", color: "--c-trkreq", rule: { type: "all" }, ruleText: "Required in the Applied AI track",
+    modules: [ m("CMS-TRK-DCD", "Digital Circuit Design", 1, 5, "2/2/0/0") ] },
+  { id: "trk", title: "AAI track · electives", color: "--c-trk", rule: { type: "lp", n: 35 }, ruleText: "Modules totalling 35 LP",
     modules: [
-      m("CMS-TRK-ABI", "Applied Bioinformatics", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-MOS", "Modeling and Simulation in Biology", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-TEA-CLS", "Computational Life Science Team Project", 2, 10, "", 1, "8 SWS project"),
-    ] },
-  { id: "trk", title: "CLS track · electives", color: "--c-trk", rule: { type: "count", n: 6 }, ruleText: "Select 6 of 24",
-    modules: [
-      m("CMS-TRK-UI1", "User Interface Engineering", 1, 5, "2/2/0/0", 2),
-      m("CMS-TRK-CFD", "Computational Fluid Dynamics", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-CV", "Computer Vision", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-MLSP", "Machine Learning in Signal Processing", 1, 5, "2/1/0/1", 2),
+      m("CMS-TRK-APSS", "Advanced Problem Solving and Search", 1, 5, "2/2/0/0"),
+      m("CMS-TRK-CAI", "Conversational Artificial Intelligence", 1, 5, "0/0/2/0"),
       m("CMS-TRK-FCG", "Foundations of Computer Graphics", 1, 5, "2/2/0/0"),
       m("CMS-TRK-DDA", "Digitization and Data Analytics", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-PM", "Particle Methods", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-ABP", "Advanced Biological Physics", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-SciVis", "Scientific Visualization", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-UI2", "Advanced User Interfaces", 2, 5, "2/0/2/0", 2),
-      m("CMS-TRK-IIV", "Interactive Information Visualization", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-MP", "Multifield Problems", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-IMIR", "Interactive Multimedia Information Retrieval", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-AT", "Advanced Topics in Finite Element Analysis", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-MBD", "Multi-Body Dynamics", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-AL", "Adaptive Laser Systems", 2, 5, "2/1/0/1", 2),
+      m("CMS-TRK-CSD", "Circuit and System Design", 2, 5, "2/1/0/0", 1, "+ 2 SWS project"),
+      m("CMS-TRK-DNNH", "Deep Neural Network Hardware", 2, 5, "2/2/0/0"),
       m("CMS-TRK-VR", "Virtual Reality", 2, 5, "2/0/0/0", 1, "+ 20 h internship"),
+      m("CMS-TRK-HWSWC", "Hardware-Software Co-Design", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-ARCCAM", "Applied Robotics & Control for Cooperative and Autonomous Mobility", 2, 5, "2/2/0/0"),
       m("CMS-TRK-RL", "Robot Learning", 2, 5, "2/2/0/0"),
-      m("CMS-TRK-GMA", "Geometric Modeling and Animation", 2, 5, "2/2/0/0"),
+      m("CMS-TRK-SciVis", "Scientific Visualization", 2, 5, "2/2/0/0"),
       m("CMS-TRK-CRC", "Computer- and Robot-Assisted Surgery", 3, 5, "2/2/0/0"),
-      m("CMS-TRK-AMH", "Active Matter Hydrodynamics", 3, 5, "2/2/0/0"),
-      m("CMS-TRK-CV", "Computer Vision", 3, 5, "2/2/0/0"),
-      m("CMS-TRK-Aero", "Introduction to Computational Aerodynamics", 3, 5, "3/1/0/0"),
-      m("CMS-TRK-APSS", "Advanced Problem Solving and Search", 3, 5, "2/2/0/0"),
-      m("CMS-TRK-FVR", "Foundations of Virtual Reality", 3, 5, "2/2/0/0"),
-      m("CMS-TRK-PBG", "Physics-Based Graphics", 3, 5, "2/2/0/0"),
+      m("CMS-TRK-SD", "Sound Design", 3, 5, "2/0/0/0", 1, "+ 20 h project"),
+      m("CMS-TRK-CLS", "Computational Laser Systems", 3, 5, "3/1/0/0"),
+      m("CMS-TRK-TSP", "Touch Sensing and Processing", 3, 5, "2/2/0/0"),
+      m("CMS-TRK-TEA-CM", "Team Assignment: Computational Metrology", 3, 10, "", 1, "8 SWS project"),
       m("CMS-TRK-DLVFA", "Deep Learning for Vision – Foundations and Applications", 3, 5, "2/2/0/0"),
+    ] },
+  { id: "team", title: "AAI track · team assignment", color: "--c-team", rule: { type: "count", n: 1 }, ruleText: "Choose 1 of 2",
+    modules: [
+      m("CMS-TRK-TEA-MLCV", "Team Assignment: Machine Learning and Computer Vision", 2, 10, "", 1, "8 SWS project"),
+      m("CMS-TRK-TEA-AIH", "Team Assignment: AI Hardware", 2, 10, "", 1, "8 SWS project"),
     ] },
   { id: "thesis", title: "Master's thesis", color: "--c-thesis", rule: { type: "all" }, ruleText: "Topic assigned at the end of semester 3",
     modules: [
@@ -337,16 +329,24 @@ const GROUPS = [
     ] },
 ];
 
-const TOTAL_TARGET = 120;
-const KEY = "cms-cls-plan-v1";
+// Module details and enrolment live in assets/data.js (shared with the dashboard).
+const DETAILS = CMS.modules;
+const CATALOGUE = CMS.sources.catalogue;
+const HANDBOOK = CMS.sources.handbook;
+// Enrolled study-plan modules always count as part of the plan and cannot be unticked.
+const ENROLLED = new Set(CMS.enrolled.filter(c => CMS.modules[c]?.group));
+// Enrolled courses that are not modules of this study plan; shown separately, not counted.
+const ENROLLED_EXTRA = CMS.enrolled.filter(c => !CMS.modules[c]?.group).map(c => CMS.modules[c]);
 
-let state = { sel: [], lang: "", onlyMine: false, theme: null };
+const TOTAL_TARGET = 120;
+const KEY = "cms-aai-plan-v1";
+
+let state = { sel: [], lang: "", onlyMine: false };
 try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) state = { ...state, ...s }; } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
-if (state.theme) document.documentElement.dataset.theme = state.theme;
 
 const sel = () => new Set(state.sel);
-const isOn = (g, mod) => g.rule.type === "all" || (mod.lang ? !!state.lang : sel().has(g.id + ":" + mod.code));
+const isOn = (g, mod) => g.rule.type === "all" || ENROLLED.has(mod.code) || (mod.lang ? !!state.lang : sel().has(g.id + ":" + mod.code));
 
 function groupProgress(g) {
   const on = g.modules.filter(mod => isOn(g, mod));
@@ -367,7 +367,8 @@ function swsBar(sws) {
 
 const CHECK = `<svg viewBox="0 0 12 12" fill="none" stroke="var(--surface)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2l2.3 2.3 4.7-5"/></svg>`;
 
-// modules that appear in multiple AAI groups? none, but track which appear in several CMS tracks isn't needed here
+const ARROW = `<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 1.5L7 5 3.5 8.5"/></svg>`;
+
 function cardHTML(g, mod) {
   const on = isOn(g, mod);
   const fixed = g.rule.type === "all";
@@ -376,12 +377,21 @@ function cardHTML(g, mod) {
       ${[...new Set(LANGS.map(l => l.lvl))].map(lvl => `<optgroup label="${lvl}">${LANGS.filter(l => l.lvl === lvl).map(l => `<option value="${l.code}" ${state.lang === l.code ? "selected" : ""}>${l.name.replace(/^.*? – /, "")}</option>`).join("")}</optgroup>`).join("")}
     </select>` : "";
   const chosenLang = mod.lang && state.lang ? LANGS.find(l => l.code === state.lang) : null;
-  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${fixed || mod.lang ? "" : `role="button" tabindex="0" aria-pressed="${on}"`}>
-    <span class="check" aria-hidden="true">${CHECK}</span>
-    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span></div>
+  const det = DETAILS[mod.code];
+  // Cards with details open a dialog; their checkbox is a separate toggle button.
+  const attrs = det ? `role="button" tabindex="0" aria-haspopup="dialog" aria-label="Details: ${mod.name}"`
+    : fixed || mod.lang || ENROLLED.has(mod.code) ? "" : `role="button" tabindex="0" aria-pressed="${on}"`;
+  const enrolled = ENROLLED.has(mod.code);
+  const check = det && !fixed && !enrolled
+    ? `<button class="check" data-toggle aria-pressed="${on}" aria-label="Add ${mod.name} to plan">${CHECK}</button>`
+    : `<span class="check" aria-hidden="true">${CHECK}</span>`;
+  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""} ${enrolled ? "enrolled" : ""} ${det ? "has-details" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${attrs}>
+    ${check}
+    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span>${enrolled ? `<span class="badge">Enrolled</span>` : ""}</div>
     <div class="title">${chosenLang ? chosenLang.name : mod.name}</div>
     <div class="meta"><span class="lp">${mod.lp} LP</span>${swsBar(mod.sws)}${mod.extra ? `<span>${mod.extra}</span>` : ""}<span>${mod.pl} PL</span></div>
     ${langSel}
+    ${det ? `<span class="more">Details ${ARROW}</span>` : ""}
   </div>`;
 }
 
@@ -407,23 +417,39 @@ function render() {
       <div class="lane-grid">${cells}</div>
     </div>`;
   }).join("");
-  document.getElementById("lanes").innerHTML = lanes;
+  const extra = ENROLLED_EXTRA.length ? `<div class="lane extra">
+      <div class="lane-head">
+        <h3><span class="dot"></span>Also enrolled · outside this study plan</h3>
+        <span class="rule">Not counted toward any requirement</span>
+      </div>
+      <div class="lane-grid">${SEMS.map(sm => `<div class="cell">${ENROLLED_EXTRA.filter(x => sm.n === 1).map(x => `<div class="cell-sem">${CMS.semester}</div>
+        <a class="card on enrolled fixed" href="module.html?code=${encodeURIComponent(x.code)}" style="--c:var(--ok);display:block;text-decoration:none;color:inherit">
+          <span class="check" aria-hidden="true">${CHECK}</span>
+          <div class="code mono"><span>${CMS.semester}</span><span class="badge">Enrolled</span></div>
+          <div class="title">${x.name}</div>
+          <div class="meta"><span>${x.extra}</span></div>
+          <div class="extra-note">${x.note}</div>
+          <span class="more">Module page ${ARROW}</span>
+        </a>`).join("")}</div>`).join("")}</div>
+    </div>` : "";
+  document.getElementById("lanes").innerHTML = lanes + extra;
   update();
 }
 
 function update() {
   // card states
-  document.querySelectorAll(".card").forEach(el => {
+  document.querySelectorAll(".card[data-g]").forEach(el => {
     const g = GROUPS.find(x => x.id === el.dataset.g);
     const mod = g.modules.find(x => x.code === el.dataset.code);
     const on = isOn(g, mod);
     const p = groupProgress(g);
     el.classList.toggle("on", on);
     if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", on);
+    el.querySelector("[data-toggle]")?.setAttribute("aria-pressed", on);
     el.classList.toggle("muted", !on && p.done);
     el.classList.toggle("hidden", state.onlyMine && !on);
   });
-  document.querySelectorAll(".lane").forEach(el => {
+  document.querySelectorAll(".lane[data-lane]").forEach(el => {
     const g = GROUPS.find(x => x.id === el.dataset.lane);
     const p = groupProgress(g);
     const prog = el.querySelector("[data-prog]");
@@ -479,7 +505,7 @@ function toggle(el) {
   const g = GROUPS.find(x => x.id === el.dataset.g);
   if (!g || g.rule.type === "all") return;
   const mod = g.modules.find(x => x.code === el.dataset.code);
-  if (mod.lang) return;
+  if (mod.lang || ENROLLED.has(mod.code)) return;
   const key = g.id + ":" + mod.code;
   const s = sel();
   if (s.has(key)) s.delete(key);
@@ -489,14 +515,68 @@ function toggle(el) {
     s.add(key);
   }
   state.sel = [...s]; save(); update();
+  if (dlg.open && dlg.dataset.code === mod.code) renderDialog(g, mod);
 }
+
+const dlg = document.getElementById("details");
+function renderDialog(g, mod) {
+  const d = DETAILS[mod.code];
+  const on = isOn(g, mod);
+  const fixed = g.rule.type === "all";
+  const sem = SEMS.find(s => s.n === mod.sem);
+  const fmt = [mod.sws && `${mod.sws} (V/Ü/S/P)`, mod.extra].filter(Boolean).join(" ");
+  const winter = d.winter
+    ? `${d.winter.who} — <a href="module.html?code=${encodeURIComponent(mod.code)}">times &amp; rooms</a>`
+    : sem.term === "Summer" ? "Summer module — not in the winter catalogue" : "Not listed in the Faculty of Computer Science catalogue";
+  dlg.style.setProperty("--c", `var(${g.color})`);
+  dlg.dataset.code = mod.code;
+  dlg.innerHTML = `<div class="dlg-body">
+      <div class="dlg-top">
+        <div><div class="dlg-code mono">${mod.code} · ${g.title}</div><h2 id="dlgTitle">${mod.name}</h2></div>
+        <button class="dlg-close" data-close aria-label="Close">×</button>
+      </div>
+      <p class="dlg-desc">${d.desc}</p>
+      <dl class="dlg-facts">
+        <dt>Credits &amp; format</dt><dd>${mod.lp} LP · ${fmt || "—"}${d.lang ? ` · taught in ${d.lang}` : " · taught in English"}</dd>
+        <dt>Offered</dt><dd>${d.freq} · planned for ${sem.name.toLowerCase()}</dd>
+        <dt>Exam</dt><dd>${d.exam}</dd>
+        <dt>Prerequisites</dt><dd>${d.prereq}</dd>
+        <dt>Coordinator</dt><dd>${d.coord}</dd>
+        <dt>${CMS.semester}</dt><dd>${winter}</dd>
+      </dl>
+    </div>
+    <div class="dlg-foot">
+      <a href="module.html?code=${encodeURIComponent(mod.code)}">Open module page →</a>
+      <button class="dlg-add ${on ? "on" : ""}" data-dlg-toggle ${fixed || ENROLLED.has(mod.code) ? "disabled" : ""}>${ENROLLED.has(mod.code) ? "Enrolled" : fixed ? "Required — always in your plan" : on ? "Remove from plan" : "Add to plan"}</button>
+    </div>`;
+}
+function openDetails(el) {
+  const g = GROUPS.find(x => x.id === el.dataset.g);
+  const mod = g.modules.find(x => x.code === el.dataset.code);
+  renderDialog(g, mod);
+  dlg.returnFocus = el;
+  dlg.showModal();
+}
+dlg.addEventListener("click", e => {
+  if (e.target === dlg || e.target.closest("[data-close]")) dlg.close();
+  else if (e.target.closest("[data-dlg-toggle]")) {
+    const card = document.querySelector(`.card[data-code="${dlg.dataset.code}"]`);
+    if (card) toggle(card);
+  }
+});
+dlg.addEventListener("close", () => dlg.returnFocus?.focus());
 
 document.getElementById("lanes").addEventListener("click", e => {
   if (e.target.closest("select")) return;
-  const el = e.target.closest(".card"); if (el) toggle(el);
+  const el = e.target.closest(".card"); if (!el) return;
+  if (e.target.closest("[data-toggle]") || !el.classList.contains("has-details")) toggle(el);
+  else openDetails(el);
 });
 document.getElementById("lanes").addEventListener("keydown", e => {
-  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) { e.preventDefault(); toggle(e.target); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("card")) {
+    e.preventDefault();
+    e.target.classList.contains("has-details") ? openDetails(e.target) : toggle(e.target);
+  }
 });
 document.getElementById("lanes").addEventListener("change", e => {
   if (!e.target.matches("[data-lang]")) return;
@@ -504,11 +584,6 @@ document.getElementById("lanes").addEventListener("change", e => {
 });
 document.getElementById("onlyMine").onclick = () => { state.onlyMine = !state.onlyMine; save(); update(); };
 document.getElementById("reset").onclick = () => { state.sel = []; state.lang = ""; save(); render(); };
-document.getElementById("theme").onclick = () => {
-  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  state.theme = cur === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = state.theme; save();
-};
 
 render();
 </script>

@@ -3,71 +3,335 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CMS Study Planner</title>
+<title>CMS Study Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
 <style>
-:root {
-  --bg: #f6f5f1; --surface: #ffffff; --ink: #1d1d1b; --ink-2: #55544f; --ink-3: #8b8a83; --line: #dddbd3;
-  --focus: #1f5fd6; --c-aai: #d2572c; --c-cls: #1d7a4a;
-  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+:root { --m1: #1f5fd6; --m2: #0f7f86; --m3: #d2572c; --m4: #7a3fbf; --m5: #8a5a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; } }
+:root[data-theme="dark"] { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; }
+
+.hero { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01em; }
+.sub { color: var(--ink-2); max-width: 64ch; margin: 0; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+.stat .num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.stat .lbl { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+
+h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
+.sec-sub { color: var(--ink-2); font-size: 13.5px; margin: 0 0 14px; }
+
+/* Alerts */
+.alerts { display: grid; gap: 8px; margin-bottom: 14px; }
+.alert { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; padding: 10px 12px; border-radius: 10px; border: 1px solid; }
+.alert.warn { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.alert.bad { border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); background: color-mix(in srgb, var(--bad) 7%, var(--surface)); }
+.alert.info { border-color: var(--line); background: var(--surface); }
+.alert b { font-weight: 600; }
+
+/* Week grid */
+.week { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+.grid-wrap { overflow: hidden; padding: 0; }
+.wk-head { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-bottom: 1px solid var(--line); }
+.wk-head div { padding: 10px 8px; font-size: 13px; font-weight: 600; border-left: 1px solid var(--line); }
+.wk-head div:first-child { border-left: 0; }
+.wk-head .today { color: var(--focus); }
+.wk-body { display: grid; grid-template-columns: 56px repeat(5, 1fr); position: relative; }
+.wk-times { position: relative; }
+.wk-times span { position: absolute; right: 8px; font-size: 11px; color: var(--ink-3); transform: translateY(-50%); font-family: "IBM Plex Mono", monospace; }
+.wk-times span:first-child { transform: none; }
+.wk-day { position: relative; border-left: 1px solid var(--line); }
+.wk-day.today { background: color-mix(in srgb, var(--focus) 4%, transparent); }
+.wk-slot { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); }
+.ev {
+  position: absolute; border-radius: 7px; padding: 5px 7px; overflow: hidden; text-decoration: none; color: var(--ink);
+  background: color-mix(in srgb, var(--c) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line));
+  border-left: 4px solid var(--c); font-size: 11.5px; line-height: 1.3;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #151514; --surface: #1f1f1d; --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
-    --focus: #7aa7ff; --c-aai: #ff9a6a; --c-cls: #5cc98d; --shadow: none;
-  }
+.ev:hover { border-color: var(--c); z-index: 2; box-shadow: var(--shadow); }
+.ev .t { font-weight: 600; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev .m { color: var(--ink-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev.option { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 8%, var(--surface)) 0 6px, var(--surface) 6px 12px); border-style: dashed; border-left-style: solid; }
+.ev.clash { box-shadow: inset 0 0 0 2px var(--bad); }
+.ev.option.clash { opacity: .5; box-shadow: none; }
+
+/* Agenda (narrow screens) */
+.agenda { display: none; }
+.ag-day h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 16px 0 8px; }
+.ag-day:first-child h3 { margin-top: 0; }
+.ag-item { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); background: var(--surface); margin-bottom: 8px; text-decoration: none; color: inherit; }
+.ag-item.option { border-style: dashed; border-left-style: solid; }
+.ag-item .time { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-2); }
+.ag-item .t { font-weight: 600; font-size: 14px; }
+.ag-item .m { font-size: 12.5px; color: var(--ink-2); }
+
+/* Group picker */
+.picker h3 { font-size: 14px; margin: 0 0 4px; }
+.picker p.hint { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; }
+.pk-mod { padding: 12px 0; border-top: 1px solid var(--line); }
+.pk-mod:first-of-type { border-top: 0; padding-top: 4px; }
+.pk-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+.pk-title .dot { width: 9px; height: 9px; border-radius: 3px; background: var(--c); flex: none; }
+.pk-opt { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: start; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.pk-opt:hover { background: var(--surface-2); }
+.pk-opt input { margin: 2px 0 0; accent-color: var(--c); }
+.pk-opt .where { font-size: 12px; color: var(--ink-2); }
+.pk-opt.is-clash .when { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--bad); }
+.pk-clear { font: inherit; font-size: 12px; color: var(--ink-2); background: none; border: 0; padding: 4px 8px; cursor: pointer; text-decoration: underline; }
+
+/* Module cards */
+.mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+a.mod {
+  display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 12px;
+  padding: 14px 16px; box-shadow: var(--shadow); transition: border-color .15s, transform .15s;
 }
-:root[data-theme="dark"] {
-  --bg: #151514; --surface: #1f1f1d; --ink: #eeede8; --ink-2: #b4b3ac; --ink-3: #7d7c76; --line: #34332f;
-  --focus: #7aa7ff; --c-aai: #ff9a6a; --c-cls: #5cc98d; --shadow: none;
+a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
+.mod .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 11.5px; color: var(--ink-3); }
+.mod .name { font-weight: 600; font-size: 15.5px; line-height: 1.3; }
+.mod .area { font-size: 12.5px; color: var(--ink-2); }
+.mod .when { font-size: 12.5px; color: var(--ink-2); display: grid; gap: 2px; margin-top: 2px; }
+.mod .when span { display: block; }
+.mod .go { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--c); }
+.mods.other a.mod { border-top-width: 1px; border-left: 4px solid var(--c); box-shadow: none; }
+
+@media (max-width: 1000px) {
+  .week { grid-template-columns: 1fr; }
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
-.wrap { max-width: 880px; margin: 0 auto; padding: 64px 24px; }
-.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-h1 { font-size: 34px; line-height: 1.15; margin: 8px 0 10px; letter-spacing: -.01em; }
-.sub { color: var(--ink-2); max-width: 60ch; margin: 0 0 36px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-a.track {
-  display: block; text-decoration: none; color: inherit; background: var(--surface);
-  border: 1px solid var(--line); border-top: 5px solid var(--c); border-radius: 12px; padding: 22px;
-  box-shadow: var(--shadow); transition: border-color .15s, transform .15s;
+@media (max-width: 760px) {
+  h1 { font-size: 24px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-wrap { display: none; }
+  .agenda { display: block; }
 }
-a.track:hover { border-color: var(--c); transform: translateY(-2px); }
-a.track:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-.track h2 { margin: 0 0 6px; font-size: 20px; }
-.track p { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; }
-.facts { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 12.5px "IBM Plex Mono", monospace; color: var(--ink-3); }
-.go { margin-top: 18px; font-weight: 600; font-size: 14px; color: var(--c); }
-.foot { font-size: 12px; color: var(--ink-3); margin-top: 40px; }
-.foot a { color: var(--ink-2); }
-@media (max-width: 600px) { .wrap { padding: 36px 16px; } h1 { font-size: 26px; } }
 </style>
 </head>
 <body>
+<header class="sitebar" data-page="dashboard"></header>
 <div class="wrap">
-  <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation</div>
-  <h1>Study planner</h1>
-  <p class="sub">Every module of the full-time study plan, laid out by semester. Pick a track, click the modules you want, and the planner checks your credits against each requirement.</p>
-
-  <div class="grid">
-    <a class="track" href="aai.html" style="--c:var(--c-aai)">
-      <h2>Applied Artificial Intelligence</h2>
-      <p>Computer vision, robot learning, conversational AI and AI hardware — with a required course in digital circuit design and a team assignment.</p>
-      <div class="facts"><span>1 required</span><span>20 electives · 35 LP</span><span>team: 1 of 2</span></div>
-      <div class="go">Open planner →</div>
-    </a>
-    <a class="track" href="cls.html" style="--c:var(--c-cls)">
-      <h2>Computational Life Sciences</h2>
-      <p>Bioinformatics and modeling in biology, a life-science team project, and a broad elective pool from biophysics to visualization.</p>
-      <div class="facts"><span>3 required</span><span>6 of 24 electives</span><span>team project</span></div>
-      <div class="go">Open planner →</div>
-    </a>
+  <div class="hero">
+    <div>
+      <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation · Applied AI track</div>
+      <h1 id="title">My semester</h1>
+      <p class="sub">Your weekly timetable, the courses you're enrolled in, and what else the Applied AI track offers this semester. Click any module for its full description.</p>
+    </div>
+    <a class="btn primary" href="plan.html">Open study plan →</a>
   </div>
 
-  <p class="foot">Based on the <a href="https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/SAPL_EN_aktualisiert_update.pdf?lang=en">Study Plan for the Full-Time Program</a>. Unofficial — check the <a href="https://tu-dresden.de/ing/informatik/studium/studienangebot/master-studiengaenge/computational-modeling-and-simulation/regulations">regulations page</a> for amendments. Selections are stored only in your browser.</p>
+  <section class="stats" id="stats" aria-label="Overview"></section>
+
+  <h2 class="sec">Weekly schedule</h2>
+  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet.</p>
+  <div class="alerts" id="alerts"></div>
+  <div class="week">
+    <aside class="panel picker" id="picker" aria-label="Exercise groups"></aside>
+    <div>
+      <div class="panel grid-wrap" id="grid"></div>
+      <div class="agenda" id="agenda"></div>
+    </div>
+  </div>
+
+  <h2 class="sec">My courses</h2>
+  <p class="sec-sub">What you're enrolled in on OPAL.</p>
+  <div class="mods" id="mine"></div>
+
+  <h2 class="sec">Other Applied AI modules this semester</h2>
+  <p class="sec-sub">Offered this winter and open to you in the Applied AI track. The badge shows whether the sessions fit around your current timetable.</p>
+  <div class="mods other" id="other"></div>
+
+  <p class="foot" id="foot"></p>
 </div>
+
+<script>
+const U = CMSUtil, esc = U.esc;
+const COLORS = ["--m1", "--m2", "--m3", "--m4", "--m5"];
+// Enrolled courses that have sessions this semester.
+const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
+const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
+const mod = code => CMS.modules[code];
+const SHORT = { "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving" };
+const shortName = code => SHORT[code] || mod(code).name;
+const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
+const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
+const datesNote = s => s.dates ? `only on ${s.dates.map(U.fmtDate).join(", ")}` : "";
+const areaColor = m => `var(--c-${{ core: "core", trkreq: "trkreq", team: "team" }[m.group] || "trk"})`;
+
+const START = 7 * 60 + 30, END = 18 * 60 + 30, PX = 1.05;
+const SLOTS = ["07:30", "09:20", "11:10", "13:00", "14:50", "16:40"];
+
+// Sessions to draw: group sessions are solid once chosen, striped options while none is chosen.
+function weekSessions() {
+  const groups = U.groups();
+  return CMS.sessions.filter(s => current.includes(s.code) && s.start).map(s => {
+    if (!s.group) return { ...s, state: "fixed" };
+    const chosen = groups[s.code];
+    if (!chosen) return { ...s, state: "option" };
+    return s.group === chosen ? { ...s, state: "fixed" } : null;
+  }).filter(Boolean);
+}
+
+// Side-by-side columns for overlapping blocks in one day.
+function layoutDay(list) {
+  const sorted = [...list].sort((a, b) => U.mins(a.start) - U.mins(b.start));
+  const ends = [];
+  sorted.forEach(ev => {
+    let i = ends.findIndex(end => end <= U.mins(ev.start));
+    if (i < 0) { i = ends.length; ends.push(0); }
+    ends[i] = U.mins(ev.end); ev.col = i;
+  });
+  sorted.forEach(ev => { ev.ncol = Math.max(...sorted.filter(o => o === ev || U.overlaps(o, ev)).map(o => o.col)) + 1; });
+  return sorted;
+}
+
+function render() {
+  const groups = U.groups();
+  const committed = U.committed();
+  const lectures = committed.filter(s => !s.group);
+  const sessions = weekSessions();
+  const today = new Date().getDay();
+
+  // Overview
+  const lp = current.reduce((a, c) => a + (mod(c).lp || 0), 0);
+  const hours = committed.filter(s => !s.dates).reduce((a, s) => a + (U.mins(s.end) - U.mins(s.start)) / 60, 0);
+  const toPick = current.filter(c => CMS.sessions.some(s => s.code === c && s.group) && !groups[c]);
+  const later = CMS.enrolled.filter(c => !current.includes(c));
+  document.getElementById("title").textContent = CMS.semester;
+  document.getElementById("stats").innerHTML = [
+    [current.length, `courses this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
+    [lp + " LP", "from study-plan modules this semester"],
+    [(Math.round(hours * 10) / 10) + " h", "weekly contact time (sessions every week)"],
+    [toPick.length || "✓", toPick.length ? `exercise group${toPick.length > 1 ? "s" : ""} still to pick` : "all exercise groups picked"],
+  ].map(([n, l]) => `<div class="panel stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
+
+  // Alerts: clashes in the committed timetable, and groups with only one workable option.
+  const alerts = [], seen = new Set();
+  committed.forEach(a => U.clashesWith(a, committed).forEach(b => {
+    const key = [a, b].map(s => s.code + s.kind + s.day + s.start).sort().join("|");
+    if (seen.has(key)) return; seen.add(key);
+    alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}.</div></div>`);
+  }));
+  toPick.forEach(c => {
+    const opts = CMS.sessions.filter(s => s.code === c && s.group);
+    const fits = opts.filter(o => !U.clashesWith(o, lectures).length);
+    if (fits.length === 1 && opts.length > 1) {
+      const o = fits[0];
+      alerts.push(`<div class="alert warn"><span class="chip warn">Pick</span><div>Only one <b>${esc(shortName(c))}</b> exercise group fits around your lectures: <b>${U.DAYS[o.day]} ${time(o)}</b> in ${room(o)}. The other ${opts.length - 1} clash.</div></div>`);
+    } else if (!fits.length) {
+      alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div>Every <b>${esc(shortName(c))}</b> exercise group clashes with one of your lectures.</div></div>`);
+    }
+  });
+  const apss = mod("CMS-TRK-APSS");
+  if (current.includes("CMS-TRK-APSS") && !groups["CMS-TRK-APSS"])
+    alerts.push(`<div class="alert info"><span class="chip offered">Note</span><div>Problem Solving tutorial groups open for registration in <a href="${apss.links.opal}" target="_blank" rel="noopener">OPAL</a> after the first lecture on 20 October.</div></div>`);
+  document.getElementById("alerts").innerHTML = alerts.join("");
+
+  // Exercise-group picker
+  const withGroups = current.filter(c => CMS.sessions.some(s => s.code === c && s.group));
+  document.getElementById("picker").innerHTML = `<h3>Exercise groups</h3><p class="hint">Pick the group you'll attend. Crossed-out options clash with one of your lectures.</p>` +
+    withGroups.map(c => {
+      const opts = CMS.sessions.filter(s => s.code === c && s.group);
+      return `<div class="pk-mod" style="--c:${colorOf(c)}">
+        <div class="pk-title"><span class="dot"></span>${esc(mod(c).name)}</div>
+        ${opts.map(o => {
+          const cl = U.clashesWith(o, lectures);
+          return `<label class="pk-opt ${cl.length ? "is-clash" : ""}">
+            <input type="radio" name="g-${c}" value="${o.group}" data-code="${c}" ${groups[c] === o.group ? "checked" : ""}>
+            <span><span class="when">${U.DAYS_SHORT[o.day]} ${time(o)}</span><br><span class="where">${room(o)}${cl.length ? ` · clashes with ${esc(shortName(cl[0].code))} ${cl[0].kind.toLowerCase()}` : ""}</span></span>
+            ${groups[c] === o.group ? `<span class="chip enrolled">Mine</span>` : ""}
+          </label>`;
+        }).join("")}
+        ${groups[c] ? `<button class="pk-clear" data-clear="${c}">Clear choice</button>` : ""}
+      </div>`;
+    }).join("");
+
+  // Week grid
+  const H = (END - START) * PX;
+  const y = t => (U.mins(t) - START) * PX;
+  const head = `<div class="wk-head"><div></div>${[1, 2, 3, 4, 5].map(d => `<div class="${d === today ? "today" : ""}">${U.DAYS[d]}</div>`).join("")}</div>`;
+  const ticks = SLOTS.map(t => `<span style="top:${y(t)}px">${t}</span>`).join("");
+  const days = [1, 2, 3, 4, 5].map(d => {
+    const lines = SLOTS.slice(1).map(t => `<div class="wk-slot" style="top:${y(t)}px"></div>`).join("");
+    const evs = layoutDay(sessions.filter(s => s.day === d)).map(s => {
+      const top = y(s.start), h = (U.mins(s.end) - U.mins(s.start)) * PX, w = 100 / s.ncol;
+      const clash = U.clashesWith(s, s.state === "fixed" ? committed : lectures).length;
+      const tip = `${mod(s.code).name} — ${s.kind}${s.group ? " (option)" : ""}\n${U.DAYS[s.day]} ${time(s)}, ${s.room}${s.who ? "\n" + s.who : ""}${s.dates ? "\n" + datesNote(s) : ""}`;
+      return `<a class="ev ${s.state === "option" ? "option" : ""} ${clash ? "clash" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
+          style="--c:${colorOf(s.code)};top:${top + 1}px;height:${h - 2}px;left:calc(${s.col * w}% + 3px);width:calc(${w}% - 6px)">
+          <span class="t">${esc(shortName(s.code))}</span>
+          <span class="m">${s.kind}${s.state === "option" ? " option" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
+          <span class="m">${esc(s.room)}</span>
+        </a>`;
+    }).join("");
+    return `<div class="wk-day ${d === today ? "today" : ""}" style="height:${H}px">${lines}${evs}</div>`;
+  }).join("");
+  document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${days}</div>`;
+
+  // Agenda for narrow screens
+  document.getElementById("agenda").innerHTML = [1, 2, 3, 4, 5].map(d => {
+    const list = sessions.filter(s => s.day === d).sort((a, b) => U.mins(a.start) - U.mins(b.start));
+    if (!list.length) return "";
+    return `<div class="ag-day"><h3>${U.DAYS[d]}</h3>${list.map(s => `<a class="ag-item ${s.state === "option" ? "option" : ""}" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
+        <span class="time">${time(s)}</span>
+        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "option" ? " · group option" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
+      </a>`).join("")}</div>`;
+  }).join("");
+
+  // My courses
+  document.getElementById("mine").innerHTML = CMS.enrolled.map(c => {
+    const m = mod(c);
+    const att = U.attended(c);
+    const pending = CMS.sessions.some(s => s.code === c && s.group) && !groups[c];
+    const when = att.length
+      ? att.map(s => `<span>${s.kind}: ${U.DAYS_SHORT[s.day]} ${time(s)} · ${esc(s.room)}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`).join("") + (pending ? `<span style="color:var(--warn)">Exercise group not picked yet</span>` : "")
+      : `<span>Summer semester — no sessions this winter</span>`;
+    return `<a class="mod" href="${U.moduleUrl(c)}" style="--c:${colorOf(c)}">
+      <div class="top"><span class="mono">${c.startsWith("EXT") ? "Outside the study plan" : c}</span><span class="chip enrolled">Enrolled</span></div>
+      <div class="name">${esc(m.name)}</div>
+      <div class="area">${esc(m.area)}${m.lp ? ` · ${m.lp} LP` : ""}</div>
+      <div class="when">${when}</div>
+      <div class="go">Module page →</div>
+    </a>`;
+  }).join("");
+
+  // Other modules offered this winter
+  const offeredNow = m => /winter|every semester/i.test(m.freq || "");
+  const order = { trkreq: 0, trk: 1, team: 2, core: 3 };
+  const others = Object.values(CMS.modules)
+    .filter(m => m.group && !CMS.enrolled.includes(m.code) && offeredNow(m))
+    .sort((a, b) => (order[a.group] - order[b.group]) || a.name.localeCompare(b.name));
+  document.getElementById("other").innerHTML = others.map(m => {
+    const ss = CMS.sessions.filter(s => s.code === m.code);
+    const nGroups = ss.filter(s => s.group).length;
+    const clashes = [...new Set(ss.filter(s => s.start && !s.group).flatMap(s => U.clashesWith(s, committed)).map(o => shortName(o.code) + " " + o.kind.toLowerCase()))];
+    const badge = !ss.length ? `<span class="chip offered">Times not listed</span>`
+      : !ss.some(s => s.start) ? `<span class="chip offered">Times TBA</span>`
+      : clashes.length ? `<span class="chip bad">Clashes</span>` : `<span class="chip enrolled">Fits your week</span>`;
+    const when = ss.length
+      ? ss.filter(s => !s.group || s.group === "A").map(s => `<span>${s.kind}${s.group ? ` (${nGroups} groups)` : ""}: ${U.when(s)}</span>`).join("")
+      : `<span>No session times in the faculty catalogue yet</span>`;
+    return `<a class="mod" href="${U.moduleUrl(m.code)}" style="--c:${areaColor(m)}">
+      <div class="top"><span class="mono">${m.code}</span>${badge}</div>
+      <div class="name">${esc(m.name)}${m.group === "trkreq" ? ` <span class="chip warn">Required</span>` : ""}</div>
+      <div class="area">${esc(m.area)} · ${m.lp} LP</div>
+      <div class="when">${when}${clashes.length ? `<span style="color:var(--bad)">Clashes with ${esc(clashes.join(", "))}</span>` : ""}</div>
+    </a>`;
+  }).join("");
+
+  document.getElementById("foot").innerHTML = `Times and rooms from the Faculty of Computer Science <a href="${CMS.sources.catalogue}">course offerings</a> and the course pages, as of ${CMS.updated} — check OPAL for changes. Module texts from the official <a href="${CMS.sources.handbook}">module descriptions</a>. Your exercise-group choices are saved in this browser only.`;
+}
+
+document.addEventListener("change", e => {
+  if (e.target.matches('input[type="radio"][data-code]')) { U.setGroup(e.target.dataset.code, e.target.value); render(); }
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-clear]");
+  if (b) { U.setGroup(b.dataset.clear, null); render(); }
+});
+render();
+</script>
 </body>
 </html>

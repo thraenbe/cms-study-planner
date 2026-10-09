@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMS Module</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<style>
+.crumbs { font-size: 13px; color: var(--ink-3); margin-bottom: 14px; }
+.crumbs a { color: var(--ink-2); }
+.head { border-left: 5px solid var(--c); padding-left: 16px; margin-bottom: 24px; }
+.head .code { font-size: 12.5px; color: var(--ink-3); }
+h1 { font-size: 30px; line-height: 1.15; margin: 4px 0 10px; letter-spacing: -.01em; max-width: 30ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.lead { font-size: 16.5px; line-height: 1.55; max-width: 68ch; margin: 0; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.main > section { margin-bottom: 18px; }
+h2 { font-size: 16px; margin: 0 0 10px; }
+.prose { font-size: 15px; line-height: 1.6; max-width: 72ch; margin: 0; color: var(--ink); }
+.note { font-size: 13.5px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin: 12px 0 0; }
+
+table.sess { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.sess th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+.sess td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sess tr:last-child td { border-bottom: 0; }
+.sess .when { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; }
+.sess .sub { font-size: 12px; color: var(--ink-3); }
+.sess tr.mine td:first-child { box-shadow: inset 3px 0 0 var(--ok); padding-left: 8px; }
+.sess button { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.sess button:hover { border-color: var(--ink-3); }
+.empty { color: var(--ink-2); font-size: 14px; margin: 0; }
+
+dl.facts { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 0; font-size: 13.5px; }
+.facts dt { color: var(--ink-3); font-size: 12px; margin-top: 10px; }
+.facts dt:first-child { margin-top: 0; }
+.facts dd { margin: 0; color: var(--ink); }
+.links { display: grid; gap: 6px; margin-top: 16px; }
+.links a { font-size: 13.5px; }
+.side .btn { margin-top: 16px; width: 100%; justify-content: center; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { order: -1; }
+}
+@media (max-width: 760px) {
+  h1 { font-size: 24px; }
+  .sess thead { display: none; }
+  .sess tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .sess td { border: 0; padding: 0; }
+  .sess tr.mine td:first-child { box-shadow: none; padding-left: 0; }
+}
+</style>
+</head>
+<body>
+<header class="sitebar" data-page="module"></header>
+<div class="wrap" id="page"></div>
+
+<script>
+const U = CMSUtil, esc = U.esc;
+const code = new URLSearchParams(location.search).get("code");
+const m = Object.hasOwn(CMS.modules, code) ? CMS.modules[code] : null;
+const page = document.getElementById("page");
+
+function render() {
+  if (!m) {
+    page.innerHTML = `<p class="crumbs"><a href="index.html">Dashboard</a></p><h1>Module not found</h1><p class="lead">There is no module “${esc(code)}”. Go back to the <a href="index.html">dashboard</a> or the <a href="plan.html">study plan</a>.</p>`;
+    return;
+  }
+  document.title = m.name + " · CMS";
+  const color = `var(--c-${m.group ? ({ core: "core", trkreq: "trkreq", team: "team" }[m.group] || "trk") : "ext"})`;
+  const enrolled = CMS.enrolled.includes(code);
+  const sessions = CMS.sessions.filter(s => s.code === code);
+  const chosen = U.groups()[code];
+  const committed = U.committed();
+  const offeredNow = /winter|every semester/i.test(m.freq || "");
+  const fmt = [m.sws && `${m.sws} SWS (lecture / exercise / seminar / practical)`, m.extra].filter(Boolean).join(", ");
+
+  const rows = sessions.map(s => {
+    const mine = enrolled && (!s.group || s.group === chosen);
+    const clash = enrolled ? [] : (s.start ? U.clashesWith(s, committed) : []);
+    const groupCtl = s.group && enrolled
+      ? (chosen === s.group ? `<span class="chip enrolled">My group</span> <button data-group="">Change</button>` : `<button data-group="${s.group}">Pick this group</button>`)
+      : s.group ? `<span class="sub">one of ${sessions.filter(x => x.group).length} groups</span>` : "";
+    return `<tr class="${mine && s.group ? "mine" : ""}">
+      <td><b>${s.kind}</b>${s.dates ? `<div class="sub">only on ${s.dates.map(U.fmtDate).join(", ")}</div>` : ""}${clash.length ? `<div class="sub" style="color:var(--bad)">Clashes with your ${esc(CMS.modules[clash[0].code].name)} ${clash[0].kind.toLowerCase()}</div>` : ""}</td>
+      <td class="when">${U.when(s)}</td>
+      <td>${s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room)}${s.who ? `<div class="sub">${esc(s.who)}</div>` : ""}</td>
+      <td>${groupCtl}</td>
+    </tr>`;
+  }).join("");
+  const sessionsHTML = sessions.length
+    ? `<table class="sess"><thead><tr><th>Session</th><th>When</th><th>Where</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+    : `<p class="empty">${offeredNow
+        ? "The faculty course catalogue has no session times for this module yet. Modules taught by other faculties (e.g. Electrical Engineering) often aren't listed there; check the course's OPAL page or the chair's website."
+        : `Not taught this semester — it's offered ${esc((m.freq || "").toLowerCase())}.`}</p>`;
+  const catalogueLink = m.winter ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
+
+  page.innerHTML = `
+    <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="plan.html">Study plan</a> / ${esc(m.name)}</p>
+    <div class="head" style="--c:${color}">
+      <div class="code mono">${m.code.startsWith("EXT") ? "Not a module of the study plan" : m.code}</div>
+      <h1>${esc(m.name)}</h1>
+      <div class="chips">
+        ${enrolled ? `<span class="chip enrolled">Enrolled</span>` : ""}
+        <span class="chip offered">${esc(m.area)}</span>
+        <span class="chip ${offeredNow ? "enrolled" : "offered"}">${offeredNow ? "Offered this semester" : "Not offered this semester"}</span>
+      </div>
+      <p class="lead">${esc(m.desc)}</p>
+    </div>
+    <div class="layout">
+      <div class="main">
+        <section class="panel">
+          <h2>This semester · ${esc(CMS.semester)}</h2>
+          ${sessionsHTML}
+          ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}
+        </section>
+        ${m.goals ? `<section class="panel"><h2>Learning goals</h2><p class="prose">${esc(m.goals)}</p></section>` : ""}
+        ${m.contents ? `<section class="panel"><h2>Contents</h2><p class="prose">${esc(m.contents)}</p></section>` : ""}
+        ${!m.goals && !m.contents ? `<section class="panel"><h2>Contents</h2><p class="prose">This course isn't in the CMS module descriptions. The summary above is based on the course's own page; see the links for the syllabus.</p></section>` : ""}
+      </div>
+      <aside class="panel side">
+        <dl class="facts">
+          ${m.lp ? `<dt>Credits</dt><dd>${m.lp} LP</dd>` : ""}
+          <dt>Format</dt><dd>${esc(fmt || "—")} · taught in ${esc(m.lang || "English")}</dd>
+          <dt>Exam</dt><dd>${esc(m.exam || "—")}</dd>
+          <dt>Prerequisites</dt><dd>${esc(m.prereq || "—")}</dd>
+          <dt>Coordinator</dt><dd>${esc(m.coord || "—")}</dd>
+          <dt>Offered</dt><dd>${esc(m.freq || "—")}${m.planSem ? ` · planned for semester ${m.planSem}` : ""}</dd>
+          <dt>Counts toward</dt><dd>${esc(m.area)}</dd>
+          ${m.winter ? `<dt>Teaching this semester</dt><dd>${esc(m.winter.who)}</dd>` : ""}
+        </dl>
+        <div class="links">
+          ${m.links?.web ? `<a href="${m.links.web}" target="_blank" rel="noopener">Course website ↗</a>` : ""}
+          ${m.links?.opal ? `<a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course ↗</a>` : ""}
+          ${catalogueLink ? `<a href="${catalogueLink}" target="_blank" rel="noopener">Faculty course catalogue ↗</a>` : ""}
+          ${m.goals ? `<a href="${CMS.sources.handbook}" target="_blank" rel="noopener">Official module description (PDF) ↗</a>` : ""}
+        </div>
+        ${m.group ? `<a class="btn" href="plan.html">See it in the study plan</a>` : ""}
+      </aside>
+    </div>
+    <p class="foot">Sessions from the Faculty of Computer Science course offerings and course pages, as of ${CMS.updated}. Learning goals and contents are quoted from the official module descriptions.</p>`;
+}
+
+page.addEventListener("click", e => {
+  const b = e.target.closest("[data-group]");
+  if (!b) return;
+  U.setGroup(code, b.dataset.group || null);
+  render();
+});
+render();
+</script>
+</body>
+</html>
