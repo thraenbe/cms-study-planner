@@ -237,8 +237,6 @@ function render() {
   const coreTaken = [...CMS.enrolled, ...CMS.toRegister].filter(c => mod(c)?.group === "core");
   if (coreTaken.length > 3)
     alerts.push(`<div class="alert warn"><span class="chip warn">Check</span><div>Basic professional training needs <b>3</b> modules, but you'd have <b>${coreTaken.length}</b> (${coreTaken.map(c => esc(mod(c).name)).join(", ")}). In this study plan the extra one counts toward no requirement.</div></div>`);
-  if (lpPlanned > 36)
-    alerts.push(`<div class="alert info"><span class="chip offered">Load</span><div>With everything registered, this semester comes to <b>${lpPlanned} LP</b> of study-plan modules plus the LLM course. The study plan expects about 30 LP per semester.</div></div>`);
   const apss = mod("CMS-TRK-APSS");
   if (current.includes("CMS-TRK-APSS") && !groups["CMS-TRK-APSS"])
     alerts.push(`<div class="alert info"><span class="chip offered">Note</span><div>Problem Solving tutorial groups open for registration in <a href="${apss.links.opal}" target="_blank" rel="noopener">OPAL</a> after the first lecture on 20 October.</div></div>`);
