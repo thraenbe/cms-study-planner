@@ -91,6 +91,7 @@ function render() {
   const chosen = U.groups()[code];
   const committed = U.committed();
   const offeredNow = U.offeredNow(m);
+  const prio = U.priorityOf(code);
   const fmt = [m.sws && `${m.sws} SWS (lecture / exercise / seminar / practical)`, m.extra].filter(Boolean).join(", ");
 
   const rows = sessions.map(s => {
@@ -130,7 +131,9 @@ function render() {
     <div class="layout">
       <div class="main">
         ${m.register ? `<section class="panel" style="border-color:color-mix(in srgb, var(--warn) 45%, var(--line))">
-          <h2>Registration</h2><p class="prose">${esc(m.register)}</p>
+          <h2>Registration</h2>
+          ${prio ? `<p class="prose" style="margin-bottom:8px"><b>Priority this semester:</b> ${esc(prio.title)}${prio.options.length > 1 ? ` — one of ${prio.options.map(c => c === code ? "this module" : `<a href="${U.moduleUrl(c)}">${esc(CMS.modules[c].name)}</a>`).join(", ")}` : ""}.</p>` : ""}
+          <p class="prose">${esc(m.register)}</p>
         </section>` : ""}
         <section class="panel">
           <h2>This semester · ${esc(CMS.semester)}</h2>

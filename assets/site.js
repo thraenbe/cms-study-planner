@@ -39,6 +39,9 @@ window.CMSUtil = {
   moduleUrl: code => "module.html?code=" + encodeURIComponent(code),
   // "enrolled", "register" (still to register) or null
   status: code => CMS.enrolled.includes(code) ? "enrolled" : (CMS.toRegister || []).includes(code) ? "register" : null,
+  // Priority items (data.js) with their state: done once one option is enrolled.
+  priorities: () => (CMS.priorities || []).map(p => ({ ...p, done: p.options.find(c => CMS.enrolled.includes(c)) || null })),
+  priorityOf: code => (CMS.priorities || []).find(p => p.options.includes(code)) || null,
   offeredNow: m => /winter|every semester/i.test(m.freq || ""),
   // Chosen exercise/tutorial group per module, stored per browser.
   groups() { try { return JSON.parse(localStorage.getItem("cms-groups") || "{}"); } catch (e) { return {}; } },

@@ -341,8 +341,10 @@ const HANDBOOK = CMS.sources.handbook;
 const ENROLLED = new Set(CMS.enrolled.filter(c => CMS.modules[c]?.group));
 // Enrolled courses that are not modules of this study plan; shown separately, not counted.
 const ENROLLED_EXTRA = CMS.enrolled.filter(c => !CMS.modules[c]?.group).map(c => CMS.modules[c]);
-// Modules still to register count as planned, like enrolled ones.
-const TO_REGISTER = new Set(CMS.toRegister || []);
+// Single-option priorities (e.g. Digital Circuit Design) count as planned, like enrolled modules.
+// Options of an either-or priority are only badged; tick the one you choose.
+const TO_REGISTER = new Set((CMS.priorities || []).filter(p => p.options.length === 1).flatMap(p => p.options).filter(c => !ENROLLED.has(c)));
+const OPTIONS = new Set((CMS.priorities || []).filter(p => p.options.length > 1).flatMap(p => p.options).filter(c => !ENROLLED.has(c)));
 const LOCKED = c => ENROLLED.has(c) || TO_REGISTER.has(c);
 
 const TOTAL_TARGET = 120;
@@ -395,7 +397,7 @@ function cardHTML(g, mod) {
     : `<span class="check" aria-hidden="true">${CHECK}</span>`;
   return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""} ${enrolled ? "enrolled" : ""} ${toReg ? "to-register" : ""} ${det ? "has-details" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${attrs}>
     ${check}
-    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span>${enrolled ? `<span class="badge">Enrolled</span>` : toReg ? `<span class="badge reg">To register</span>` : ""}</div>
+    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span>${enrolled ? `<span class="badge">Enrolled</span>` : toReg ? `<span class="badge reg">To register</span>` : OPTIONS.has(mod.code) ? `<span class="badge reg">Option</span>` : ""}</div>
     <div class="title">${chosenLang ? chosenLang.name : mod.name}</div>
     <div class="meta"><span class="lp">${mod.lp} LP</span>${swsBar(mod.sws)}${mod.extra ? `<span>${mod.extra}</span>` : ""}<span>${mod.pl} PL</span></div>
     ${langSel}

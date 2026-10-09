@@ -23,6 +23,37 @@ window.CMS = {
   "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
+ "priorities": [
+  {
+   "id": "core3",
+   "title": "Third basic professional training module",
+   "options": [
+    "CMS-COR-SAP",
+    "CMS-COR-SSE"
+   ],
+   "why": "Basic professional training needs 3 modules; you have High-Performance Computing and Data Visualization.",
+   "hint": "Stochastics and Probability is taught this winter (as “Stochastic Modeling and Simulation”); Scientific Software Engineering isn't in this winter's catalogue."
+  },
+  {
+   "id": "dcd",
+   "title": "Digital Circuit Design",
+   "options": [
+    "CMS-TRK-DCD"
+   ],
+   "why": "Required module of the Applied AI track."
+  },
+  {
+   "id": "elective4",
+   "title": "Fourth track elective",
+   "options": [
+    "CMS-TRK-MLSP",
+    "CMS-TRK-CAI",
+    "CMS-TRK-HWSWC"
+   ],
+   "why": "You have three: Problem Solving, Computer Vision and Circuit and System Design. Any of these works.",
+   "hint": "Hardware-Software Co-Design is only taught in summer, so this semester it's Machine Learning in Signal Processing or Conversational AI."
+  }
+ ],
  "sources": {
   "catalogue": "https://wwwdek.inf.tu-dresden.de/lv/en.html",
   "handbook": "https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/ModuleDescriptions_EN.pdf",
@@ -192,7 +223,7 @@ window.CMS = {
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445134",
     "opalNote": "This OPAL course is last year's (winter 2025/26); this winter's course may have a new page."
    },
-   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan). Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it.",
+   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan); the faculty catalogue lists that course under CMS-COR-SAP. When you register for the exam in Selma, check it's filed under CMS-COR-SAP. Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it.",
    "opalText": "This course enable the students to master the basics of stochastic modelling and simulation. The course first discusses discrete-time models, followed by two classic examples, and then goes on to discuss continuous-time models."
   },
   "CMS-COR-SSE": {
@@ -445,7 +476,11 @@ window.CMS = {
    "links": {
     "web": "https://jens-lehmann.org/seminars-and-teaching/courses-at-tu-dresden/seminar-conversational-ai/"
    },
-   "register": "Seminar by Hon.-Prof. Dr. Jens Lehmann. The seminar page says to register in both Selma and OPAL; the topic list is in the seminar slides."
+   "register": "Seminar by Hon.-Prof. Dr. Jens Lehmann. The seminar page says to register in both Selma and OPAL; the topic list is in the seminar slides.",
+   "winter": {
+    "who": "Hon.-Prof. Dr. Jens Lehmann",
+    "q": "Conversational Artificial Intelligence"
+   }
   },
   "CMS-TRK-FCG": {
    "code": "CMS-TRK-FCG",
