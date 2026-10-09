@@ -885,9 +885,99 @@ window.CMS = {
    "goals": "Students will master the practical application and implementation of these concepts in an independent research project. They will be able to identify a problem and break it down into work steps that they can tackle independently. They can communicate independently about the project and have mastered the scientific methods of computer modeling—in particular, the design, implementation, and validation of models and simulations—and can apply these to complex application problems.",
    "contents": "The module focuses on a computer-aided modeling or simulation project.",
    "links": {
+    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/project-cs/index.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56369152004"
    },
-   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year."
+   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 (room tbd; no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
+   "schedule": {
+    "src": "course page (mlcv.cs.tu-dresden.de)",
+    "rows": [
+     [
+      "2026-10-12",
+      "Kick-off meeting, task selection"
+     ],
+     [
+      "2026-10-19",
+      "Task selection, progress meeting, consultation"
+     ],
+     [
+      "2026-10-26",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-11-02",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-11-09",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-11-16",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-11-23",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-11-30",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-12-07",
+      "No meeting"
+     ],
+     [
+      "2026-12-14",
+      "No meeting"
+     ],
+     [
+      "2026-12-21",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2026-12-28",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2027-01-04",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2027-01-11",
+      "Progress meeting, consultation"
+     ],
+     [
+      "2027-01-18",
+      "Presentations (14:50–16:20)"
+     ],
+     [
+      "2027-01-19",
+      "Presentations (11:00–13:00 and 14:00–18:00)"
+     ],
+     [
+      "2027-01-25",
+      "Presentations (14:50–16:20)"
+     ],
+     [
+      "2027-01-26",
+      "Presentations (11:00–13:00 and 14:00–18:00)"
+     ],
+     [
+      "2027-02-01",
+      "Presentations (14:50–16:20)"
+     ],
+     [
+      "2027-02-02",
+      "Presentations (11:00–13:00 and 14:00–18:00)"
+     ],
+     [
+      "2027-02-06",
+      "Deadline: written report by email (for INF-25-Ma-FP)"
+     ]
+    ]
+   }
   },
   "EXT-LLM": {
    "code": "EXT-LLM",
@@ -1150,6 +1240,16 @@ window.CMS = {
    "who": "",
    "src": "OPAL",
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310"
+  },
+  {
+   "code": "CMS-PRO",
+   "kind": "Meeting",
+   "day": 1,
+   "start": "14:50",
+   "end": "16:20",
+   "room": "room tbd",
+   "who": "Chair of Machine Learning for Computer Vision",
+   "src": "course page"
   },
   {
    "code": "CMS-TRK-FCG",

@@ -11,9 +11,9 @@
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <style>
-:root { --m1: #1f5fd6; --m2: #0f7f86; --m3: #d2572c; --m4: #7a3fbf; --m5: #8a5a00; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; } }
-:root[data-theme="dark"] { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; }
+:root { --m1: #1f5fd6; --m2: #0f7f86; --m3: #d2572c; --m4: #7a3fbf; --m5: #8a5a00; --m6: #2f6b2f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; --m6: #7fcf7f; } }
+:root[data-theme="dark"] { --m1: #7aa7ff; --m2: #4fc7cf; --m3: #ff9a6a; --m4: #b98cf0; --m5: #e0b050; --m6: #7fcf7f; }
 
 .hero { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
 h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01em; }
@@ -167,14 +167,14 @@ a.mod.reg { border-top-style: dashed; }
 
 <script>
 const U = CMSUtil, esc = U.esc;
-const COLORS = ["--m1", "--m2", "--m3", "--m4", "--m5"];
+const COLORS = ["--m1", "--m2", "--m3", "--m4", "--m5", "--m6"];
 // Enrolled courses that have sessions this semester (timetable colours).
 const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
 // Enrolled courses taught this semester, with or without fixed sessions.
 const nowEnrolled = CMS.enrolled.filter(c => CMSUtil.offeredNow(CMS.modules[c]));
 const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
 const mod = code => CMS.modules[code];
-const SHORT = { "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving" };
+const SHORT = { "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
 const shortName = code => SHORT[code] || mod(code).name;
 const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
 const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);

@@ -176,7 +176,7 @@ function scheduleHTML() {
   const today = new Date().toISOString().slice(0, 10);
   const next = sc.rows.find(r => r[0] >= today)?.[0];
   const rows = sc.rows.map(([d, topic, lab]) => {
-    const cls = [d < today ? "past" : "", d === next ? "next" : "", /^No lecture/.test(topic) ? "off" : ""].join(" ");
+    const cls = [d < today ? "past" : "", d === next ? "next" : "", /^No (lecture|meeting)/.test(topic) ? "off" : ""].join(" ");
     return `<tr class="${cls}"><td class="d">${U.fmtDate(d)}</td><td>${esc(topic)}</td>${sc.lab ? `<td>${esc(lab || "—")}</td>` : ""}</tr>`;
   }).join("");
   return `<section class="panel" style="--c:${headColor()}"><h2>Course schedule</h2>
