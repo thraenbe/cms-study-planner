@@ -18,7 +18,7 @@
 .hero { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
 h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01em; }
 .sub { color: var(--ink-2); max-width: 64ch; margin: 0; }
-.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 28px; }
 .stat .num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
 .stat .lbl { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
 
@@ -97,6 +97,8 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
 .mod .when { font-size: 12.5px; color: var(--ink-2); display: grid; gap: 2px; margin-top: 2px; }
 .mod .when span { display: block; }
 .mod .go { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--c); }
+a.mod.reg { border-top-style: dashed; }
+.mod .how { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
 .mods.other a.mod { border-top-width: 1px; border-left: 4px solid var(--c); box-shadow: none; }
 
 @media (max-width: 1000px) {
@@ -105,6 +107,7 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
 @media (max-width: 760px) {
   h1 { font-size: 24px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .grid-wrap { display: none; }
   .agenda { display: block; }
 }
@@ -125,7 +128,7 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
   <section class="stats" id="stats" aria-label="Overview"></section>
 
   <h2 class="sec">Weekly schedule</h2>
-  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet.</p>
+  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet. Courses you still have to register for aren't shown here; none of them has published times yet.</p>
   <div class="alerts" id="alerts"></div>
   <div class="week">
     <aside class="panel picker" id="picker" aria-label="Exercise groups"></aside>
@@ -138,6 +141,10 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
   <h2 class="sec">My courses</h2>
   <p class="sec-sub">What you're enrolled in on OPAL.</p>
   <div class="mods" id="mine"></div>
+
+  <h2 class="sec">Still to register</h2>
+  <p class="sec-sub">Modules you plan to take but haven't registered for yet. Join each course in OPAL and register for the exam in Selma.</p>
+  <div class="mods" id="register"></div>
 
   <h2 class="sec">Other Applied AI modules this semester</h2>
   <p class="sec-sub">Offered this winter and open to you in the Applied AI track. The badge shows whether the sessions fit around your current timetable.</p>
@@ -200,10 +207,13 @@ function render() {
   const toPick = current.filter(c => CMS.sessions.some(s => s.code === c && s.group) && !groups[c]);
   const later = CMS.enrolled.filter(c => !current.includes(c));
   document.getElementById("title").textContent = CMS.semester;
+  const regNow = (CMS.toRegister || []).filter(c => U.offeredNow(mod(c)));
+  const lpPlanned = lp + regNow.reduce((a, c) => a + mod(c).lp, 0);
   document.getElementById("stats").innerHTML = [
-    [current.length, `courses this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
-    [lp + " LP", "from study-plan modules this semester"],
-    [(Math.round(hours * 10) / 10) + " h", "weekly contact time (sessions every week)"],
+    [current.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
+    [regNow.length, `still to register this semester${CMS.toRegister.length > regNow.length ? ` (+${CMS.toRegister.length - regNow.length} in summer)` : ""}`],
+    [lpPlanned + " LP", `this semester once registered (${lp} LP so far)`],
+    [(Math.round(hours * 10) / 10) + " h", "weekly contact time so far (sessions every week)"],
     [toPick.length || "✓", toPick.length ? `exercise group${toPick.length > 1 ? "s" : ""} still to pick` : "all exercise groups picked"],
   ].map(([n, l]) => `<div class="panel stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
 
@@ -224,6 +234,11 @@ function render() {
       alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div>Every <b>${esc(shortName(c))}</b> exercise group clashes with one of your lectures.</div></div>`);
     }
   });
+  const coreTaken = [...CMS.enrolled, ...CMS.toRegister].filter(c => mod(c)?.group === "core");
+  if (coreTaken.length > 3)
+    alerts.push(`<div class="alert warn"><span class="chip warn">Check</span><div>Basic professional training needs <b>3</b> modules, but you'd have <b>${coreTaken.length}</b> (${coreTaken.map(c => esc(mod(c).name)).join(", ")}). In this study plan the extra one counts toward no requirement.</div></div>`);
+  if (lpPlanned > 36)
+    alerts.push(`<div class="alert info"><span class="chip offered">Load</span><div>With everything registered, this semester comes to <b>${lpPlanned} LP</b> of study-plan modules plus the LLM course. The study plan expects about 30 LP per semester.</div></div>`);
   const apss = mod("CMS-TRK-APSS");
   if (current.includes("CMS-TRK-APSS") && !groups["CMS-TRK-APSS"])
     alerts.push(`<div class="alert info"><span class="chip offered">Note</span><div>Problem Solving tutorial groups open for registration in <a href="${apss.links.opal}" target="_blank" rel="noopener">OPAL</a> after the first lecture on 20 October.</div></div>`);
@@ -297,11 +312,25 @@ function render() {
     </a>`;
   }).join("");
 
+  // Still to register
+  document.getElementById("register").innerHTML = CMS.toRegister.map(c => {
+    const m = mod(c), ss = CMS.sessions.filter(s => s.code === c), now = U.offeredNow(m);
+    const when = !now ? `<span>Summer semester — not offered this winter</span>`
+      : ss.length ? ss.filter(s => !s.group || s.group === "A").map(s => `<span>${s.kind}: ${U.when(s)}</span>`).join("")
+      : `<span>No session times in the faculty catalogue yet</span>`;
+    return `<a class="mod reg" href="${U.moduleUrl(c)}" style="--c:${areaColor(m)}">
+      <div class="top"><span class="mono">${c}</span><span class="chip ${now ? "warn" : "offered"}">${now ? "To register" : "Summer"}</span></div>
+      <div class="name">${esc(m.name)}${m.group === "trkreq" ? ` <span class="chip bad">Required</span>` : ""}</div>
+      <div class="area">${esc(m.area)} · ${m.lp} LP</div>
+      <div class="when">${when}</div>
+      <div class="how">${esc(m.register)}</div>
+    </a>`;
+  }).join("");
+
   // Other modules offered this winter
-  const offeredNow = m => /winter|every semester/i.test(m.freq || "");
   const order = { trkreq: 0, trk: 1, team: 2, core: 3 };
   const others = Object.values(CMS.modules)
-    .filter(m => m.group && !CMS.enrolled.includes(m.code) && offeredNow(m))
+    .filter(m => m.group && !U.status(m.code) && U.offeredNow(m))
     .sort((a, b) => (order[a.group] - order[b.group]) || a.name.localeCompare(b.name));
   document.getElementById("other").innerHTML = others.map(m => {
     const ss = CMS.sessions.filter(s => s.code === m.code);

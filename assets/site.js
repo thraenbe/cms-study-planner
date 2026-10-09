@@ -37,6 +37,9 @@ window.CMSUtil = {
   mins: t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; },
   fmtDate: iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
   moduleUrl: code => "module.html?code=" + encodeURIComponent(code),
+  // "enrolled", "register" (still to register) or null
+  status: code => CMS.enrolled.includes(code) ? "enrolled" : (CMS.toRegister || []).includes(code) ? "register" : null,
+  offeredNow: m => /winter|every semester/i.test(m.freq || ""),
   // Chosen exercise/tutorial group per module, stored per browser.
   groups() { try { return JSON.parse(localStorage.getItem("cms-groups") || "{}"); } catch (e) { return {}; } },
   setGroup(code, g) {

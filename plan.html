@@ -172,6 +172,10 @@ dialog.details h2 { margin: 2px 0 10px; font-size: 20px; line-height: 1.25; }
 @media (max-width: 520px) { .dlg-facts { grid-template-columns: 1fr; gap: 2px; } .dlg-facts dd { margin-bottom: 8px; } }
 .card .badge { font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 1px 6px; border-radius: 99px; white-space: nowrap; }
 .card.enrolled .check { background: var(--ok); border-color: var(--ok); }
+.card .badge.reg { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.card.to-register .check { background: var(--warn); border-color: var(--warn); }
+.card.to-register .check svg { opacity: 1; }
+.card.to-register { border-style: dashed; border-left-style: solid; }
 .card.enrolled .check svg { opacity: 1; }
 .card.enrolled { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
 .lane.extra .lane-head h3 .dot { background: var(--ok); }
@@ -337,6 +341,9 @@ const HANDBOOK = CMS.sources.handbook;
 const ENROLLED = new Set(CMS.enrolled.filter(c => CMS.modules[c]?.group));
 // Enrolled courses that are not modules of this study plan; shown separately, not counted.
 const ENROLLED_EXTRA = CMS.enrolled.filter(c => !CMS.modules[c]?.group).map(c => CMS.modules[c]);
+// Modules still to register count as planned, like enrolled ones.
+const TO_REGISTER = new Set(CMS.toRegister || []);
+const LOCKED = c => ENROLLED.has(c) || TO_REGISTER.has(c);
 
 const TOTAL_TARGET = 120;
 const KEY = "cms-aai-plan-v1";
@@ -346,7 +353,7 @@ try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) state = 
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
 
 const sel = () => new Set(state.sel);
-const isOn = (g, mod) => g.rule.type === "all" || ENROLLED.has(mod.code) || (mod.lang ? !!state.lang : sel().has(g.id + ":" + mod.code));
+const isOn = (g, mod) => g.rule.type === "all" || LOCKED(mod.code) || (mod.lang ? !!state.lang : sel().has(g.id + ":" + mod.code));
 
 function groupProgress(g) {
   const on = g.modules.filter(mod => isOn(g, mod));
@@ -380,14 +387,15 @@ function cardHTML(g, mod) {
   const det = DETAILS[mod.code];
   // Cards with details open a dialog; their checkbox is a separate toggle button.
   const attrs = det ? `role="button" tabindex="0" aria-haspopup="dialog" aria-label="Details: ${mod.name}"`
-    : fixed || mod.lang || ENROLLED.has(mod.code) ? "" : `role="button" tabindex="0" aria-pressed="${on}"`;
+    : fixed || mod.lang || LOCKED(mod.code) ? "" : `role="button" tabindex="0" aria-pressed="${on}"`;
   const enrolled = ENROLLED.has(mod.code);
-  const check = det && !fixed && !enrolled
+  const toReg = TO_REGISTER.has(mod.code);
+  const check = det && !fixed && !enrolled && !toReg
     ? `<button class="check" data-toggle aria-pressed="${on}" aria-label="Add ${mod.name} to plan">${CHECK}</button>`
     : `<span class="check" aria-hidden="true">${CHECK}</span>`;
-  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""} ${enrolled ? "enrolled" : ""} ${det ? "has-details" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${attrs}>
+  return `<div class="card ${on ? "on" : ""} ${fixed ? "fixed" : ""} ${enrolled ? "enrolled" : ""} ${toReg ? "to-register" : ""} ${det ? "has-details" : ""}" style="--c:var(${g.color})" data-g="${g.id}" data-code="${mod.code}" ${attrs}>
     ${check}
-    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span>${enrolled ? `<span class="badge">Enrolled</span>` : ""}</div>
+    <div class="code mono"><span>${chosenLang ? chosenLang.code : mod.code}</span>${enrolled ? `<span class="badge">Enrolled</span>` : toReg ? `<span class="badge reg">To register</span>` : ""}</div>
     <div class="title">${chosenLang ? chosenLang.name : mod.name}</div>
     <div class="meta"><span class="lp">${mod.lp} LP</span>${swsBar(mod.sws)}${mod.extra ? `<span>${mod.extra}</span>` : ""}<span>${mod.pl} PL</span></div>
     ${langSel}
@@ -505,7 +513,7 @@ function toggle(el) {
   const g = GROUPS.find(x => x.id === el.dataset.g);
   if (!g || g.rule.type === "all") return;
   const mod = g.modules.find(x => x.code === el.dataset.code);
-  if (mod.lang || ENROLLED.has(mod.code)) return;
+  if (mod.lang || LOCKED(mod.code)) return;
   const key = g.id + ":" + mod.code;
   const s = sel();
   if (s.has(key)) s.delete(key);
@@ -547,7 +555,7 @@ function renderDialog(g, mod) {
     </div>
     <div class="dlg-foot">
       <a href="module.html?code=${encodeURIComponent(mod.code)}">Open module page →</a>
-      <button class="dlg-add ${on ? "on" : ""}" data-dlg-toggle ${fixed || ENROLLED.has(mod.code) ? "disabled" : ""}>${ENROLLED.has(mod.code) ? "Enrolled" : fixed ? "Required — always in your plan" : on ? "Remove from plan" : "Add to plan"}</button>
+      <button class="dlg-add ${on ? "on" : ""}" data-dlg-toggle ${fixed || LOCKED(mod.code) ? "disabled" : ""}>${ENROLLED.has(mod.code) ? "Enrolled" : TO_REGISTER.has(mod.code) ? "Planned — still to register" : fixed ? "Required — always in your plan" : on ? "Remove from plan" : "Add to plan"}</button>
     </div>`;
 }
 function openDetails(el) {

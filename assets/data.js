@@ -13,6 +13,15 @@ window.CMS = {
   "EXT-LLM",
   "CMS-TRK-CSD"
  ],
+ "toRegister": [
+  "CMS-TRK-DCD",
+  "CMS-TRK-MLSP",
+  "CMS-TRK-CAI",
+  "CMS-COR-SAP",
+  "CMS-COR-SSE",
+  "CMS-TRK-CV",
+  "CMS-TRK-HWSWC"
+ ],
  "sources": {
   "catalogue": "https://wwwdek.inf.tu-dresden.de/lv/en.html",
   "handbook": "https://tu-dresden.de/ing/informatik/ressourcen/dateien/cms/ordnungen-1/ModuleDescriptions_EN.pdf",
@@ -112,7 +121,8 @@ window.CMS = {
    },
    "goals": "Upon completion of the module, students will have mastered the fundamentals of stochastic modeling and simulation. They will be able to independently implement stochastic algorithms and formulate new ones.",
    "contents": "The module covers conditional probabilities, normal distributions and scale-free distributions, transformation of random variables, simulation of pseudo- and quasi-random numbers, Markov chains and their matrix representation, mixing times, Monte Carlo methods—in particular convergence, the law of large numbers, variance reduction, Rao-Blackwell, Importance sampling, Markov chain Monte Carlo using Metropolis-Hastings and Gibbs samplers, random processes and Brownian motion—in particular, properties in 1, 2, 3, and more dimensions—connection to the diffusion equation, stochastic differential equations—in particular, nonlinear transformations of Brownian motion, Ito calculus, Ornstein-Uhlenbeck process, and other solvable equations, numerical simulation of stochastic differential equations, in particular strong and weak error estimates, Euler-Maruyama scheme, Milstein scheme, stochastic optimization algorithms, and exact stochastic simulation algorithms for reaction networks.",
-   "links": {}
+   "links": {},
+   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan). Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it."
   },
   "CMS-COR-SSE": {
    "code": "CMS-COR-SSE",
@@ -131,7 +141,8 @@ window.CMS = {
    "prereq": "Object-oriented programming (Java, C#, Python, C++), UML",
    "goals": "Students will master fundamental methods, design elements, and notations for the systematic modeling, design, and development of large object-oriented software systems for scientific computing, with particular emphasis on the reuse of classes and frameworks, the use of design patterns, and the underlying principles of role-based modeling. They will be able to contribute to the design and development of large software systems in accordance with the current state of the art and apply these systems in practical scenarios.",
    "contents": "The module covers classic design patterns in UML and programming languages for the variability, extensibility, and reuse of components and software frameworks.",
-   "links": {}
+   "links": {},
+   "register": "Not in this winter's faculty catalogue under this name or module number. Its content (design patterns and frameworks, Prof. Aßmann's chair) matches the course “Design Patterns and Frameworks”; ask the study office whether that course counts as CMS-COR-SSE before registering."
   },
   "CMS-COR-VIZ": {
    "code": "CMS-COR-VIZ",
@@ -180,7 +191,8 @@ window.CMS = {
    },
    "goals": "Students will understand the functioning and fundamental design principles of digital circuits. Building on their knowledge of active semiconductor device models, they will learn the systematic design and analysis of basic digital and mixed-signal circuits. They understand the architectural and system concepts of complex digital systems and are familiar with the circuit-level characteristics of nanoscale CMOS technologies, methods for reducing power dissipation, measures to increase processing speed in high-speed circuits and interfaces, and the consideration of statistical effects of manufacturing technologies.",
    "contents": "The module covers the analysis, sizing, and optimization of basic digital combinational and sequential elements based on current semiconductor technologies, such as CMOS and BiCMOS; the design of complex logic functions in the form of arithmetic-logic circuits, such as ALUs, shifters and multipliers; finite-state machines; flip-flop and oscillator circuits; digital architecture and system concepts such as register-transfer logic, memory architectures—in particular DRAM, SRAM, EPROM, and mixed-signal circuits, such as ADCs, DACs, and interfaces, as well as methodologies for designing complex digital and mixed-signal systems, such as behavioral description, optimization, and validation.",
-   "links": {}
+   "links": {},
+   "register": "Required for the Applied AI track. Taught by the Faculty of Electrical Engineering, so its times aren't in the computer-science catalogue: look for the course in OPAL and on the chair's website. Register for the exam in Selma."
   },
   "CMS-TRK-CV": {
    "code": "CMS-TRK-CV",
@@ -205,7 +217,8 @@ window.CMS = {
    "contents": "The module covers color spaces, elementary linear and nonlinear operators in image analysis, the problem of image classification, artificial neural networks, convolutional networks, forward and backward propagation algorithms, image segmentation as an optimization problem, local search algorithms for image segmentation, object detection as an optimization problem, local search algorithms for object detection, object tracking as an optimization problem, and local search algorithms for object tracking.",
    "links": {
     "web": "https://mlcv.inf.tu-dresden.de/teaching.html"
-   }
+   },
+   "register": "Taught as “Computer Vision I” (Prof. Dr. Björn Andres). Join the course in OPAL and register for the exam in Selma. Session times aren't published yet."
   },
   "CMS-TRK-MLSP": {
    "code": "CMS-TRK-MLSP",
@@ -228,7 +241,8 @@ window.CMS = {
    },
    "goals": "Students will gain an overview of fundamental machine learning methods and their application in signal processing, with a particular focus on the estimation-theoretic foundations of learning algorithms. Students will understand the design principles of machine learning algorithms and the fundamental trade-off between the flexibility of a machine learning model and its generalization ability. They will be familiar with methods of signal preprocessing and signal representation for applying machine learning to signal processing problems.",
    "contents": "The module covers fundamental methods for regression and classification, such as linear regression, logistic regression, and the k-nearest-neighbor algorithm, as well as their foundations in estimation theory, the trade-off between a model’s flexibility and its generalization ability, characteristics of learning in high-dimensional spaces compared to learning in low-dimensional spaces, increasing the flexibility of linear models using polynomials and splines, wavelets for structured signal representation, key concepts of convex optimization, support vector machines, and the fundamentals of neural networks.",
-   "links": {}
+   "links": {},
+   "register": "Taught by the Faculty of Electrical Engineering (Dr.-Ing. Meik Dörpinghaus). In OPAL it may appear under its German title, “Maschinelles Lernen in der Signalverarbeitung”. Register for the exam in Selma."
   },
   "CMS-TRK-APSS": {
    "code": "CMS-TRK-APSS",
@@ -274,7 +288,10 @@ window.CMS = {
    "prereq": "None",
    "goals": "Students will be able to independently acquire knowledge of methods in the field of Conversational Artificial Intelligence from the literature and present this knowledge in English.",
    "contents": "The module covers methods in the field of dialogue-based artificial intelligence.",
-   "links": {}
+   "links": {
+    "web": "https://jens-lehmann.org/seminars-and-teaching/courses-at-tu-dresden/seminar-conversational-ai/"
+   },
+   "register": "Seminar by Hon.-Prof. Dr. Jens Lehmann. The seminar page says to register in both Selma and OPAL; the topic list is in the seminar slides."
   },
   "CMS-TRK-FCG": {
    "code": "CMS-TRK-FCG",
@@ -415,7 +432,8 @@ window.CMS = {
    "prereq": "Computer architecture, digital signal processing algorithms",
    "goals": "Students will gain an overview of current hardware architectures, particularly various hardware platforms for the software implementation of digital signal processing algorithms, and will be able to evaluate these platforms based on various criteria, such as flexibility and power consumption. Students can derive hardware requirements from algorithms, taking into account flexibility requirements for both hardware and software components. They are familiar with strategies for improving performance and minimizing power consumption and can apply these confidently.",
    "contents": "The module covers methods and various aspects of the hardware and software implementation of embedded systems, including those in communications engineering; the mutual influence of both design areas—that is, co-design—with a view to optimizing circuit design; and new parallel processing concepts resulting from massive scaling down toward the nanoscale.",
-   "links": {}
+   "links": {},
+   "register": "Summer-semester module, so it isn't offered this winter. Registration opens in the summer semester."
   },
   "CMS-TRK-ARCCAM": {
    "code": "CMS-TRK-ARCCAM",
