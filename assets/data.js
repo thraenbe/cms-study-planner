@@ -53,9 +53,75 @@ window.CMS = {
    "goals": "Students will be able to describe strategies and methods of parallel processing in parallel computer architectures. They will be able to evaluate parallel architectures and network concepts and assess their suitability for various parallel algorithms. They will be able to develop simple parallel programs that utilize different types of parallelism.",
    "contents": "The module covers the fundamentals of high-performance computing and its programming, as well as strategies and methods of parallel processing, including programming models widely used in supercomputing. Additional content includes architecture and network concepts, as well as the necessary algorithmic building blocks, closely linked to practical experience from the interdisciplinary field of work at the CIDS Department ZIH—Information Services and high-performance computing.",
    "links": {
-    "web": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung"
+    "web": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/55582162944"
    },
-   "note": "The course may start late, on 21 October; check the announcements in OPAL. Choose one of the three exercise groups. Slides and exercises are published in OPAL."
+   "note": "The course may start late, on 21 October; check the announcements in OPAL. Choose one of the three exercise groups. Slides and exercises are published in OPAL.",
+   "schedule": {
+    "src": "OPAL",
+    "rows": [
+     [
+      "2026-10-14",
+      "Introduction (the course might start late, on 21 Oct)"
+     ],
+     [
+      "2026-10-21",
+      "Basics of Parallelism"
+     ],
+     [
+      "2026-10-28",
+      "Batch Systems"
+     ],
+     [
+      "2026-11-04",
+      "Shared Memory: Parallelism within a Processor and on a Compute Node"
+     ],
+     [
+      "2026-11-11",
+      "Shared Memory Programming 1: Threads"
+     ],
+     [
+      "2026-11-18",
+      "No lecture (Buß- und Bettag)"
+     ],
+     [
+      "2026-11-25",
+      "Shared Memory Programming 2: SIMD & Dependencies"
+     ],
+     [
+      "2026-12-02",
+      "Distributed Memory: Networks"
+     ],
+     [
+      "2026-12-09",
+      "Distributed Memory Programming: MPI"
+     ],
+     [
+      "2026-12-16",
+      "Distributed Memory Programming: PGAS and Data Layout"
+     ],
+     [
+      "2027-01-06",
+      "Accelerators"
+     ],
+     [
+      "2027-01-13",
+      "Accelerator Programming: CUDA, OpenACC, and OpenMP"
+     ],
+     [
+      "2027-01-20",
+      "Performance Analysis"
+     ],
+     [
+      "2027-01-27",
+      "Load Balance, Power, and Energy"
+     ],
+     [
+      "2027-02-03",
+      "Summary, Outlook and Questions"
+     ]
+    ]
+   }
   },
   "CMS-COR-ML": {
    "code": "CMS-COR-ML",
@@ -122,8 +188,12 @@ window.CMS = {
    },
    "goals": "Upon completion of the module, students will have mastered the fundamentals of stochastic modeling and simulation. They will be able to independently implement stochastic algorithms and formulate new ones.",
    "contents": "The module covers conditional probabilities, normal distributions and scale-free distributions, transformation of random variables, simulation of pseudo- and quasi-random numbers, Markov chains and their matrix representation, mixing times, Monte Carlo methods—in particular convergence, the law of large numbers, variance reduction, Rao-Blackwell, Importance sampling, Markov chain Monte Carlo using Metropolis-Hastings and Gibbs samplers, random processes and Brownian motion—in particular, properties in 1, 2, 3, and more dimensions—connection to the diffusion equation, stochastic differential equations—in particular, nonlinear transformations of Brownian motion, Ito calculus, Ornstein-Uhlenbeck process, and other solvable equations, numerical simulation of stochastic differential equations, in particular strong and weak error estimates, Euler-Maruyama scheme, Milstein scheme, stochastic optimization algorithms, and exact stochastic simulation algorithms for reaction networks.",
-   "links": {},
-   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan). Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it."
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445134",
+    "opalNote": "This OPAL course is last year's (winter 2025/26); this winter's course may have a new page."
+   },
+   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan). Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it.",
+   "opalText": "This course enable the students to master the basics of stochastic modelling and simulation. The course first discusses discrete-time models, followed by two classic examples, and then goes on to discuss continuous-time models."
   },
   "CMS-COR-SSE": {
    "code": "CMS-COR-SSE",
@@ -167,9 +237,91 @@ window.CMS = {
    "goals": "Students will master the fundamentals and practices of scientific visualization of measurement and experimental data as well as simulation results. They will understand the fundamentals of visual perception and its influence on the design of visualizations. Students will be able to confidently specify data by dimension, feature types, and structure, and select appropriate visual attributes for a given specification. They are familiar with the most important forms of visualization for two-, three-, and multidimensional observation spaces, as well as for scalar, vector, tensor, and multidimensional feature values. They are able to select appropriate techniques for the respective visualization task. Students are familiar with basic presentation and interaction techniques and can implement them at a fundamental level in an interactive visual analysis system. They are familiar with the most important visualization frameworks, have gained practical experience with them, and are able to select them appropriately for the task at hand.",
    "contents": "The module covers the fundamentals of data visualization, focusing on the representation of different types of data as visual attributes and insights into human visual perception.",
    "links": {
-    "web": "https://mt.inf.tu-dresden.de/lehre/datavis"
+    "web": "https://mt.inf.tu-dresden.de/lehre/datavis",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56176246787"
    },
-   "note": "Lectures every Wednesday from 14 October. Exercises run only on six Wednesdays (the room is shared with User Interface Engineering). No session on 18 November (Buß- und Bettag) or 20 December – 3 January. Enrolment in OPAL and for the exam in Selma is open until 15 December 2026."
+   "note": "Lectures every Wednesday from 14 October. Exercises run only on six Wednesdays (the room is shared with User Interface Engineering). No session on 18 November (Buß- und Bettag) or 20 December – 3 January. Enrolment in OPAL and for the exam in Selma is open until 15 December 2026.",
+   "schedule": {
+    "src": "course page",
+    "lab": true,
+    "rows": [
+     [
+      "2026-10-14",
+      "Introduction",
+      "Introduction and E1: Dear Data"
+     ],
+     [
+      "2026-10-21",
+      "Visual Variables",
+      ""
+     ],
+     [
+      "2026-10-28",
+      "Perception",
+      ""
+     ],
+     [
+      "2026-11-04",
+      "Multivariate Data Visualization 1",
+      "E2: Multivariate Data"
+     ],
+     [
+      "2026-11-11",
+      "Multivariate Data Visualization 2",
+      ""
+     ],
+     [
+      "2026-11-18",
+      "No lecture or exercise (Buß- und Bettag)",
+      ""
+     ],
+     [
+      "2026-11-25",
+      "Visualizing Relations",
+      ""
+     ],
+     [
+      "2026-12-02",
+      "Presentation & Interaction 1",
+      "E3: Networks"
+     ],
+     [
+      "2026-12-09",
+      "Presentation & Interaction 2",
+      "E4: Elevation Data; [optional] Time Visualization"
+     ],
+     [
+      "2026-12-16",
+      "Introduction to Scientific Visualization",
+      ""
+     ],
+     [
+      "2027-01-06",
+      "Data Preparation",
+      "E5: Volume Data"
+     ],
+     [
+      "2027-01-13",
+      "Volume Visualization 1",
+      ""
+     ],
+     [
+      "2027-01-20",
+      "Volume Visualization 2",
+      ""
+     ],
+     [
+      "2027-01-27",
+      "Flow Visualization 1",
+      "Closing"
+     ],
+     [
+      "2027-02-03",
+      "Flow Visualization 2 + Summary & Outlook",
+      ""
+     ]
+    ]
+   }
   },
   "CMS-TRK-DCD": {
    "code": "CMS-TRK-DCD",
@@ -217,7 +369,8 @@ window.CMS = {
    "goals": "Students will become familiar with basic linear and nonlinear operators used in image analysis and will be able to implement and apply them independently. They will understand the problems of image classification, image segmentation, object detection, and object tracking in their mathematical formulations. They will be familiar with local search algorithms for these problems and will be able to implement them independently and apply them to image data. Students are familiar with and understand the mathematical concepts of artificial neural networks and convolutional networks. They are familiar with and understand the forward and backward propagation algorithms used in machine learning for deep artificial neural networks and are able to apply these algorithms to the problem of image classification. They can present subject-specific results in English.",
    "contents": "The module covers color spaces, elementary linear and nonlinear operators in image analysis, the problem of image classification, artificial neural networks, convolutional networks, forward and backward propagation algorithms, image segmentation as an optimization problem, local search algorithms for image segmentation, object detection as an optimization problem, local search algorithms for object detection, object tracking as an optimization problem, and local search algorithms for object tracking.",
    "links": {
-    "web": "https://mlcv.inf.tu-dresden.de/teaching.html"
+    "web": "https://mlcv.inf.tu-dresden.de/teaching.html",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56313610253"
    },
    "note": "You're in the OPAL course “Computer Vision - Winter 2026/27” (David Stein, Jannik Presberger, Björn Andres). Session times aren't published yet. Register for the exam in Selma."
   },
@@ -375,8 +528,11 @@ window.CMS = {
    "lang": "German or English",
    "goals": "Students will be able to systematically develop the data path (register-transfer description) and the control logic (FSM) of a numerically-based algorithm of their own choosing using a data dependency graph. They are familiar with the implementation workflow, which includes both the automated synthesis of complex blocks based on a hardware description language—such as Verilog—and manually optimized digital data path elements.",
    "contents": "The module covers the fundamentals and methods for developing application-specific digital integrated circuits (ASICs). This includes the conversion of a numerical algorithm into a data dependency graph, the application of scheduling and allocation methods, optimization with regard to resource consumption—such as area and runtime—as well as the implementation, functional verification, and simulation of the ASIC.",
-   "links": {},
-   "note": "Summer-semester module. You are already in its OPAL course; sessions start in the summer semester."
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/53465382917"
+   },
+   "note": "Summer-semester module. You are already in its OPAL course; sessions start in the summer semester.",
+   "opalText": "The module covers the fundamentals and methods for the development of application-specific digital integrated circuits (ASICs). This includes transforming a numerical algorithm into a data dependency graph, applying scheduling and allocation techniques, optimizing resource usage (area, runtime), as well as implementation and functional verification (simulation) of the ASIC."
   },
   "CMS-TRK-DNNH": {
    "code": "CMS-TRK-DNNH",
@@ -693,7 +849,9 @@ window.CMS = {
    },
    "goals": "Students will master the practical application and implementation of these concepts in an independent research project. They will be able to identify a problem and break it down into work steps that they can tackle independently. They can communicate independently about the project and have mastered the scientific methods of computer modeling—in particular, the design, implementation, and validation of models and simulations—and can apply these to complex application problems.",
    "contents": "The module focuses on a computer-aided modeling or simulation project.",
-   "links": {},
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56369152004"
+   },
    "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year."
   },
   "EXT-LLM": {
@@ -717,10 +875,91 @@ window.CMS = {
    "goals": "",
    "contents": "",
    "links": {
-    "web": "https://scads.ai/about-us/ai-professorships/lectures/behind-the-secrets-of-large-language-models/",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56000479232"
    },
-   "note": "Not a module of the Applied AI track in this study plan, so it counts toward no requirement there. The faculty catalogue lists it for the Computational Engineering, Life Sciences and Visual Computing tracks."
+   "note": "Questions go to the OPAL forum; personal matters to behind-the-secrets-of-llms-lecture2627@tu-dresden.de. Not a module of the Applied AI track in this study plan, so it counts toward no requirement there. The faculty catalogue lists it for the Computational Engineering, Life Sciences and Visual Computing tracks.",
+   "opalText": "This course provides a practical and in-depth understanding of large language models that power modern natural language processing systems. Students will explore the architecture, training methodologies, capabilities, and ethical implications of LLMs. The course combines theoretical knowledge with hands-on experience to equip students with the skills necessary to develop, analyze, and apply LLMs in various contexts.",
+   "schedule": {
+    "src": "OPAL (tentative)",
+    "lab": true,
+    "rows": [
+     [
+      "2026-10-12",
+      "Intro (Razniewski)",
+      "Crash course"
+     ],
+     [
+      "2026-10-19",
+      "Word representation (Razniewski)",
+      "Word representation"
+     ],
+     [
+      "2026-10-26",
+      "Neural networks (Färber)",
+      "Neural networks"
+     ],
+     [
+      "2026-11-02",
+      "Deep Learning + Attention (Färber)",
+      "Attention"
+     ],
+     [
+      "2026-11-09",
+      "Training data (Razniewski)",
+      "Training data"
+     ],
+     [
+      "2026-11-16",
+      "Architectures (Färber)",
+      "Architectures"
+     ],
+     [
+      "2026-11-23",
+      "Training (Razniewski)",
+      "Pre-training"
+     ],
+     [
+      "2026-11-30",
+      "Transfer learning (Färber)",
+      "Fine-tuning"
+     ],
+     [
+      "2026-12-07",
+      "Evaluation (Razniewski)",
+      "Evaluation"
+     ],
+     [
+      "2026-12-14",
+      "Applications (Färber)",
+      "Project work"
+     ],
+     [
+      "2027-01-04",
+      "RAG (Razniewski)",
+      ""
+     ],
+     [
+      "2027-01-11",
+      "Vision LMs",
+      ""
+     ],
+     [
+      "2027-01-18",
+      "Agents I",
+      ""
+     ],
+     [
+      "2027-01-25",
+      "LLM Knowledge (Razniewski)",
+      ""
+     ],
+     [
+      "2027-02-01",
+      "Ethics and safety (Razniewski)",
+      ""
+     ]
+    ]
+   }
   }
  },
  "sessions": [
@@ -730,9 +969,9 @@ window.CMS = {
    "day": 3,
    "start": "09:20",
    "end": "10:50",
-   "room": "TOE/0317/H",
-   "who": "Prof. Dr. Wolfgang Nagel",
-   "src": "catalogue"
+   "room": "TOE/A317/H",
+   "who": "Prof. Dr. Wolfgang E. Nagel",
+   "src": "OPAL"
   },
   {
    "code": "CMS-COR-HPC",
@@ -740,10 +979,9 @@ window.CMS = {
    "day": 1,
    "start": "09:20",
    "end": "10:50",
-   "room": "APB/E009/U",
-   "who": "Dr. Robert Schöne",
-   "src": "catalogue",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2140",
+   "room": "online",
+   "who": "",
+   "src": "OPAL",
    "group": "A"
   },
   {
@@ -753,8 +991,8 @@ window.CMS = {
    "start": "09:20",
    "end": "10:50",
    "room": "APB/E008/U",
-   "who": "Dr. Robert Schöne",
-   "src": "catalogue",
+   "who": "",
+   "src": "OPAL",
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2130",
    "group": "B"
   },
@@ -764,9 +1002,9 @@ window.CMS = {
    "day": 3,
    "start": "07:30",
    "end": "09:00",
-   "room": "TOE/0317/H",
-   "who": "Dr. Robert Schöne",
-   "src": "catalogue",
+   "room": "TOE/A317/H",
+   "who": "",
+   "src": "OPAL",
    "group": "C"
   },
   {
@@ -864,18 +1102,18 @@ window.CMS = {
    "start": "09:20",
    "end": "10:50",
    "room": "FOE/0244/H",
-   "who": "Prof. Dr. Michael Färber",
-   "src": "catalogue"
+   "who": "Michael Färber, Simon Razniewski",
+   "src": "OPAL"
   },
   {
    "code": "EXT-LLM",
-   "kind": "Exercise",
+   "kind": "Lab",
    "day": 1,
    "start": "14:50",
    "end": "16:20",
    "room": "APB/E023/U",
-   "who": "Prof. Dr. Michael Färber",
-   "src": "catalogue",
+   "who": "",
+   "src": "OPAL",
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310"
   },
   {

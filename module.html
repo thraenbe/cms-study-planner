@@ -35,6 +35,18 @@ table.sess { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .sess button { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .sess button:hover { border-color: var(--ink-3); }
 .empty { color: var(--ink-2); font-size: 14px; margin: 0; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.head-actions .hint { font-size: 12.5px; color: var(--warn); }
+blockquote.opal { margin: 0; padding: 2px 0 2px 14px; border-left: 3px solid var(--line); color: var(--ink); font-size: 15px; line-height: 1.6; max-width: 72ch; }
+.src { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; }
+table.plan { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.plan th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+.plan td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.plan td.d { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; color: var(--ink-2); width: 92px; }
+.plan tr.past td { color: var(--ink-3); }
+.plan tr.next td { background: color-mix(in srgb, var(--c) 9%, transparent); }
+.plan tr.next td.d::after { content: " ← next"; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; color: var(--c); }
+.plan tr.off td { color: var(--ink-3); font-style: italic; }
 
 dl.facts { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 0; font-size: 13.5px; }
 .facts dt { color: var(--ink-3); font-size: 12px; margin-top: 10px; }
@@ -73,7 +85,7 @@ function render() {
     return;
   }
   document.title = m.name + " · CMS";
-  const color = `var(--c-${m.group ? ({ core: "core", trkreq: "trkreq", team: "team", req: "req" }[m.group] || "trk") : "ext"})`;
+  const color = headColor();
   const enrolled = CMS.enrolled.includes(code);
   const sessions = CMS.sessions.filter(s => s.code === code);
   const chosen = U.groups()[code];
@@ -113,6 +125,7 @@ function render() {
         <span class="chip ${offeredNow ? "enrolled" : "offered"}">${offeredNow ? "Offered this semester" : "Not offered this semester"}</span>
       </div>
       <p class="lead">${esc(m.desc)}</p>
+      ${m.links?.opal ? `<div class="head-actions"><a class="btn primary" href="${m.links.opal}" target="_blank" rel="noopener">Open in OPAL ↗</a>${m.links.opalNote ? `<span class="hint">${esc(m.links.opalNote)}</span>` : ""}</div>` : ""}
     </div>
     <div class="layout">
       <div class="main">
@@ -124,9 +137,11 @@ function render() {
           ${sessionsHTML}
           ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}
         </section>
+        ${scheduleHTML()}
+        ${m.opalText ? `<section class="panel"><h2>Course description (OPAL)</h2><blockquote class="opal">${esc(m.opalText)}</blockquote><p class="src">From the course's public OPAL page.</p></section>` : ""}
         ${m.goals ? `<section class="panel"><h2>Learning goals</h2><p class="prose">${esc(m.goals)}</p></section>` : ""}
         ${m.contents ? `<section class="panel"><h2>Contents</h2><p class="prose">${esc(m.contents)}</p></section>` : ""}
-        ${!m.goals && !m.contents ? `<section class="panel"><h2>Contents</h2><p class="prose">This course isn't in the CMS module descriptions. The summary above is based on the course's own page; see the links for the syllabus.</p></section>` : ""}
+        ${!m.goals && !m.contents && !m.opalText ? `<section class="panel"><h2>Contents</h2><p class="prose">This course isn't in the CMS module descriptions. The summary above is based on the course's own page; see the links for the syllabus.</p></section>` : ""}
       </div>
       <aside class="panel side">
         <dl class="facts">
@@ -141,7 +156,7 @@ function render() {
         </dl>
         <div class="links">
           ${m.links?.web ? `<a href="${m.links.web}" target="_blank" rel="noopener">Course website ↗</a>` : ""}
-          ${m.links?.opal ? `<a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course ↗</a>` : ""}
+          ${m.links?.opal ? `<a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course ↗</a>${m.links.opalNote ? ` <span class="sub" style="font-size:12px;color:var(--warn)">(last year's)</span>` : ""}` : ""}
           ${catalogueLink ? `<a href="${catalogueLink}" target="_blank" rel="noopener">Faculty course catalogue ↗</a>` : ""}
           ${m.goals ? `<a href="${CMS.sources.handbook}" target="_blank" rel="noopener">Official module description (PDF) ↗</a>` : ""}
         </div>
@@ -149,6 +164,24 @@ function render() {
       </aside>
     </div>
     <p class="foot">Sessions from the Faculty of Computer Science course offerings and course pages, as of ${CMS.updated}. Learning goals and contents are quoted from the official module descriptions.</p>`;
+}
+
+// Session-by-session plan, with past dates dimmed and the next one highlighted.
+function scheduleHTML() {
+  const sc = m.schedule;
+  if (!sc) return "";
+  const today = new Date().toISOString().slice(0, 10);
+  const next = sc.rows.find(r => r[0] >= today)?.[0];
+  const rows = sc.rows.map(([d, topic, lab]) => {
+    const cls = [d < today ? "past" : "", d === next ? "next" : "", /^No lecture/.test(topic) ? "off" : ""].join(" ");
+    return `<tr class="${cls}"><td class="d">${U.fmtDate(d)}</td><td>${esc(topic)}</td>${sc.lab ? `<td>${esc(lab || "—")}</td>` : ""}</tr>`;
+  }).join("");
+  return `<section class="panel" style="--c:${headColor()}"><h2>Course schedule</h2>
+    <table class="plan"><thead><tr><th>Date</th><th>Lecture</th>${sc.lab ? "<th>Exercise / lab</th>" : ""}</tr></thead><tbody>${rows}</tbody></table>
+    <p class="src">Source: ${esc(sc.src)}. Dates can change; check OPAL announcements.</p></section>`;
+}
+function headColor() {
+  return `var(--c-${m.group ? ({ core: "core", trkreq: "trkreq", team: "team", req: "req" }[m.group] || "trk") : "ext"})`;
 }
 
 page.addEventListener("click", e => {
