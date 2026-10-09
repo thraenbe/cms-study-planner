@@ -139,7 +139,7 @@ a.mod.reg { border-top-style: dashed; }
   </div>
 
   <h2 class="sec">My courses</h2>
-  <p class="sec-sub">What you're enrolled in on OPAL.</p>
+  <p class="sec-sub">What you're enrolled in on OPAL. Modules without published times aren't in the timetable yet.</p>
   <div class="mods" id="mine"></div>
 
   <h2 class="sec">Still to register</h2>
@@ -156,8 +156,10 @@ a.mod.reg { border-top-style: dashed; }
 <script>
 const U = CMSUtil, esc = U.esc;
 const COLORS = ["--m1", "--m2", "--m3", "--m4", "--m5"];
-// Enrolled courses that have sessions this semester.
+// Enrolled courses that have sessions this semester (timetable colours).
 const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
+// Enrolled courses taught this semester, with or without fixed sessions.
+const nowEnrolled = CMS.enrolled.filter(c => CMSUtil.offeredNow(CMS.modules[c]));
 const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
 const mod = code => CMS.modules[code];
 const SHORT = { "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving" };
@@ -165,7 +167,7 @@ const shortName = code => SHORT[code] || mod(code).name;
 const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
 const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
 const datesNote = s => s.dates ? `only on ${s.dates.map(U.fmtDate).join(", ")}` : "";
-const areaColor = m => `var(--c-${{ core: "core", trkreq: "trkreq", team: "team" }[m.group] || "trk"})`;
+const areaColor = m => `var(--c-${{ core: "core", trkreq: "trkreq", team: "team", req: "req" }[m.group] || "trk"})`;
 
 const START = 7 * 60 + 30, END = 18 * 60 + 30, PX = 1.05;
 const SLOTS = ["07:30", "09:20", "11:10", "13:00", "14:50", "16:40"];
@@ -202,15 +204,17 @@ function render() {
   const today = new Date().getDay();
 
   // Overview
-  const lp = current.reduce((a, c) => a + (mod(c).lp || 0), 0);
+  const lp = nowEnrolled.reduce((a, c) => a + (mod(c).lp || 0), 0);
   const hours = committed.filter(s => !s.dates).reduce((a, s) => a + (U.mins(s.end) - U.mins(s.start)) / 60, 0);
-  const toPick = current.filter(c => CMS.sessions.some(s => s.code === c && s.group) && !groups[c]);
-  const later = CMS.enrolled.filter(c => !current.includes(c));
+  // Only modules whose group sessions have published times can be picked yet.
+  const hasTimedGroups = c => CMS.sessions.some(s => s.code === c && s.group && s.start);
+  const toPick = current.filter(c => hasTimedGroups(c) && !groups[c]);
+  const later = CMS.enrolled.filter(c => !nowEnrolled.includes(c));
   document.getElementById("title").textContent = CMS.semester;
   const regNow = (CMS.toRegister || []).filter(c => U.offeredNow(mod(c)));
   const lpPlanned = lp + regNow.reduce((a, c) => a + mod(c).lp, 0);
   document.getElementById("stats").innerHTML = [
-    [current.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
+    [nowEnrolled.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
     [regNow.length, `still to register this semester${CMS.toRegister.length > regNow.length ? ` (+${CMS.toRegister.length - regNow.length} in summer)` : ""}`],
     [lpPlanned + " LP", `this semester once registered (${lp} LP so far)`],
     [(Math.round(hours * 10) / 10) + " h", "weekly contact time so far (sessions every week)"],
@@ -243,7 +247,7 @@ function render() {
   document.getElementById("alerts").innerHTML = alerts.join("");
 
   // Exercise-group picker
-  const withGroups = current.filter(c => CMS.sessions.some(s => s.code === c && s.group));
+  const withGroups = current.filter(hasTimedGroups);
   document.getElementById("picker").innerHTML = `<h3>Exercise groups</h3><p class="hint">Pick the group you'll attend. Crossed-out options clash with one of your lectures.</p>` +
     withGroups.map(c => {
       const opts = CMS.sessions.filter(s => s.code === c && s.group);
@@ -296,12 +300,18 @@ function render() {
   // My courses
   document.getElementById("mine").innerHTML = CMS.enrolled.map(c => {
     const m = mod(c);
-    const att = U.attended(c);
-    const pending = CMS.sessions.some(s => s.code === c && s.group) && !groups[c];
-    const when = att.length
-      ? att.map(s => `<span>${s.kind}: ${U.DAYS_SHORT[s.day]} ${time(s)} · ${esc(s.room)}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`).join("") + (pending ? `<span style="color:var(--warn)">Exercise group not picked yet</span>` : "")
-      : `<span>Summer semester — no sessions this winter</span>`;
-    return `<a class="mod" href="${U.moduleUrl(c)}" style="--c:${colorOf(c)}">
+    const pending = hasTimedGroups(c) && !groups[c];
+    const all = CMS.sessions.filter(s => s.code === c);
+    // Attended sessions; while no group is chosen, one line stands in for all groups.
+    // Attended sessions; while no group is chosen, one line stands in for all groups.
+    const shown = all.filter(s => !s.group || s.group === (groups[c] || "A"));
+    const nG = all.filter(x => x.group).length;
+    const line = s => s.group && !groups[c] ? `<span>${s.kind}: ${nG} groups to choose from</span>`
+      : `<span>${s.kind}: ${U.when(s)}${s.room && s.start ? " · " + esc(s.room) : ""}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`;
+    const when = shown.length
+      ? shown.map(line).join("") + (pending ? `<span style="color:var(--warn)">Exercise group not picked yet</span>` : "")
+      : U.offeredNow(m) ? `<span>No timetabled sessions — project work</span>` : `<span>Summer semester — no sessions this winter</span>`;
+    return `<a class="mod" href="${U.moduleUrl(c)}" style="--c:${current.includes(c) ? colorOf(c) : m.group ? areaColor(m) : "var(--ink-3)"}">
       <div class="top"><span class="mono">${c.startsWith("EXT") ? "Outside the study plan" : c}</span><span class="chip enrolled">Enrolled</span></div>
       <div class="name">${esc(m.name)}</div>
       <div class="area">${esc(m.area)}${m.lp ? ` · ${m.lp} LP` : ""}</div>

@@ -73,7 +73,7 @@ function render() {
     return;
   }
   document.title = m.name + " · CMS";
-  const color = `var(--c-${m.group ? ({ core: "core", trkreq: "trkreq", team: "team" }[m.group] || "trk") : "ext"})`;
+  const color = `var(--c-${m.group ? ({ core: "core", trkreq: "trkreq", team: "team", req: "req" }[m.group] || "trk") : "ext"})`;
   const enrolled = CMS.enrolled.includes(code);
   const sessions = CMS.sessions.filter(s => s.code === code);
   const chosen = U.groups()[code];

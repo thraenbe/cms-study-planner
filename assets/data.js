@@ -10,6 +10,8 @@ window.CMS = {
   "CMS-COR-HPC",
   "CMS-COR-VIZ",
   "CMS-TRK-APSS",
+  "CMS-TRK-CV",
+  "CMS-PRO",
   "EXT-LLM",
   "CMS-TRK-CSD"
  ],
@@ -19,7 +21,6 @@ window.CMS = {
   "CMS-TRK-CAI",
   "CMS-COR-SAP",
   "CMS-COR-SSE",
-  "CMS-TRK-CV",
   "CMS-TRK-HWSWC"
  ],
  "sources": {
@@ -46,7 +47,7 @@ window.CMS = {
    "prereq": "Setting up computer systems, Unix command line, C programming",
    "lang": "German or English",
    "winter": {
-    "who": "Prof. Dr. Wolfgang Nagel (lecture), Dr. Robert Schöne (exercises)",
+    "who": "Dr. Robert Schöne, Markus Velten, Josef Weidendorfer (per OPAL); lecture listed under Prof. Dr. Wolfgang Nagel",
     "q": "High Performance Computing"
    },
    "goals": "Students will be able to describe strategies and methods of parallel processing in parallel computer architectures. They will be able to evaluate parallel architectures and network concepts and assess their suitability for various parallel algorithms. They will be able to develop simple parallel programs that utilize different types of parallelism.",
@@ -54,7 +55,7 @@ window.CMS = {
    "links": {
     "web": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung"
    },
-   "note": "Choose one of the three exercise groups. Slides and exercises are published in OPAL."
+   "note": "The course may start late, on 21 October; check the announcements in OPAL. Choose one of the three exercise groups. Slides and exercises are published in OPAL."
   },
   "CMS-COR-ML": {
    "code": "CMS-COR-ML",
@@ -218,7 +219,7 @@ window.CMS = {
    "links": {
     "web": "https://mlcv.inf.tu-dresden.de/teaching.html"
    },
-   "register": "Taught as “Computer Vision I” (Prof. Dr. Björn Andres). Join the course in OPAL and register for the exam in Selma. Session times aren't published yet."
+   "note": "You're in the OPAL course “Computer Vision - Winter 2026/27” (David Stein, Jannik Presberger, Björn Andres). Session times aren't published yet. Register for the exam in Selma."
   },
   "CMS-TRK-MLSP": {
    "code": "CMS-TRK-MLSP",
@@ -670,6 +671,30 @@ window.CMS = {
    "goals": "Students will be able to work on a complex, research-oriented project that requires expertise from multiple areas of applied artificial intelligence, including hardware-software co-design. Students will be able to work in a group to solve a larger, typically interdisciplinary problem in the field of applied artificial intelligence, particularly the implementation of AI algorithms on a given accelerator architecture. They are proficient in conducting literature reviews and utilizing scientific information sources, and possess both in-depth subject-matter expertise and extensive methodological and interpersonal skills related to project management and teamwork.",
    "contents": "The module covers the analysis of a practical problem from the field of machine learning, as well as the implementation of the algorithm on a given accelerator architecture. It also addresses the optimization of the algorithm for the accelerator—for example, with regard to structural and dynamic sparsity, data flow, or quantization—as well as the implementation and analysis of the optimization in terms of effectiveness and its impact on the problem and application.",
    "links": {}
+  },
+  "CMS-PRO": {
+   "code": "CMS-PRO",
+   "name": "Research Assignment",
+   "area": "Required course",
+   "group": "req",
+   "planSem": 3,
+   "lp": 15,
+   "sws": "",
+   "extra": "12 SWS project per year",
+   "pl": 1,
+   "desc": "An independent research project in computer-aided modeling or simulation. You define a problem, break it into work steps, and design, implement and validate models and simulations for it, then communicate the results.",
+   "coord": "Prof. Dr. Martin Weigert",
+   "freq": "Every winter semester",
+   "exam": "Project assignment (240 h)",
+   "prereq": "None",
+   "winter": {
+    "who": "Chair of Machine Learning for Computer Vision: Jannik Presberger, Lucas Fabian Naumann, David Stein, Prof. Dr. Björn Andres",
+    "q": "CMS Research Project Machine Learning"
+   },
+   "goals": "Students will master the practical application and implementation of these concepts in an independent research project. They will be able to identify a problem and break it down into work steps that they can tackle independently. They can communicate independently about the project and have mastered the scientific methods of computer modeling—in particular, the design, implementation, and validation of models and simulations—and can apply these to complex application problems.",
+   "contents": "The module focuses on a computer-aided modeling or simulation project.",
+   "links": {},
+   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year."
   },
   "EXT-LLM": {
    "code": "EXT-LLM",
