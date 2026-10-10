@@ -44,10 +44,17 @@ window.CMSUtil = {
   priorityOf: code => (CMS.priorities || []).find(p => p.options.includes(code)) || null,
   offeredNow: m => /winter|every semester/i.test(m.freq || ""),
   // Chosen exercise/tutorial group per module, stored per browser.
-  groups() { try { return JSON.parse(localStorage.getItem("cms-groups") || "{}"); } catch (e) { return {}; } },
+  // Groups registered in OPAL (data.js) unless this browser picked something else.
+  groups() {
+    let mine = {};
+    try { mine = JSON.parse(localStorage.getItem("cms-groups") || "{}"); } catch (e) {}
+    return { ...(CMS.defaultGroups || {}), ...mine };
+  },
   setGroup(code, g) {
     const all = this.groups();
     if (g) all[code] = g; else delete all[code];
+    // keep only real choices: a choice equal to the OPAL default needn't be stored
+    Object.keys(all).forEach(c => { if (CMS.defaultGroups?.[c] === all[c]) delete all[c]; });
     try { localStorage.setItem("cms-groups", JSON.stringify(all)); } catch (e) {}
   },
   // Sessions a student actually attends: all non-group sessions plus the chosen group.

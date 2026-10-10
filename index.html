@@ -177,7 +177,7 @@ const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
 const nowEnrolled = CMS.enrolled.filter(c => CMSUtil.offeredNow(CMS.modules[c]));
 const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
 const mod = code => CMS.modules[code];
-const SHORT = { "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
+const SHORT = { "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
 const shortName = code => SHORT[code] || mod(code).name;
 const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
 const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
@@ -243,7 +243,7 @@ function render() {
   committed.forEach(a => U.clashesWith(a, committed).forEach(b => {
     const key = [a, b].map(s => s.code + s.kind + s.day + s.start).sort().join("|");
     if (seen.has(key)) return; seen.add(key);
-    alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}.</div></div>`);
+    alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}${a.dates || b.dates ? ` (on the ${(a.dates || b.dates).length} dates the ${esc(shortName((a.dates ? a : b).code))} ${(a.dates ? a : b).kind.toLowerCase()} runs)` : ""}.</div></div>`);
   }));
   // OPAL problems first (e.g. all exercise groups full)
   Object.entries(CMS.opalStatus || {}).filter(([, st]) => st.level === "bad").forEach(([c, st]) =>

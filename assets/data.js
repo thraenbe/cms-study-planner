@@ -12,9 +12,14 @@ window.CMS = {
   "CMS-TRK-APSS",
   "CMS-TRK-CV",
   "CMS-PRO",
+  "CMS-TRK-DCD",
+  "CMS-TRK-MLSP",
   "EXT-LLM",
   "CMS-TRK-CSD"
  ],
+ "defaultGroups": {
+  "CMS-TRK-CV": "A"
+ },
  "toRegister": [
   "CMS-TRK-DCD",
   "CMS-TRK-MLSP",
@@ -29,8 +34,24 @@ window.CMS = {
    "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
   },
   "CMS-TRK-CV": {
+   "level": "ok",
+   "text": "In the course group and in exercise group 1 (Tuesday 13:00, SCH/A251)."
+  },
+  "CMS-TRK-DCD": {
+   "level": "ok",
+   "text": "Enrolled in the WS 26/27 student group of “Digital Circuit Technology / Digitale Schaltungstechnik” (58 of 300)."
+  },
+  "CMS-TRK-MLSP": {
+   "level": "ok",
+   "text": "Enrolled for winter 2026/27 (24 of 50 places)."
+  },
+  "CMS-TRK-CAI": {
    "level": "warn",
-   "text": "In the course group. Exercise group not picked yet: group 1 (Tue) or group 2 (Thu), both have places."
+   "text": "The seminar is full (15/15); you're 3rd on the waiting list. Sign-up closes 15 Oct, 11:00."
+  },
+  "CMS-COR-SAP": {
+   "level": "warn",
+   "text": "No OPAL course for this winter yet; the only one is last year's. Check again before the first lecture."
   },
   "CMS-TRK-APSS": {
    "level": "warn",
@@ -398,8 +419,11 @@ window.CMS = {
    },
    "goals": "Students will understand the functioning and fundamental design principles of digital circuits. Building on their knowledge of active semiconductor device models, they will learn the systematic design and analysis of basic digital and mixed-signal circuits. They understand the architectural and system concepts of complex digital systems and are familiar with the circuit-level characteristics of nanoscale CMOS technologies, methods for reducing power dissipation, measures to increase processing speed in high-speed circuits and interfaces, and the consideration of statistical effects of manufacturing technologies.",
    "contents": "The module covers the analysis, sizing, and optimization of basic digital combinational and sequential elements based on current semiconductor technologies, such as CMOS and BiCMOS; the design of complex logic functions in the form of arithmetic-logic circuits, such as ALUs, shifters and multipliers; finite-state machines; flip-flop and oscillator circuits; digital architecture and system concepts such as register-transfer logic, memory architectures—in particular DRAM, SRAM, EPROM, and mixed-signal circuits, such as ADCs, DACs, and interfaces, as well as methodologies for designing complex digital and mixed-signal systems, such as behavioral description, optimization, and validation.",
-   "links": {},
-   "register": "Required for the Applied AI track. Taught by the Faculty of Electrical Engineering, so its times aren't in the computer-science catalogue: look for the course in OPAL and on the chair's website. Register for the exam in Selma."
+   "links": {
+    "web": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/dst",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/26351140878"
+   },
+   "register": "Required for the Applied AI track. In OPAL the course is called “Digital Circuit Technology / Digitale Schaltungstechnik” (Chair of Highly-Parallel VLSI Systems). Lecture and exercise times are on the chair's winter timetable, linked from the course page. Register for the exam in Selma."
   },
   "CMS-TRK-CV": {
    "code": "CMS-TRK-CV",
@@ -449,8 +473,103 @@ window.CMS = {
    },
    "goals": "Students will gain an overview of fundamental machine learning methods and their application in signal processing, with a particular focus on the estimation-theoretic foundations of learning algorithms. Students will understand the design principles of machine learning algorithms and the fundamental trade-off between the flexibility of a machine learning model and its generalization ability. They will be familiar with methods of signal preprocessing and signal representation for applying machine learning to signal processing problems.",
    "contents": "The module covers fundamental methods for regression and classification, such as linear regression, logistic regression, and the k-nearest-neighbor algorithm, as well as their foundations in estimation theory, the trade-off between a model’s flexibility and its generalization ability, characteristics of learning in high-dimensional spaces compared to learning in low-dimensional spaces, increasing the flexibility of linear models using polynomials and splines, wavelets for structured signal representation, key concepts of convex optimization, support vector machines, and the fundamentals of neural networks.",
-   "links": {},
-   "register": "Taught by the Faculty of Electrical Engineering (Dr.-Ing. Meik Dörpinghaus). In OPAL it may appear under its German title, “Maschinelles Lernen in der Signalverarbeitung”. Register for the exam in Selma."
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/21509210126"
+   },
+   "register": "In OPAL as “Maschinelles Lernen in der Signalverarbeitung” (Dr.-Ing. Meik Dörpinghaus). Lectures and exercises are in person; programming exercises handed out during the semester are mandatory for CMS-TRK-MLSP. Register for the exam in Selma.",
+   "schedule": {
+    "src": "OPAL",
+    "rows": [
+     [
+      "2026-10-13",
+      "Exercise 1"
+     ],
+     [
+      "2026-10-16",
+      "Lecture 1"
+     ],
+     [
+      "2026-10-23",
+      "Lecture 2"
+     ],
+     [
+      "2026-10-27",
+      "Exercise 2"
+     ],
+     [
+      "2026-10-30",
+      "Lecture 3"
+     ],
+     [
+      "2026-11-06",
+      "Lecture 4"
+     ],
+     [
+      "2026-11-10",
+      "Exercise 3"
+     ],
+     [
+      "2026-11-13",
+      "Lecture 5"
+     ],
+     [
+      "2026-11-20",
+      "Lecture 6"
+     ],
+     [
+      "2026-11-24",
+      "Exercise 4"
+     ],
+     [
+      "2026-11-27",
+      "Lecture 7"
+     ],
+     [
+      "2026-12-04",
+      "Lecture 8"
+     ],
+     [
+      "2026-12-08",
+      "Exercise 5"
+     ],
+     [
+      "2026-12-11",
+      "Lecture 9"
+     ],
+     [
+      "2026-12-18",
+      "Lecture 10"
+     ],
+     [
+      "2027-01-08",
+      "Lecture 11"
+     ],
+     [
+      "2027-01-12",
+      "Exercise 6"
+     ],
+     [
+      "2027-01-15",
+      "Lecture 12"
+     ],
+     [
+      "2027-01-22",
+      "Lecture 13"
+     ],
+     [
+      "2027-01-26",
+      "Exercise 7"
+     ],
+     [
+      "2027-01-29",
+      "Lecture 14"
+     ],
+     [
+      "2027-02-05",
+      "Lecture 15"
+     ]
+    ]
+   }
   },
   "CMS-TRK-APSS": {
    "code": "CMS-TRK-APSS",
@@ -497,9 +616,10 @@ window.CMS = {
    "goals": "Students will be able to independently acquire knowledge of methods in the field of Conversational Artificial Intelligence from the literature and present this knowledge in English.",
    "contents": "The module covers methods in the field of dialogue-based artificial intelligence.",
    "links": {
-    "web": "https://jens-lehmann.org/seminars-and-teaching/courses-at-tu-dresden/seminar-conversational-ai/"
+    "web": "https://jens-lehmann.org/seminars-and-teaching/courses-at-tu-dresden/seminar-conversational-ai/",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56149671937"
    },
-   "register": "Seminar by Hon.-Prof. Dr. Jens Lehmann. The seminar page says to register in both Selma and OPAL; the topic list is in the seminar slides.",
+   "register": "Seminar “Conversational AI 2026” (Charvi Jain, chair of Hon.-Prof. Dr. Jens Lehmann), starting 15 Oct. Two intro lectures, then each student presents a topic (e.g. LLM architectures, knowledge retrieval, LLMs and knowledge graphs, agentic workflows); interim presentation late Nov / early Dec, final presentations after New Year. Register in Selma and OPAL.",
    "winter": {
     "who": "Hon.-Prof. Dr. Jens Lehmann",
     "q": "Conversational Artificial Intelligence"
@@ -1273,6 +1393,46 @@ window.CMS = {
    "room": "room tbd",
    "who": "Chair of Machine Learning for Computer Vision",
    "src": "course page"
+  },
+  {
+   "code": "CMS-TRK-MLSP",
+   "kind": "Lecture",
+   "day": 5,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "BAR/I86C/U",
+   "who": "Dr.-Ing. Meik Dörpinghaus",
+   "src": "OPAL"
+  },
+  {
+   "code": "CMS-TRK-MLSP",
+   "kind": "Exercise",
+   "day": 2,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "BAR/I86C/U",
+   "who": "",
+   "src": "OPAL",
+   "dates": [
+    "2026-10-13",
+    "2026-10-27",
+    "2026-11-10",
+    "2026-11-24",
+    "2026-12-08",
+    "2027-01-12",
+    "2027-01-26"
+   ]
+  },
+  {
+   "code": "CMS-TRK-CAI",
+   "kind": "Seminar",
+   "day": 4,
+   "start": "11:10",
+   "end": "12:40",
+   "room": "APB/E006/U",
+   "who": "Charvi Jain",
+   "src": "OPAL",
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110"
   },
   {
    "code": "CMS-TRK-FCG",
