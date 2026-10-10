@@ -111,6 +111,9 @@ a.mod.reg { border-top-style: dashed; }
 .pr a.opt:hover { border-color: var(--c); }
 .pr a.opt.na { color: var(--ink-3); }
 .pr .hint { font-size: 12.5px; color: var(--ink-2); margin: 0; padding-top: 6px; border-top: 1px solid var(--line); }
+.mod .opal { font-size: 12.5px; line-height: 1.4; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); }
+.mod .opal.bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
+.mod .opal.warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); color: var(--ink); }
 .mods.other a.mod { border-top-width: 1px; border-left: 4px solid var(--c); box-shadow: none; }
 
 @media (max-width: 1000px) {
@@ -242,7 +245,11 @@ function render() {
     if (seen.has(key)) return; seen.add(key);
     alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}.</div></div>`);
   }));
+  // OPAL problems first (e.g. all exercise groups full)
+  Object.entries(CMS.opalStatus || {}).filter(([, st]) => st.level === "bad").forEach(([c, st]) =>
+    alerts.push(`<div class="alert bad"><span class="chip bad">OPAL</span><div><b>${esc(mod(c).name)}:</b> ${esc(st.text)}</div></div>`));
   toPick.forEach(c => {
+    if (CMS.opalStatus?.[c]?.level === "bad") return;
     const opts = CMS.sessions.filter(s => s.code === c && s.group);
     const fits = opts.filter(o => !U.clashesWith(o, lectures).length);
     if (fits.length === 1 && opts.length > 1) {
@@ -327,6 +334,7 @@ function render() {
       <div class="name">${esc(m.name)}</div>
       <div class="area">${esc(m.area)}${m.lp ? ` · ${m.lp} LP` : ""}</div>
       <div class="when">${when}</div>
+      ${CMS.opalStatus?.[c] ? `<div class="opal ${CMS.opalStatus[c].level}">OPAL: ${esc(CMS.opalStatus[c].text)}</div>` : ""}
       <div class="go">Module page →</div>
     </a>`;
   }).join("");

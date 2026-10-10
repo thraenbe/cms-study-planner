@@ -135,6 +135,9 @@ function render() {
           ${prio ? `<p class="prose" style="margin-bottom:8px"><b>Priority this semester:</b> ${esc(prio.title)}${prio.options.length > 1 ? ` — one of ${prio.options.map(c => c === code ? "this module" : `<a href="${U.moduleUrl(c)}">${esc(CMS.modules[c].name)}</a>`).join(", ")}` : ""}.</p>` : ""}
           <p class="prose">${esc(m.register)}</p>
         </section>` : ""}
+        ${CMS.opalStatus?.[code] ? `<section class="panel" style="border-color:color-mix(in srgb, var(--${({ ok: "ok", warn: "warn", bad: "bad" })[CMS.opalStatus[code].level]}) 45%, var(--line))">
+          <h2>Your OPAL status</h2><p class="prose">${esc(CMS.opalStatus[code].text)}</p><p class="src">Checked in your OPAL account on ${U.fmtDate(CMS.opalChecked)}.</p>
+        </section>` : ""}
         <section class="panel">
           <h2>This semester · ${esc(CMS.semester)}</h2>
           ${sessionsHTML}

@@ -23,6 +23,29 @@ window.CMS = {
   "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
+ "opalStatus": {
+  "CMS-COR-HPC": {
+   "level": "bad",
+   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
+  },
+  "CMS-TRK-CV": {
+   "level": "warn",
+   "text": "In the course group. Exercise group not picked yet: group 1 (Tue) or group 2 (Thu), both have places."
+  },
+  "CMS-TRK-APSS": {
+   "level": "warn",
+   "text": "In the course group. Tutorial groups open after the first lecture on 20 Oct."
+  },
+  "CMS-COR-VIZ": {
+   "level": "ok",
+   "text": "Signed up for the course."
+  },
+  "CMS-PRO": {
+   "level": "ok",
+   "text": "Registered for the research project (33 of 35 places taken)."
+  }
+ },
+ "opalChecked": "2026-10-10",
  "priorities": [
   {
    "id": "core3",
@@ -87,17 +110,17 @@ window.CMS = {
     "web": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/55582162944"
    },
-   "note": "The course may start late, on 21 October; check the announcements in OPAL. Choose one of the three exercise groups. Slides and exercises are published in OPAL.",
+   "note": "Late start: the lecture begins on 21 October, the exercises in the week of 26 October. Until then, students without a computer-science background should check the prerequisites in OPAL: the computer-architecture video (Lectures → videos from previous semesters) and the Linux and C self-tests (Exercises). Slides and exercise sheets are in OPAL.",
    "schedule": {
     "src": "OPAL",
     "rows": [
      [
       "2026-10-14",
-      "Introduction (the course might start late, on 21 Oct)"
+      "No lecture (late start; the Introduction is skipped or merged)"
      ],
      [
       "2026-10-21",
-      "Basics of Parallelism"
+      "Basics of Parallelism (first lecture)"
      ],
      [
       "2026-10-28",
@@ -271,7 +294,7 @@ window.CMS = {
     "web": "https://mt.inf.tu-dresden.de/lehre/datavis",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56176246787"
    },
-   "note": "Lectures every Wednesday from 14 October. Exercises run only on six Wednesdays (the room is shared with User Interface Engineering). No session on 18 November (Buß- und Bettag) or 20 December – 3 January. Enrolment in OPAL and for the exam in Selma is open until 15 December 2026.",
+   "note": "The exercises aren't graded and give no exam bonus, but the exam includes questions about them. Lectures every Wednesday from 14 October. Exercises run only on six Wednesdays (the room is shared with User Interface Engineering). No session on 18 November (Buß- und Bettag) or 20 December – 3 January. Enrolment in OPAL and for the exam in Selma is open until 15 December 2026.",
    "schedule": {
     "src": "course page",
     "lab": true,
@@ -403,7 +426,7 @@ window.CMS = {
     "web": "https://mlcv.inf.tu-dresden.de/teaching.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56313610253"
    },
-   "note": "You're in the OPAL course “Computer Vision - Winter 2026/27” (David Stein, Jannik Presberger, Björn Andres). Session times aren't published yet. Register for the exam in Selma."
+   "note": "Pick one of the two exercise groups in OPAL (“Registration Exercise”). OPAL gives the exercise start as “14.10.25”, which looks left over from last year; check the announcements. Register for the exam in Selma."
   },
   "CMS-TRK-MLSP": {
    "code": "CMS-TRK-MLSP",
@@ -454,7 +477,7 @@ window.CMS = {
     "web": "https://iccl.inf.tu-dresden.de/web/Advanced_Problem_Solving_and_Search_(WS2026)",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56319377408"
    },
-   "note": "First lecture on 20 October 2026. Sign up for one tutorial group in OPAL after the first lecture; changes are only announced to registered group members."
+   "note": "First lecture on 20 October 2026. Sign up for one tutorial group in OPAL after the first lecture; changes are only announced to registered group members. Slides and exercise sheets are uploaded in OPAL per session."
   },
   "CMS-TRK-CAI": {
    "code": "CMS-TRK-CAI",
@@ -888,7 +911,7 @@ window.CMS = {
     "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/project-cs/index.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56369152004"
    },
-   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 (room tbd; no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
+   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 (room tbd; no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. The topic list is linked from the OPAL course (“Topics”) and isn't out yet. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
    "schedule": {
     "src": "course page (mlcv.cs.tu-dresden.de)",
     "rows": [
@@ -1297,32 +1320,32 @@ window.CMS = {
    "code": "CMS-TRK-CV",
    "kind": "Lecture",
    "day": 1,
-   "start": null,
-   "end": null,
+   "start": "11:10",
+   "end": "12:40",
    "room": "HSZ/AUDI/H",
    "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue"
+   "src": "OPAL"
   },
   {
    "code": "CMS-TRK-CV",
    "kind": "Exercise",
    "day": 2,
-   "start": null,
-   "end": null,
+   "start": "13:00",
+   "end": "14:30",
    "room": "SCH/A251",
-   "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue",
+   "who": "",
+   "src": "OPAL",
    "group": "A"
   },
   {
    "code": "CMS-TRK-CV",
    "kind": "Exercise",
    "day": 4,
-   "start": null,
-   "end": null,
+   "start": "13:00",
+   "end": "14:30",
    "room": "HSZ/0002/E",
-   "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue",
+   "who": "",
+   "src": "OPAL",
    "group": "B"
   },
   {
