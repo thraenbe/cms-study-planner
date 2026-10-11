@@ -57,6 +57,12 @@ h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .ev .m { color: var(--ink-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ev.option { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 8%, var(--surface)) 0 6px, var(--surface) 6px 12px); border-style: dashed; border-left-style: solid; }
 .ev.clash { box-shadow: inset 0 0 0 2px var(--bad); }
+.ev.tentative { border-style: dashed; background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.wk-tba { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-top: 1px solid var(--line); }
+.wk-tba > div { padding: 8px 6px; border-left: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
+.wk-tba > div:first-child { border-left: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.2; text-align: right; padding-right: 8px; }
+.wk-tba a { display: block; text-decoration: none; color: var(--ink); font-size: 11.5px; line-height: 1.3; padding: 5px 7px; border-radius: 7px; border: 1px dashed color-mix(in srgb, var(--c) 55%, var(--line)); border-left: 4px solid var(--c); }
+.wk-tba a .m { color: var(--ink-2); display: block; }
 .ev.option.clash { opacity: .5; box-shadow: none; }
 
 /* Agenda (narrow screens) */
@@ -147,7 +153,7 @@ a.mod.reg { border-top-style: dashed; }
   <div class="prio" id="prio"></div>
 
   <h2 class="sec">Weekly schedule</h2>
-  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet. Courses you still have to register for aren't shown here; none of them has published times yet.</p>
+  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet. Dashed blocks are sessions still to confirm; courses whose times aren't published yet are listed below the week.</p>
   <div class="alerts" id="alerts"></div>
   <div class="week">
     <aside class="panel picker" id="picker" aria-label="Exercise groups"></aside>
@@ -158,7 +164,7 @@ a.mod.reg { border-top-style: dashed; }
   </div>
 
   <h2 class="sec">My courses</h2>
-  <p class="sec-sub">What you're enrolled in on OPAL. Modules without published times aren't in the timetable yet.</p>
+  <p class="sec-sub">What you're enrolled in on OPAL. Sessions without published times are listed under the timetable.</p>
   <div class="mods" id="mine"></div>
 
   <h2 class="sec">Other Applied AI modules this semester</h2>
@@ -177,7 +183,7 @@ const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
 const nowEnrolled = CMS.enrolled.filter(c => CMSUtil.offeredNow(CMS.modules[c]));
 const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
 const mod = code => CMS.modules[code];
-const SHORT = { "CMS-TRK-TSP": "Touch Sensing", "CMS-COR-SAP": "Stochastics", "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
+const SHORT = { "CMS-TRK-CSD": "Circuit & System Design", "CMS-TRK-TSP": "Touch Sensing", "CMS-COR-SAP": "Stochastics", "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
 const shortName = code => SHORT[code] || mod(code).name;
 const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
 const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
@@ -191,7 +197,7 @@ const SLOTS = ["07:30", "09:20", "11:10", "13:00", "14:50", "16:40"];
 function weekSessions() {
   const groups = U.groups();
   return CMS.sessions.filter(s => current.includes(s.code) && s.start).map(s => {
-    if (!s.group) return { ...s, state: "fixed" };
+    if (!s.group) return { ...s, state: s.tentative ? "tentative" : "fixed" };
     const chosen = groups[s.code];
     if (!chosen) return { ...s, state: "option" };
     return s.group === chosen ? { ...s, state: "fixed" } : null;
@@ -243,7 +249,7 @@ function render() {
   committed.forEach(a => U.clashesWith(a, committed).forEach(b => {
     const key = [a, b].map(s => s.code + s.kind + s.day + s.start).sort().join("|");
     if (seen.has(key)) return; seen.add(key);
-    alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}${a.dates || b.dates ? ` (on the ${(a.dates || b.dates).length} dates the ${esc(shortName((a.dates ? a : b).code))} ${(a.dates ? a : b).kind.toLowerCase()} runs)` : ""}.</div></div>`);
+    alerts.push(`<div class="alert bad"><span class="chip bad">Clash</span><div><b>${esc(shortName(a.code))} ${a.kind.toLowerCase()}</b> and <b>${esc(shortName(b.code))} ${b.kind.toLowerCase()}</b> overlap on ${U.DAYS[a.day]}, ${time(a)}${a.tentative || b.tentative ? " (the " + esc(shortName((a.tentative ? a : b).code)) + " " + (a.tentative ? a : b).kind.toLowerCase() + " is still to confirm)" : ""}${a.dates || b.dates ? ` (on the ${(a.dates || b.dates).length} dates the ${esc(shortName((a.dates ? a : b).code))} ${(a.dates ? a : b).kind.toLowerCase()} runs)` : ""}.</div></div>`);
   }));
   // OPAL problems first (e.g. all exercise groups full)
   Object.entries(CMS.opalStatus || {}).filter(([, st]) => st.level === "bad").forEach(([c, st]) =>
@@ -294,26 +300,33 @@ function render() {
       const top = y(s.start), h = (U.mins(s.end) - U.mins(s.start)) * PX, w = 100 / s.ncol;
       const clash = U.clashesWith(s, s.state === "fixed" ? committed : lectures).length;
       const tip = `${mod(s.code).name} — ${s.kind}${s.group ? " (option)" : ""}\n${U.DAYS[s.day]} ${time(s)}, ${s.room}${s.who ? "\n" + s.who : ""}${s.dates ? "\n" + datesNote(s) : ""}`;
-      return `<a class="ev ${s.state === "option" ? "option" : ""} ${clash ? "clash" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
+      return `<a class="ev ${s.state === "option" ? "option" : ""} ${s.state === "tentative" ? "tentative" : ""} ${clash ? "clash" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
           style="--c:${colorOf(s.code)};top:${top + 1}px;height:${h - 2}px;left:calc(${s.col * w}% + 3px);width:calc(${w}% - 6px)">
           <span class="t">${esc(shortName(s.code))}</span>
-          <span class="m">${s.kind}${s.state === "option" ? " option" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
+          <span class="m">${s.kind}${s.state === "option" ? " option" : ""}${s.state === "tentative" ? " (to confirm)" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
           <span class="m">${esc(s.room)}</span>
         </a>`;
     }).join("");
     return `<div class="wk-day ${d === today ? "today" : ""}" style="height:${H}px">${lines}${evs}</div>`;
   }).join("");
-  document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${days}</div>`;
+  // Enrolled sessions whose time isn't published yet, by day (day-less ones in a note)
+  const tba = CMS.sessions.filter(s => current.includes(s.code) && !s.start && (!s.group || !groups[s.code] || s.group === groups[s.code]));
+  const tbaChip = s => `<a href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}"><b>${esc(shortName(s.code))}</b><span class="m">${s.kind} · ${esc(s.room)}</span></a>`;
+  const tbaRow = tba.length ? `<div class="wk-tba"><div>time not<br>published</div>${[1, 2, 3, 4, 5].map(d => `<div>${tba.filter(s => s.day === d).map(tbaChip).join("")}</div>`).join("")}</div>` : "";
+  document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${days}</div>` + tbaRow;
 
   // Agenda for narrow screens
+  const agTba = tba.length ? `<div class="ag-day"><h3>Time not published yet</h3>${tba.map(s => `<a class="ag-item option" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
+        <span class="time">${s.day ? U.DAYS_SHORT[s.day] : "—"}</span>
+        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind} · ${esc(s.room)}</span></span></a>`).join("")}</div>` : "";
   document.getElementById("agenda").innerHTML = [1, 2, 3, 4, 5].map(d => {
     const list = sessions.filter(s => s.day === d).sort((a, b) => U.mins(a.start) - U.mins(b.start));
     if (!list.length) return "";
     return `<div class="ag-day"><h3>${U.DAYS[d]}</h3>${list.map(s => `<a class="ag-item ${s.state === "option" ? "option" : ""}" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
         <span class="time">${time(s)}</span>
-        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "option" ? " · group option" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
+        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "option" ? " · group option" : ""}${s.state === "tentative" ? " · to confirm" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
       </a>`).join("")}</div>`;
-  }).join("");
+  }).join("") + agTba;
 
   // My courses
   document.getElementById("mine").innerHTML = CMS.enrolled.map(c => {

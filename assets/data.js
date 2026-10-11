@@ -3,6 +3,7 @@
 // written from them. Sessions: faculty course catalogue for winter 2026/27, corrected
 // with course pages where the catalogue had no times ("src": "course page").
 // Sessions with start === null have no published time yet (day === null: no day either).
+// "tentative": true = listed by the chair but not confirmed to apply to Bela.
 // Generated once by a script, now edited directly (last: 2026-10-11).
 window.CMS = {
  "semester": "Winter 2026/27",
@@ -1624,6 +1625,17 @@ window.CMS = {
    "room": "BEY/0137/U",
    "who": "Prof. Dr. Roberto Calandra",
    "src": "OPAL"
+  },
+  {
+   "code": "CMS-TRK-CSD",
+   "kind": "Lab",
+   "day": 3,
+   "start": "13:00",
+   "end": "14:30",
+   "room": "TOE 201",
+   "who": "Chair of Highly-Parallel VLSI Systems",
+   "src": "course page",
+   "tentative": true
   }
  ]
 };
