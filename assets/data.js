@@ -2,10 +2,11 @@
 // Module texts: official module descriptions (goals/contents) and short summaries
 // written from them. Sessions: faculty course catalogue for winter 2026/27, corrected
 // with course pages where the catalogue had no times ("src": "course page").
-// Sessions with start === null have a published day and room but no time yet.
+// Sessions with start === null have no published time yet (day === null: no day either).
+// Generated once by a script, now edited directly (last: 2026-10-11).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-09",
+ "updated": "2026-10-11",
  "enrolled": [
   "CMS-COR-HPC",
   "CMS-COR-VIZ",
@@ -220,8 +221,9 @@ window.CMS = {
    "goals": "Students will be familiar with the problems of supervised, semi-supervised, unsupervised, and structural machine learning as formulated as mathematical optimization problems. They will understand the complexity of these problems and be able to prove this complexity themselves using methods from theoretical computer science. They are familiar with efficient local search algorithms for learning decision trees, logistic regression, correlation clustering, linear ordering, as well as for inference and learning in graphical models with factor graphs, and are able to implement and apply these algorithms themselves. Students are familiar with the structure of simple artificial neural networks as well as the forward and backward propagation algorithms, and are able to implement and apply these algorithms on their own. They can present research findings in English.",
    "contents": "The module covers supervised machine learning as an optimization problem, regularized risk minimization, decision tree learning, logistic regression, neural networks, and the fundamentals of supervised deep learning, forward and backward propagation algorithms, semi-supervised and unsupervised machine learning as optimization problems, classification with more than two classes, correlation clustering, linear ordering, structural machine learning as an optimization problem, graphical models, factor graphs, the Gibbs distribution, and message-passing algorithms.",
    "links": {
-    "web": "https://mlcv.inf.tu-dresden.de/teaching.html"
-   }
+    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/ml1/index.html"
+   },
+   "note": "Exercise groups start 20 Oct 2026: Tuesday 16:40–18:10 (POT/0081/H) or Thursday 14:50–16:40 (BAR/SCHÖ/E)."
   },
   "CMS-COR-NUM": {
    "code": "CMS-COR-NUM",
@@ -420,10 +422,10 @@ window.CMS = {
    "goals": "Students will understand the functioning and fundamental design principles of digital circuits. Building on their knowledge of active semiconductor device models, they will learn the systematic design and analysis of basic digital and mixed-signal circuits. They understand the architectural and system concepts of complex digital systems and are familiar with the circuit-level characteristics of nanoscale CMOS technologies, methods for reducing power dissipation, measures to increase processing speed in high-speed circuits and interfaces, and the consideration of statistical effects of manufacturing technologies.",
    "contents": "The module covers the analysis, sizing, and optimization of basic digital combinational and sequential elements based on current semiconductor technologies, such as CMOS and BiCMOS; the design of complex logic functions in the form of arithmetic-logic circuits, such as ALUs, shifters and multipliers; finite-state machines; flip-flop and oscillator circuits; digital architecture and system concepts such as register-transfer logic, memory architectures—in particular DRAM, SRAM, EPROM, and mixed-signal circuits, such as ADCs, DACs, and interfaces, as well as methodologies for designing complex digital and mixed-signal systems, such as behavioral description, optimization, and validation.",
    "links": {
-    "web": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/dst",
+    "web": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/zeitplan_ws",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/26351140878"
    },
-   "register": "Required for the Applied AI track. In OPAL the course is called “Digital Circuit Technology / Digitale Schaltungstechnik” (Chair of Highly-Parallel VLSI Systems). Lecture and exercise times are on the chair's winter timetable, linked from the course page. Register for the exam in Selma."
+   "note": "Lecture Mondays 4th DS (13:00–14:30) in TOE/317/H from 12 Oct; exercise for CMS students Tuesdays 3rd DS (11:10–12:40) in SCH/A285/U, weekly, from 20 Oct (the chair's page says “20.10.2025”, clearly meaning 2026). Sign up for the exercises in OPAL. Register for the exam in Selma."
   },
   "CMS-TRK-CV": {
    "code": "CMS-TRK-CV",
@@ -447,7 +449,7 @@ window.CMS = {
    "goals": "Students will become familiar with basic linear and nonlinear operators used in image analysis and will be able to implement and apply them independently. They will understand the problems of image classification, image segmentation, object detection, and object tracking in their mathematical formulations. They will be familiar with local search algorithms for these problems and will be able to implement them independently and apply them to image data. Students are familiar with and understand the mathematical concepts of artificial neural networks and convolutional networks. They are familiar with and understand the forward and backward propagation algorithms used in machine learning for deep artificial neural networks and are able to apply these algorithms to the problem of image classification. They can present subject-specific results in English.",
    "contents": "The module covers color spaces, elementary linear and nonlinear operators in image analysis, the problem of image classification, artificial neural networks, convolutional networks, forward and backward propagation algorithms, image segmentation as an optimization problem, local search algorithms for image segmentation, object detection as an optimization problem, local search algorithms for object detection, object tracking as an optimization problem, and local search algorithms for object tracking.",
    "links": {
-    "web": "https://mlcv.inf.tu-dresden.de/teaching.html",
+    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/cv1/index.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56313610253"
    },
    "note": "Pick one of the two exercise groups in OPAL (“Registration Exercise”). OPAL gives the exercise start as “14.10.25”, which looks left over from last year; check the announcements. Register for the exam in Selma."
@@ -709,7 +711,7 @@ window.CMS = {
    "links": {
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/53465382917"
    },
-   "note": "Summer-semester module. You are already in its OPAL course; sessions start in the summer semester.",
+   "note": "Summer-semester module. You are already in its OPAL course; sessions start in the summer semester. The chair's winter timetable also lists a “Schaltkreis- und Systementwurf” lab on Wednesdays 4th DS (13:00–14:30) in TOE 201 from 14 Oct; check in OPAL whether it applies to you (it would overlap the Data Visualization lecture).",
    "opalText": "The module covers the fundamentals and methods for the development of application-specific digital integrated circuits (ASICs). This includes transforming a numerical algorithm into a data dependency graph, applying scheduling and allocation techniques, optimizing resource usage (area, runtime), as well as implementation and functional verification (simulation) of the ASIC."
   },
   "CMS-TRK-DNNH": {
@@ -1509,38 +1511,6 @@ window.CMS = {
    "group": "B"
   },
   {
-   "code": "CMS-COR-ML",
-   "kind": "Lecture",
-   "day": 5,
-   "start": null,
-   "end": null,
-   "room": "TRE/PHYS/E",
-   "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue"
-  },
-  {
-   "code": "CMS-COR-ML",
-   "kind": "Exercise",
-   "day": 2,
-   "start": null,
-   "end": null,
-   "room": "POT/0081/H",
-   "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue",
-   "group": "A"
-  },
-  {
-   "code": "CMS-COR-ML",
-   "kind": "Exercise",
-   "day": 4,
-   "start": null,
-   "end": null,
-   "room": "BAR/SCHÖ/E",
-   "who": "Prof. Dr. Björn Andres",
-   "src": "catalogue",
-   "group": "B"
-  },
-  {
    "code": "CMS-TRK-TSP",
    "kind": "Lecture",
    "day": 2,
@@ -1599,6 +1569,58 @@ window.CMS = {
    "room": "to be announced",
    "who": "Prof. Dr. Martin Weigert",
    "src": "catalogue"
+  },
+  {
+   "code": "CMS-TRK-DCD",
+   "kind": "Lecture",
+   "day": 1,
+   "start": "13:00",
+   "end": "14:30",
+   "room": "TOE/317/H",
+   "who": "Prof. Dr. Christian Mayr",
+   "src": "course page"
+  },
+  {
+   "code": "CMS-TRK-DCD",
+   "kind": "Exercise",
+   "day": 2,
+   "start": "11:10",
+   "end": "12:40",
+   "room": "SCH/A285/U",
+   "who": "Dr.-Ing. Johannes Partzsch, Dipl.-Ing. Jörg Schreiter",
+   "src": "course page"
+  },
+  {
+   "code": "CMS-COR-ML",
+   "kind": "Lecture",
+   "day": 5,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "TRE/PHYS/E",
+   "who": "Prof. Dr. Björn Andres",
+   "src": "course page"
+  },
+  {
+   "code": "CMS-COR-ML",
+   "kind": "Exercise",
+   "day": 2,
+   "start": "16:40",
+   "end": "18:10",
+   "room": "POT/0081/H",
+   "who": "",
+   "src": "course page",
+   "group": "A"
+  },
+  {
+   "code": "CMS-COR-ML",
+   "kind": "Exercise",
+   "day": 4,
+   "start": "14:50",
+   "end": "16:40",
+   "room": "BAR/SCHÖ/E",
+   "who": "",
+   "src": "course page",
+   "group": "B"
   }
  ]
 };
