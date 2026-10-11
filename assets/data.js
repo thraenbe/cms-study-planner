@@ -7,7 +7,7 @@
 // Generated once by a script, now edited directly (last: 2026-10-11).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-11",
+ "updated": "2026-10-12",
  "enrolled": [
   "CMS-COR-HPC",
   "CMS-COR-VIZ",
@@ -17,11 +17,13 @@ window.CMS = {
   "CMS-TRK-DCD",
   "CMS-TRK-MLSP",
   "CMS-COR-SAP",
+  "CMS-COR-ML",
   "CMS-TRK-TSP",
   "CMS-TRK-CSD"
  ],
  "defaultGroups": {
-  "CMS-TRK-CV": "A"
+  "CMS-TRK-CV": "A",
+  "CMS-COR-ML": "A"
  },
  "toRegister": [
   "CMS-TRK-CAI",
@@ -31,7 +33,7 @@ window.CMS = {
  "opalStatus": {
   "CMS-COR-HPC": {
    "level": "bad",
-   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
+   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov. Machine Learning 1 is enrolled as a backup basic-training module."
   },
   "CMS-TRK-CV": {
    "level": "ok",
@@ -68,9 +70,13 @@ window.CMS = {
   "CMS-TRK-TSP": {
    "level": "ok",
    "text": "In the OPAL course (Calandra, Koch)."
+  },
+  "CMS-COR-ML": {
+   "level": "ok",
+   "text": "Enrolled in “Machine Learning 1 – Winter 2026/27” (380 of 500) and in exercise group 1 (Tuesday 16:40, POT/0081/H). Backup for basic training in case HPC doesn't work out."
   }
  },
- "opalChecked": "2026-10-11",
+ "opalChecked": "2026-10-12",
  "priorities": [
   {
    "id": "core3",
@@ -224,9 +230,10 @@ window.CMS = {
    "goals": "Students will be familiar with the problems of supervised, semi-supervised, unsupervised, and structural machine learning as formulated as mathematical optimization problems. They will understand the complexity of these problems and be able to prove this complexity themselves using methods from theoretical computer science. They are familiar with efficient local search algorithms for learning decision trees, logistic regression, correlation clustering, linear ordering, as well as for inference and learning in graphical models with factor graphs, and are able to implement and apply these algorithms themselves. Students are familiar with the structure of simple artificial neural networks as well as the forward and backward propagation algorithms, and are able to implement and apply these algorithms on their own. They can present research findings in English.",
    "contents": "The module covers supervised machine learning as an optimization problem, regularized risk minimization, decision tree learning, logistic regression, neural networks, and the fundamentals of supervised deep learning, forward and backward propagation algorithms, semi-supervised and unsupervised machine learning as optimization problems, classification with more than two classes, correlation clustering, linear ordering, structural machine learning as an optimization problem, graphical models, factor graphs, the Gibbs distribution, and message-passing algorithms.",
    "links": {
-    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/ml1/index.html"
+    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/ml1/index.html",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56370987016"
    },
-   "note": "Exercise groups start 20 Oct 2026: Tuesday 16:40–18:10 (POT/0081/H) or Thursday 14:50–16:40 (BAR/SCHÖ/E)."
+   "note": "Exercise groups start 20 Oct 2026; you're in group 1 (Tuesday 16:40–18:10, POT/0081/H). Group 2 is Thursday 14:50–16:20 (BAR/SCHÖ/E). The lecture (Friday 9:20) overlaps ML in Signal Processing."
   },
   "CMS-COR-NUM": {
    "code": "CMS-COR-NUM",
@@ -245,7 +252,10 @@ window.CMS = {
    "prereq": "Programming, algorithms, analysis, linear algebra, probability and statistics",
    "goals": "Upon completion of the module, students will have mastered the fundamentals of numerical mathematics and numerical simulation methods. They will have a theoretical understanding of how a computer performs calculations using finite-precision floating-point numbers, the errors and inaccuracies that can arise in the process, and how to mitigate and control these. They will be familiar with fundamental numerical methods for solving and simulating mathematical models, models in linear algebra, and ordinary and partial differential equations. They will be able to estimate the approximation errors of these methods and determine their computational complexity, and will be capable of implementing the methods themselves, adapting them to specific applications, and optimizing them.",
    "contents": "The module covers floating-point arithmetic, rounding errors, cancellation, numerical interpolation using the Lagrange, Newton, Aitken-Neville, Hermite, and spline methods, numerical solution of linear and nonlinear equations and systems of equations, Taylor series expansions, finite differences and their approximation errors, explicit and implicit time integrators, numerical stability, direct and iterative algorithms for matrix inversion, numerical integration, discrete Fourier transforms, matrix decomposition, solvers for the Poisson equation, and fundamentals of numerical methods for partial differential equations.",
-   "links": {}
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445133"
+   },
+   "note": "The OPAL course (Gopan, Sbalzarini; RepositoryEntry 32365445133) still shows winter 2025/26 with a “Students2025” enrolment group; last winter it ran Mondays 14:50 (lecture) and Thursdays 11:10 (exercise) in BEY/0127/H. Check again for a 2026/27 enrolment group."
   },
   "CMS-COR-SAP": {
    "code": "CMS-COR-SAP",
@@ -1600,10 +1610,10 @@ window.CMS = {
    "kind": "Exercise",
    "day": 4,
    "start": "14:50",
-   "end": "16:40",
+   "end": "16:20",
    "room": "BAR/SCHÖ/E",
    "who": "",
-   "src": "course page",
+   "src": "OPAL",
    "group": "B"
   },
   {
