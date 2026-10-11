@@ -15,17 +15,15 @@ window.CMS = {
   "CMS-PRO",
   "CMS-TRK-DCD",
   "CMS-TRK-MLSP",
-  "EXT-LLM",
+  "CMS-COR-SAP",
+  "CMS-TRK-TSP",
   "CMS-TRK-CSD"
  ],
  "defaultGroups": {
   "CMS-TRK-CV": "A"
  },
  "toRegister": [
-  "CMS-TRK-DCD",
-  "CMS-TRK-MLSP",
   "CMS-TRK-CAI",
-  "CMS-COR-SAP",
   "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
@@ -40,7 +38,7 @@ window.CMS = {
   },
   "CMS-TRK-DCD": {
    "level": "ok",
-   "text": "Enrolled in the WS 26/27 student group of “Digital Circuit Technology / Digitale Schaltungstechnik” (58 of 300)."
+   "text": "Enrolled in the WS 26/27 student group of “Digital Circuit Technology / Digitale Schaltungstechnik”. Exercise sign-up isn't open in OPAL yet."
   },
   "CMS-TRK-MLSP": {
    "level": "ok",
@@ -51,8 +49,8 @@ window.CMS = {
    "text": "The seminar is full (15/15); you're 3rd on the waiting list. Sign-up closes 15 Oct, 11:00."
   },
   "CMS-COR-SAP": {
-   "level": "warn",
-   "text": "No OPAL course for this winter yet; the only one is last year's. Check again before the first lecture."
+   "level": "ok",
+   "text": "Enrolled in the winter 26/27 group “Students2026”. First lecture on 19 October 2026."
   },
   "CMS-TRK-APSS": {
    "level": "warn",
@@ -65,9 +63,13 @@ window.CMS = {
   "CMS-PRO": {
    "level": "ok",
    "text": "Registered for the research project (33 of 35 places taken)."
+  },
+  "CMS-TRK-TSP": {
+   "level": "ok",
+   "text": "In the OPAL course (Calandra, Koch)."
   }
  },
- "opalChecked": "2026-10-10",
+ "opalChecked": "2026-10-11",
  "priorities": [
   {
    "id": "core3",
@@ -266,11 +268,10 @@ window.CMS = {
    "goals": "Upon completion of the module, students will have mastered the fundamentals of stochastic modeling and simulation. They will be able to independently implement stochastic algorithms and formulate new ones.",
    "contents": "The module covers conditional probabilities, normal distributions and scale-free distributions, transformation of random variables, simulation of pseudo- and quasi-random numbers, Markov chains and their matrix representation, mixing times, Monte Carlo methods—in particular convergence, the law of large numbers, variance reduction, Rao-Blackwell, Importance sampling, Markov chain Monte Carlo using Metropolis-Hastings and Gibbs samplers, random processes and Brownian motion—in particular, properties in 1, 2, 3, and more dimensions—connection to the diffusion equation, stochastic differential equations—in particular, nonlinear transformations of Brownian motion, Ito calculus, Ornstein-Uhlenbeck process, and other solvable equations, numerical simulation of stochastic differential equations, in particular strong and weak error estimates, Euler-Maruyama scheme, Milstein scheme, stochastic optimization algorithms, and exact stochastic simulation algorithms for reaction networks.",
    "links": {
-    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445134",
-    "opalNote": "This OPAL course is last year's (winter 2025/26); this winter's course may have a new page."
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445134"
    },
-   "register": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan); the faculty catalogue lists that course under CMS-COR-SAP. When you register for the exam in Selma, check it's filed under CMS-COR-SAP. Join the course in OPAL and register for the exam in Selma. Exam: written (90 min), or oral (30 min) if fewer than 10 students take it.",
-   "opalText": "This course enable the students to master the basics of stochastic modelling and simulation. The course first discusses discrete-time models, followed by two classic examples, and then goes on to discuss continuous-time models."
+   "opalText": "This course enable the students to master the basics of stochastic modelling and simulation. The course first discusses discrete-time models, followed by two classic examples, and then goes on to discuss continuous-time models.",
+   "note": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan); the faculty catalogue lists it under CMS-COR-SAP. First lecture 19 October 2026; per the catalogue, lecture Mondays (SCH/A117/H) and exercise Thursdays (BEY/0E39/U), times not yet published. Register for the exam in Selma."
   },
   "CMS-COR-SSE": {
    "code": "CMS-COR-SSE",
@@ -921,8 +922,10 @@ window.CMS = {
    "goals": "Students will gain in-depth knowledge of touch-sensing and touch-processing techniques. They will be able to independently implement these techniques algorithmically. They will be able to apply these algorithms in practice, on specific touch-sensing hardware, and to specific problems, and will be able to empirically and quantitatively evaluate the algorithms in relation to their application.",
    "contents": "The module covers the fundamentals of the psychology of the sense of touch, touch-sensing hardware, simulation of touch, touch sensing, touch processing, touch-based control, and applications of touch sensing, touch processing, and touch-based control.",
    "links": {
-    "web": "https://lasr.org/teaching/"
-   }
+    "web": "https://lasr.org/teaching",
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/45408092160"
+   },
+   "note": "From the OPAL course calendar: Mondays 9:20–10:50 in BEY/0245/H and Tuesdays 9:20–10:50 in BEY/0137/U, starting 12 Oct. Questions via teaching@lasr.org."
   },
   "CMS-TRK-TEA-CM": {
    "code": "CMS-TRK-TEA-CM",
@@ -1511,26 +1514,6 @@ window.CMS = {
    "group": "B"
   },
   {
-   "code": "CMS-TRK-TSP",
-   "kind": "Lecture",
-   "day": 2,
-   "start": null,
-   "end": null,
-   "room": "BEY/0137/U",
-   "who": "Prof. Dr. Roberto Calandra",
-   "src": "catalogue"
-  },
-  {
-   "code": "CMS-TRK-TSP",
-   "kind": "Exercise",
-   "day": 1,
-   "start": null,
-   "end": null,
-   "room": "BEY/0245/H",
-   "who": "Prof. Dr. Roberto Calandra",
-   "src": "catalogue"
-  },
-  {
    "code": "CMS-COR-SAP",
    "kind": "Lecture",
    "day": 1,
@@ -1621,6 +1604,26 @@ window.CMS = {
    "who": "",
    "src": "course page",
    "group": "B"
+  },
+  {
+   "code": "CMS-TRK-TSP",
+   "kind": "Lecture",
+   "day": 1,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "BEY/0245/H",
+   "who": "Prof. Dr. Roberto Calandra",
+   "src": "OPAL"
+  },
+  {
+   "code": "CMS-TRK-TSP",
+   "kind": "Lecture/Practice",
+   "day": 2,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "BEY/0137/U",
+   "who": "Prof. Dr. Roberto Calandra",
+   "src": "OPAL"
   }
  ]
 };
