@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Computer Vision · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="computer-vision/cv.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="computer-vision/cv.js"></script>
+<style>
+/* Chart colours: dataviz reference palette. The gamma curves are an ORDINAL ramp (one hue, light→dark, validated
+   with the skill's validator for both surfaces); the kernel bars use the single accent. */
+:root { --vz-s1: #2a78d6; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7;
+        --vz-o1: #86b6ef; --vz-o2: #5598e7; --vz-o3: #2a78d6; --vz-o4: #1c5cab; --vz-o5: #0d366b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835;
+        --vz-o1: #9ec5f4; --vz-o2: #6da7ec; --vz-o3: #3987e5; --vz-o4: #256abf; --vz-o5: #184f95; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835;
+        --vz-o1: #9ec5f4; --vz-o2: #6da7ec; --vz-o3: #3987e5; --vz-o4: #256abf; --vz-o5: #184f95; }
+</style>
+</head>
+<body class="cv">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, slot, today } = CV;
+const n = Number(new URLSearchParams(location.search).get("n"));
+const l = c.lectures.find(x => x.n === n);
+const page = document.getElementById("page");
+const back = `<a class="back" href="computer-vision.html">← All lectures</a>`;
+const M = s => `<span class="m">${s}</span>`;
+
+// ---- Figure 1: the gamma operator c ↦ c^γ for the five γ shown on slide 4 (ordinal ramp, direct labels, crosshair).
+const GAMMAS = [{ g: 0.25, k: "γ = ¼", cls: "o1", at: 0.12, up: true }, { g: 0.5, k: "γ = ½", cls: "o2", at: 0.3, up: true },
+  { g: 1, k: "γ = 1", cls: "o3", at: 0.52, up: true }, { g: 2, k: "γ = 2", cls: "o4", at: 0.66, up: false }, { g: 4, k: "γ = 4", cls: "o5", at: 0.84, up: false }];
+const GEO = { W: 560, H: 330, L: 44, R: 16, T: 14, B: 40 };
+function gx(v) { return GEO.L + v * (GEO.W - GEO.L - GEO.R); }
+function gy(v) { return GEO.T + (1 - v) * (GEO.H - GEO.T - GEO.B); }
+function gammaSVG() {
+  const { W, H, L, R, T, B } = GEO;
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const grid = ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${gy(v)}" y2="${gy(v)}"/><text class="tick" x="${L - 6}" y="${gy(v) + 4}" text-anchor="end">${v}</text>
+    <text class="tick" x="${gx(v)}" y="${H - B + 16}" text-anchor="middle">${v}</text>`).join("");
+  const curves = GAMMAS.map(s => {
+    const pts = Array.from({ length: 101 }, (_, i) => { const x = i / 100; return `${gx(x).toFixed(1)},${gy(Math.pow(x, s.g)).toFixed(1)}`; }).join(" ");
+    const lx = gx(s.at), ly = gy(Math.pow(s.at, s.g)) + (s.up ? -9 : 15);
+    return `<polyline class="ln ${s.cls}" points="${pts}"/><text class="lbl" x="${lx}" y="${ly}" text-anchor="middle">${s.k}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gamma operator: output colour against input colour for gamma one quarter, one half, one, two and four. Gamma below one brightens, gamma above one darkens.">
+    ${grid}<line class="axis" x1="${L}" x2="${W - R}" y1="${gy(0)}" y2="${gy(0)}"/><line class="axis" x1="${L}" x2="${L}" y1="${gy(0)}" y2="${gy(1)}"/>
+    <text class="axl" x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">input colour c</text>
+    <text class="axl" transform="translate(12 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">output ξ(c)</text>
+    ${curves}<g id="gamma-xh" style="display:none"><line class="xh" x1="0" x2="0" y1="${gy(1)}" y2="${gy(0)}"/>${GAMMAS.map(s => `<circle class="pt ${s.cls}" r="4"/>`).join("")}</g>
+    <rect id="gamma-hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg>`;
+}
+function wireGamma() {
+  const wrap = document.getElementById("gamma-wrap"), svg = wrap?.querySelector("svg"), hit = document.getElementById("gamma-hit"), xh = document.getElementById("gamma-xh"), tip = document.getElementById("gamma-tip");
+  if (!svg) return;
+  const move = e => {
+    const r = svg.getBoundingClientRect(), sx = GEO.W / r.width;
+    const x = Math.min(1, Math.max(0, ((e.clientX - r.left) * sx - GEO.L) / (GEO.W - GEO.L - GEO.R)));
+    xh.style.display = ""; const line = xh.querySelector("line"); line.setAttribute("x1", gx(x)); line.setAttribute("x2", gx(x));
+    xh.querySelectorAll("circle").forEach((cc, i) => { cc.setAttribute("cx", gx(x)); cc.setAttribute("cy", gy(Math.pow(x, GAMMAS[i].g))); });
+    tip.style.display = ""; tip.innerHTML = `<b>c = ${x.toFixed(2)}</b><br>` + GAMMAS.map(s => `<span class="sw" style="background:var(--vz-${s.cls})"></span>${s.k}: ${Math.pow(x, s.g).toFixed(3)}`).join("<br>");
+    const px = (e.clientX - r.left), flip = px > r.width * 0.6; tip.style.left = flip ? "" : (px + 14) + "px"; tip.style.right = flip ? (r.width - px + 14) + "px" : ""; tip.style.top = "10px";
+  };
+  hit.addEventListener("mousemove", move); hit.addEventListener("mouseleave", () => { xh.style.display = "none"; tip.style.display = "none"; });
+}
+
+// ---- Figure 2: the Gaussian averaging filter g₀ for σ = 1, m = 3 (slide 13) — the seven normalised weights.
+const KER = (() => { const s = 1, mm = 3, w = []; for (let j = -mm; j <= mm; j++) w.push(Math.exp(-j * j / (2 * s * s))); const N = w.reduce((a, b) => a + b, 0); return w.map((v, i) => ({ j: i - mm, v: v / N })); })();
+function kernelSVG() {
+  const W = 560, H = 190, L = 40, R = 16, T = 22, B = 34, PW = W - L - R, bw = PW / KER.length, vmax = 0.45;
+  const y = v => T + (1 - v / vmax) * (H - T - B);
+  const grid = [0, 0.1, 0.2, 0.3, 0.4].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(1)}</text>`).join("");
+  const bars = KER.map((d, i) => { const x0 = L + i * bw + 6, w = bw - 12, yv = y(d.v), h = y(0) - yv, r = Math.min(4, h);
+    const path = `M${x0},${y(0)} v-${h - r} a${r},${r} 0 0 1 ${r},-${r} h${w - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z`;
+    return `<g class="row" tabindex="0"><title>j = ${d.j}: weight ${d.v.toFixed(3)}</title><rect class="hit" x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}"/>
+      <path class="bar s1" d="${path}"/><text class="val" x="${x0 + w / 2}" y="${yv - 6}" text-anchor="middle" style="font-size:12px">${d.v.toFixed(3)}</text>
+      <text class="tick" x="${x0 + w / 2}" y="${H - B + 16}" text-anchor="middle">${d.j > 0 ? "+" : ""}${d.j}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gaussian averaging filter weights for sigma 1 and m 3: 0.004, 0.054, 0.242, 0.399, 0.242, 0.054, 0.004 at offsets minus 3 to plus 3.">
+    ${grid}<line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>${bars}<text class="axl" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">offset j from the centre pixel</text></svg>`;
+}
+
+function head(l) {
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1>
+    <p class="meta">${fmt(l.date)} · ${slot(lec)} · Prof. Björn Andres${l.slides ? ` · <a href="${l.slides}" target="_blank" rel="noopener">Slides (PDF) ↗</a>` : ""}</p>`;
+}
+function lecture1() {
+  return `${head(l)}
+    <p class="lead">The course opens with its first chapter, <i>Operators on digital images</i>: what a digital image is mathematically, and a tour of operators from the trivial (one pixel in, one pixel out) to convolution, morphology and the classic edge and corner detectors. The 43 slides are public on the course page; the mathematical-foundations and optimisation chapters listed on the course page come without slides so far.</p>
+
+    <h2>1 · Digital images</h2>
+    <div class="def"><b class="t">Definition 1</b>For width and height ${M("n<sub>0</sub>, n<sub>1</sub> ∈ ℕ")} and a colour set ${M("C ≠ ∅")}, a digital image is a map ${M("f ∈ C<sup>n<sub>0</sub>×n<sub>1</sub></sup>")}; an infinite digital image is ${M("f ∈ C<sup>ℤ×ℤ</sup>")}. The elements of ${M("n<sub>0</sub> × n<sub>1</sub>")} are the pixels. The <b>pixel grid graph</b> joins two pixels iff their Euclidean distance is 1 (4-neighbourhood).</div>
+    <p>Colour sets in the examples: gray levels {0,…,255}, RGB {0,…,255}³, real numbers (ℝ or [0,1]), real tuples (ℝⁿ or [0,1]ⁿ). The whole chapter is written against this definition: an operator is just a map between image spaces.</p>
+
+    <h2>2 · Point operators</h2>
+    <div class="def"><b class="t">Definition 2</b>A point operator ${M("φ: C<sup>n<sub>0</sub>×n<sub>1</sub></sup> → C<sup>n<sub>0</sub>×n<sub>1</sub></sup>")} has a ${M("χ: C × n<sub>0</sub> × n<sub>1</sub> → C")} with ${M("φ(f)(x,y) = χ(f(x,y), x, y)")}: the new colour at a pixel depends only on the old colour there and on the coordinates. Any ${M("ξ: C → C")} gives one, ${M("φ<sub>ξ</sub>: f ↦ ξ ∘ f")}.</div>
+    <h3>Gamma operator (Definition 3)</h3>
+    <p>With ${M("C = [0,1]")} and ${M("ξ(c) = c<sup>γ</sup>")} for ${M("γ ∈ (0,∞)")}. The slides show the same photo for γ = ¼, ½, 1, 2, 4: γ &lt; 1 lifts dark tones, γ &gt; 1 compresses them, γ = 1 is the identity. The curves below are the operator itself; hover to read off ξ(c) for each γ.</p>
+    <figure class="viz">
+      <div class="vlegend" aria-hidden="true">${GAMMAS.map(s => `<span><span class="sw" style="background:var(--vz-${s.cls})"></span>${s.k}</span>`).join("")}</div>
+      <div class="viz-wrap" id="gamma-wrap">${gammaSVG()}<div class="tip" id="gamma-tip" style="display:none"></div></div>
+      <figcaption>The gamma operator ξ(c) = c<sup>γ</sup> on [0,1] for the five values of γ used on slide 4. Darker blue = larger γ. All curves pass through (0,0) and (1,1); only the mid-tones move.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view of the chart</summary>
+      <table><tr><th>c</th>${GAMMAS.map(s => `<th>${s.k}</th>`).join("")}</tr>${[0.1, 0.25, 0.5, 0.75, 0.9].map(x => `<tr><td class="n">${x}</td>${GAMMAS.map(s => `<td class="n">${Math.pow(x, s.g).toFixed(3)}</td>`).join("")}</tr>`).join("")}</table>
+    </details>
+    <h3>Histogram equilibration (Definitions 4–5)</h3>
+    <ul>
+      <li>The <b>histogram</b> ${M("h(c) = |{r : f(r) = c}|")} counts pixels per colour; the <b>cumulative distribution</b> ${M("H(c) = (1/n<sub>0</sub>n<sub>1</sub>) Σ<sub>c′≤c</sub> h(c′)")} maps colours to [0,1].</li>
+      <li>For ${M("C = [c<sup>−</sup>, c<sup>+</sup>]")} and an increasing ${M("H")} with ${M("H(c<sup>+</sup>) = 1")}, the <b>H-equilibration</b> is ${M("ξ<sub>H</sub>(c) = c<sup>−</sup> + (c<sup>+</sup> − c<sup>−</sup>) H(c)")}; applied pixel-wise it is the <b>H-equilibrator</b>. Using the image's own ${M("H")} gives its <b>self-equilibration</b>: the histogram is flattened, the cumulative curve becomes a straight line.</li>
+      <li><b>Question from the slides:</b> is self-equilibration a point operator? Think about what ${M("H")} depends on before saying yes.</li>
+    </ul>
+
+    <h2>3 · Linear operators</h2>
+    <p>${M("φ")} is linear iff ${M("φ(f)(x,y) = Σ<sub>j,k</sub> a<sub>xyjk</sub> f(j,k)")}. The typical, more restrictive setting fixes a small image ${M("g: m<sub>0</sub> × m<sub>1</sub> → ℝ")} (the kernel) and sums ${M("g(j,k) · f(x + j − ⌊m<sub>0</sub>/2⌋, y + k − ⌊m<sub>1</sub>/2⌋)")} over the kernel. Four remarks: ${M("f")} must be extended for this to be well defined; ${M("g")} determines ${M("φ")} uniquely; this defines a binary operation ${M("f ⊗ g := φ(f)")}; and ${M("g")} is itself a digital image.</p>
+    <div class="def"><b class="t">Definitions 6–10</b><b>Infinite 0-extension</b> ${M("X(f)")} pads with zeros outside ${M("n<sub>0</sub> × n<sub>1</sub>")}; the <b>shift</b> ${M("S<sub>jk</sub>(f)(x,y) = f(x+j, y+k)")}; the <b>reflection</b> ${M("L(f)(x,y) = f(−x, −y)")}. <b>Discrete convolution</b>: ${M("(f ∗ g)(x,y) = Σ<sub>j,k</sub> f(x+j, y+k) g(−j, −k)")} — the minus signs make ∗ commutative. For finite images, ${M("f ∗ g := (X(f) ∗ S<sub>d<sub>0</sub>d<sub>1</sub></sub>(X(g)))|<sub>n<sub>0</sub>×n<sub>1</sub></sub>")} with ${M("d<sub>i</sub> = −⌊m<sub>i</sub>/2⌋")}.</div>
+    <ul>
+      <li><b>Lemma 1:</b> convolution is commutative, associative, distributive over +, and associative with scalar multiplication.</li>
+      <li><b>Lemma 2:</b> the kernel operation and convolution differ only by a reflection: ${M("f ⊗ g = f ∗ L(g)")}.</li>
+    </ul>
+    <h3>Example 1 · Gaussian averaging filters</h3>
+    <p>With ${M("w(t) = exp(−t²/2σ²)")} and ${M("N = Σ<sub>j=−m..m</sub> w(j)")}, the row filter ${M("g<sub>0</sub>")} (size ${M("(2m+1) × 1")}) and the column filter ${M("g<sub>1</sub>")} (size ${M("1 × (2m+1)")}) hold the normalised weights ${M("w(j−m)/N")}; typically ${M("m ≥ 3σ")}. Blurring is ${M("f ∗ g<sub>0</sub> ∗ g<sub>1</sub>")} (slides: σ = 3, m = 9 and σ = 10, m = 30), and <b>sharpening</b> is ${M("2f − f ∗ g<sub>0</sub> ∗ g<sub>1</sub>")} (σ = 1, m = 3).</p>
+    <figure class="viz">
+      ${kernelSVG()}
+      <figcaption>The seven weights of g<sub>0</sub> for σ = 1, m = 3, the kernel behind the sharpening example. They sum to 1; the centre pixel carries about 40 %.</figcaption>
+    </figure>
+    <h3>Example 2 · Discrete derivatives</h3>
+    <p>${M("∂<sub>0</sub> f := f ∗ d<sub>0</sub>")} and ${M("∂<sub>1</sub> f := f ∗ d<sub>1</sub>")} with the central-difference kernels ${M("d<sub>0</sub> = ½ (1, 0, −1)")} (a row) and ${M("d<sub>1</sub>")} its column counterpart. The <b>discrete gradient</b> is ${M("∇f = (∂<sub>0</sub>f, ∂<sub>1</sub>f)")}, its <b>magnitude</b> ${M("|∇f| = √((∂<sub>0</sub>f)² + (∂<sub>1</sub>f)²)")}; the slides show both derivative images and the magnitude image.</p>
+
+    <h2>4 · Non-linear operators</h2>
+    <ul>
+      <li><b>Bilateral filter (Definition 11):</b> a weighted average over a spatial neighbourhood ${M("N(v)")}, where the weight of ${M("v′")} is ${M("w<sub>s</sub>(d<sub>s</sub>(v,v′)) · w<sub>c</sub>(d<sub>c</sub>(f(v), f(v′)))")}: close in space <i>and</i> similar in colour counts, so edges survive while flat regions are smoothed. Normalise by ${M("ν(f)(v)")}, the sum of the weights. The example uses a Gaussian ${M("w<sub>s</sub>")} with σ<sub>s</sub>, ${M("w<sub>c</sub>(x) = 1/(1 + x²/σ<sub>c</sub>²)")}, and a disc neighbourhood of radius n. <b>Exercise announced:</b> implement the bilateral filter and apply it recursively.</li>
+      <li><b>Median operator (Definition 12):</b> ${M("M(f)(v) = median f(N(v))")}; removes salt-and-pepper noise where a Gaussian would only smear it.</li>
+      <li><b>Morphological operators (Definitions 13–14):</b> identify a binary image with its support set ${M("f<sup>−1</sup>(1) ⊆ ℤ²")}. With a structuring element ${M("B")}: <b>erosion</b> ${M("A ⊖ B = {v : B + v ⊆ A}")}, <b>dilation</b> ${M("A ⊕ B = {v : (−B + v) ∩ A ≠ ∅}")}, <b>opening</b> ${M("(A ⊖ B) ⊕ B")} (removes small blobs), <b>closing</b> ${M("(A ⊕ B) ⊖ B")} (fills small holes). The example image is a cell micrograph thresholded at ${M("f ≥ 45")}.</li>
+      <li><b>Connected-components operator (Definition 15):</b> two pixels get the same label iff a path of zero-coloured pixels joins them in the pixel grid graph.</li>
+      <li><b>Distance operator (Definition 16):</b> each pixel gets its grid distance to the nearest non-zero pixel.</li>
+      <li><b>Non-maximum suppression:</b> ${M("φ<sub>NMS</sub>(f)(v) = f(v)")} if ${M("f(v) = max f(N(v))")}, else 0. Keeps only local maxima; used by both detectors below.</li>
+    </ul>
+
+    <h2>5 · Edge and corner detection</h2>
+    <h3>Canny's edge detector (1986)</h3>
+    <ol class="steps">
+      <li><b>Gradient:</b> magnitude ${M("g = hypot(∂<sub>0</sub>f, ∂<sub>1</sub>f)")} and direction ${M("α = atan2(∂<sub>1</sub>f, ∂<sub>0</sub>f)")} (the slides name <code>std::hypot</code> and <code>std::atan2</code>).</li>
+      <li><b>Directional non-maximum suppression</b> of ${M("g")}: compare each pixel only with its two neighbours along the gradient direction (quantised to four directions).</li>
+      <li><b>Double thresholding</b> with ${M("θ<sub>0</sub> ≤ θ<sub>1</sub>")}: strong edge pixels have ${M("g ≥ θ<sub>1</sub>")}, weak ones ${M("θ<sub>0</sub> ≤ g &lt; θ<sub>1</sub>")}.</li>
+      <li><b>Weak-edge classification:</b> a pixel is an edge pixel iff it is strong, or weak with a strong pixel in its 8-neighbourhood.</li>
+    </ol>
+    <h3>Structure tensor and Harris' corner detector (1988)</h3>
+    <p>For each pixel ${M("v")} stack the gradients of its neighbours into the ${M("|N(v)| × 2")} matrix ${M("A(v)")}, choose weights ${M("k<sub>v</sub>")} summing to 1, and form the <b>structure tensor</b> ${M("S(v) = Σ<sub>w</sub> k<sub>v</sub>(w) A<sub>w·</sub><sup>T</sup> A<sub>w·</sub>")}, a 2×2 matrix of weighted products of ∂<sub>0</sub>f and ∂<sub>1</sub>f (Definition 17). For a unit direction ${M("r")}, the weighted squared projection of the gradient is ${M("P<sub>r</sub>(v) = r<sup>T</sup> S(v) r = σ<sub>1</sub>|s<sub>1</sub>·r|² + σ<sub>2</sub>|s<sub>2</sub>·r|²")} with eigenvalues ${M("σ<sub>1</sub> ≥ σ<sub>2</sub> ≥ 0")}.</p>
+    <ul class="cmp" aria-label="Reading the eigenvalues">
+      <li><b>σ₁ = σ₂ = 0</b><span class="v">P<sub>r</sub> = 0 in every direction: the image is constant around v.</span></li>
+      <li><b>σ₁ &gt; 0, σ₂ = 0</b><span class="v">Some direction r gives P<sub>r</sub> = 0: a non-zero, constant gradient, i.e. an edge.</span></li>
+      <li><b>σ₁, σ₂ &gt; 0</b><span class="v">No direction gives P<sub>r</sub> = 0: the gradient varies across N(v), i.e. a corner.</span></li>
+      <li><b>Harris (Definition 18)</b><span class="v">φ<sub>NMS</sub> ∘ σ₂: take the smaller eigenvalue at every pixel and keep its local maxima.</span></li>
+    </ul>
+
+    <h2>Take-aways</h2>
+    <ul>
+      <li>Everything is a map between image spaces ${M("C<sup>n<sub>0</sub>×n<sub>1</sub></sup>")}; point, linear and non-linear operators differ only in what a pixel's new value may depend on.</li>
+      <li>Convolution is defined with reflected indices so that it is commutative; the kernel operation ⊗ is convolution with the reflected kernel.</li>
+      <li>Gaussian blur, sharpening and derivatives are all convolutions; median, bilateral, morphology and NMS are not linear.</li>
+      <li>Canny = gradient → directional NMS → hysteresis thresholds; Harris = NMS of the smaller structure-tensor eigenvalue.</li>
+    </ul>
+    <h2>Readings named in the slides</h2>
+    <ul class="refs">
+      <li>J. Canny (1986). A Computational Approach to Edge Detection. IEEE TPAMI 8(6), 679–698.</li>
+      <li>C. Harris &amp; M. Stephens (1988). A Combined Corner and Edge Detector. Alvey Vision Conference.</li>
+      <li>Example micrograph by courtesy of Stephan Grill's lab, MPI-CBG Dresden (slide 24).</li>
+    </ul>
+    <p class="muted">Source: <a href="${l.slides}" target="_blank" rel="noopener">01-operators.pdf ↗</a> on the <a href="${m.links.web}" target="_blank" rel="noopener">course page ↗</a> (43 slides, generated the morning of the lecture). Written up from the slides, not from attending.</p>`;
+}
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${slot(lec)}.<br>The course page lists the chapters but no dates per lecture, so the topic appears here once the slides are published.</p>
+      <p class="muted" style="margin-bottom:0">Exercise group 1 that week: ${(() => { const e = c.exercises.find(x => x.date > l.date); return e ? `${fmt(e.date)}, ${slot(exe)}` : "none"; })()}.</p>
+    </div>
+    <h2>Chapters still to come (course page)</h2>
+    <div>${c.chapters.filter(ch => !ch.held).map(ch => `<div class="chap"><b>${esc(ch.t)}</b><span class="s">${ch.sub.map(esc).join(" · ")}</span></div>`).join("")}</div>`;
+}
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · Computer Vision`;
+  page.innerHTML = l.covered ? lecture1() : placeholder();
+  wireGamma();
+}
+</script>
+</body>
+</html>

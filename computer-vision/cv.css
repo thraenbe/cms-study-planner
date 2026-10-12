@@ -1,0 +1,153 @@
+/* Computer Vision pages (copied from the Touch Sensing board): the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.cv { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.cv .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.cv .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.cv .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.cv header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.cv .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.cv .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.cv .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.cv .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cv .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.cv .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.cv .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.cv .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.cv .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.cv .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.cv .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.cv .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.cv .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.cv .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.cv .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.cv .kd.past { opacity: .55; }
+.cv .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.cv .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.cv .detail { max-width: 760px; margin: 0 auto; }
+.cv .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.cv .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.cv .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.cv .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.cv .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.cv .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.cv .detail p { margin: 0 0 0.7rem; }
+.cv .detail p.lead { font-size: 1.08rem; }
+.cv .detail ul, .cv .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.cv .detail li { margin: 0.2rem 0; }
+.cv .detail .muted { color: var(--ink-2); }
+.cv .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.cv .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.cv .detail .placeholder .big-icon { font-size: 3.2rem; }
+.cv .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Lecture-1 figures */
+.cv .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.cv .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.cv .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.cv .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.cv .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.cv .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.cv .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.cv .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.cv .viz .bar.s1 { fill: var(--vz-s1); }
+.cv .viz .bar.gray { fill: var(--vz-gray); }
+.cv .viz .hit { fill: transparent; }
+.cv .viz .row:hover .bar, .cv .viz .row:focus .bar { filter: brightness(1.12); }
+.cv .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.cv .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.cv .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.cv .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.cv .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.cv .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.cv .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.cv .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.cv .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.cv .cmp .v { display: flex; align-items: center; gap: 6px; }
+.cv .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.cv .cmp .sw.t { background: var(--vz-s1); }
+.cv .cmp .sw.v { background: var(--vz-gray); }
+.cv details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.cv details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.cv details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.cv details.tbl td, .cv details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.cv details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.cv .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.cv .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.cv .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.cv .grade b { display: block; }
+.cv .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.cv table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.cv .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cv .plan tr:last-child td { border-bottom: 0; }
+.cv .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.cv .plan td.k { width: 22px; }
+.cv .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.cv .plan .sw.lec { background: var(--c-core); }
+.cv .plan .sw.exe { background: var(--c-trk); }
+.cv .plan tr.past td { color: var(--ink-3); }
+.cv .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.cv .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.cv .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.cv .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cv .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.cv ul.reading { font-size: 0.92rem; }
+.cv ul.reading b { font-weight: 500; }
+.cv .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .cv .hero h1 { font-size: 1.55rem; }
+  .cv .cmp { grid-template-columns: 1fr; }
+  .cv .plan td.d { width: 70px; }
+}
+
+/* Lecture-1 line chart (gamma curves): ordinal single-hue ramp, direct labels, crosshair */
+.cv .viz .ln { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cv .viz .ln.o1 { stroke: var(--vz-o1); } .cv .viz .ln.o2 { stroke: var(--vz-o2); } .cv .viz .ln.o3 { stroke: var(--vz-o3); }
+.cv .viz .ln.o4 { stroke: var(--vz-o4); } .cv .viz .ln.o5 { stroke: var(--vz-o5); }
+.cv .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--surface-2); stroke-width: 4px; stroke-linejoin: round; }
+.cv .viz .axl { fill: var(--ink-2); font-size: 12px; }
+.cv .viz .xh { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+.cv .viz .pt { stroke: var(--surface-2); stroke-width: 2; }
+.cv .viz .pt.o1 { fill: var(--vz-o1); } .cv .viz .pt.o2 { fill: var(--vz-o2); } .cv .viz .pt.o3 { fill: var(--vz-o3); } .cv .viz .pt.o4 { fill: var(--vz-o4); } .cv .viz .pt.o5 { fill: var(--vz-o5); }
+.cv .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; }
+.cv .viz .tip b { font-weight: 600; }
+.cv .viz .tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+.cv .viz-wrap { position: relative; }
+.cv .vlegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 2px 2px 6px; }
+.cv .vlegend span { display: inline-flex; align-items: center; gap: 6px; }
+.cv .vlegend .sw { width: 14px; height: 3px; border-radius: 2px; }
+.cv .def { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--c-trk); border-radius: 10px; padding: .7rem 1rem; margin: .6rem 0 .9rem; font-size: .95rem; }
+.cv .def b.t { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+.cv .m { font-family: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Times New Roman", serif; font-style: italic; }
+.cv .steps li { margin: .35rem 0; }
+.cv .chap { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); margin: 6px 0; }
+.cv .chap.held { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.cv .chap b { display: block; }
+.cv .chap .s { font-size: .86rem; color: var(--ink-2); }

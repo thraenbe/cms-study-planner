@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Computer Vision · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="computer-vision/cv.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="computer-vision/cv.js"></script>
+</head>
+<body class="cv">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, lec, exe, slot, today } = CV;
+// One row per session, lectures and Bela's exercise group interleaved by date.
+const rows = [...c.lectures.map(l => ({ d: l.date, k: "lec", t: `Lecture ${l.n}: ${l.title}`, s: lec })),
+              ...c.exercises.map(e => ({ d: e.date, k: "exe", t: `Exercise ${e.n} (group 1)`, s: exe }))].sort((a, b) => a.d.localeCompare(b.d));
+const nx = rows.find(r => r.d >= today);
+const nextHTML = nx ? (() => { const d = daysUntil(nx.d); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}</p>
+    <p style="font-size:1.25rem;font-weight:700;margin:.2rem 0">${esc(nx.t)}</p>
+    <p style="margin:0">${fmt(nx.d)} · ${slot(nx.s)} · ${nx.k === "exe" ? "David Stein (TA)" : "Prof. Björn Andres"}</p></div>`; })()
+  : `<div class="box"><p style="margin:0">All ${rows.length} sessions are over.</p></div>`;
+const tr = rows.map(r => `<tr class="${r.d < today ? "past" : ""} ${r === nx ? "next" : ""}"><td class="d">${U.fmtDate(r.d)}</td><td class="k"><span class="sw ${r.k}" title="${r.k === "exe" ? "Exercise" : "Lecture"}"></span></td><td>${esc(r.t)}${r.k === "exe" && r.d === c.exercises[0].date ? ' <span class="muted">· date assumed</span>' : ""}</td></tr>`).join("");
+const nav = (room, label) => c.navigator[room] ? `<a href="${c.navigator[room]}" target="_blank" rel="noopener">${esc(label || room)} ↗</a>` : esc(label || room);
+document.getElementById("page").innerHTML = `
+  <a class="back" href="computer-vision.html">← All lectures</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}), taught as “Computer Vision 1” by the Chair of Machine Learning for Computer Vision.</p>
+  ${CV.topbar({ dates: true })}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  <p>The module description gives a written exam of 90 minutes; course and exam are in English. Exam registration in Selma is required in addition to the OPAL enrolment.</p>
+  <div class="grades">${c.grading.map(g => `<div class="grade mine"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma registration: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <p class="muted">${esc(c.selmaNote)} The university's core exam period is 8 Feb – 6 Mar 2027; the exam date itself is not announced.</p>
+  <p>${esc(c.format)}</p>
+  <h2>Chapters (course page)</h2>
+  <p class="muted">The course page lists the contents by chapter without dates; the slide files are numbered (01 = operators). Chapters already held are marked.</p>
+  <div>${c.chapters.map(ch => `<div class="chap ${ch.held ? "held" : ""}"><b>${esc(ch.t)}${ch.held ? ` <span class="muted" style="font-weight:500">· held ${U.fmtDate(ch.held)}</span>` : ""}${ch.slides ? ` · <a href="${ch.slides}" target="_blank" rel="noopener">slides ↗</a>` : ""}</b><span class="s">${ch.sub.map(esc).join(" · ")}</span></div>`).join("")}</div>
+  <h2>Schedule · ${rows.length} sessions</h2>
+  <div class="legend"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-core)"></span>Lecture · Mon ${lec.start}–${lec.end} · ${nav("HSZ/AUDI/H")}</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-trk)"></span>Exercise group 1 · Tue ${exe.start}–${exe.end} · ${nav("SCH/A251")}</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Dates follow the TU Dresden lecture period (12 Oct – 19 Dec 2026 and 4 Jan – 6 Feb 2027; no Monday or Tuesday holidays fall in it). ${esc(c.exerciseNote)} Group 2 meets Thursdays 13:00–14:30 in ${nav("HSZ/0002/E")}. Not in the calendar yet.</p>
+  <h2>Material &amp; contact</h2>
+  <div class="links">
+    <a href="${m.links.web}" target="_blank" rel="noopener">Course page (contents, slides as they appear) ↗</a>
+    <a href="${c.lectures[0].slides}" target="_blank" rel="noopener">Slides 01 · Operators on digital images (PDF) ↗</a>
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (registration, forum, announcements) ↗</a>
+    <a href="https://mlcv.cs.tu-dresden.de/teaching.html" target="_blank" rel="noopener">Chair's teaching page ↗</a>
+    <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
+  </div>
+  <p>Lecturer: ${esc(c.team.lecturer)} · Teaching assistant: ${esc(c.team.ta)} · OPAL course owners: ${esc(c.team.opal)}.<br>Questions: ${esc(c.contact)}. OPAL has no announcements yet; the forum is where the lecturer confirmed the start date.</p>
+  <h2>Reading list</h2>
+  <p class="muted">Neither OPAL nor the course page lists literature yet. Two papers are cited in the first slides; the textbook is a general suggestion.</p>
+  <ul class="reading">${c.reading.map(r => `<li><b>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">${esc(r.t)}</a>` : esc(r.t)}</b> — ${esc(r.a)}, ${esc(r.v)} ${r.y}${r.why ? `<br><span class="muted">${esc(r.why)}</span>` : ""}</li>`).join("")}</ul>
+  <p class="foot muted">Dates, rooms and organisational facts from the course page, OPAL and the TU Dresden academic calendar as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>

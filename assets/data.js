@@ -5,7 +5,7 @@
 // Sessions with start === null have no published time yet (day === null: no day either).
 // "tentative": true = listed by the chair but not confirmed to apply to Bela.
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
-// ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html).
+// ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
 // Generated once by a script, now edited directly (last: 2026-10-12).
 window.CMS = {
  "semester": "Winter 2026/27",
@@ -36,7 +36,7 @@ window.CMS = {
   },
   "CMS-TRK-CV": {
    "level": "ok",
-   "text": "In the course group and in exercise group 1 (Tuesday 13:00, SCH/A251)."
+   "text": "In the CV Group (301/500) and in Exercise Group 1 (Tuesday 13:00, SCH/A251); OPAL registration open until 31 Jan 2027."
   },
   "CMS-TRK-DCD": {
    "level": "ok",
@@ -463,7 +463,424 @@ window.CMS = {
     "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/cv1/index.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56313610253"
    },
-   "note": "Pick one of the two exercise groups in OPAL (“Registration Exercise”). OPAL gives the exercise start as “14.10.25”, which looks left over from last year; check the announcements. Register for the exam in Selma."
+   "note": "Pick one of the two exercise groups in OPAL (“Registration Exercise”); Bela is in group 1 (Tue 13:00, SCH/A251). OPAL registration is open until 31 Jan 2027. Register for the written exam in Selma (period not announced yet).",
+   "course": {
+    "page": "computer-vision.html",
+    "team": {
+     "lecturer": "Prof. Björn Andres",
+     "ta": "David Stein",
+     "opal": "David Stein, Jannik Presberger, Björn Andres"
+    },
+    "rooms": {
+     "lecture": "HSZ/AUDI/H (Mon 11:10–12:40)",
+     "exercise": "SCH/A251 (Tue 13:00–14:30, group 1 — Bela's)",
+     "exerciseB": "HSZ/0002/E (Thu 13:00–14:30, group 2)"
+    },
+    "navigator": {
+     "HSZ/AUDI/H": "https://navigator.tu-dresden.de/raum/136101.0400",
+     "SCH/A251": "https://navigator.tu-dresden.de/raum/145803.0990",
+     "HSZ/0002/E": "https://navigator.tu-dresden.de/raum/1361-1.0400"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-12",
+      "label": "First lecture (operators on digital images)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-13",
+      "label": "First exercise, group 1 (date assumed, see note)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-12-19",
+      "label": "Christmas break starts (20 Dec – 3 Jan)",
+      "kind": "deadline"
+     },
+     {
+      "date": "2027-01-04",
+      "label": "Lectures resume",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-01-31",
+      "label": "OPAL course registration closes",
+      "kind": "deadline"
+     },
+     {
+      "date": "2027-02-01",
+      "label": "Last lecture",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-02",
+      "label": "Last exercise, group 1",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Core exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-TRK-CV",
+      "how": "Written exam, 90 min (module description)",
+      "selma": "period not announced yet"
+     }
+    ],
+    "format": "Lecture (2 h/week) + exercise group session (2 h/week) + self-study + final examination; course and exam in English. Taught as “Computer Vision 1” by the Chair of Machine Learning for Computer Vision.",
+    "contact": "OPAL forum of the course (the lecturer answers there), or the chair: mlcv@tu-dresden.de",
+    "selmaNote": "Registration period for the written exam not announced yet (nothing on OPAL or the course page as of 12 Oct 2026).",
+    "exerciseNote": "OPAL still says “Exercises (start 14.10.25)”, which is last year's date; the first session of group 1 is assumed to be Tue 13 Oct 2026, the day after the first lecture, as it was last year.",
+    "chapters": [
+     {
+      "t": "Introduction",
+      "sub": [
+       "Mathematical foundations",
+       "Linear and integer optimization for computer vision"
+      ]
+     },
+     {
+      "t": "Operators on digital images",
+      "sub": [
+       "Digital images",
+       "Point operators",
+       "Linear operators, including convolution",
+       "Non-linear operators, including edge and corner detection"
+      ],
+      "slides": "https://mlcv.cs.tu-dresden.de/courses/26-winter/cv1/01-operators.pdf",
+      "held": "2026-10-12"
+     },
+     {
+      "t": "Machine learning for computer vision",
+      "sub": [
+       "Logistic regression",
+       "Deep learning for computer vision",
+       "Attention and transformers for computer vision"
+      ]
+     },
+     {
+      "t": "Classification of digital images",
+      "sub": [
+       "Classification of digital images and image patches",
+       "Supervised learning problems and inference problems"
+      ]
+     },
+     {
+      "t": "Segmentation of digital images",
+      "sub": [
+       "Image segmentation",
+       "Semantic segmentation"
+      ]
+     },
+     {
+      "t": "Object recognition in digital images",
+      "sub": [
+       "Single object recognition",
+       "Multiple object recognition"
+      ]
+     },
+     {
+      "t": "Object tracking in digital images",
+      "sub": [
+       "Single object tracking",
+       "Multiple object tracking"
+      ]
+     },
+     {
+      "t": "Embedding of digital images",
+      "sub": [
+       "Principal component analysis",
+       "Auto-encoders",
+       "Variational auto-encoders"
+      ]
+     }
+    ],
+    "lectures": [
+     {
+      "n": 1,
+      "title": "Operators on digital images",
+      "date": "2026-10-12",
+      "icon": "🖼️",
+      "blurb": "Digital images as maps on a pixel grid; point, linear and non-linear operators from gamma and histogram equalisation to convolution, morphology, Canny edges and Harris corners.",
+      "covered": true,
+      "slides": "https://mlcv.cs.tu-dresden.de/courses/26-winter/cv1/01-operators.pdf"
+     },
+     {
+      "n": 2,
+      "title": "Topic to be announced",
+      "date": "2026-10-19",
+      "icon": "📐",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 3,
+      "title": "Topic to be announced",
+      "date": "2026-10-26",
+      "icon": "🧮",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 4,
+      "title": "Topic to be announced",
+      "date": "2026-11-02",
+      "icon": "🔭",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 5,
+      "title": "Topic to be announced",
+      "date": "2026-11-09",
+      "icon": "🧠",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 6,
+      "title": "Topic to be announced",
+      "date": "2026-11-16",
+      "icon": "🏷️",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 7,
+      "title": "Topic to be announced",
+      "date": "2026-11-23",
+      "icon": "🧩",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 8,
+      "title": "Topic to be announced",
+      "date": "2026-11-30",
+      "icon": "🎯",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 9,
+      "title": "Topic to be announced",
+      "date": "2026-12-07",
+      "icon": "🎞️",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 10,
+      "title": "Topic to be announced",
+      "date": "2026-12-14",
+      "icon": "🔗",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 11,
+      "title": "Topic to be announced",
+      "date": "2027-01-04",
+      "icon": "📊",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 12,
+      "title": "Topic to be announced",
+      "date": "2027-01-11",
+      "icon": "🪞",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 13,
+      "title": "Topic to be announced",
+      "date": "2027-01-18",
+      "icon": "🧬",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 14,
+      "title": "Topic to be announced",
+      "date": "2027-01-25",
+      "icon": "🧭",
+      "blurb": "Not held yet. Topic to be announced; the summary appears here once the lecture is over and its slides are on the course page."
+     },
+     {
+      "n": 15,
+      "title": "Topic to be announced",
+      "date": "2027-02-01",
+      "icon": "🎓",
+      "blurb": "Last lecture of the term (Mon 1 Feb 2027). Topic to be announced."
+     }
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "date": "2026-10-13"
+     },
+     {
+      "n": 2,
+      "date": "2026-10-20"
+     },
+     {
+      "n": 3,
+      "date": "2026-10-27"
+     },
+     {
+      "n": 4,
+      "date": "2026-11-03"
+     },
+     {
+      "n": 5,
+      "date": "2026-11-10"
+     },
+     {
+      "n": 6,
+      "date": "2026-11-17"
+     },
+     {
+      "n": 7,
+      "date": "2026-11-24"
+     },
+     {
+      "n": 8,
+      "date": "2026-12-01"
+     },
+     {
+      "n": 9,
+      "date": "2026-12-08"
+     },
+     {
+      "n": 10,
+      "date": "2026-12-15"
+     },
+     {
+      "n": 11,
+      "date": "2027-01-05"
+     },
+     {
+      "n": 12,
+      "date": "2027-01-12"
+     },
+     {
+      "n": 13,
+      "date": "2027-01-19"
+     },
+     {
+      "n": 14,
+      "date": "2027-01-26"
+     },
+     {
+      "n": 15,
+      "date": "2027-02-02"
+     }
+    ],
+    "reading": [
+     {
+      "t": "Computer Vision: Algorithms and Applications (2nd ed.)",
+      "a": "R. Szeliski",
+      "y": 2022,
+      "v": "Springer; free PDF on the author's site",
+      "url": "https://szeliski.org/Book/",
+      "why": "general textbook covering image operators, segmentation, recognition and tracking (not an official course reference)"
+     },
+     {
+      "t": "A Computational Approach to Edge Detection",
+      "a": "J. Canny",
+      "y": 1986,
+      "v": "IEEE TPAMI 8(6)",
+      "url": "https://doi.org/10.1109/TPAMI.1986.4767851",
+      "why": "cited in the lecture-1 slides (Canny's edge detector)"
+     },
+     {
+      "t": "A Combined Corner and Edge Detector",
+      "a": "C. Harris & M. Stephens",
+      "y": 1988,
+      "v": "Alvey Vision Conference",
+      "url": "https://www.bmva.org/bmvc/1988/avc-88-023.pdf",
+      "why": "cited in the lecture-1 slides (Harris' corner detector)"
+     }
+    ]
+   },
+   "status": {
+    "opal": true,
+    "selma": false
+   },
+   "schedule": {
+    "src": "TU Dresden lecture period for winter 2026/27 (Mondays 12 Oct – 1 Feb, Christmas break 20 Dec – 3 Jan) with the weekly slots from OPAL; the course page lists chapters but no dates, so only lecture 1 has a topic",
+    "lab": true,
+    "rows": [
+     [
+      "2026-10-12",
+      "Lecture 1: Operators on digital images",
+      "Exercise 1 · Tue 13 Oct (group 1)"
+     ],
+     [
+      "2026-10-19",
+      "Lecture 2: Topic to be announced",
+      "Exercise 2 · Tue 20 Oct (group 1)"
+     ],
+     [
+      "2026-10-26",
+      "Lecture 3: Topic to be announced",
+      "Exercise 3 · Tue 27 Oct (group 1)"
+     ],
+     [
+      "2026-11-02",
+      "Lecture 4: Topic to be announced",
+      "Exercise 4 · Tue 3 Nov (group 1)"
+     ],
+     [
+      "2026-11-09",
+      "Lecture 5: Topic to be announced",
+      "Exercise 5 · Tue 10 Nov (group 1)"
+     ],
+     [
+      "2026-11-16",
+      "Lecture 6: Topic to be announced",
+      "Exercise 6 · Tue 17 Nov (group 1)"
+     ],
+     [
+      "2026-11-23",
+      "Lecture 7: Topic to be announced",
+      "Exercise 7 · Tue 24 Nov (group 1)"
+     ],
+     [
+      "2026-11-30",
+      "Lecture 8: Topic to be announced",
+      "Exercise 8 · Tue 1 Dec (group 1)"
+     ],
+     [
+      "2026-12-07",
+      "Lecture 9: Topic to be announced",
+      "Exercise 9 · Tue 8 Dec (group 1)"
+     ],
+     [
+      "2026-12-14",
+      "Lecture 10: Topic to be announced",
+      "Exercise 10 · Tue 15 Dec (group 1)"
+     ],
+     [
+      "2027-01-04",
+      "Lecture 11: Topic to be announced",
+      "Exercise 11 · Tue 5 Jan (group 1)"
+     ],
+     [
+      "2027-01-11",
+      "Lecture 12: Topic to be announced",
+      "Exercise 12 · Tue 12 Jan (group 1)"
+     ],
+     [
+      "2027-01-18",
+      "Lecture 13: Topic to be announced",
+      "Exercise 13 · Tue 19 Jan (group 1)"
+     ],
+     [
+      "2027-01-25",
+      "Lecture 14: Topic to be announced",
+      "Exercise 14 · Tue 26 Jan (group 1)"
+     ],
+     [
+      "2027-02-01",
+      "Lecture 15: Topic to be announced",
+      "Exercise 15 · Tue 2 Feb (group 1)"
+     ]
+    ]
+   }
   },
   "CMS-TRK-MLSP": {
    "code": "CMS-TRK-MLSP",

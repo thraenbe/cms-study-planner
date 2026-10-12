@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer Vision · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="computer-vision/cv.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="computer-vision/cv.js"></script>
+</head>
+<body class="cv">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Main page: header, status bar (OPAL/Selma), then one card per lecture plus the Orga card (SML-games grid).
+const { m, c, esc, U, CODE } = CV;
+const cards = c.lectures.map(l => `<a class="game-card" href="computer-vision/lecture.html?n=${l.n}">
+    <div class="game-icon">${l.icon}</div>
+    <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
+    <p>${esc(l.blurb)}</p>
+  </a>`).join("") + `<a class="game-card" href="computer-vision/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>Next session, exam and Selma status, the chapter list and full schedule, slides and links, reading list and contacts.</p>
+  </a>`;
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="${U.moduleUrl(CODE)}">${esc(m.name)}</a> / Course dashboard</p>
+  <header class="hero">
+    <h1>👁️ ${esc(m.name)}</h1>
+    <p class="subtitle">${CODE} · ${esc(CMS.semester)} · “Computer Vision 1” · Prof. Björn Andres · TU Dresden</p>
+  </header>
+  ${CV.topbar()}
+  <main class="game-cards">${cards}</main>`;
+</script>
+</body>
+</html>
