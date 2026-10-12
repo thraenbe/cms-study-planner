@@ -18,8 +18,7 @@ window.CMS = {
   "CMS-TRK-MLSP",
   "CMS-COR-SAP",
   "CMS-COR-ML",
-  "CMS-TRK-TSP",
-  "CMS-TRK-CSD"
+  "CMS-TRK-TSP"
  ],
  "defaultGroups": {
   "CMS-TRK-CV": "A",

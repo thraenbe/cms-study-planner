@@ -183,7 +183,7 @@ const current = CMS.enrolled.filter(c => CMS.sessions.some(s => s.code === c));
 const nowEnrolled = CMS.enrolled.filter(c => CMSUtil.offeredNow(CMS.modules[c]));
 const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(code) % COLORS.length]})` : "var(--ink-3)";
 const mod = code => CMS.modules[code];
-const SHORT = { "CMS-COR-ML": "ML 1", "CMS-TRK-CSD": "Circuit & System Design", "CMS-TRK-TSP": "Touch Sensing", "CMS-COR-SAP": "Stochastics", "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
+const SHORT = { "CMS-COR-ML": "ML 1", "CMS-TRK-TSP": "Touch Sensing", "CMS-COR-SAP": "Stochastics", "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
 const shortName = code => SHORT[code] || mod(code).name;
 const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
 const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
