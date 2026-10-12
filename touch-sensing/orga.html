@@ -30,7 +30,7 @@ document.getElementById("page").innerHTML = `
   <a class="back" href="touch-sensing.html">← All lectures</a>
   <div class="big-icon">🗂️</div><h1>Orga</h1>
   <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}).</p>
-  ${TSP.topbar()}
+  ${TSP.topbar({ dates: true })}
   <h2>Next session</h2>
   ${nextHTML}
   <h2>Exam &amp; grading</h2>
