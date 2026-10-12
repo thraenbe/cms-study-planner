@@ -433,7 +433,7 @@ function render() {
         <span class="rule">Not counted toward any requirement</span>
       </div>
       <div class="lane-grid">${SEMS.map(sm => `<div class="cell">${ENROLLED_EXTRA.filter(x => sm.n === 1).map(x => `<div class="cell-sem">${CMS.semester}</div>
-        <a class="card on enrolled fixed" href="module.html?code=${encodeURIComponent(x.code)}" style="--c:var(--ok);display:block;text-decoration:none;color:inherit">
+        <a class="card on enrolled fixed" href="${CMSUtil.moduleUrl(x.code)}" style="--c:var(--ok);display:block;text-decoration:none;color:inherit">
           <span class="check" aria-hidden="true">${CHECK}</span>
           <div class="code mono"><span>${CMS.semester}</span><span class="badge">Enrolled</span></div>
           <div class="title">${x.name}</div>
@@ -536,7 +536,7 @@ function renderDialog(g, mod) {
   const sem = SEMS.find(s => s.n === mod.sem);
   const fmt = [mod.sws && `${mod.sws} (V/Ü/S/P)`, mod.extra].filter(Boolean).join(" ");
   const winter = d.winter
-    ? `${d.winter.who} — <a href="module.html?code=${encodeURIComponent(mod.code)}">times &amp; rooms</a>`
+    ? `${d.winter.who} — <a href="${CMSUtil.moduleUrl(mod.code)}">times &amp; rooms</a>`
     : sem.term === "Summer" ? "Summer module — not in the winter catalogue" : "Not listed in the Faculty of Computer Science catalogue";
   dlg.style.setProperty("--c", `var(${g.color})`);
   dlg.dataset.code = mod.code;
@@ -556,7 +556,7 @@ function renderDialog(g, mod) {
       </dl>
     </div>
     <div class="dlg-foot">
-      <a href="module.html?code=${encodeURIComponent(mod.code)}">Open module page →</a>
+      <a href="${CMSUtil.moduleUrl(mod.code)}">${DETAILS[mod.code]?.course?.page ? "Open course dashboard →" : "Open module page →"}</a>
       <button class="dlg-add ${on ? "on" : ""}" data-dlg-toggle ${fixed || LOCKED(mod.code) ? "disabled" : ""}>${ENROLLED.has(mod.code) ? "Enrolled" : TO_REGISTER.has(mod.code) ? "Planned — still to register" : fixed ? "Required — always in your plan" : on ? "Remove from plan" : "Add to plan"}</button>
     </div>`;
 }

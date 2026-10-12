@@ -27,7 +27,7 @@ const cards = c.lectures.map(l => `<a class="game-card" href="touch-sensing/lect
     <p>Next session, exam variants and Selma dates, the full schedule, material, reading list and contacts.</p>
   </a>`;
 document.getElementById("page").innerHTML = `
-  <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="${U.moduleUrl(CODE)}">${esc(m.name)}</a> / Course dashboard</p>
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
   <header class="hero">
     <h1>🖐️ ${esc(m.name)}</h1>
     <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Roberto Calandra &amp; Robin Koch · TU Dresden</p>

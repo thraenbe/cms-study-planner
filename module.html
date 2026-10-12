@@ -79,6 +79,7 @@ const code = new URLSearchParams(location.search).get("code");
 const m = Object.hasOwn(CMS.modules, code) ? CMS.modules[code] : null;
 const page = document.getElementById("page");
 
+if (m?.course?.page) location.replace(m.course.page);
 function render() {
   if (!m) {
     page.innerHTML = `<p class="crumbs"><a href="index.html">Dashboard</a></p><h1>Module not found</h1><p class="lead">There is no module “${esc(code)}”. Go back to the <a href="index.html">dashboard</a> or the <a href="plan.html">study plan</a>.</p>`;

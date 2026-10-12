@@ -32,6 +32,8 @@ document.getElementById("page").innerHTML = `
   <div class="big-icon">🗂️</div><h1>Orga</h1>
   <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}), taught as “Computer Vision 1” by the Chair of Machine Learning for Computer Vision.</p>
   ${CV.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
   <h2>Next session</h2>
   ${nextHTML}
   <h2>Exam &amp; grading</h2>
@@ -52,7 +54,6 @@ document.getElementById("page").innerHTML = `
     <a href="${c.lectures[0].slides}" target="_blank" rel="noopener">Slides 01 · Operators on digital images (PDF) ↗</a>
     <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (registration, forum, announcements) ↗</a>
     <a href="https://mlcv.cs.tu-dresden.de/teaching.html" target="_blank" rel="noopener">Chair's teaching page ↗</a>
-    <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
   </div>
   <p>Lecturer: ${esc(c.team.lecturer)} · Teaching assistant: ${esc(c.team.ta)} · OPAL course owners: ${esc(c.team.opal)}.<br>Questions: ${esc(c.contact)}. OPAL has no announcements yet; the forum is where the lecturer confirmed the start date.</p>
   <h2>Reading list</h2>

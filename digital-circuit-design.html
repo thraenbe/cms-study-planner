@@ -27,7 +27,7 @@ const cards = c.lectures.map(l => `<a class="game-card" href="digital-circuit-de
     <p>Next session, exam and Selma, the full schedule with rooms, slides and OPAL links, reading list and contacts.</p>
   </a>`;
 document.getElementById("page").innerHTML = `
-  <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="${U.moduleUrl(CODE)}">${esc(m.name)}</a> / Course dashboard</p>
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
   <header class="hero">
     <h1>🔲 ${esc(m.name)}</h1>
     <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Christian Mayr · Chair of Highly-Parallel VLSI Systems and Neuromorphic Circuits · TU Dresden</p>

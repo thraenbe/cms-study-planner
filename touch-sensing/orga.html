@@ -31,6 +31,8 @@ document.getElementById("page").innerHTML = `
   <div class="big-icon">🗂️</div><h1>Orga</h1>
   <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}).</p>
   ${TSP.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
   <h2>Next session</h2>
   ${nextHTML}
   <h2>Exam &amp; grading</h2>
@@ -46,7 +48,6 @@ document.getElementById("page").innerHTML = `
     <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (slides, PDFs, feedback links) ↗</a>
     <a href="${m.links.web}" target="_blank" rel="noopener">LASR Lab teaching page ↗</a>
     <a href="${c.feedback}" target="_blank" rel="noopener">Feedback form after each session ↗</a>
-    <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
   </div>
   <p>Questions: ${esc(c.contact)}.</p>
   <h2>Reading list (OPAL bibliography)</h2>

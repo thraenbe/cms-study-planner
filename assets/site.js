@@ -36,7 +36,41 @@ window.CMSUtil = {
   when: s => s.start ? `${CMSUtil.DAYS_SHORT[s.day]} ${s.start}–${s.end}` : s.day ? `${CMSUtil.DAYS_SHORT[s.day]} · time TBA` : "Time TBA",
   mins: t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; },
   fmtDate: iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-  moduleUrl: code => "module.html?code=" + encodeURIComponent(code),
+  // Modules with a course board link straight to it; the others to the module page.
+  moduleUrl: code => CMS.modules[code]?.course?.page || ("module.html?code=" + encodeURIComponent(code)),
+  // The module information (description, facts, goals, contents, OPAL status), shared by
+  // module.html and the Orga pages of the course boards.
+  moduleInfoHTML(code) {
+    const m = CMS.modules[code]; if (!m) return "";
+    const esc = this.esc;
+    const fmt = [m.sws && `${m.sws} SWS (lecture / exercise / seminar / practical)`, m.extra].filter(Boolean).join(", ");
+    const catalogueLink = m.winter ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
+    const st = CMS.opalStatus?.[code];
+    const fact = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
+    return `<section class="modinfo">
+      <p class="lead">${esc(m.desc)}</p>
+      <dl class="facts">
+        ${fact("Module", `<span class="mono">${esc(m.code)}</span>`)}
+        ${fact("Credits", m.lp ? `${m.lp} LP` : "")}
+        ${fact("Format", `${esc(fmt || "—")} · taught in ${esc(m.lang || "English")}`)}
+        ${fact("Exam", esc(m.exam || "—"))}
+        ${fact("Prerequisites", esc(m.prereq || "—"))}
+        ${fact("Coordinator", esc(m.coord || "—"))}
+        ${fact("Offered", `${esc(m.freq || "—")}${m.planSem ? ` · planned for semester ${m.planSem}` : ""}`)}
+        ${fact("Counts toward", esc(m.area))}
+        ${m.winter ? fact("Teaching this semester", esc(m.winter.who)) : ""}
+      </dl>
+      ${st ? `<div class="opal ${st.level}"><b>Your OPAL status</b> ${esc(st.text)} <span class="src">Checked ${this.fmtDate(CMS.opalChecked)}.</span></div>` : ""}
+      ${m.goals ? `<h3>Learning goals</h3><p>${esc(m.goals)}</p>` : ""}
+      ${m.contents ? `<h3>Contents</h3><p>${esc(m.contents)}</p>` : ""}
+      ${m.note ? `<p class="note">${esc(m.note)}</p>` : ""}
+      <div class="modlinks">
+        ${m.goals ? `<a href="${CMS.sources.handbook}" target="_blank" rel="noopener">Official module description (PDF) ↗</a>` : ""}
+        ${catalogueLink ? `<a href="${catalogueLink}" target="_blank" rel="noopener">Faculty course catalogue ↗</a>` : ""}
+        ${m.group ? `<a href="plan.html">See it in the study plan →</a>` : ""}
+      </div>
+    </section>`;
+  },
   // "enrolled", "register" (still to register) or null
   status: code => CMS.enrolled.includes(code) ? "enrolled" : (CMS.toRegister || []).includes(code) ? "register" : null,
   // Priority items (data.js) with their state: done once one option is enrolled.

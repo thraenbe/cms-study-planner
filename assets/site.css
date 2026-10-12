@@ -80,6 +80,23 @@ a.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--in
 .foot { font-size: 12px; color: var(--ink-3); margin-top: 28px; max-width: 90ch; line-height: 1.5; }
 .foot a { color: var(--ink-2); }
 
+/* Module information block (CMSUtil.moduleInfoHTML), used on the course boards' Orga pages */
+.modinfo .lead { font-size: 16px; line-height: 1.55; max-width: 68ch; margin: 0 0 14px; }
+.modinfo .facts { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; margin: 0 0 14px; font-size: 13.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.modinfo .facts dt { color: var(--ink-3); font-size: 12px; }
+.modinfo .facts dd { margin: 0; }
+.modinfo .opal { font-size: 13.5px; line-height: 1.45; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); margin: 0 0 14px; }
+.modinfo .opal.bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.modinfo .opal.warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); }
+.modinfo .opal.ok { background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+.modinfo .opal .src { color: var(--ink-3); font-size: 12px; }
+.modinfo h3 { font-size: 15px; margin: 14px 0 6px; }
+.modinfo p { max-width: 72ch; line-height: 1.6; margin: 0 0 10px; }
+.modinfo .note { font-size: 13.5px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+.modinfo .modlinks { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; }
+.modinfo .modlinks a { color: var(--ink-2); }
+@media (max-width: 520px) { .modinfo .facts { grid-template-columns: 1fr; gap: 2px; } .modinfo .facts dd { margin-bottom: 8px; } }
+
 @media (max-width: 760px) {
   .wrap { padding: 0 16px 48px; }
   .sitebar-in { padding: 10px 16px; gap: 10px; }
