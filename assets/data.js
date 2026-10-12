@@ -4,6 +4,8 @@
 // with course pages where the catalogue had no times ("src": "course page").
 // Sessions with start === null have no published time yet (day === null: no day either).
 // "tentative": true = listed by the chair but not confirmed to apply to Bela.
+// Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
+// ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html).
 // Generated once by a script, now edited directly (last: 2026-10-12).
 window.CMS = {
  "semester": "Winter 2026/27",
@@ -66,7 +68,7 @@ window.CMS = {
   },
   "CMS-TRK-TSP": {
    "level": "ok",
-   "text": "In the OPAL course (Calandra, Koch)."
+   "text": "In the OPAL course and its WiSe 26/27 group (Calandra, Koch). Enrolment/unenrolment open until 31 Oct."
   },
   "CMS-COR-ML": {
    "level": "ok",
@@ -933,7 +935,226 @@ window.CMS = {
     "web": "https://lasr.org/teaching",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/45408092160"
    },
-   "note": "From the OPAL course calendar: Mondays 9:20–10:50 in BEY/0245/H and Tuesdays 9:20–10:50 in BEY/0137/U, starting 12 Oct. Questions via teaching@lasr.org."
+   "note": "OPAL calendar: Mondays 9:20–10:50 in BEY/0245/H (lectures) and Tuesdays 9:20–10:50 in APB-E040 (exercises; 13 Oct in BEY/0137/U), 12 Oct – 19 Jan. Questions via teaching@lasr.org.",
+   "schedule": {
+    "src": "OPAL (course structure page, 2026-10-12; exercise topics from the practice list, assuming Exercise n = Practice n−1)",
+    "rows": [
+     [
+      "2026-10-12",
+      "Lecture 0 + 1: Welcome · The importance of Touch in Humans and Robots"
+     ],
+     [
+      "2026-10-13",
+      "Lecture 2: Brief Introduction to the Physiology of Touch"
+     ],
+     [
+      "2026-10-19",
+      "Exercise 1: PyTorch and Deep Learning"
+     ],
+     [
+      "2026-10-20",
+      "Exercise 2: The importance of Touch in Humans and Robots"
+     ],
+     [
+      "2026-10-26",
+      "Lecture 3: Touch Sensing Hardware"
+     ],
+     [
+      "2026-10-27",
+      "Exercise 3: Brief Introduction to the Physiology of Touch"
+     ],
+     [
+      "2026-11-02",
+      "Lecture 4: Vision-based Tactile Sensors 1"
+     ],
+     [
+      "2026-11-03",
+      "Exercise 4: Vision-based Tactile Sensors 1"
+     ],
+     [
+      "2026-11-09",
+      "Lecture 5: Vision-based Tactile Sensors 2"
+     ],
+     [
+      "2026-11-10",
+      "Exercise 5: Vision-based Tactile Sensors 2"
+     ],
+     [
+      "2026-11-16",
+      "Lecture 6: Simulating Touch"
+     ],
+     [
+      "2026-11-17",
+      "Exercise 6: Vision-based Tactile Sensors 3"
+     ],
+     [
+      "2026-11-23",
+      "Lecture 7: Perception with Touch"
+     ],
+     [
+      "2026-11-24",
+      "Exercise 7: Simulating Touch"
+     ],
+     [
+      "2026-11-30",
+      "Lecture 8: ML for Touch 1"
+     ],
+     [
+      "2026-12-01",
+      "Exercise 8: Perception with Touch"
+     ],
+     [
+      "2026-12-07",
+      "Lecture 9: ML for Touch 2"
+     ],
+     [
+      "2026-12-08",
+      "Exercise 9: ML for Touch 1"
+     ],
+     [
+      "2026-12-14",
+      "Lecture 10: Touch-based Control 1"
+     ],
+     [
+      "2026-12-15",
+      "Exercise 10: ML for Touch 2"
+     ],
+     [
+      "2027-01-04",
+      "Lecture 11: Touch-based Control 2"
+     ],
+     [
+      "2027-01-05",
+      "Exercise 11: ML for Touch 3"
+     ],
+     [
+      "2027-01-11",
+      "Lecture 12: Other applications of Touch"
+     ],
+     [
+      "2027-01-12",
+      "Exercise 12: Depth Estimation"
+     ],
+     [
+      "2027-01-18",
+      "Lecture 13: Recap and Exam preparation"
+     ],
+     [
+      "2027-01-19",
+      "Exercise 13 (topic not listed yet)"
+     ]
+    ]
+   },
+   "status": {
+    "opal": true,
+    "selma": false
+   },
+   "course": {
+    "page": "touch-sensing.html",
+    "rooms": {
+     "lecture": "BEY/0245/H (Mon)",
+     "exercise": "APB-E040 (Tue; 13 Oct in BEY/0137/U)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-12",
+      "label": "First lecture (L0 + L1)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-19",
+      "label": "First exercise (PyTorch)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-10-31",
+      "label": "OPAL enrolment / unenrolment closes",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-12-14",
+      "label": "Selma exam registration opens",
+      "kind": "deadline"
+     },
+     {
+      "date": "2027-01-18",
+      "label": "Recap & exam preparation",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-01-19",
+      "label": "Last exercise",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-01-25",
+      "label": "Selma registration closes (portfolio / oral)",
+      "kind": "deadline"
+     },
+     {
+      "date": "2027-03-31",
+      "label": "Selma registration closes (written exam, CMS-AAI-TSP)",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-AAI-TSP",
+      "how": "100 % written exam (90 min)",
+      "selma": "14 Dec 2026 – 31 Mar 2027"
+     },
+     {
+      "variant": "CMS-TRK-TSP (new study regulation)",
+      "how": "Portfolio",
+      "selma": "14 Dec 2026 – 25 Jan 2027"
+     },
+     {
+      "variant": "CMS old regulation (not AAI)",
+      "how": "80 % oral exam + 20 % home exercises",
+      "selma": "14 Dec 2026 – 25 Jan 2027"
+     }
+    ],
+    "homeExercises": 3,
+    "format": "12 lectures and 12 practices, all in English; prior knowledge of Python/PyTorch and Machine Learning 1 strongly recommended.",
+    "contact": "teaching@lasr.org (or the OPAL e-mail form; no direct personal e-mails)",
+    "feedback": "https://forms.gle/stWPRCG7vm5j5Cpf7",
+    "reading": [
+     {
+      "t": "Coding and use of tactile signals from the fingertips in object manipulation tasks",
+      "a": "Johansson & Flanagan",
+      "y": 2009,
+      "v": "Nature Reviews Neuroscience"
+     },
+     {
+      "t": "The Feeling of Success: Does Touch Sensing Help Predict Grasp Outcomes?",
+      "a": "Calandra et al.",
+      "y": 2017,
+      "v": "CoRL",
+      "url": "https://arxiv.org/abs/1710.05512"
+     },
+     {
+      "t": "DIGIT: A Novel Design for a Low-Cost Compact High-Resolution Tactile Sensor",
+      "a": "Lambeta et al.",
+      "y": 2020,
+      "v": "RA-L",
+      "url": "https://arxiv.org/abs/2005.14679"
+     },
+     {
+      "t": "PyTouch: A Machine Learning Library for Touch Processing",
+      "a": "Lambeta et al.",
+      "y": 2021,
+      "v": "ICRA",
+      "url": "https://arxiv.org/abs/2105.12791"
+     },
+     {
+      "t": "TACTO: A Fast, Flexible, and Open-source Simulator for Vision-based Tactile Sensors",
+      "a": "Wang et al.",
+      "y": 2022,
+      "v": "RA-L",
+      "url": "https://arxiv.org/abs/2012.08456"
+     }
+    ]
+   }
   },
   "CMS-TRK-TEA-CM": {
    "code": "CMS-TRK-TEA-CM",
@@ -1626,12 +1847,12 @@ window.CMS = {
   },
   {
    "code": "CMS-TRK-TSP",
-   "kind": "Lecture/Practice",
+   "kind": "Exercise",
    "day": 2,
    "start": "09:20",
    "end": "10:50",
-   "room": "BEY/0137/U",
-   "who": "Prof. Dr. Roberto Calandra",
+   "room": "APB-E040",
+   "who": "Robin Koch",
    "src": "OPAL"
   },
   {
