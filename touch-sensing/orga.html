@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Touch Sensing · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="touch-sensing/tsp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="touch-sensing/tsp.js"></script>
+</head>
+<body class="tsp">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, roomOn, kindOf, today } = TSP;
+const rows = m.schedule.rows;
+const nx = rows.find(r => r[0] >= today);
+const nextDate = nx?.[0];
+const sessFor = topic => CMS.sessions.find(s => s.code === CODE && s.day === (kindOf(topic) === "exe" ? 2 : 1));
+const nextHTML = nx ? (() => { const s = sessFor(nx[1]), d = daysUntil(nx[0]); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}</p>
+    <p style="font-size:1.25rem;font-weight:700;margin:.2rem 0">${esc(nx[1])}</p>
+    <p style="margin:0">${fmt(nx[0])} · ${s.start}–${s.end} · ${esc(roomOn(nx[0]))} · ${kindOf(nx[1]) === "exe" ? "Robin Koch" : "Roberto Calandra"}</p></div>`; })()
+  : `<div class="box"><p style="margin:0">All ${rows.length} sessions are over.</p></div>`;
+const tr = rows.map(([d, topic]) => { const k = kindOf(topic); return `<tr class="${d < today ? "past" : ""} ${d === nextDate ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : "Lecture"}"></span></td><td>${esc(topic)}</td></tr>`; }).join("");
+document.getElementById("page").innerHTML = `
+  <a class="back" href="touch-sensing.html">← All lectures</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}).</p>
+  ${TSP.topbar()}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  <p>From Lecture 0. Which variant applies depends on the module the course is registered under; Bela's study plan lists it as CMS-TRK-TSP (portfolio). Exam registration in Selma is required in addition to the OPAL enrolment; the dates are the lecturers' and not legally binding.</p>
+  <div class="grades">${c.grading.map(g => `<div class="grade ${/TRK-TSP/.test(g.variant) ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma registration ${esc(g.selma)}</div></div>`).join("")}</div>
+  <p>${c.homeExercises} home exercises during the semester (20 % for the oral-exam variant). ${esc(c.format)}</p>
+  <h2>Schedule · ${rows.length} sessions</h2>
+  <div class="legend"><span><span class="sw lec" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-core)"></span>Lecture · Mon 9:20–10:50 · ${esc(c.rooms.lecture)}</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-trk)"></span>Exercise · Tue 9:20–10:50 · ${esc(c.rooms.exercise)}</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Source: ${esc(m.schedule.src)}. All sessions are in Bela's Google Calendar (lectures yellow, exercises orange).</p>
+  <h2>Material &amp; contact</h2>
+  <div class="links">
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (slides, PDFs, feedback links) ↗</a>
+    <a href="${m.links.web}" target="_blank" rel="noopener">LASR Lab teaching page ↗</a>
+    <a href="${c.feedback}" target="_blank" rel="noopener">Feedback form after each session ↗</a>
+    <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
+  </div>
+  <p>Questions: ${esc(c.contact)}.</p>
+  <h2>Reading list (OPAL bibliography)</h2>
+  <ul class="reading">${c.reading.map(r => `<li><b>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">${esc(r.t)}</a>` : esc(r.t)}</b> — ${esc(r.a)}, ${esc(r.v)} ${r.y}</li>`).join("")}</ul>
+  <p class="foot muted">Dates, rooms and organisational facts from the course's OPAL page and Lecture 0 as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>

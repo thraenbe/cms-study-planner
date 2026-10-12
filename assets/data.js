@@ -1160,86 +1160,100 @@ window.CMS = {
       "title": "Welcome to Touch Sensing and Processing",
       "date": "2026-10-12",
       "icon": "👋",
-      "covered": true
+      "covered": true,
+      "blurb": "Course goals, format, grading variants and logistics from the welcome lecture."
      },
      {
       "n": 1,
       "title": "The importance of Touch in Humans and Robots",
       "date": "2026-10-12",
       "icon": "🤖",
-      "covered": true
+      "covered": true,
+      "blurb": "Why touch matters for humans and robots: Johansson's experiment, touch versus vision, and the grasp-success evidence."
      },
      {
       "n": 2,
       "title": "Brief Introduction to the Physiology of Touch",
       "date": "2026-10-13",
-      "icon": "🧠"
+      "icon": "🧠",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 3,
       "title": "Touch Sensing Hardware",
       "date": "2026-10-26",
-      "icon": "🔧"
+      "icon": "🔧",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 4,
       "title": "Vision-based Tactile Sensors 1",
       "date": "2026-11-02",
-      "icon": "📷"
+      "icon": "📷",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 5,
       "title": "Vision-based Tactile Sensors 2",
       "date": "2026-11-09",
-      "icon": "🔍"
+      "icon": "🔍",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 6,
       "title": "Simulating Touch",
       "date": "2026-11-16",
-      "icon": "🧪"
+      "icon": "🧪",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 7,
       "title": "Perception with Touch",
       "date": "2026-11-23",
-      "icon": "👁️"
+      "icon": "👁️",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 8,
       "title": "ML for Touch 1",
       "date": "2026-11-30",
-      "icon": "📈"
+      "icon": "📈",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 9,
       "title": "ML for Touch 2",
       "date": "2026-12-07",
-      "icon": "📊"
+      "icon": "📊",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 10,
       "title": "Touch-based Control 1",
       "date": "2026-12-14",
-      "icon": "🦾"
+      "icon": "🦾",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 11,
       "title": "Touch-based Control 2",
       "date": "2027-01-04",
-      "icon": "🕹️"
+      "icon": "🕹️",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 12,
       "title": "Other applications of Touch",
       "date": "2027-01-11",
-      "icon": "🌍"
+      "icon": "🌍",
+      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },
      {
       "n": 13,
       "title": "Recap and Exam preparation",
       "date": "2027-01-18",
-      "icon": "🎓"
+      "icon": "🎓",
+      "blurb": "Recap of the course and preparation for the exam."
      }
     ]
    }
