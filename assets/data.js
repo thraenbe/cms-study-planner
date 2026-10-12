@@ -1044,7 +1044,7 @@ window.CMS = {
     "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/project-cs/index.html",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56369152004"
    },
-   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 (room tbd; no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. The topic list is linked from the OPAL course (“Topics”) and isn't out yet. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
+   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 in APB-E067 (no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. The topic list is linked from the OPAL course (“Topics”) and isn't out yet. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
    "schedule": {
     "src": "course page (mlcv.cs.tu-dresden.de)",
     "rows": [
@@ -1110,7 +1110,7 @@ window.CMS = {
      ],
      [
       "2027-01-19",
-      "Presentations (11:00–13:00 and 14:00–18:00)"
+      "Presentations (13:00–18:00)"
      ],
      [
       "2027-01-25",
@@ -1118,7 +1118,7 @@ window.CMS = {
      ],
      [
       "2027-01-26",
-      "Presentations (11:00–13:00 and 14:00–18:00)"
+      "Presentations (13:00–18:00)"
      ],
      [
       "2027-02-01",
@@ -1126,7 +1126,7 @@ window.CMS = {
      ],
      [
       "2027-02-02",
-      "Presentations (11:00–13:00 and 14:00–18:00)"
+      "Presentations (13:00–18:00)"
      ],
      [
       "2027-02-06",
@@ -1403,7 +1403,7 @@ window.CMS = {
    "day": 1,
    "start": "14:50",
    "end": "16:20",
-   "room": "room tbd",
+   "room": "APB/E067",
    "who": "Chair of Machine Learning for Computer Vision",
    "src": "course page"
   },
