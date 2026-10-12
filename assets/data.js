@@ -1404,6 +1404,7 @@ window.CMS = {
    "start": "14:50",
    "end": "16:20",
    "room": "APB/E067",
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2840",
    "who": "Chair of Machine Learning for Computer Vision",
    "src": "course page"
   },
