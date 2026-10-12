@@ -12,7 +12,8 @@
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <style>
-/* Course dashboard: the card-grid feel of thraenbe.github.io/sml-games on the organizer's tokens. */
+/* Course dashboard: one card per lecture, in the card style of thraenbe.github.io/sml-games
+   (14px radius, icon, chip, h2, muted text, lift on hover) on the organizer's tokens. */
 :root {
   --vz-s1: #2a78d6;   /* chart accent (validated light step) */
   --vz-gray: #898781; /* de-emphasis series */
@@ -24,22 +25,24 @@
 }
 :root[data-theme="dark"] { --vz-s1: #3987e5; --vz-gray: #898781; --vz-grid: #2c2c2a; --vz-axis: #383835; }
 
-.wrap { max-width: 1040px; }
-.crumbs { font-size: 13px; color: var(--ink-3); margin-bottom: 6px; }
+.wrap { max-width: 1000px; }
+.crumbs { font-size: 13px; color: var(--ink-3); margin-bottom: 4px; }
 .crumbs a { color: var(--ink-2); }
-.hero { text-align: center; padding: 18px 0 8px; }
-.hero .icon { font-size: 44px; line-height: 1; }
-.hero h1 { font-size: 32px; line-height: 1.15; margin: 8px 0 6px; letter-spacing: -.015em; }
-.hero .subtitle { color: var(--ink-2); margin: 0 auto 16px; max-width: 70ch; font-size: 14.5px; }
-.pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
-.pills a { font-size: 13.5px; font-weight: 500; color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+
+/* Header like the SML site: centered title with icon, subtitle, pill nav */
+.hero { text-align: center; padding: 26px 0 10px; }
+.hero h1 { font-size: 32px; line-height: 1.15; margin: 0 0 6px; letter-spacing: -.015em; }
+.hero .subtitle { color: var(--ink-2); margin: 0 auto 16px; max-width: 70ch; font-size: 15px; }
+.pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+.pills a { font-size: 14px; font-weight: 500; color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 17px; }
 .pills a:hover { border-color: var(--ink-3); }
+.pills a.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
 /* Top bar: status buttons + key dates */
-.topbar { display: grid; gap: 14px; padding: 16px 18px; margin-bottom: 18px; }
+.topbar { display: grid; gap: 14px; padding: 16px 18px; margin-bottom: 26px; }
 .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
-.st { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid; cursor: default; text-decoration: none; }
+.st { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid; cursor: default; }
 .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
 .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
 .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
@@ -53,23 +56,32 @@
 .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
 .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
 
-/* Cards */
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.card .ico { font-size: 30px; line-height: 1; }
-.card h2 { font-size: 18px; margin: 0; line-height: 1.25; }
-.card p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
-.card p.lead { color: var(--ink); }
-.card .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
-@media (min-width: 720px) { .card.wide { grid-column: span 2; } }
+/* Sections */
+h2.sec { font-size: 20px; margin: 30px 0 4px; letter-spacing: -.005em; }
+.sec-sub { color: var(--ink-2); font-size: 14px; margin: 0 0 14px; }
 
-/* Next-up card */
-.next-big { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-.next-meta { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--ink-2); }
-.next-in { display: inline-flex; align-self: flex-start; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); }
+/* Cards (SML game-card) */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); transition: transform .12s ease; min-width: 0; }
+.card:hover { transform: translateY(-3px); }
+.card.full { grid-column: 1 / -1; }
+.card .ico { font-size: 2.2rem; line-height: 1.1; }
+.card .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+.card-chip { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+.card-chip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+.card-chip.next { color: var(--focus); border-color: color-mix(in srgb, var(--focus) 40%, var(--line)); background: color-mix(in srgb, var(--focus) 10%, var(--surface)); }
+.card h2 { font-size: 20px; margin: 6px 0 6px; line-height: 1.25; }
+.card h3 { font-size: 14.5px; margin: 14px 0 6px; }
+.card p { color: var(--ink-2); font-size: 14.5px; line-height: 1.5; margin: 0 0 6px; }
+.card p.lead { color: var(--ink); }
+.card ul { margin: 0 0 6px; padding-left: 18px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.card ul li { margin: 2px 0; }
+.card .meta { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.card.todo { border-style: dashed; box-shadow: none; }
+.card.todo .ico { opacity: .55; }
 
 /* Lecture 1 visualization */
-.viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; }
+.viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 10px 0; }
 .viz figcaption { font-size: 12.5px; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
 .viz svg { display: block; width: 100%; height: auto; font-family: "IBM Plex Sans", system-ui, sans-serif; }
 .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
@@ -83,56 +95,42 @@
 .viz .row:hover .bar, .viz .row:focus .bar { filter: brightness(1.12); }
 .viz .delta { fill: var(--ink-2); font-size: 12px; }
 .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 6px 0 10px; }
 .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
 .tile .v { font-size: 22px; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
 .tile .l { font-size: 12px; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
-.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; font-size: 13px; margin: 0; padding: 0; list-style: none; }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin: 6px 0 10px; padding: 0; list-style: none; }
 .cmp li { display: grid; gap: 1px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); }
 .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
-.cmp .v { display: flex; align-items: center; gap: 6px; }
+.cmp .v { display: flex; align-items: center; gap: 6px; color: var(--ink); }
 .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .cmp .sw.t { background: var(--vz-s1); }
 .cmp .sw.v { background: var(--vz-gray); }
-details.tbl { font-size: 13px; }
+details.tbl { font-size: 13px; margin-top: 6px; }
 details.tbl summary { cursor: pointer; color: var(--ink-2); }
 details.tbl table { border-collapse: collapse; margin-top: 6px; }
 details.tbl td, details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
 details.tbl td.n { font-variant-numeric: tabular-nums; }
+.refs { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; margin-top: 10px; }
 
-/* Schedule */
-table.plan { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.plan td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-.plan tr:last-child td { border-bottom: 0; }
-.plan td.d { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; color: var(--ink-2); width: 84px; }
-.plan td.k { width: 22px; }
-.plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
-.plan .sw.lec { background: var(--c-core); }
-.plan .sw.exe { background: var(--c-trk); }
-.plan tr.past td { color: var(--ink-3); }
-.plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
-.plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
-.legend { display: flex; gap: 14px; font-size: 12.5px; color: var(--ink-2); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-
-/* Exam, material */
-.grades { display: grid; gap: 8px; }
+/* Organisation cards */
+.next-big { font-size: 22px; font-weight: 700; letter-spacing: -.015em; line-height: 1.2; margin: 6px 0 4px; }
+.grades { display: grid; gap: 8px; margin: 6px 0; }
 .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; }
 .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
 .grade b { display: block; }
 .grade .s { font-size: 12.5px; color: var(--ink-2); }
-.links { display: grid; gap: 8px; }
+.links { display: grid; gap: 8px; margin: 6px 0 10px; }
 .links a { font-size: 14px; }
-ul.reading { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: grid; gap: 6px; }
+ul.reading { font-size: 13px; }
 ul.reading b { color: var(--ink); font-weight: 500; }
-ol.topics { margin: 0; padding-left: 20px; font-size: 13.5px; display: grid; gap: 3px; }
 .foot { text-align: center; margin: 32px auto 0; }
 
 @media (max-width: 760px) {
   .hero h1 { font-size: 26px; }
-  .card { padding: 16px; }
-  .cmp { grid-template-columns: 1fr; }
-  .plan td.d { width: 70px; }
+  .card { padding: 18px; }
+  .two, .cmp { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -150,14 +148,15 @@ const fmt = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { wee
 const daysUntil = iso => Math.round((new Date(iso + "T12:00:00") - new Date(today + "T12:00:00")) / 864e5);
 const kindOf = topic => /^Exercise/.test(topic) ? "exe" : "lec";
 const KIND_COLOR = { lecture: "var(--c-core)", exercise: "var(--c-trk)", deadline: "var(--warn)" };
+const roomOn = date => date === "2026-10-13" ? "BEY/0137/U" : CMS.sessions.find(s => s.code === CODE && s.day === 1).room;
 
 function topbar() {
   const nextDate = c.keyDates.find(k => k.date >= today)?.date;
   const dates = c.keyDates.map(k => `<div class="kd ${k.date < today ? "past" : ""} ${k.date === nextDate ? "next" : ""}" style="--c:${KIND_COLOR[k.kind]}">
       <div class="d">${fmt(k.date)}</div><div class="l">${esc(k.label)}</div><div class="k">${k.kind}</div></div>`).join("");
-  const btn = (on, label, note) => `<span class="st ${on ? "on" : "off"}" title="${esc(note || "")}"><span class="dot"></span>${label}${note ? ` <small>· ${esc(note)}</small>` : ""}</span>`;
+  const btn = (on, label, note) => `<span class="st ${on ? "on" : "off"}"><span class="dot"></span>${label}${note ? ` <small>· ${esc(note)}</small>` : ""}</span>`;
   const selmaOpen = c.keyDates.find(k => /Selma.*opens/.test(k.label));
-  return `<section class="panel topbar" id="overview" aria-label="Organisation">
+  return `<section class="panel topbar" id="orga" aria-label="Organisation">
     <div class="status"><span class="lbl">Status</span>
       ${btn(st.opal, "Enrolled in OPAL", st.opal ? "WiSe 26/27 group" : "not yet")}
       ${btn(st.selma, "Registered in Selma", st.selma ? "" : selmaOpen && selmaOpen.date > today ? `not yet · registration opens ${U.fmtDate(selmaOpen.date)}` : "not yet confirmed")}
@@ -166,25 +165,31 @@ function topbar() {
   </section>`;
 }
 
-function nextCard() {
-  const rows = m.schedule.rows;
-  const nx = rows.find(r => r[0] >= today);
-  if (!nx) return `<section class="card"><div class="ico">🏁</div><h2>Course finished</h2><p>All ${rows.length} sessions are in the past.</p></section>`;
-  const kind = kindOf(nx[1]);
-  const sess = CMS.sessions.find(s => s.code === CODE && s.day === (kind === "exe" ? 2 : 1));
-  const n = daysUntil(nx[0]);
-  const room = nx[0] === "2026-10-13" ? "BEY/0137/U" : sess.room;
-  return `<section class="card" style="--c:${kind === "exe" ? "var(--c-trk)" : "var(--c-core)"}">
-    <div class="tag">Next up</div>
-    <div class="next-big">${esc(nx[1])}</div>
-    <div class="next-meta">${fmt(nx[0])} · ${sess.start}–${sess.end} · ${esc(room)}</div>
-    <span class="next-in">${n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`}</span>
-    <p>${kind === "exe" ? "Exercises are on Tuesdays with Robin Koch." : "Lectures are on Mondays with Prof. Calandra."} Slides are linked on the course's OPAL page after each session.</p>
+// ---- Lecture cards -------------------------------------------------------------
+// Status chip: covered (slides read), next (first lecture from today on), upcoming.
+function lectureChips(l, nextN) {
+  const status = l.covered ? `<span class="card-chip ok">Covered</span>` : l.n === nextN ? `<span class="card-chip next">Next</span>` : l.date < today ? `<span class="card-chip">Held · slides pending</span>` : `<span class="card-chip">Upcoming</span>`;
+  return `<div class="chips"><span class="card-chip">Lecture ${l.n} · ${U.fmtDate(l.date)}</span>${status}</div>`;
+}
+function placeholderCard(l, nextN) {
+  const n = daysUntil(l.date);
+  return `<section class="card todo" id="lecture${l.n}">
+    <div class="ico">${l.icon}</div>${lectureChips(l, nextN)}
+    <h2>${esc(l.title)}</h2>
+    <p>Material not yet covered. The summary and figures are added once the lecture has been held and its slides are on OPAL.</p>
+    <div class="meta">${fmt(l.date)} · 09:20–10:50 · ${esc(roomOn(l.date))}${n > 0 ? ` · in ${n} day${n > 1 ? "s" : ""}` : n === 0 ? " · today" : ""}</div>
+  </section>`;
+}
+function lecture0Card(l, nextN) {
+  return `<section class="card" id="lecture0">
+    <div class="ico">${l.icon}</div>${lectureChips(l, nextN)}
+    <h2>${esc(l.title)}</h2>
+    <p>The organisational lecture, held together with Lecture 1: a first-of-its-kind, interdisciplinary course on touch digitalisation with a strong emphasis on vision-based tactile sensors and robotics. The lecturers' pitch: audio was digitised around 1890, vision around 1990, touch is the breakthrough of the 2020s.</p>
+    <p>12 lectures and 12 practices in English, 3 home exercises; Python/PyTorch and Machine Learning 1 strongly recommended. Grading and Selma dates are on the exam card below.</p>
+    <div class="meta">${fmt(l.date)} · 09:20–10:50 · ${esc(roomOn(l.date))} · Roberto Calandra, Robin Koch</div>
   </section>`;
 }
 
-// Lecture 1: "The importance of touch in humans and robots" — the one quantitative result of the lecture,
-// from Calandra et al. 2017 (The Feeling of Success): grasp success on 22 unseen objects, vision only vs vision + touch.
 // Lecture 1: "The importance of touch in humans and robots" — the one quantitative result of the lecture,
 // from Calandra et al. 2017 (The Feeling of Success): grasp success on 22 unseen objects, vision only vs vision + touch.
 const GRASP = [{ k: "Vision only", v: 56.6, cls: "gray" }, { k: "Vision + touch", v: 83.8, cls: "s1" }];
@@ -213,63 +218,101 @@ function graspSVG(narrow) {
       </svg>`;
 }
 const isNarrow = () => matchMedia("(max-width: 600px)").matches;
-function lecture1Card() {
-  const data = GRASP;
-  return `<section class="card wide" id="lecture1">
-    <div class="ico">🤖</div>
-    <div class="tag">Lecture 1 · 12 Oct</div>
-    <h2>The importance of touch in humans and robots</h2>
-    <p class="lead">Touch is the first sense to evolve and sits deep in the sensory cortex; nobody is born without it. Humans deprived of fingertip feedback fail at everyday manipulation (Johansson's anaesthetised-finger experiment), and touch is a social sense too (C-tactile fibres, infant development). For robots, touch complements vision: local, hard to occlude, almost noise-free, and it measures forces directly, which is what manipulation is about.</p>
-    <figure class="viz">
-      <div id="grasp-chart" data-narrow="${isNarrow()}">${graspSVG(isNarrow())}</div>
-      <figcaption>Predicting grasp outcomes from touch: success rate on 22 unseen objects after self-supervised data collection. Calandra et al., <i>The Feeling of Success</i>, CoRL 2017 (as shown in the lecture).</figcaption>
-    </figure>
-    <div class="tiles">
-      <div class="tile"><div class="v">6,450</div><div class="l">grasps collected, almost fully autonomously</div></div>
-      <div class="tile"><div class="v">60+</div><div class="l">training objects, ~2 weeks of data</div></div>
-      <div class="tile"><div class="v">2</div><div class="l">GelSight sensors, one per gripper finger</div></div>
-      <div class="tile"><div class="v">22</div><div class="l">unseen test objects</div></div>
+
+function lecture1Card(l, nextN) {
+  return `<section class="card full" id="lecture1">
+    <div class="ico">${l.icon}</div>${lectureChips(l, nextN)}
+    <h2>${esc(l.title)}</h2>
+    <p class="lead">Why give machines a sense of touch at all? The lecture answers in two halves: touch is indispensable for humans, and the first hard evidence says the same for robots, even though robotics has been slow to adopt it.</p>
+    <div class="two">
+      <div>
+        <h3>Touch in humans</h3>
+        <ul>
+          <li><b>Johansson's experiment</b> (Umeå): with the fingertips anaesthetised, people fail at simple manipulation like striking a match. They adapt surprisingly fast, which raises the question whether that is possible only because touch representations already exist.</li>
+          <li><b>Evolution:</b> touch is the first sense that evolved and sits deep in the brain (sensory cortex). It is impossible to be born without it; only a couple of medical cases of losing it are known.</li>
+          <li><b>Social sense:</b> touch is deeply social and emotional. Infants need human touch, and C-tactile nerve fibres are tied to social development (Dunbar 2010; Croy, Fairhurst &amp; McGlone 2022).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Touch in robots</h3>
+        <ul>
+          <li><b>Complementary to vision:</b> vision is global, touch local; vision can be occluded, touch hardly; vision gives a noisy estimate, touch is virtually noiseless; and people are more confident in touch than vision under perceptual ambiguity (Fairhurst et al. 2018).</li>
+          <li><b>Forces:</b> manipulation is about controlling forces, and only touch measures them. Contact position and intensity together give the torque (Del Prete et al. 2012).</li>
+          <li><b>Adoption:</b> most manipulation roboticists accept that touch is essential for human-level manipulation, but parts of the computer-vision and RL communities still do not, partly for lack of flashy demonstrations.</li>
+        </ul>
+      </div>
     </div>
     <ul class="cmp" aria-label="Touch versus vision">
       <li><b>Coverage</b><span class="v"><span class="sw t"></span>Touch: local contact patch</span><span class="v"><span class="sw v"></span>Vision: global scene</span></li>
       <li><b>Occlusion</b><span class="v"><span class="sw t"></span>Touch: hardly ever occluded</span><span class="v"><span class="sw v"></span>Vision: easily occluded</span></li>
       <li><b>Noise</b><span class="v"><span class="sw t"></span>Touch: virtually noiseless</span><span class="v"><span class="sw v"></span>Vision: noisy estimate</span></li>
-      <li><b>Forces</b><span class="v"><span class="sw t"></span>Touch: measures contact position and intensity, hence torque</span><span class="v"><span class="sw v"></span>Vision: does not</span></li>
+      <li><b>Forces</b><span class="v"><span class="sw t"></span>Touch: contact position + intensity, hence torque</span><span class="v"><span class="sw v"></span>Vision: does not measure forces</span></li>
     </ul>
-    <p>Second example from the lecture: general in-hand object rotation with vision and touch (Qi et al., CoRL 2023). Take-away: touch is crucial for humans, the proofs for robots are arriving, but touch is still not widely adopted in robotics, partly for lack of flashy demonstrations.</p>
-    <details class="tbl"><summary>Table view of the chart</summary>
-      <table><tr><th>Input</th><th>Grasp success (22 unseen objects)</th></tr>${data.map(d => `<tr><td>${d.k}</td><td class="n">${d.v} %</td></tr>`).join("")}</table>
-    </details>
+    <h3>Example 1 · Learning grasp stability (Calandra et al., CoRL 2017)</h3>
+    <p>A 7-DOF Sawyer arm with a Weiss WSG-50 gripper, one GelSight sensor per finger and two RGB-D cameras collected grasps almost autonomously: estimate the object position from depth, grasp at random, label the attempt by whether contact persists after lifting. A network then predicts from the tactile and visual readings whether a grasp will succeed.</p>
+    <div class="two">
+      <figure class="viz">
+        <div id="grasp-chart" data-narrow="${isNarrow()}">${graspSVG(isNarrow())}</div>
+        <figcaption>Grasp success on 22 unseen objects when the policy uses the outcome predictor, vision only vs vision + touch (as shown in the lecture).</figcaption>
+      </figure>
+      <div>
+        <div class="tiles">
+          <div class="tile"><div class="v">6,450</div><div class="l">grasps collected, ~2 weeks</div></div>
+          <div class="tile"><div class="v">60+</div><div class="l">training objects</div></div>
+          <div class="tile"><div class="v">2</div><div class="l">GelSight sensors, one per finger</div></div>
+          <div class="tile"><div class="v">22</div><div class="l">unseen test objects</div></div>
+        </div>
+        <details class="tbl"><summary>Table view of the chart</summary>
+          <table><tr><th>Input</th><th>Grasp success (22 unseen objects)</th></tr>${GRASP.map(d => `<tr><td>${d.k}</td><td class="n">${d.v} %</td></tr>`).join("")}</table>
+        </details>
+      </div>
+    </div>
+    <h3>Example 2 · General in-hand object rotation with vision and touch (Qi et al., CoRL 2023)</h3>
+    <p>A multi-fingered hand rotates unseen objects in-hand around arbitrary axes; the policy fuses vision and touch, and touch is what makes the rotation robust when the object is occluded by the hand itself.</p>
+    <h3>Summary</h3>
+    <ul>
+      <li>Touch is a crucial sensing modality in humans.</li>
+      <li>The first proofs that this holds for robots too are here (grasp-outcome prediction, in-hand rotation).</li>
+      <li>Touch is still not widely adopted in robotics.</li>
+    </ul>
+    <p class="refs">Readings named in the lecture: Dunbar 2010 (social role of touch); Croy, Fairhurst &amp; McGlone 2022 (C-tactile fibres); Fairhurst et al. 2018 (confidence in touch vs vision); Del Prete et al., IROS 2012 (contact forces and tactile feedback); Lambeta et al., RA-L 2020 (DIGIT sensor); Calandra et al., CoRL 2017 (The Feeling of Success); Qi et al., CoRL 2023 (in-hand rotation). Slides are on OPAL.</p>
+    <div class="meta">${fmt(l.date)} · 09:20–10:50 · ${esc(roomOn(l.date))} · Roberto Calandra</div>
   </section>`;
 }
 
+function lectureCards() {
+  const nextN = c.lectures.find(l => !l.covered && l.date >= today)?.n;
+  // The filled lecture-1 card spans the full row, so it leads; the rest follow in lecture order.
+  const sorted = [...c.lectures].sort((a, b) => (a.n === 1 ? -1 : b.n === 1 ? 1 : a.n - b.n));
+  return sorted.map(l => l.n === 1 ? lecture1Card(l, nextN) : l.n === 0 ? lecture0Card(l, nextN) : placeholderCard(l, nextN)).join("");
+}
+
+// ---- Organisation cards -------------------------------------------------------
+function nextCard() {
+  const rows = m.schedule.rows;
+  const nx = rows.find(r => r[0] >= today);
+  if (!nx) return `<section class="card"><div class="ico">🏁</div><h2>Course finished</h2><p>All ${rows.length} sessions are in the past.</p></section>`;
+  const kind = kindOf(nx[1]);
+  const sess = CMS.sessions.find(s => s.code === CODE && s.day === (kind === "exe" ? 2 : 1));
+  const n = daysUntil(nx[0]);
+  return `<section class="card">
+    <div class="ico">⏭️</div>
+    <div class="chips"><span class="card-chip">Next session</span><span class="card-chip next">${n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`}</span></div>
+    <div class="next-big">${esc(nx[1])}</div>
+    <p>${fmt(nx[0])} · ${sess.start}–${sess.end} · ${esc(roomOn(nx[0]))}</p>
+    <p>${kind === "exe" ? "Exercises are on Tuesdays with Robin Koch." : "Lectures are on Mondays with Prof. Calandra."}</p>
+  </section>`;
+}
 function examCard() {
   const mine = /TRK-TSP/;
   return `<section class="card" id="exam">
     <div class="ico">🎓</div>
     <h2>Exam &amp; grading</h2>
-    <p>From Lecture 0. Which variant applies depends on the module you register the course under; Bela's study plan lists it as CMS-TRK-TSP (portfolio). Exam registration in Selma is required in addition to OPAL; the dates are the lecturers' and not legally binding.</p>
+    <p>From Lecture 0. Which variant applies depends on the module the course is registered under; Bela's study plan lists it as CMS-TRK-TSP (portfolio). Selma registration is required in addition to OPAL; the dates are the lecturers' and not legally binding.</p>
     <div class="grades">${c.grading.map(g => `<div class="grade ${mine.test(g.variant) ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma registration ${esc(g.selma)}</div></div>`).join("")}</div>
-    <p>${c.homeExercises} home exercises during the semester (they count 20 % for the oral-exam variant). Feedback form after every session: <a href="${c.feedback}" target="_blank" rel="noopener">forms.gle ↗</a></p>
+    <p>${c.homeExercises} home exercises during the semester (20 % for the oral-exam variant). Feedback form after every session: <a href="${c.feedback}" target="_blank" rel="noopener">forms.gle ↗</a></p>
   </section>`;
 }
-
-function scheduleCard() {
-  const rows = m.schedule.rows;
-  const next = rows.find(r => r[0] >= today)?.[0];
-  const tr = rows.map(([d, topic]) => {
-    const k = kindOf(topic);
-    return `<tr class="${d < today ? "past" : ""} ${d === next ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : "Lecture"}"></span></td><td>${esc(topic)}</td></tr>`;
-  }).join("");
-  return `<section class="card wide" id="schedule">
-    <div class="ico">📅</div>
-    <h2>Schedule · ${rows.length} sessions</h2>
-    <div class="legend"><span><span class="sw lec" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-core)"></span>Lecture · Mon 9:20–10:50 · ${esc(c.rooms.lecture)}</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-trk)"></span>Exercise · Tue 9:20–10:50 · ${esc(c.rooms.exercise)}</span></div>
-    <table class="plan"><tbody>${tr}</tbody></table>
-    <p>Source: ${esc(m.schedule.src)}. All sessions are in Bela's Google Calendar (lectures yellow, exercises orange).</p>
-  </section>`;
-}
-
 function materialCard() {
   return `<section class="card" id="material">
     <div class="ico">📚</div>
@@ -280,33 +323,26 @@ function materialCard() {
       <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
     </div>
     <p>Questions: ${esc(c.contact)}.</p>
-    <div class="tag">Reading list (OPAL bibliography)</div>
+    <h3>Reading list (OPAL bibliography)</h3>
     <ul class="reading">${c.reading.map(r => `<li><b>${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">${esc(r.t)}</a>` : esc(r.t)}</b> — ${esc(r.a)}, ${esc(r.v)} ${r.y}</li>`).join("")}</ul>
   </section>`;
 }
 
-function glanceCard() {
-  const topics = ["The importance of touch in humans and robots", "Physiology of touch", "Touch sensing hardware", "Simulating touch", "Perception with touch", "Machine learning for touch processing", "Robot manipulation from touch", "Real-world applications of touch"];
-  return `<section class="card">
-    <div class="ico">🖐️</div>
-    <h2>Course at a glance</h2>
-    <p>${esc(c.format)} ${m.lp} LP, ${esc(m.sws)} SWS, taught by Prof. Roberto Calandra and Robin Koch (LASR Lab). The lecturers' pitch: audio was digitised around 1890, vision around 1990, and touch is the next breakthrough of the 2020s.</p>
-    <ol class="topics">${topics.map(t => `<li>${esc(t)}</li>`).join("")}</ol>
-  </section>`;
-}
-
-document.title = "Touch Sensing · CMS";
 page.innerHTML = `
   <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="${U.moduleUrl(CODE)}">${esc(m.name)}</a> / Course dashboard</p>
   <header class="hero">
-    <div class="icon">🖐️</div>
-    <h1>${esc(m.name)}</h1>
+    <h1>🖐️ ${esc(m.name)}</h1>
     <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Roberto Calandra &amp; Robin Koch · LASR Lab, TU Dresden</p>
-    <nav class="pills" aria-label="Sections"><a href="#overview">Overview</a><a href="#lecture1">Lecture 1</a><a href="#schedule">Schedule</a><a href="#exam">Exam</a><a href="#material">Material</a></nav>
+    <nav class="pills" aria-label="Sections"><a class="active" href="#lectures">📖 Lectures</a><a href="#exam">🎓 Exam</a><a href="#material">📚 Material</a></nav>
   </header>
   ${topbar()}
-  <main class="cards">${nextCard()}${glanceCard()}${lecture1Card()}${examCard()}${scheduleCard()}${materialCard()}</main>
-  <p class="foot">Dates, rooms and organisational facts from the course's OPAL page and Lecture 0 as of ${CMS.updated}; check OPAL announcements for changes. Lecture 1 summary written from the lecture slides; the chart shows the result as presented there.</p>`;
+  <h2 class="sec" id="lectures">Lectures</h2>
+  <p class="sec-sub">One card per lecture from the OPAL list, Lecture 1 first because it is the one filled in so far. The other cards are completed once their lecture has been held and the slides are on OPAL.</p>
+  <main class="cards">${lectureCards()}</main>
+  <h2 class="sec" id="organisation">Organisation</h2>
+  <p class="sec-sub">Next session, exam variants and where the material lives. The full session list is in Bela's Google Calendar and on the module page.</p>
+  <div class="cards">${nextCard()}${examCard()}${materialCard()}</div>
+  <p class="foot">Dates, rooms and organisational facts from the course's OPAL page and Lecture 0 as of ${CMS.updated}; check OPAL announcements for changes. Lecture summaries are written from the lecture slides; the chart shows the result as presented there.</p>`;
 
 // Re-render the lecture-1 chart when the viewport crosses the narrow breakpoint.
 addEventListener("resize", () => {

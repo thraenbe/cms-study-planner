@@ -1153,6 +1153,94 @@ window.CMS = {
       "v": "RA-L",
       "url": "https://arxiv.org/abs/2012.08456"
      }
+    ],
+    "lectures": [
+     {
+      "n": 0,
+      "title": "Welcome to Touch Sensing and Processing",
+      "date": "2026-10-12",
+      "icon": "👋",
+      "covered": true
+     },
+     {
+      "n": 1,
+      "title": "The importance of Touch in Humans and Robots",
+      "date": "2026-10-12",
+      "icon": "🤖",
+      "covered": true
+     },
+     {
+      "n": 2,
+      "title": "Brief Introduction to the Physiology of Touch",
+      "date": "2026-10-13",
+      "icon": "🧠"
+     },
+     {
+      "n": 3,
+      "title": "Touch Sensing Hardware",
+      "date": "2026-10-26",
+      "icon": "🔧"
+     },
+     {
+      "n": 4,
+      "title": "Vision-based Tactile Sensors 1",
+      "date": "2026-11-02",
+      "icon": "📷"
+     },
+     {
+      "n": 5,
+      "title": "Vision-based Tactile Sensors 2",
+      "date": "2026-11-09",
+      "icon": "🔍"
+     },
+     {
+      "n": 6,
+      "title": "Simulating Touch",
+      "date": "2026-11-16",
+      "icon": "🧪"
+     },
+     {
+      "n": 7,
+      "title": "Perception with Touch",
+      "date": "2026-11-23",
+      "icon": "👁️"
+     },
+     {
+      "n": 8,
+      "title": "ML for Touch 1",
+      "date": "2026-11-30",
+      "icon": "📈"
+     },
+     {
+      "n": 9,
+      "title": "ML for Touch 2",
+      "date": "2026-12-07",
+      "icon": "📊"
+     },
+     {
+      "n": 10,
+      "title": "Touch-based Control 1",
+      "date": "2026-12-14",
+      "icon": "🦾"
+     },
+     {
+      "n": 11,
+      "title": "Touch-based Control 2",
+      "date": "2027-01-04",
+      "icon": "🕹️"
+     },
+     {
+      "n": 12,
+      "title": "Other applications of Touch",
+      "date": "2027-01-11",
+      "icon": "🌍"
+     },
+     {
+      "n": 13,
+      "title": "Recap and Exam preparation",
+      "date": "2027-01-18",
+      "icon": "🎓"
+     }
     ]
    }
   },
