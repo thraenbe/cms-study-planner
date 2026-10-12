@@ -4,7 +4,7 @@
 // with course pages where the catalogue had no times ("src": "course page").
 // Sessions with start === null have no published time yet (day === null: no day either).
 // "tentative": true = listed by the chair but not confirmed to apply to Bela.
-// Generated once by a script, now edited directly (last: 2026-10-11).
+// Generated once by a script, now edited directly (last: 2026-10-12).
 window.CMS = {
  "semester": "Winter 2026/27",
  "updated": "2026-10-12",
@@ -17,12 +17,10 @@ window.CMS = {
   "CMS-TRK-DCD",
   "CMS-TRK-MLSP",
   "CMS-COR-SAP",
-  "CMS-COR-ML",
   "CMS-TRK-TSP"
  ],
  "defaultGroups": {
-  "CMS-TRK-CV": "A",
-  "CMS-COR-ML": "A"
+  "CMS-TRK-CV": "A"
  },
  "toRegister": [
   "CMS-TRK-CAI",
@@ -32,7 +30,7 @@ window.CMS = {
  "opalStatus": {
   "CMS-COR-HPC": {
    "level": "bad",
-   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov. Machine Learning 1 is enrolled as a backup basic-training module."
+   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
   },
   "CMS-TRK-CV": {
    "level": "ok",
@@ -72,7 +70,7 @@ window.CMS = {
   },
   "CMS-COR-ML": {
    "level": "ok",
-   "text": "Enrolled in “Machine Learning 1 – Winter 2026/27” (380 of 500) and in exercise group 1 (Tuesday 16:40, POT/0081/H). Backup for basic training in case HPC doesn't work out."
+   "text": "Enrolled in “Machine Learning 1 – Winter 2026/27” (380 of 500) and in exercise group 1 (Tuesday 16:40, POT/0081/H). Not in your schedule (dropped on 12 Oct); the OPAL enrolment is untouched."
   }
  },
  "opalChecked": "2026-10-12",
