@@ -1,0 +1,156 @@
+/* Digital Circuit Design pages: the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.dcd { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.dcd .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.dcd .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.dcd .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.dcd header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.dcd .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.dcd .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.dcd .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.dcd .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dcd .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.dcd .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.dcd .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.dcd .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.dcd .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.dcd .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.dcd .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.dcd .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.dcd .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.dcd .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.dcd .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.dcd .kd.past { opacity: .55; }
+.dcd .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.dcd .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.dcd .detail { max-width: 760px; margin: 0 auto; }
+.dcd .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.dcd .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.dcd .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.dcd .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.dcd .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.dcd .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.dcd .detail p { margin: 0 0 0.7rem; }
+.dcd .detail p.lead { font-size: 1.08rem; }
+.dcd .detail ul, .dcd .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.dcd .detail li { margin: 0.2rem 0; }
+.dcd .detail .muted { color: var(--ink-2); }
+.dcd .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.dcd .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.dcd .detail .placeholder .big-icon { font-size: 3.2rem; }
+.dcd .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Lecture-1 figures */
+.dcd .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.dcd .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.dcd .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.dcd .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.dcd .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.dcd .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.dcd .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.dcd .viz .bar.s1 { fill: var(--vz-s1); }
+.dcd .viz .bar.gray { fill: var(--vz-gray); }
+.dcd .viz .hit { fill: transparent; }
+.dcd .viz .row:hover .bar, .dcd .viz .row:focus .bar { filter: brightness(1.12); }
+.dcd .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.dcd .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.dcd .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.dcd .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.dcd .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.dcd .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.dcd .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.dcd .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.dcd .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.dcd .cmp .v { display: flex; align-items: center; gap: 6px; }
+.dcd .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.dcd .cmp .sw.t { background: var(--vz-s1); }
+.dcd .cmp .sw.v { background: var(--vz-gray); }
+.dcd details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.dcd details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.dcd details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.dcd details.tbl td, .dcd details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.dcd details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.dcd .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.dcd .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.dcd .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.dcd .grade b { display: block; }
+.dcd .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.dcd table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.dcd .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.dcd .plan tr:last-child td { border-bottom: 0; }
+.dcd .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.dcd .plan td.k { width: 22px; }
+.dcd .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.dcd .plan .sw.lec { background: var(--c-core); }
+.dcd .plan .sw.exe { background: var(--c-trk); }
+.dcd .plan tr.past td { color: var(--ink-3); }
+.dcd .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.dcd .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.dcd .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.dcd .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dcd .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.dcd ul.reading { font-size: 0.92rem; }
+.dcd ul.reading b { font-weight: 500; }
+.dcd .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .dcd .hero h1 { font-size: 1.55rem; }
+  .dcd .cmp { grid-template-columns: 1fr; }
+  .dcd .plan td.d { width: 70px; }
+}
+
+/* Lecture-1 extras: scaling line chart, truth-table demo */
+.dcd .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dcd .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.dcd .viz .pt:hover .dot, .dcd .viz .pt:focus .dot { r: 6; }
+.dcd .viz .pt:focus { outline: none; }
+.dcd .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dcd .viz .note { fill: var(--ink-2); font-size: 11px; }
+.dcd .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.dcd .viz .tip.show { opacity: 1; }
+.dcd .viz .tip b { display: block; }
+.dcd .viz .chart-wrap { position: relative; }
+.dcd table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.dcd table.tt th, .dcd table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.dcd table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.dcd table.tt td.one { font-weight: 700; }
+.dcd .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.dcd .cmp { grid-template-columns: 1fr; }
+.dcd .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.dcd .cmp li b { align-self: center; }
+@media (max-width: 760px) { .dcd .cmp li { grid-template-columns: 1fr; } }
+.dcd .plan .sw.off, .dcd .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.dcd .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.dcd .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.dcd .legend .sw.lec { background: var(--c-core); }
+.dcd .legend .sw.exe { background: var(--c-trk); }
+.dcd .cmp .v { display: block; }
+.dcd .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }

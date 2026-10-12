@@ -436,7 +436,367 @@ window.CMS = {
     "web": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/zeitplan_ws",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/26351140878"
    },
-   "note": "Lecture Mondays 4th DS (13:00–14:30) in TOE/317/H from 12 Oct; exercise for CMS students Tuesdays 3rd DS (11:10–12:40) in SCH/A285/U, weekly, from 20 Oct (the chair's page says “20.10.2025”, clearly meaning 2026). Sign up for the exercises in OPAL. Register for the exam in Selma."
+   "note": "Lecture Mondays 4th DS (13:00–14:30) in TOE/317/H from 12 Oct; exercise for CMS students (CMS-AAI-DCT) Wednesdays 2nd DS (9:20–10:50) in APB/E008/U, weekly from 21 Oct (chair timetable as of 12 Oct 2026; it said Tue 11:10 SCH/A285/U before). The Thursday exercise is for the EuI Diplom variant only. Sign up for the exercises in OPAL (not open yet). Register for the exam in Selma.",
+   "status": {
+    "opal": true,
+    "selma": false
+   },
+   "schedule": {
+    "src": "lecture topics and order from the chair's slide list (materials page, 2022/23 decks), one deck per lecture Monday assumed; dates from the chair's WS 2026/27 timetable (12 Oct 2026) and the TU Dresden academic calendar; exercise topics not published yet",
+    "rows": [
+     [
+      "2026-10-12",
+      "Lecture 1: Introduction and digital basics",
+      "lec"
+     ],
+     [
+      "2026-10-19",
+      "Lecture 2: Arithmetic circuits 1",
+      "lec"
+     ],
+     [
+      "2026-10-21",
+      "Exercise 1 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-10-26",
+      "Lecture 3: Arithmetic circuits 2",
+      "lec"
+     ],
+     [
+      "2026-10-28",
+      "Exercise 2 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-11-02",
+      "Lecture 4: Arithmetic circuits 3",
+      "lec"
+     ],
+     [
+      "2026-11-04",
+      "Exercise 3 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-11-09",
+      "Lecture 5: Semiconductor technology for digital circuits",
+      "lec"
+     ],
+     [
+      "2026-11-11",
+      "Exercise 4 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-11-16",
+      "Lecture 6: CMOS logic 1",
+      "lec"
+     ],
+     [
+      "2026-11-18",
+      "No exercise: Buß- und Bettag (public holiday in Saxony)",
+      "off"
+     ],
+     [
+      "2026-11-23",
+      "Lecture 7: Timing of CMOS logic",
+      "lec"
+     ],
+     [
+      "2026-11-25",
+      "Exercise 5 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-11-30",
+      "Lecture 8: Power and energy in digital circuits",
+      "lec"
+     ],
+     [
+      "2026-12-02",
+      "Exercise 6 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-12-07",
+      "Lecture 9: Mixed-signal circuits 1",
+      "lec"
+     ],
+     [
+      "2026-12-09",
+      "Exercise 7 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-12-14",
+      "Lecture 10: Mixed-signal circuits 2",
+      "lec"
+     ],
+     [
+      "2026-12-16",
+      "Exercise 8 (CMS group)",
+      "exe"
+     ],
+     [
+      "2026-12-21",
+      "Christmas break until 3 Jan (no lectures or exercises)",
+      "off"
+     ],
+     [
+      "2027-01-04",
+      "Lecture 11: Logic 2: programmable logic",
+      "lec"
+     ],
+     [
+      "2027-01-06",
+      "Exercise 9 (CMS group)",
+      "exe"
+     ],
+     [
+      "2027-01-11",
+      "Lecture 12: Memory circuits",
+      "lec"
+     ],
+     [
+      "2027-01-13",
+      "Exercise 10 (CMS group)",
+      "exe"
+     ],
+     [
+      "2027-01-18",
+      "Lecture 13: I/O circuits",
+      "lec"
+     ],
+     [
+      "2027-01-20",
+      "Exercise 11 (CMS group)",
+      "exe"
+     ],
+     [
+      "2027-01-25",
+      "Lecture 14: Hardware for deep neural networks",
+      "lec"
+     ],
+     [
+      "2027-01-27",
+      "Exercise 12 (CMS group)",
+      "exe"
+     ],
+     [
+      "2027-02-01",
+      "Reserve Monday (the 2022 plan had a lab tour and an 'advanced circuits' lecture here; not announced)",
+      "off"
+     ],
+     [
+      "2027-02-03",
+      "Exercise 13 (CMS group)",
+      "exe"
+     ]
+    ]
+   },
+   "course": {
+    "page": "digital-circuit-design.html",
+    "rooms": {
+     "lecture": "TOE/317/H (Mon 13:00–14:30, 4th DS)",
+     "exercise": "APB/E008/U (Wed 9:20–10:50, 2nd DS, CMS group)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-12",
+      "label": "First lecture (Introduction)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-16",
+      "label": "OPAL enrolment / unenrolment closes (00:00)",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-10-21",
+      "label": "First exercise (CMS group)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-11-18",
+      "label": "No exercise: Buß- und Bettag",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-21",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-01-25",
+      "label": "Last titled lecture (DNN hardware)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-03",
+      "label": "Last exercise",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-AAI-DCT / CMS-TRK-DCD (CMS, Applied AI track)",
+      "how": "Written exam, 120 min; the module grade is the exam grade",
+      "selma": "registration period not announced yet"
+     },
+     {
+      "variant": "EuI-ET-C-ADST (Diplom Informationssystemtechnik)",
+      "how": "Combined written exam, 150 min; 1 SWS exercise instead of 2",
+      "selma": "not Bela’s variant"
+     }
+    ],
+    "selmaNote": "registration period not announced yet",
+    "format": "2 SWS lecture + 2 SWS exercise (CMS variant), 5 LP, 150 h workload. Slides in English; lecture, exercise and board notes in German (as announced on the 2022 slides). No formal prerequisites for CMS students.",
+    "contact": "Prof. Christian Mayr (christian.mayr@tu-dresden.de, TOE 214) for the lecture; Dr.-Ing. Johannes Partzsch and Dipl.-Ing. Jörg Schreiter run the exercises; questions also go to the OPAL forum",
+    "materials": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+    "materialsNote": "14 slide decks (2022/23 versions) behind a password that is announced in the first lecture; the OPAL course only links here and hosts enrolment and the forum.",
+    "coursePage": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/dst",
+    "reading": [
+     {
+      "t": "CMOS: Circuit Design, Layout, and Simulation",
+      "a": "R. Jacob Baker",
+      "y": 2011,
+      "v": "IEEE Press, 3rd ed."
+     },
+     {
+      "t": "Halbleiter-Schaltungstechnik",
+      "a": "Ulrich Tietze & Christoph Schenk",
+      "y": 2002,
+      "v": "Springer"
+     },
+     {
+      "t": "Digital Design and Computer Architecture",
+      "a": "David Harris & Sarah Harris",
+      "y": 2010,
+      "v": "Morgan Kaufmann"
+     }
+    ],
+    "lectures": [
+     {
+      "n": 1,
+      "title": "Introduction and digital basics",
+      "date": "2026-10-12",
+      "icon": "🧭",
+      "covered": true,
+      "blurb": "Why digital wins: abstraction and scaling, analog vs digital, Boolean algebra, Karnaugh maps, binary arithmetic, latches and finite-state machines."
+     },
+     {
+      "n": 2,
+      "title": "Arithmetic circuits 1",
+      "date": "2026-10-19",
+      "icon": "➕",
+      "covered": false,
+      "blurb": "Number representations (unsigned, signed, fixed and floating point), addition and subtraction circuits."
+     },
+     {
+      "n": 3,
+      "title": "Arithmetic circuits 2",
+      "date": "2026-10-26",
+      "icon": "✖️",
+      "covered": false,
+      "blurb": "Adding multiple operands, multipliers and sequential multiplication; carry delays of ripple-carry vs carry-lookahead adders."
+     },
+     {
+      "n": 4,
+      "title": "Arithmetic circuits 3",
+      "date": "2026-11-02",
+      "icon": "➗",
+      "covered": false,
+      "blurb": "Division circuits, then the advanced blocks: filters, the ALU and floating-point operations."
+     },
+     {
+      "n": 5,
+      "title": "Semiconductor technology for digital circuits",
+      "date": "2026-11-09",
+      "icon": "🔬",
+      "covered": false,
+      "blurb": "Lithography-based CMOS manufacturing, the bulk CMOS cross section, devices and the 22 nm FDSOI prototype of the chair."
+     },
+     {
+      "n": 6,
+      "title": "CMOS logic 1",
+      "date": "2026-11-16",
+      "icon": "🔀",
+      "covered": false,
+      "blurb": "The CMOS inverter, transistor switch models, pull-up and pull-down networks, static characteristics and sizing."
+     },
+     {
+      "n": 7,
+      "title": "Timing of CMOS logic",
+      "date": "2026-11-23",
+      "icon": "⏱️",
+      "covered": false,
+      "blurb": "MOS capacitances, the RC switch model, effective resistance, gate delays, setup and hold in synchronous circuits."
+     },
+     {
+      "n": 8,
+      "title": "Power and energy in digital circuits",
+      "date": "2026-11-30",
+      "icon": "🔋",
+      "covered": false,
+      "blurb": "Where the energy goes: dynamic and static power, supply networks, and why keyword spotting must run below 10 µW."
+     },
+     {
+      "n": 9,
+      "title": "Mixed-signal circuits 1",
+      "date": "2026-12-07",
+      "icon": "🎚️",
+      "covered": false,
+      "blurb": "ADC types and characteristics, DAC types, with 1000BASE-T1 Ethernet as the running example."
+     },
+     {
+      "n": 10,
+      "title": "Mixed-signal circuits 2",
+      "date": "2026-12-14",
+      "icon": "📡",
+      "covered": false,
+      "blurb": "Digitally assisted analog, line drivers for wired communication, PLLs and DLLs, built-in self-test and calibration."
+     },
+     {
+      "n": 11,
+      "title": "Logic 2: programmable logic",
+      "date": "2027-01-04",
+      "icon": "🧩",
+      "covered": false,
+      "blurb": "Hardware vs software trade-offs, PLA and PAL, CPLDs and FPGAs: fast operation that is still quick to change."
+     },
+     {
+      "n": 12,
+      "title": "Memory circuits",
+      "date": "2027-01-11",
+      "icon": "💾",
+      "covered": false,
+      "blurb": "Flash, DRAM and SRAM: cell structures, arrays, embedded vs specific silicon technologies."
+     },
+     {
+      "n": 13,
+      "title": "I/O circuits",
+      "date": "2027-01-18",
+      "icon": "🔌",
+      "covered": false,
+      "blurb": "Why pads need their own circuitry: drivers, level shifters, ESD protection and high-speed interfaces."
+     },
+     {
+      "n": 14,
+      "title": "Hardware for deep neural networks",
+      "date": "2027-01-25",
+      "icon": "🧠",
+      "covered": false,
+      "blurb": "Why DNNs need special hardware: data flows, accelerators and the energy of a multiply-accumulate."
+     }
+    ]
+   }
   },
   "CMS-TRK-CV": {
    "code": "CMS-TRK-CV",
@@ -2315,10 +2675,10 @@ window.CMS = {
   {
    "code": "CMS-TRK-DCD",
    "kind": "Exercise",
-   "day": 2,
-   "start": "11:10",
-   "end": "12:40",
-   "room": "SCH/A285/U",
+   "day": 3,
+   "start": "09:20",
+   "end": "10:50",
+   "room": "APB/E008/U",
    "who": "Dr.-Ing. Johannes Partzsch, Dipl.-Ing. Jörg Schreiter",
    "src": "course page"
   },

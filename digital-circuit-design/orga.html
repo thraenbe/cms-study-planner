@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Digital Circuit Design · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="digital-circuit-design/dcd.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="digital-circuit-design/dcd.js"></script>
+</head>
+<body class="dcd">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, lec, exe, slot, today } = DCD;
+const rows = m.schedule.rows;
+const held = rows.filter(r => r[2] !== "off");
+const nx = held.find(r => r[0] >= today);
+const nextDate = nx?.[0];
+const who = k => k === "exe" ? exe.who : lec.who;
+const nextHTML = nx ? (() => { const d = daysUntil(nx[0]); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}</p>
+    <p style="font-size:1.25rem;font-weight:700;margin:.2rem 0">${esc(nx[1])}</p>
+    <p style="margin:0">${fmt(nx[0])} · ${slot(nx[2])} · ${esc(who(nx[2]))}</p></div>`; })()
+  : `<div class="box"><p style="margin:0">All ${held.length} sessions are over.</p></div>`;
+const tr = rows.map(([d, topic, k]) => `<tr class="${k === "off" ? "off" : ""} ${d < today ? "past" : ""} ${d === nextDate ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : k === "lec" ? "Lecture" : "No session"}"></span></td><td>${esc(topic)}</td></tr>`).join("");
+const nLec = rows.filter(r => r[2] === "lec").length, nExe = rows.filter(r => r[2] === "exe").length;
+document.getElementById("page").innerHTML = `
+  <a class="back" href="digital-circuit-design.html">← All lectures</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}; taught as “Digital Circuit Technology / Digitale Schaltungstechnik”).</p>
+  ${DCD.topbar({ dates: true })}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  <p>From the module description (CMS-AAI-DCT) and the chair's course page. The CMS variant is a 120-minute written exam and nothing else counts towards the grade. Exam registration in Selma is separate from the OPAL enrolment; the registration period has not been announced. The exam period of the winter semester is 8 Feb – 6 Mar 2027, the date itself is not published yet.</p>
+  <div class="grades">${c.grading.map(g => `<div class="grade ${/CMS/.test(g.variant) ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <p>${esc(c.format)}</p>
+  <h2>Enrolment</h2>
+  <div class="box">
+    <p style="margin:0 0 .4rem"><b>OPAL:</b> enrolled in the course group “Students_digital_circuits_technology_ws26_27” (all participants of WS 26/27). Enrolment and unenrolment close on <b>16 Oct 2026, 00:00</b>.</p>
+    <p style="margin:0 0 .4rem"><b>Exercise groups:</b> the chair's timetable says “for exercises, please sign up in OPAL”, but the OPAL course has no exercise sign-up yet (only the one course group; checked ${CMS.updated}). Watch OPAL mails.</p>
+    <p style="margin:0"><b>Selma:</b> exam registration still open-ended; shown red above until it is done.</p>
+  </div>
+  <h2>Schedule · ${nLec} lectures, ${nExe} exercises</h2>
+  <div class="legend"><span><span class="sw lec"></span>Lecture · Mon ${lec.start}–${lec.end} · ${esc(lec.room)} · from 12 Oct</span><span><span class="sw exe"></span>Exercise (CMS group) · Wed ${exe.start}–${exe.end} · ${esc(exe.room)} · weekly from 21 Oct</span><span><span class="sw off"></span>No session</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Source: ${esc(m.schedule.src)}. The Thursday exercise on the chair's timetable (BAR/0E85/U, every first week) is for the electrical-engineering Diplom variant, not for CMS. No calendar events have been created for this course.</p>
+  <h2>Material &amp; links</h2>
+  <div class="links">
+    <a href="${c.materials}" target="_blank" rel="noopener">Lecture slides on the chair's materials page (password from the first lecture) ↗</a>
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (enrolment, forum, announcements) ↗</a>
+    <a href="${c.coursePage}" target="_blank" rel="noopener">Course page “Digitale Schaltungstechnik” ↗</a>
+    <a href="${m.links.web}" target="_blank" rel="noopener">Chair timetable for the winter semester ↗</a>
+    <a href="${U.moduleUrl(CODE)}">Module description in the organizer →</a>
+  </div>
+  <p>${esc(c.materialsNote)}</p>
+  <h2>Contact</h2>
+  <p>${esc(c.contact)}.</p>
+  <h2>Reading list (from the introduction lecture)</h2>
+  <ul class="reading">${c.reading.map(r => `<li><b>${esc(r.t)}</b> — ${esc(r.a)}, ${esc(r.v)} ${r.y}</li>`).join("")}</ul>
+  <p>Follow-up courses named in the lecture: VLSI Processor Design, Neuromorphic VLSI Systems, Schaltkreisentwurf.</p>
+  <p class="foot muted">Dates, rooms and organisational facts from OPAL, the chair's pages and the introduction slides as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Digital Circuit Design · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔲</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="digital-circuit-design/dcd.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="digital-circuit-design/dcd.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="dcd">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, today } = DCD;
+const n = Number(new URLSearchParams(location.search).get("n"));
+const l = c.lectures.find(x => x.n === n);
+const page = document.getElementById("page");
+const back = `<a class="back" href="digital-circuit-design.html">← All lectures</a>`;
+
+// Lecture 1, slide "Advantage: Size Scaling": the same D flip-flop drawn in 180 nm, 65 nm and 28 nm, and
+// "2 nm in 2027 (Intel) -> no end of the road yet". The slide names the nodes; the years of the first three
+// are the industry introduction years (added here). Single series, log axis, direct labels only at the ends.
+const NODES = [
+  { year: 1999, nm: 180, note: "the reference D flip-flop on the slide" },
+  { year: 2006, nm: 65, note: "same flip-flop, about 1/8 of the area" },
+  { year: 2011, nm: 28, note: "same flip-flop, about 1/41 of the area" },
+  { year: 2027, nm: 2, note: "Intel's roadmap, quoted on the slide" },
+];
+const relArea = nm => (nm / 180) ** 2;
+const isNarrow = () => matchMedia("(max-width: 600px)").matches;
+function scalingSVG(narrow) {
+  const W = narrow ? 340 : 560, H = narrow ? 230 : 250, L = narrow ? 44 : 56, R = narrow ? 16 : 24, T = 18, B = 34;
+  const PW = W - L - R, PH = H - T - B;
+  const x = y => L + (y - 1996) / (2030 - 1996) * PW;
+  const y = nm => T + (3 - Math.log10(nm)) / 3 * PH; // 1 nm … 1000 nm, log scale
+  const ygrid = [1, 10, 100, 1000].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v >= 1000 ? "1 µm" : v + " nm"}</text>`).join("");
+  const xt = narrow ? [2000, 2010, 2020, 2030] : [2000, 2005, 2010, 2015, 2020, 2025, 2030];
+  const xticks = xt.map(v => `<text class="tick" x="${x(v)}" y="${H - 12}" text-anchor="middle">${v}</text>`).join("");
+  const path = "M" + NODES.map(d => `${x(d.year).toFixed(1)},${y(d.nm).toFixed(1)}`).join(" L");
+  const pts = NODES.map((d, i) => `<g class="pt" tabindex="0" data-i="${i}"><title>${d.nm} nm (${d.year}): ${d.note}</title>
+      <circle class="hit" cx="${x(d.year)}" cy="${y(d.nm)}" r="18"/>
+      <circle class="dot" cx="${x(d.year)}" cy="${y(d.nm)}" r="4.5"/>
+      ${i === 0 || i === NODES.length - 1 ? `<text class="lbl" x="${x(d.year) + (i === 0 ? 10 : -10)}" y="${y(d.nm) + (i === 0 ? -10 : 16)}" text-anchor="${i === 0 ? "start" : "end"}">${d.nm} nm · ${d.year}</text>` : ""}
+    </g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Minimum feature size of CMOS nodes named in the lecture, on a logarithmic axis: 180 nanometres in 1999, 65 in 2006, 28 in 2011, and Intel's 2 nanometres planned for 2027">
+      ${ygrid}<line class="axis" x1="${L}" x2="${W - R}" y1="${y(1)}" y2="${y(1)}"/>${xticks}
+      <path class="line" d="${path}"/>${pts}</svg>`;
+}
+function wireChart() {
+  const wrap = document.getElementById("scaling-chart"); if (!wrap) return;
+  const tip = wrap.parentElement.querySelector(".tip");
+  const show = g => { const d = NODES[+g.dataset.i], dot = g.querySelector(".dot"), r = dot.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    tip.innerHTML = `<b>${d.nm} nm · ${d.year}</b>relative flip-flop area ${relArea(d.nm) >= 0.01 ? (relArea(d.nm) * 100).toFixed(0) + " %" : "1/" + Math.round(1 / relArea(d.nm)).toLocaleString("en-GB")}<br><span class="muted">${d.note}</span>`;
+    tip.style.left = (r.left + r.width / 2 - w.left) + "px"; tip.style.top = (r.top - w.top) + "px"; tip.classList.add("show"); };
+  wrap.querySelectorAll(".pt").forEach(g => { g.addEventListener("mouseenter", () => show(g)); g.addEventListener("focus", () => show(g));
+    g.addEventListener("mouseleave", () => tip.classList.remove("show")); g.addEventListener("blur", () => tip.classList.remove("show")); });
+}
+
+function head(l) {
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1>
+    <p class="meta">${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · Prof. Christian Mayr</p>`;
+}
+const tt = (hdr, rows) => `<table class="tt"><tr>${hdr.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i >= hdr.length - 2 && v === 1 ? "one" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table>`;
+function lecture1() {
+  return `${head(l)}
+    <p class="lead">The opening lecture makes the case for digital design and then rebuilds the toolbox the rest of the course assumes: Boolean algebra, number representation and arithmetic, and sequential logic up to finite-state machines. Slides are the chair's 2022/23 deck (33 slides); the password for the materials page was given in this lecture.</p>
+    <h2>Who teaches it and why</h2>
+    <p>Prof. Mayr's chair (Highly-Parallel VLSI Systems and Neuromorphic Circuits) builds multi-processor systems-on-chip down to 22 nm, mixed-signal sensor nodes with ADCs, DACs and power conditioning, and brain-inspired hardware: the 10-million-processor real-time AI machine of the Human Brain Project, neural implants and processors for machine learning. The course is the entry point to all of that.</p>
+    <h2>Why digital</h2>
+    <ul>
+      <li><b>Everything is a digital system now.</b> A conventional smartphone contains 20–30 processors. Even a 1000BASE-T1 automotive Ethernet link is a mixed-signal chip whose analog front end is wrapped in digital processing.</li>
+      <li><b>Abstraction.</b> Hardware description languages (Verilog, VHDL, SystemVerilog, SystemC) describe behaviour; a synthesizable register-transfer-level description becomes a netlist of flip-flops and gates automatically.</li>
+      <li><b>Size scaling.</b> The same D flip-flop drawn to scale in 180 nm, 65 nm and 28 nm shrinks dramatically, and Intel plans 2 nm for 2027: no end of the road yet.</li>
+    </ul>
+    <figure class="viz">
+      <div class="chart-wrap"><div id="scaling-chart" data-narrow="${isNarrow()}">${scalingSVG(isNarrow())}</div><div class="tip" role="tooltip"></div></div>
+      <figcaption>Minimum feature size of the CMOS nodes named on the "size scaling" slide, logarithmic axis. Node years for 180/65/28 nm are the industry introduction years; 2 nm in 2027 is Intel's plan as quoted in the lecture. Hover or focus a point for the relative flip-flop area.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view of the chart</summary>
+      <table><tr><th>Year</th><th>Feature size</th><th>Relative D-FF area</th></tr>${NODES.map(d => `<tr><td class="n">${d.year}</td><td class="n">${d.nm} nm</td><td class="n">${relArea(d.nm) >= 0.01 ? (relArea(d.nm) * 100).toFixed(1) + " %" : "1/" + Math.round(1 / relArea(d.nm)).toLocaleString("en-GB")}</td></tr>`).join("")}</table>
+    </details>
+    <h3>Analog vs digital (slide 9)</h3>
+    <ul class="cmp" aria-label="Analog versus digital">
+      <li><b>Signal representation</b><span class="v"><span class="sw v"></span>Analog: gradual degradation and noise; energy grows quadratically with resolution; high dynamic range</span><span class="v"><span class="sw t"></span>Digital: noise-free; energy linear in resolution; dynamic range set by the word width</span></li>
+      <li><b>Device variations</b><span class="v"><span class="sw v"></span>Analog: not very tolerant</span><span class="v"><span class="sw t"></span>Digital: very tolerant</span></li>
+      <li><b>Technology scaling</b><span class="v"><span class="sw v"></span>Analog: does not scale to small dimensions</span><span class="v"><span class="sw t"></span>Digital: scales very well</span></li>
+      <li><b>Design scaling</b><span class="v"><span class="sw v"></span>Analog: little automation, manual design, &lt; 10<sup>5</sup> transistors</span><span class="v"><span class="sw t"></span>Digital: highly abstracted and automated, &gt; 10<sup>11</sup> transistors</span></li>
+      <li><b>Power / energy</b><span class="v"><span class="sw v"></span>Analog: large gate capacitances, high V<sub>DD</sub></span><span class="v"><span class="sw t"></span>Digital: small capacitances and V<sub>DD</sub>, but a clock is needed</span></li>
+      <li><b>Bandwidth</b><span class="v"><span class="sw v"></span>Analog: about the signal bandwidth</span><span class="v"><span class="sw t"></span>Digital: well above it (rectangular signals)</span></li>
+    </ul>
+    <h2>Digital circuit basics</h2>
+    <ul>
+      <li><b>Binary values.</b> 0/LOW/L/FALSE and 1/HIGH/H/TRUE, electrically a voltage: above V<sub>AH</sub> reads 1, below V<sub>AL</sub> reads 0.</li>
+      <li><b>Gates.</b> INV, BUF, AND2, OR2, NAND2, NOR2; standard-cell libraries add wider gates, adders, multiplexers, AOI and OAI cells.</li>
+      <li><b>Truth tables and don't cares.</b> Inputs that do not influence an output are marked X, which shrinks the table.</li>
+      <li><b>Logic equations.</b> Min-terms (AND the input combinations where the output is 1, OR them together) or max-terms (OR the combinations where it is 0, AND them together). The slide's example reduces to the two functions below.</li>
+      <li><b>Boolean rules.</b> Associative, commutative, absorption, distributive, complement, dominance, idempotence, De Morgan, double complement.</li>
+      <li><b>Karnaugh maps.</b> Gray-coded rearrangement of the truth table for 2, 3 and 4 inputs; the simplification procedure of the course.</li>
+    </ul>
+    ${tt(["A2", "A3", "Z1", "Z2"], [[0, 0, 0, 0], [0, 1, 1, 1], [1, 0, 1, 0], [1, 1, 0, 0]])}
+    <div class="formula">Z1 = A2·A3̅ + A2̅·A3 &nbsp;(= A2 ⊕ A3) &nbsp;&nbsp;&nbsp; Z2 = A2̅·A3 &nbsp;&nbsp;&nbsp; A1 is a don't care for both.</div>
+    <h3>Numbers and arithmetic</h3>
+    <ul>
+      <li>Unsigned integers as n-bit vectors, D = Σ b<sub>i</sub>·2<sup>i</sup>, range 0 … 2<sup>n</sup>−1, MSB left, LSB right; binary and hexadecimal notation (0b…, 0x…).</li>
+      <li>Addition: 1-bit sum and carry table; 0101 + 1101 = 10010, so an n-bit sum needs n+1 bits.</li>
+      <li>Multiplication: 1-bit AND table and shifted partial sums; 1001 · 0101 = 00101101 (9 · 5 = 45), so an n-bit product needs 2n bits.</li>
+    </ul>
+    <h2>A little more advanced</h2>
+    <ul>
+      <li><b>Memory and delay.</b> Combinational circuits have no clocked memory but do have electrical memory (RC of the gates), so Z = F(A) only holds after a delay t<sub>d</sub>. Evaluating at defined time points restores the memory-free theory.</li>
+      <li><b>Sequential systems.</b> Clocked memory with state S: S<sub>i+1</sub> = G(A<sub>i</sub>, S<sub>i</sub>), Z<sub>i</sub> = F(A<sub>i</sub>, S<sub>i</sub>).</li>
+      <li><b>D-latch.</b> Level-driven: C = 1 makes it transparent (D is written), C = 0 holds the old value.</li>
+      <li><b>Finite-state machines.</b> Mealy (output depends on input and state) vs Moore (output depends on state only); state-transition diagrams with a named reset state; unused states must also be coded, e.g. by sending them to idle.</li>
+      <li><b>State coding</b> affects power and logic complexity: on the slide's four-state path a binary code toggles 6 state bits, a Gray code only 4. The worked example derives S<sub>1,i+1</sub> and S<sub>0,i+1</sub> from Karnaugh maps.</li>
+    </ul>
+    <div class="tiles">
+      <div class="tile"><div class="v">6 → 4</div><div class="l">state-bit toggles per full path, binary vs Gray coding</div></div>
+      <div class="tile"><div class="v">20–30</div><div class="l">processors in a conventional smartphone</div></div>
+      <div class="tile"><div class="v">&gt; 10<sup>11</sup></div><div class="l">transistors a digital design flow scales to</div></div>
+      <div class="tile"><div class="v">120 min</div><div class="l">written exam, the only graded part</div></div>
+    </div>
+    <h2>Take-home message</h2>
+    <ul>
+      <li>Digital design rests on representations and arithmetic, Boolean algebra, truth tables, FSMs and timing.</li>
+      <li>It is strongly abstracted, largely automated and scales to systems with more than ten billion transistors.</li>
+      <li>Digital blocks are the missing link between analog sensors and software: mixed-signal systems (AD converters, HDMI, Ethernet, USB) and digital systems (processors, AI accelerators, DSPs).</li>
+    </ul>
+    <h2>Organisation named in the slides</h2>
+    <ul>
+      <li>Slides are in English; lecture, exercise and board notes are in German (the deck is from 2022, when the exercise ran six times; the CMS group now has a weekly exercise, see the <a href="digital-circuit-design/orga.html">Orga page</a>).</li>
+      <li>Slides live on the chair's materials page behind a password given in this lecture; further information comes by OPAL mail.</li>
+      <li>The module ends with a 120-minute written test; the module grade is the test grade.</li>
+    </ul>
+    <h2>Literature named in the lecture</h2>
+    <ul class="refs">${c.reading.map(r => `<li>${esc(r.a)} (${r.y}). <i>${esc(r.t)}</i>. ${esc(r.v)}.</li>`).join("")}</ul>
+    <p class="muted">Follow-up lectures of the chair: VLSI Processor Design, Neuromorphic VLSI Systems, Schaltkreisentwurf. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
+}
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
+    </div>`;
+}
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · Digital Circuit Design`;
+  page.innerHTML = l.n === 1 ? lecture1() : placeholder();
+  wireChart();
+}
+addEventListener("resize", () => {
+  const el = document.getElementById("scaling-chart");
+  if (el && el.dataset.narrow !== String(isNarrow())) { el.dataset.narrow = String(isNarrow()); el.innerHTML = scalingSVG(isNarrow()); wireChart(); }
+});
+</script>
+</body>
+</html>
