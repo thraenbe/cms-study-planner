@@ -21,9 +21,18 @@ window.CMS = {
   "CMS-COR-SAP",
   "CMS-TRK-TSP"
  ],
- "defaultGroups": {
-  "CMS-TRK-CV": "A"
- },
+ "toConfirm": [
+  {
+   "code": "CMS-COR-HPC",
+   "kind": "Exercise",
+   "text": "No exercise group yet: all three are full and you're on the waiting list. Exercises start in the week of 26 Oct."
+  },
+  {
+   "code": "CMS-TRK-APSS",
+   "kind": "Tutorial",
+   "text": "Tutorial groups open after the first lecture on 20 Oct; tutorials start on 29 Oct."
+  }
+ ],
  "toRegister": [
   "CMS-TRK-CAI",
   "CMS-COR-SSE",
@@ -2355,40 +2364,6 @@ window.CMS = {
    "src": "OPAL"
   },
   {
-   "code": "CMS-COR-HPC",
-   "kind": "Exercise",
-   "day": 1,
-   "start": "09:20",
-   "end": "10:50",
-   "room": "online",
-   "who": "",
-   "src": "OPAL",
-   "group": "A"
-  },
-  {
-   "code": "CMS-COR-HPC",
-   "kind": "Exercise",
-   "day": 2,
-   "start": "09:20",
-   "end": "10:50",
-   "room": "APB/E008/U",
-   "who": "",
-   "src": "OPAL",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2130",
-   "group": "B"
-  },
-  {
-   "code": "CMS-COR-HPC",
-   "kind": "Exercise",
-   "day": 3,
-   "start": "07:30",
-   "end": "09:00",
-   "room": "TOE/A317/H",
-   "who": "",
-   "src": "OPAL",
-   "group": "C"
-  },
-  {
    "code": "CMS-COR-VIZ",
    "kind": "Lecture",
    "day": 3,
@@ -2427,54 +2402,6 @@ window.CMS = {
    "room": "GÖR/0226/H",
    "who": "Dr. Sarah Alice Gaggl",
    "src": "course page"
-  },
-  {
-   "code": "CMS-TRK-APSS",
-   "kind": "Tutorial",
-   "day": 1,
-   "start": "13:00",
-   "end": "14:30",
-   "room": "APB/E001/U",
-   "who": "",
-   "src": "course page",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2060",
-   "group": "A"
-  },
-  {
-   "code": "CMS-TRK-APSS",
-   "kind": "Tutorial",
-   "day": 1,
-   "start": "16:40",
-   "end": "18:10",
-   "room": "APB/E001/U",
-   "who": "",
-   "src": "course page",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2060",
-   "group": "B"
-  },
-  {
-   "code": "CMS-TRK-APSS",
-   "kind": "Tutorial",
-   "day": 4,
-   "start": "13:00",
-   "end": "14:30",
-   "room": "APB/E007/U",
-   "who": "",
-   "src": "course page",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2120",
-   "group": "C"
-  },
-  {
-   "code": "CMS-TRK-APSS",
-   "kind": "Tutorial",
-   "day": 5,
-   "start": "13:00",
-   "end": "14:30",
-   "room": "APB/E006/U",
-   "who": "Dr. Timothy S. Lyon",
-   "src": "course page",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110",
-   "group": "D"
   },
   {
    "code": "EXT-LLM",
@@ -2608,19 +2535,7 @@ window.CMS = {
    "end": "14:30",
    "room": "SCH/A251",
    "who": "",
-   "src": "OPAL",
-   "group": "A"
-  },
-  {
-   "code": "CMS-TRK-CV",
-   "kind": "Exercise",
-   "day": 4,
-   "start": "13:00",
-   "end": "14:30",
-   "room": "HSZ/0002/E",
-   "who": "",
-   "src": "OPAL",
-   "group": "B"
+   "src": "OPAL"
   },
   {
    "code": "CMS-COR-SAP",

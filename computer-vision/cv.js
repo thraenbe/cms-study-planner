@@ -8,7 +8,7 @@ window.CV = (function () {
   const KIND_COLOR = { lecture: "var(--c-core)", exercise: "var(--c-trk)", deadline: "var(--warn)" };
   const sessions = CMS.sessions.filter(s => s.code === CODE);
   const lec = sessions.find(s => s.kind === "Lecture");
-  const exe = sessions.find(s => s.kind === "Exercise" && s.group === "A"); // Bela's group (OPAL "Exercise Group 1")
+  const exe = sessions.find(s => s.kind === "Exercise"); // Bela's group (OPAL "Exercise Group 1")
   const slot = s => `${s.start}–${s.end} · ${s.room}`;
 
   // Status buttons; the key-dates strip only where asked for (the Orga page).

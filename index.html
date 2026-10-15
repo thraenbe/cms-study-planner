@@ -26,7 +26,6 @@ h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .sec-sub { color: var(--ink-2); font-size: 13.5px; margin: 0 0 14px; }
 
 /* Week grid */
-.week { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
 .grid-wrap { overflow: hidden; padding: 0; }
 .wk-head { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-bottom: 1px solid var(--line); }
 .wk-head div { padding: 10px 8px; font-size: 13px; font-weight: 600; border-left: 1px solid var(--line); }
@@ -47,9 +46,9 @@ h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .ev:hover { border-color: var(--c); z-index: 2; box-shadow: var(--shadow); }
 .ev .t { font-weight: 600; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ev .m { color: var(--ink-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ev.option { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 8%, var(--surface)) 0 6px, var(--surface) 6px 12px); border-style: dashed; border-left-style: solid; }
 .ev.tentative { border-style: dashed; background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
 .wk-tba { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-top: 1px solid var(--line); }
+.wk-tba > .tbc-list { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
 .wk-tba > div { padding: 8px 6px; border-left: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
 .wk-tba > div:first-child { border-left: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.2; text-align: right; padding-right: 8px; }
 .wk-tba a { display: block; text-decoration: none; color: var(--ink); font-size: 11.5px; line-height: 1.3; padding: 5px 7px; border-radius: 7px; border: 1px dashed color-mix(in srgb, var(--c) 55%, var(--line)); border-left: 4px solid var(--c); }
@@ -60,24 +59,10 @@ h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .ag-day h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 16px 0 8px; }
 .ag-day:first-child h3 { margin-top: 0; }
 .ag-item { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); background: var(--surface); margin-bottom: 8px; text-decoration: none; color: inherit; }
-.ag-item.option { border-style: dashed; border-left-style: solid; }
+.ag-item.tbc { border-style: dashed; border-left-style: solid; }
 .ag-item .time { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-2); }
 .ag-item .t { font-weight: 600; font-size: 14px; }
 .ag-item .m { font-size: 12.5px; color: var(--ink-2); }
-
-/* Group picker */
-.picker h3 { font-size: 14px; margin: 0 0 4px; }
-.picker p.hint { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; }
-.pk-mod { padding: 12px 0; border-top: 1px solid var(--line); }
-.pk-mod:first-of-type { border-top: 0; padding-top: 4px; }
-.pk-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
-.pk-title .dot { width: 9px; height: 9px; border-radius: 3px; background: var(--c); flex: none; }
-.pk-opt { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: start; padding: 7px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
-.pk-opt:hover { background: var(--surface-2); }
-.pk-opt input { margin: 2px 0 0; accent-color: var(--c); }
-.pk-opt .where { font-size: 12px; color: var(--ink-2); }
-.pk-opt.is-clash .when { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--bad); }
-.pk-clear { font: inherit; font-size: 12px; color: var(--ink-2); background: none; border: 0; padding: 4px 8px; cursor: pointer; text-decoration: underline; }
 
 /* Module cards */
 .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
@@ -96,9 +81,6 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
 a.mod.reg { border-top-style: dashed; }
 .mod .how { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
 
-@media (max-width: 1000px) {
-  .week { grid-template-columns: 1fr; }
-}
 @media (max-width: 760px) {
   h1 { font-size: 24px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -123,14 +105,9 @@ a.mod.reg { border-top-style: dashed; }
   <section class="stats" id="stats" aria-label="Overview"></section>
 
   <h2 class="sec" style="margin-top:0">Weekly schedule</h2>
-  <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet. Dashed blocks are sessions still to confirm; courses whose times aren't published yet are listed below the week.</p>
-  <div class="week">
-    <aside class="panel picker" id="picker" aria-label="Exercise groups"></aside>
-    <div>
-      <div class="panel grid-wrap" id="grid"></div>
-      <div class="agenda" id="agenda"></div>
-    </div>
-  </div>
+  <p class="sec-sub">The sessions you attend in your enrolled courses. Sessions whose time isn't fixed yet are listed under the week.</p>
+  <div class="panel grid-wrap" id="grid"></div>
+  <div class="agenda" id="agenda"></div>
 
   <h2 class="sec">My courses</h2>
   <p class="sec-sub">What you're enrolled in on OPAL. Sessions without published times are listed under the timetable.</p>
@@ -158,15 +135,9 @@ const areaColor = m => `var(--c-${{ core: "core", trkreq: "trkreq", team: "team"
 const START = 7 * 60 + 30, END = 18 * 60 + 30, PX = 1.05;
 const SLOTS = ["07:30", "09:20", "11:10", "13:00", "14:50", "16:40"];
 
-// Sessions to draw: group sessions are solid once chosen, striped options while none is chosen.
+// Sessions to draw: everything Bela attends that has a time.
 function weekSessions() {
-  const groups = U.groups();
-  return CMS.sessions.filter(s => current.includes(s.code) && s.start).map(s => {
-    if (!s.group) return { ...s, state: s.tentative ? "tentative" : "fixed" };
-    const chosen = groups[s.code];
-    if (!chosen) return { ...s, state: "option" };
-    return s.group === chosen ? { ...s, state: "fixed" } : null;
-  }).filter(Boolean);
+  return CMS.sessions.filter(s => current.includes(s.code) && s.start).map(s => ({ ...s, state: s.tentative ? "tentative" : "fixed" }));
 }
 
 // Side-by-side columns for overlapping blocks in one day.
@@ -183,45 +154,20 @@ function layoutDay(list) {
 }
 
 function render() {
-  const groups = U.groups();
   const committed = U.committed();
-  const lectures = committed.filter(s => !s.group);
   const sessions = weekSessions();
   const today = new Date().getDay();
 
   // Overview
   const lp = nowEnrolled.reduce((a, c) => a + (mod(c).lp || 0), 0);
   const hours = committed.filter(s => !s.dates).reduce((a, s) => a + (U.mins(s.end) - U.mins(s.start)) / 60, 0);
-  // Only modules whose group sessions have published times can be picked yet.
-  const hasTimedGroups = c => CMS.sessions.some(s => s.code === c && s.group && s.start);
-  const toPick = current.filter(c => hasTimedGroups(c) && !groups[c]);
   const later = CMS.enrolled.filter(c => !nowEnrolled.includes(c));
   document.getElementById("title").textContent = CMS.semester;
   document.getElementById("stats").innerHTML = [
     [nowEnrolled.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
     [lp + " LP", "credits this semester"],
     [(Math.round(hours * 10) / 10) + " h", "weekly contact time so far (sessions every week)"],
-    [toPick.length || "✓", toPick.length ? `exercise group${toPick.length > 1 ? "s" : ""} still to pick` : "all exercise groups picked"],
   ].map(([n, l]) => `<div class="panel stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
-
-  // Exercise-group picker
-  const withGroups = current.filter(hasTimedGroups);
-  document.getElementById("picker").innerHTML = `<h3>Exercise groups</h3><p class="hint">Pick the group you'll attend. Crossed-out options clash with one of your lectures.</p>` +
-    withGroups.map(c => {
-      const opts = CMS.sessions.filter(s => s.code === c && s.group);
-      return `<div class="pk-mod" style="--c:${colorOf(c)}">
-        <div class="pk-title"><span class="dot"></span>${esc(mod(c).name)}</div>
-        ${opts.map(o => {
-          const cl = U.clashesWith(o, lectures);
-          return `<label class="pk-opt ${cl.length ? "is-clash" : ""}">
-            <input type="radio" name="g-${c}" value="${o.group}" data-code="${c}" ${groups[c] === o.group ? "checked" : ""}>
-            <span><span class="when">${U.DAYS_SHORT[o.day]} ${time(o)}</span><br><span class="where">${room(o)}${cl.length ? ` · clashes with ${esc(shortName(cl[0].code))} ${cl[0].kind.toLowerCase()}` : ""}</span></span>
-            ${groups[c] === o.group ? `<span class="chip enrolled">Mine</span>` : ""}
-          </label>`;
-        }).join("")}
-        ${groups[c] ? `<button class="pk-clear" data-clear="${c}">Clear choice</button>` : ""}
-      </div>`;
-    }).join("");
 
   // Week grid
   const H = (END - START) * PX;
@@ -232,48 +178,44 @@ function render() {
     const lines = SLOTS.slice(1).map(t => `<div class="wk-slot" style="top:${y(t)}px"></div>`).join("");
     const evs = layoutDay(sessions.filter(s => s.day === d)).map(s => {
       const top = y(s.start), h = (U.mins(s.end) - U.mins(s.start)) * PX, w = 100 / s.ncol;
-      const tip = `${mod(s.code).name} — ${s.kind}${s.group ? " (option)" : ""}\n${U.DAYS[s.day]} ${time(s)}, ${s.room}${s.who ? "\n" + s.who : ""}${s.dates ? "\n" + datesNote(s) : ""}`;
-      return `<a class="ev ${s.state === "option" ? "option" : ""} ${s.state === "tentative" ? "tentative" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
+      const tip = `${mod(s.code).name} — ${s.kind}\n${U.DAYS[s.day]} ${time(s)}, ${s.room}${s.who ? "\n" + s.who : ""}${s.dates ? "\n" + datesNote(s) : ""}`;
+      return `<a class="ev ${s.state === "tentative" ? "tentative" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
           style="--c:${colorOf(s.code)};top:${top + 1}px;height:${h - 2}px;left:calc(${s.col * w}% + 3px);width:calc(${w}% - 6px)">
           <span class="t">${esc(shortName(s.code))}</span>
-          <span class="m">${s.kind}${s.state === "option" ? " option" : ""}${s.state === "tentative" ? " (to confirm)" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
+          <span class="m">${s.kind}${s.state === "tentative" ? " (to confirm)" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
           <span class="m">${esc(s.room)}</span>
         </a>`;
     }).join("");
     return `<div class="wk-day ${d === today ? "today" : ""}" style="height:${H}px">${lines}${evs}</div>`;
   }).join("");
-  // Enrolled sessions whose time isn't published yet, by day (day-less ones in a note)
-  const tba = CMS.sessions.filter(s => current.includes(s.code) && !s.start && (!s.group || !groups[s.code] || s.group === groups[s.code]));
-  const tbaChip = s => `<a href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}"><b>${esc(shortName(s.code))}</b><span class="m">${s.kind} · ${esc(s.room)}</span></a>`;
-  const tbaRow = tba.length ? `<div class="wk-tba"><div>time not<br>published</div>${[1, 2, 3, 4, 5].map(d => `<div>${tba.filter(s => s.day === d).map(tbaChip).join("")}</div>`).join("")}</div>` : "";
+  // Sessions whose time isn't fixed yet: no published time, or no group yet (CMS.toConfirm)
+  const tba = [...CMS.sessions.filter(s => current.includes(s.code) && !s.start).map(s => ({ ...s, text: s.room })),
+    ...(CMS.toConfirm || []).filter(t => CMS.enrolled.includes(t.code))];
+  const tbaChip = s => `<a href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}" title="${esc(s.text)}"><b>${esc(shortName(s.code))}</b><span class="m">${s.kind}</span></a>`;
+  const tbaRow = tba.length ? `<div class="wk-tba"><div>times still<br>to confirm</div><div class="tbc-list">${tba.map(tbaChip).join("")}</div></div>` : "";
   document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${days}</div>` + tbaRow;
 
   // Agenda for narrow screens
-  const agTba = tba.length ? `<div class="ag-day"><h3>Time not published yet</h3>${tba.map(s => `<a class="ag-item option" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
+  const agTba = tba.length ? `<div class="ag-day"><h3>Times still to confirm</h3>${tba.map(s => `<a class="ag-item tbc" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
         <span class="time">${s.day ? U.DAYS_SHORT[s.day] : "—"}</span>
-        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind} · ${esc(s.room)}</span></span></a>`).join("")}</div>` : "";
+        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind} · ${esc(s.text)}</span></span></a>`).join("")}</div>` : "";
   document.getElementById("agenda").innerHTML = [1, 2, 3, 4, 5].map(d => {
     const list = sessions.filter(s => s.day === d).sort((a, b) => U.mins(a.start) - U.mins(b.start));
     if (!list.length) return "";
-    return `<div class="ag-day"><h3>${U.DAYS[d]}</h3>${list.map(s => `<a class="ag-item ${s.state === "option" ? "option" : ""}" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
+    return `<div class="ag-day"><h3>${U.DAYS[d]}</h3>${list.map(s => `<a class="ag-item" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
         <span class="time">${time(s)}</span>
-        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "option" ? " · group option" : ""}${s.state === "tentative" ? " · to confirm" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
+        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "tentative" ? " · to confirm" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
       </a>`).join("")}</div>`;
   }).join("") + agTba;
 
   // My courses
   document.getElementById("mine").innerHTML = CMS.enrolled.map(c => {
     const m = mod(c);
-    const pending = hasTimedGroups(c) && !groups[c];
-    const all = CMS.sessions.filter(s => s.code === c);
-    // Attended sessions; while no group is chosen, one line stands in for all groups.
-    // Attended sessions; while no group is chosen, one line stands in for all groups.
-    const shown = all.filter(s => !s.group || s.group === (groups[c] || "A"));
-    const nG = all.filter(x => x.group).length;
-    const line = s => s.group && !groups[c] ? `<span>${s.kind}: ${nG} groups to choose from</span>`
-      : `<span>${s.kind}: ${U.when(s)}${s.room && s.start ? " · " + esc(s.room) : ""}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`;
-    const when = shown.length
-      ? shown.map(line).join("") + (pending ? `<span style="color:var(--warn)">Exercise group not picked yet</span>` : "")
+    const shown = CMS.sessions.filter(s => s.code === c);
+    const tbc = (CMS.toConfirm || []).filter(t => t.code === c);
+    const line = s => `<span>${s.kind}: ${U.when(s)}${s.room && s.start ? " · " + esc(s.room) : ""}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`;
+    const when = shown.length || tbc.length
+      ? shown.map(line).join("") + tbc.map(t => `<span>${t.kind}: time to confirm</span>`).join("")
       : U.offeredNow(m) ? `<span>No timetabled sessions — project work</span>` : `<span>Summer semester — no sessions this winter</span>`;
     return `<a class="mod" href="${U.moduleUrl(c)}" style="--c:${current.includes(c) ? colorOf(c) : m.group ? areaColor(m) : "var(--ink-3)"}">
       <div class="top"><span class="mono">${c.startsWith("EXT") ? "Outside the study plan" : c}</span><span class="chip enrolled">Enrolled</span></div>
@@ -284,16 +226,9 @@ function render() {
     </a>`;
   }).join("");
 
-  document.getElementById("foot").innerHTML = `Times and rooms from the Faculty of Computer Science <a href="${CMS.sources.catalogue}">course offerings</a> and the course pages, as of ${CMS.updated} — check OPAL for changes. Module texts from the official <a href="${CMS.sources.handbook}">module descriptions</a>. Your exercise-group choices are saved in this browser only.`;
+  document.getElementById("foot").innerHTML = `Times and rooms from the Faculty of Computer Science <a href="${CMS.sources.catalogue}">course offerings</a> and the course pages, as of ${CMS.updated} — check OPAL for changes. Module texts from the official <a href="${CMS.sources.handbook}">module descriptions</a>.`;
 }
 
-document.addEventListener("change", e => {
-  if (e.target.matches('input[type="radio"][data-code]')) { U.setGroup(e.target.dataset.code, e.target.value); render(); }
-});
-document.addEventListener("click", e => {
-  const b = e.target.closest("[data-clear]");
-  if (b) { U.setGroup(b.dataset.clear, null); render(); }
-});
 render();
 </script>
 </body>
