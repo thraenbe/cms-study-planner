@@ -105,4 +105,29 @@ window.CMSUtil = {
   clashesWith(session, pool) {
     return pool.filter(o => o !== session && o.code !== session.code && this.overlaps(session, o));
   },
+  // Dates as local "YYYY-MM-DD" strings; arithmetic at noon so DST changes don't shift the day.
+  iso: d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+  addDays: (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return CMSUtil.iso(d); },
+  weekday: iso => new Date(iso + "T12:00:00").getDay(), // 0 = Sunday, 1 = Monday …
+  // Holidays and break periods of the term (CMS.term): no regular sessions.
+  lectureFree(iso) {
+    const t = CMS.term || {};
+    return (t.holidays || []).some(h => h.date === iso) || (t.periods || []).some(p => p.kind === "break" && p.from <= iso && iso <= p.to);
+  },
+  // Every date a session takes place, from its date rules in data.js: { ...session, date, day, label }.
+  occurrences(s) {
+    const dates = [];
+    if (s.dates) dates.push(...s.dates);
+    else if (s.from && s.to && s.day) {
+      let d = s.from;
+      while (this.weekday(d) !== s.day) d = this.addDays(d, 1);
+      for (; d <= s.to; d = this.addDays(d, 7))
+        if (!(s.skip || []).includes(d) && (s.duringBreaks || !this.lectureFree(d))) dates.push(d);
+    }
+    const { dates: _d, extra = [], labels = {}, skip: _s, ...base } = s;
+    return [
+      ...dates.map(date => ({ ...base, date, label: labels[date] || "" })),
+      ...extra.map(x => ({ ...base, label: "", ...x, day: this.weekday(x.date) })),
+    ].sort((a, b) => a.date.localeCompare(b.date) || (a.start || "").localeCompare(b.start || ""));
+  },
 };

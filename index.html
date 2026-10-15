@@ -25,19 +25,39 @@ h1 { font-size: 30px; line-height: 1.15; margin: 6px 0 6px; letter-spacing: -.01
 h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .sec-sub { color: var(--ink-2); font-size: 13.5px; margin: 0 0 14px; }
 
+/* Week navigation and notes */
+.wk-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 10px; }
+.wk-nav .btns { display: flex; gap: 6px; }
+.wk-nav button.btn.icon { padding: 7px 12px; font-size: 15px; line-height: 1; }
+.wk-nav button.btn:disabled { opacity: .45; cursor: default; border-color: var(--line); }
+.wk-label { font-size: 16px; font-weight: 600; margin: 0; font-variant-numeric: tabular-nums; }
+.wk-notes { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.wk-notes:empty { display: none; }
+.wk-note { font-size: 12.5px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; display: inline-flex; gap: 6px; align-items: center; }
+.wk-note.off { background: var(--surface-2); }
+.wk-note b { font-weight: 600; color: var(--ink); }
+.wk-note .dot { width: 8px; height: 8px; border-radius: 3px; background: var(--c); flex: none; }
+
 /* Week grid */
 .grid-wrap { overflow: hidden; padding: 0; }
 .wk-head { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-bottom: 1px solid var(--line); }
-.wk-head div { padding: 10px 8px; font-size: 13px; font-weight: 600; border-left: 1px solid var(--line); }
+.wk-head div { padding: 8px 8px; font-size: 13px; font-weight: 600; border-left: 1px solid var(--line); min-width: 0; }
 .wk-head div:first-child { border-left: 0; }
-.wk-head .today { color: var(--focus); }
+.wk-head .d { font-weight: 500; color: var(--ink-2); }
+.wk-head .today { color: var(--focus); background: color-mix(in srgb, var(--focus) 8%, transparent); }
+.wk-head .today .d { color: var(--focus); }
+.wk-head .off-lbl { display: block; font-size: 11px; font-weight: 500; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-body { display: grid; grid-template-columns: 56px repeat(5, 1fr); position: relative; }
 .wk-times { position: relative; }
 .wk-times span { position: absolute; right: 8px; font-size: 11px; color: var(--ink-3); transform: translateY(-50%); font-family: "IBM Plex Mono", monospace; }
 .wk-times span:first-child { transform: none; }
 .wk-day { position: relative; border-left: 1px solid var(--line); }
-.wk-day.today { background: color-mix(in srgb, var(--focus) 4%, transparent); }
+.wk-day.today { background: color-mix(in srgb, var(--focus) 5%, transparent); }
+.wk-day.off { background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, transparent 6px 12px); }
 .wk-slot { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line); }
+.wk-empty { position: absolute; top: 0; bottom: 0; left: 56px; right: 0; display: grid; place-items: center; text-align: center; color: var(--ink-2); font-size: 13.5px; padding: 16px; pointer-events: none; }
+.wk-empty div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; max-width: 46ch; }
+.wk-empty b { display: block; color: var(--ink); font-size: 14.5px; }
 .ev {
   position: absolute; border-radius: 7px; padding: 5px 7px; overflow: hidden; text-decoration: none; color: var(--ink);
   background: color-mix(in srgb, var(--c) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 45%, var(--line));
@@ -47,22 +67,28 @@ h2.sec { font-size: 18px; margin: 34px 0 4px; letter-spacing: -.005em; }
 .ev .t { font-weight: 600; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ev .m { color: var(--ink-2); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ev.tentative { border-style: dashed; background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
-.wk-tba { display: grid; grid-template-columns: 56px repeat(5, 1fr); border-top: 1px solid var(--line); }
-.wk-tba > .tbc-list { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
-.wk-tba > div { padding: 8px 6px; border-left: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
-.wk-tba > div:first-child { border-left: 0; font-size: 10.5px; color: var(--ink-3); line-height: 1.2; text-align: right; padding-right: 8px; }
-.wk-tba a { display: block; text-decoration: none; color: var(--ink); font-size: 11.5px; line-height: 1.3; padding: 5px 7px; border-radius: 7px; border: 1px dashed color-mix(in srgb, var(--c) 55%, var(--line)); border-left: 4px solid var(--c); }
+.ev.past { opacity: .5; }
+.wk-tba { display: grid; grid-template-columns: 56px 1fr; border-top: 1px solid var(--line); }
+.wk-tba > div { padding: 8px 6px; }
+.wk-tba > div:first-child { font-size: 10.5px; color: var(--ink-3); line-height: 1.2; text-align: right; padding-right: 8px; }
+.wk-tba .tbc-list { border-left: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; }
+.wk-tba a { display: block; text-decoration: none; color: var(--ink); font-size: 11.5px; line-height: 1.3; padding: 5px 7px; border-radius: 7px; border: 1px dashed color-mix(in srgb, var(--c) 55%, var(--line)); border-left: 4px solid var(--c); max-width: 360px; }
 .wk-tba a .m { color: var(--ink-2); display: block; }
 
-/* Agenda (narrow screens) */
-.agenda { display: none; }
-.ag-day h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 16px 0 8px; }
-.ag-day:first-child h3 { margin-top: 0; }
-.ag-item { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); background: var(--surface); margin-bottom: 8px; text-decoration: none; color: inherit; }
-.ag-item.tbc { border-style: dashed; border-left-style: solid; }
+/* Agenda of the shown week (the only view on narrow screens) */
+.agenda { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 16px; align-items: start; }
+.ag-day h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 0 0 8px; }
+.ag-day.today h3 { color: var(--focus); }
+.ag-day { margin-bottom: 10px; }
+.ag-item { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); border-left: 4px solid var(--c); background: var(--surface); margin-bottom: 8px; text-decoration: none; color: inherit; }
+.ag-item.tbc, .ag-item.tentative { border-style: dashed; border-left-style: solid; }
+.ag-item.past { opacity: .6; }
 .ag-item .time { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-2); }
 .ag-item .t { font-weight: 600; font-size: 14px; }
 .ag-item .m { font-size: 12.5px; color: var(--ink-2); }
+.ag-note { font-size: 12.5px; color: var(--ink-2); padding: 8px 12px; border-radius: 10px; background: var(--surface-2); margin-bottom: 8px; }
+.ag-empty { grid-column: 1 / -1; font-size: 13.5px; color: var(--ink-2); margin: 0; }
+.ag-day.tbc-day { display: none; } /* under the grid on wide screens */
 
 /* Module cards */
 .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
@@ -78,15 +104,14 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
 .mod .when { font-size: 12.5px; color: var(--ink-2); display: grid; gap: 2px; margin-top: 2px; }
 .mod .when span { display: block; }
 .mod .go { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--c); display: flex; gap: 12px; flex-wrap: wrap; }
-a.mod.reg { border-top-style: dashed; }
-.mod .how { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
 
 @media (max-width: 760px) {
   h1 { font-size: 24px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .grid-wrap { display: none; }
-  .agenda { display: block; }
+  .agenda { margin-top: 4px; }
+  .ag-day.tbc-day { display: block; }
 }
 </style>
 </head>
@@ -97,7 +122,7 @@ a.mod.reg { border-top-style: dashed; }
     <div>
       <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation · Applied AI track</div>
       <h1 id="title">My semester</h1>
-      <p class="sub">Your weekly timetable and the courses you're enrolled in. Click any course for its board or module page.</p>
+      <p class="sub">Your timetable week by week and the courses you're enrolled in. Click any course for its board or module page.</p>
     </div>
     <a class="btn primary" href="plan.html">Open study plan →</a>
   </div>
@@ -105,12 +130,21 @@ a.mod.reg { border-top-style: dashed; }
   <section class="stats" id="stats" aria-label="Overview"></section>
 
   <h2 class="sec" style="margin-top:0">Weekly schedule</h2>
-  <p class="sec-sub">The sessions you attend in your enrolled courses. Sessions whose time isn't fixed yet are listed under the week.</p>
+  <p class="sec-sub">The sessions you attend, with this semester's actual dates. Use the arrows (or the ← → keys) to change the week; “Today” jumps back.</p>
+  <div class="wk-nav">
+    <div class="btns">
+      <button class="btn icon" type="button" id="wk-prev" aria-label="Previous week">‹</button>
+      <button class="btn" type="button" id="wk-today">Today</button>
+      <button class="btn icon" type="button" id="wk-next" aria-label="Next week">›</button>
+    </div>
+    <h3 class="wk-label" id="wk-label" aria-live="polite"></h3>
+  </div>
+  <div class="wk-notes" id="wk-notes"></div>
   <div class="panel grid-wrap" id="grid"></div>
   <div class="agenda" id="agenda"></div>
 
   <h2 class="sec">My courses</h2>
-  <p class="sec-sub">What you're enrolled in on OPAL. Sessions without published times are listed under the timetable.</p>
+  <p class="sec-sub">What you're enrolled in on OPAL, with the sessions you attend.</p>
   <div class="mods" id="mine"></div>
 
   <p class="foot" id="foot"></p>
@@ -127,22 +161,51 @@ const colorOf = code => current.includes(code) ? `var(${COLORS[current.indexOf(c
 const mod = code => CMS.modules[code];
 const SHORT = { "CMS-COR-ML": "ML 1", "CMS-TRK-TSP": "Touch Sensing", "CMS-COR-SAP": "Stochastics", "CMS-TRK-MLSP": "ML in Signal Processing", "CMS-TRK-DCD": "Digital Circuit Design", "EXT-LLM": "LLMs", "CMS-COR-HPC": "HPC", "CMS-COR-VIZ": "Data Vis", "CMS-TRK-APSS": "Problem Solving", "CMS-PRO": "Research project", "CMS-TRK-CV": "Computer Vision" };
 const shortName = code => SHORT[code] || mod(code).name;
-const time = s => s.start ? `${s.start}–${s.end}` : "time TBA";
-const room = s => s.roomUrl ? `<a href="${s.roomUrl}" target="_blank" rel="noopener">${esc(s.room)}</a>` : esc(s.room);
-const datesNote = s => s.dates ? `only on ${s.dates.map(U.fmtDate).join(", ")}` : "";
+const time = s => s.start ? `${s.start}–${s.end}` : "all day";
 const areaColor = m => `var(--c-${{ core: "core", trkreq: "trkreq", team: "team", req: "req" }[m.group] || "trk"})`;
 
 const START = 7 * 60 + 30, END = 18 * 60 + 30, PX = 1.05;
 const SLOTS = ["07:30", "09:20", "11:10", "13:00", "14:50", "16:40"];
 
-// Sessions to draw: everything Bela attends that has a time.
-function weekSessions() {
-  return CMS.sessions.filter(s => current.includes(s.code) && s.start).map(s => ({ ...s, state: s.tentative ? "tentative" : "fixed" }));
+// Every date of every session Bela attends (date rules in data.js) and the term calendar.
+const OCC = CMS.sessions.filter(s => current.includes(s.code)).flatMap(s => U.occurrences(s));
+const TERM = CMS.term;
+const TODAY = U.iso(new Date());
+const monday = iso => U.addDays(iso, -((U.weekday(iso) + 6) % 7));
+const FIRST = monday(TERM.start), LAST = monday(TERM.end);
+const clamp = w => w < FIRST ? FIRST : w > LAST ? LAST : w;
+const THIS_WEEK = clamp(monday(TODAY));
+const weekFromHash = () => { const m = location.hash.match(/^#week=(\d{4}-\d\d-\d\d)$/); return m ? clamp(monday(m[1])) : THIS_WEEK; };
+let week = weekFromHash();
+
+const fmt = (iso, o) => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", o);
+const dayMonth = iso => fmt(iso, { day: "numeric", month: "short" });                    // "19 Oct"
+const dayDate = iso => fmt(iso, { weekday: "short", day: "numeric", month: "short" });   // "Mon 19 Oct"
+// ISO 8601 week number.
+function isoWeek(iso) {
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); // Thursday of the same week
+  const jan4 = new Date(d.getFullYear(), 0, 4, 12);
+  return 1 + Math.round(((d - jan4) / 864e5 - 3 + (jan4.getDay() + 6) % 7) / 7);
 }
+// "19–25 Oct 2026", "26 Oct – 1 Nov 2026", "28 Dec 2026 – 3 Jan 2027"
+function rangeLabel(mon) {
+  const sun = U.addDays(mon, 6);
+  if (mon.slice(0, 4) !== sun.slice(0, 4)) return `${fmt(mon, { day: "numeric", month: "short", year: "numeric" })} – ${fmt(sun, { day: "numeric", month: "short", year: "numeric" })}`;
+  if (mon.slice(5, 7) !== sun.slice(5, 7)) return `${dayMonth(mon)} – ${dayMonth(sun)} ${sun.slice(0, 4)}`;
+  return `${+mon.slice(8)}–${dayMonth(sun)} ${sun.slice(0, 4)}`;
+}
+const lectures = TERM.periods.filter(p => p.kind === "lectures");
+// Mondays of the weeks with lectures, for "lecture week n of N".
+const LECTURE_WEEKS = [];
+for (let w = FIRST; w <= LAST; w = U.addDays(w, 7))
+  if (lectures.some(p => p.from <= U.addDays(w, 4) && p.to >= w)) LECTURE_WEEKS.push(w);
+const holidayOn = iso => TERM.holidays.find(h => h.date === iso);
+const breakOn = iso => TERM.periods.find(p => p.kind === "break" && p.from <= iso && iso <= p.to);
 
 // Side-by-side columns for overlapping blocks in one day.
 function layoutDay(list) {
-  const sorted = [...list].sort((a, b) => U.mins(a.start) - U.mins(b.start));
+  const sorted = list.map(o => ({ ...o })).sort((a, b) => U.mins(a.start) - U.mins(b.start));
   const ends = [];
   sorted.forEach(ev => {
     let i = ends.findIndex(end => end <= U.mins(ev.start));
@@ -153,69 +216,123 @@ function layoutDay(list) {
   return sorted;
 }
 
+// What kind of week this is (lecture week n, break, exams) plus holidays and all-day items.
+function weekNotes(mon, allDay) {
+  const fri = U.addDays(mon, 4), sun = U.addDays(mon, 6);
+  const notes = TERM.periods.filter(p => p.from <= fri && p.to >= mon).map(p => p.kind === "lectures"
+    ? `<span class="wk-note">${esc(p.label)} · week ${LECTURE_WEEKS.indexOf(mon) + 1} of ${LECTURE_WEEKS.length}</span>`
+    : `<span class="wk-note off"><b>${esc(p.label)}</b> ${dayMonth(p.from)} – ${dayMonth(p.to)}${p.note ? ` · ${esc(p.note)}` : ""}</span>`);
+  if (!notes.length) notes.push(mon < lectures[0].from
+    ? `<span class="wk-note off"><b>Before the lecture period</b> lectures start on ${dayDate(lectures[0].from)}</span>`
+    : `<span class="wk-note off"><b>No lectures</b> the winter semester ends on ${dayMonth(TERM.end)}</span>`);
+  TERM.holidays.filter(h => h.date >= mon && h.date <= sun).forEach(h =>
+    notes.push(`<span class="wk-note off"><b>${dayDate(h.date)}</b> ${esc(h.label)} (public holiday)${U.weekday(h.date) % 6 ? ", no lectures" : ""}</span>`));
+  allDay.forEach(o => notes.push(`<span class="wk-note" style="--c:${colorOf(o.code)}"><span class="dot"></span><b>${dayDate(o.date)}</b> ${esc(shortName(o.code))}: ${esc(o.label || o.kind)}</span>`));
+  return notes.join("");
+}
+
+function renderWeek() {
+  const days = [0, 1, 2, 3, 4].map(i => U.addDays(week, i));
+  const sun = U.addDays(week, 6);
+  const inWeek = OCC.filter(o => o.date >= week && o.date <= sun);
+  const timed = inWeek.filter(o => o.start && o.day >= 1 && o.day <= 5);
+  const allDay = inWeek.filter(o => !o.start);
+  const isPast = o => o.date < TODAY;
+
+  document.getElementById("wk-label").textContent = `Week ${isoWeek(week)} · ${rangeLabel(week)}`;
+  document.getElementById("wk-prev").disabled = week <= FIRST;
+  document.getElementById("wk-next").disabled = week >= LAST;
+  document.getElementById("wk-today").disabled = week === THIS_WEEK;
+  document.getElementById("wk-notes").innerHTML = weekNotes(week, allDay);
+
+  // Grid
+  const H = (END - START) * PX;
+  const y = t => (U.mins(t) - START) * PX;
+  const offLabel = d => holidayOn(d)?.label || (breakOn(d) ? "no lectures" : "");
+  const head = `<div class="wk-head"><div></div>${days.map(d => `<div class="${d === TODAY ? "today" : ""}">${fmt(d, { weekday: "short" })} <span class="d">${dayMonth(d)}</span>${offLabel(d) ? `<span class="off-lbl">${esc(offLabel(d))}</span>` : ""}</div>`).join("")}</div>`;
+  const ticks = SLOTS.map(t => `<span style="top:${y(t)}px">${t}</span>`).join("");
+  const cols = days.map(d => {
+    const lines = SLOTS.slice(1).map(t => `<div class="wk-slot" style="top:${y(t)}px"></div>`).join("");
+    const evs = layoutDay(timed.filter(o => o.date === d)).map(o => {
+      const top = y(o.start), h = (U.mins(o.end) - U.mins(o.start)) * PX, w = 100 / o.ncol;
+      const tip = `${mod(o.code).name} — ${o.kind}${o.label ? ": " + o.label : ""}${o.tentative ? " (to confirm)" : ""}\n${dayDate(o.date)}, ${time(o)}, ${o.room}${o.who ? "\n" + o.who : ""}`;
+      return `<a class="ev ${o.tentative ? "tentative" : ""} ${isPast(o) ? "past" : ""}" href="${U.moduleUrl(o.code)}" title="${esc(tip)}"
+          style="--c:${colorOf(o.code)};top:${top + 1}px;height:${h - 2}px;left:calc(${o.col * w}% + 3px);width:calc(${w}% - 6px)">
+          <span class="t">${esc(shortName(o.code))}</span>
+          <span class="m">${esc(o.kind)}${o.label ? " · " + esc(o.label) : ""}${o.tentative ? " (to confirm)" : ""}</span>
+          <span class="m">${esc(o.room)}</span>
+        </a>`;
+    }).join("");
+    return `<div class="wk-day ${d === TODAY ? "today" : ""} ${offLabel(d) ? "off" : ""}" style="height:${H}px">${lines}${evs}</div>`;
+  }).join("");
+  const offNote = TERM.periods.find(p => p.kind !== "lectures" && p.from <= days[4] && p.to >= week);
+  const empty = timed.length ? "" : `<div class="wk-empty"><div><b>No sessions this week</b>${offNote ? `${esc(offNote.label)}${offNote.note ? ` · ${esc(offNote.note)}` : ""}` : week < lectures[0].from ? `Lectures start on ${dayDate(lectures[0].from)}.` : "Nothing is scheduled for your courses."}</div></div>`;
+  // Sessions whose time isn't fixed yet (no published time, no group yet), during the lecture period
+  const lectureWeek = LECTURE_WEEKS.includes(week);
+  const tba = !lectureWeek ? [] : [
+    ...CMS.sessions.filter(s => current.includes(s.code) && !s.start).map(s => ({ ...s, text: `${s.day ? U.DAYS[s.day] + ", " : ""}time not published yet` })),
+    ...(CMS.toConfirm || []).filter(t => CMS.enrolled.includes(t.code))];
+  const tbaChip = t => `<a href="${U.moduleUrl(t.code)}" style="--c:${colorOf(t.code)}" title="${esc(t.text)}"><b>${esc(shortName(t.code))}</b><span class="m">${esc(t.kind)}: ${esc(t.text)}</span></a>`;
+  const tbaRow = tba.length ? `<div class="wk-tba"><div>times still<br>to confirm</div><div class="tbc-list">${tba.map(tbaChip).join("")}</div></div>` : "";
+  document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${cols}${empty}</div>` + tbaRow;
+
+  // Agenda of the same week
+  const agItem = o => `<a class="ag-item ${o.tentative ? "tentative" : ""} ${isPast(o) ? "past" : ""}" href="${U.moduleUrl(o.code)}" style="--c:${colorOf(o.code)}">
+      <span class="time">${time(o)}</span>
+      <span><span class="t">${esc(mod(o.code).name)}</span><br><span class="m">${esc(o.kind)}${o.label ? " · " + esc(o.label) : ""}${o.start ? " · " + esc(o.room) : ""}${o.tentative ? " · to confirm" : ""}</span></span>
+    </a>`;
+  const agDays = [0, 1, 2, 3, 4, 5, 6].map(i => U.addDays(week, i)).map(d => {
+    const list = inWeek.filter(o => o.date === d).sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+    const h = holidayOn(d);
+    if (!list.length && !h) return "";
+    return `<div class="ag-day ${d === TODAY ? "today" : ""}"><h3>${fmt(d, { weekday: "long", day: "numeric", month: "short" })}${d === TODAY ? " · today" : ""}</h3>
+      ${h ? `<div class="ag-note">${esc(h.label)} (public holiday)</div>` : ""}${list.map(agItem).join("")}</div>`;
+  }).join("");
+  const agTba = tba.length ? `<div class="ag-day tbc-day"><h3>Times still to confirm</h3>${tba.map(t => `<a class="ag-item tbc" href="${U.moduleUrl(t.code)}" style="--c:${colorOf(t.code)}">
+        <span class="time">—</span>
+        <span><span class="t">${esc(mod(t.code).name)}</span><br><span class="m">${esc(t.kind)}: ${esc(t.text)}</span></span></a>`).join("")}</div>` : "";
+  document.getElementById("agenda").innerHTML = (timed.length || allDay.length ? agDays : `<p class="ag-empty">No sessions this week.</p>${agDays}`) + agTba;
+}
+
+function go(w) {
+  week = clamp(w);
+  history.replaceState(null, "", week === THIS_WEEK ? location.pathname + location.search : "#week=" + week);
+  renderWeek();
+}
+
 function render() {
-  const committed = U.committed();
-  const sessions = weekSessions();
-  const today = new Date().getDay();
+  document.getElementById("title").textContent = CMS.semester;
 
   // Overview
   const lp = nowEnrolled.reduce((a, c) => a + (mod(c).lp || 0), 0);
-  const hours = committed.filter(s => !s.dates).reduce((a, s) => a + (U.mins(s.end) - U.mins(s.start)) / 60, 0);
   const later = CMS.enrolled.filter(c => !nowEnrolled.includes(c));
-  document.getElementById("title").textContent = CMS.semester;
+  const thisWeek = OCC.filter(o => o.start && o.date >= monday(TODAY) && o.date <= U.addDays(monday(TODAY), 6));
+  const hours = thisWeek.reduce((a, o) => a + (U.mins(o.end) - U.mins(o.start)) / 60, 0);
   document.getElementById("stats").innerHTML = [
     [nowEnrolled.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
     [lp + " LP", "credits this semester"],
-    [(Math.round(hours * 10) / 10) + " h", "weekly contact time so far (sessions every week)"],
+    [(Math.round(hours * 10) / 10) + " h", `in ${thisWeek.length} session${thisWeek.length === 1 ? "" : "s"} this week`],
   ].map(([n, l]) => `<div class="panel stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
 
-  // Week grid
-  const H = (END - START) * PX;
-  const y = t => (U.mins(t) - START) * PX;
-  const head = `<div class="wk-head"><div></div>${[1, 2, 3, 4, 5].map(d => `<div class="${d === today ? "today" : ""}">${U.DAYS[d]}</div>`).join("")}</div>`;
-  const ticks = SLOTS.map(t => `<span style="top:${y(t)}px">${t}</span>`).join("");
-  const days = [1, 2, 3, 4, 5].map(d => {
-    const lines = SLOTS.slice(1).map(t => `<div class="wk-slot" style="top:${y(t)}px"></div>`).join("");
-    const evs = layoutDay(sessions.filter(s => s.day === d)).map(s => {
-      const top = y(s.start), h = (U.mins(s.end) - U.mins(s.start)) * PX, w = 100 / s.ncol;
-      const tip = `${mod(s.code).name} — ${s.kind}\n${U.DAYS[s.day]} ${time(s)}, ${s.room}${s.who ? "\n" + s.who : ""}${s.dates ? "\n" + datesNote(s) : ""}`;
-      return `<a class="ev ${s.state === "tentative" ? "tentative" : ""}" href="${U.moduleUrl(s.code)}" title="${esc(tip)}"
-          style="--c:${colorOf(s.code)};top:${top + 1}px;height:${h - 2}px;left:calc(${s.col * w}% + 3px);width:calc(${w}% - 6px)">
-          <span class="t">${esc(shortName(s.code))}</span>
-          <span class="m">${s.kind}${s.state === "tentative" ? " (to confirm)" : ""}${s.dates ? " · " + s.dates.length + " dates" : ""}</span>
-          <span class="m">${esc(s.room)}</span>
-        </a>`;
-    }).join("");
-    return `<div class="wk-day ${d === today ? "today" : ""}" style="height:${H}px">${lines}${evs}</div>`;
-  }).join("");
-  // Sessions whose time isn't fixed yet: no published time, or no group yet (CMS.toConfirm)
-  const tba = [...CMS.sessions.filter(s => current.includes(s.code) && !s.start).map(s => ({ ...s, text: s.room })),
-    ...(CMS.toConfirm || []).filter(t => CMS.enrolled.includes(t.code))];
-  const tbaChip = s => `<a href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}" title="${esc(s.text)}"><b>${esc(shortName(s.code))}</b><span class="m">${s.kind}</span></a>`;
-  const tbaRow = tba.length ? `<div class="wk-tba"><div>times still<br>to confirm</div><div class="tbc-list">${tba.map(tbaChip).join("")}</div></div>` : "";
-  document.getElementById("grid").innerHTML = head + `<div class="wk-body"><div class="wk-times" style="height:${H}px">${ticks}</div>${days}</div>` + tbaRow;
+  renderWeek();
 
-  // Agenda for narrow screens
-  const agTba = tba.length ? `<div class="ag-day"><h3>Times still to confirm</h3>${tba.map(s => `<a class="ag-item tbc" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
-        <span class="time">${s.day ? U.DAYS_SHORT[s.day] : "—"}</span>
-        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind} · ${esc(s.text)}</span></span></a>`).join("")}</div>` : "";
-  document.getElementById("agenda").innerHTML = [1, 2, 3, 4, 5].map(d => {
-    const list = sessions.filter(s => s.day === d).sort((a, b) => U.mins(a.start) - U.mins(b.start));
-    if (!list.length) return "";
-    return `<div class="ag-day"><h3>${U.DAYS[d]}</h3>${list.map(s => `<a class="ag-item" href="${U.moduleUrl(s.code)}" style="--c:${colorOf(s.code)}">
-        <span class="time">${time(s)}</span>
-        <span><span class="t">${esc(mod(s.code).name)}</span><br><span class="m">${s.kind}${s.state === "tentative" ? " · to confirm" : ""} · ${esc(s.room)}${s.dates ? " · " + datesNote(s) : ""}</span></span>
-      </a>`).join("")}</div>`;
-  }).join("") + agTba;
-
-  // My courses
+  // My courses: the sessions Bela attends, with their first and last date
   document.getElementById("mine").innerHTML = CMS.enrolled.map(c => {
     const m = mod(c);
-    const shown = CMS.sessions.filter(s => s.code === c);
+    const sessions = CMS.sessions.filter(s => s.code === c);
     const tbc = (CMS.toConfirm || []).filter(t => t.code === c);
-    const line = s => `<span>${s.kind}: ${U.when(s)}${s.room && s.start ? " · " + esc(s.room) : ""}${s.dates ? ` (${s.dates.length} dates)` : ""}</span>`;
-    const when = shown.length || tbc.length
-      ? shown.map(line).join("") + tbc.map(t => `<span>${t.kind}: time to confirm</span>`).join("")
+    const span = list => list.length > 1 ? `${dayMonth(list[0].date)} – ${dayMonth(list[list.length - 1].date)}` : list.length ? dayDate(list[0].date) : "";
+    const line = s => {
+      const occ = U.occurrences(s);
+      const regular = occ.filter(o => o.kind === s.kind && o.day === s.day);
+      const when = s.dates ? `${s.dates.length} dates, ${span(regular)}` : span(regular);
+      // one-off dates of another kind (e.g. presentations, a deadline)
+      const kinds = [...new Set(occ.filter(o => o.kind !== s.kind).map(o => o.kind))];
+      return `<span>${s.kind}: ${U.when(s)}${s.room && s.start ? " · " + esc(s.room) : ""}${when ? " · " + when : ""}</span>` +
+        kinds.map(k => { const l = occ.filter(o => o.kind === k); return `<span>${esc(k)}: ${span(l)}${l.length > 1 ? ` (${l.length} dates)` : ""}</span>`; }).join("");
+    };
+    const when = sessions.length || tbc.length
+      ? sessions.map(line).join("") + tbc.map(t => `<span>${t.kind}: time to confirm</span>`).join("")
       : U.offeredNow(m) ? `<span>No timetabled sessions — project work</span>` : `<span>Summer semester — no sessions this winter</span>`;
     return `<a class="mod" href="${U.moduleUrl(c)}" style="--c:${current.includes(c) ? colorOf(c) : m.group ? areaColor(m) : "var(--ink-3)"}">
       <div class="top"><span class="mono">${c.startsWith("EXT") ? "Outside the study plan" : c}</span><span class="chip enrolled">Enrolled</span></div>
@@ -226,9 +343,20 @@ function render() {
     </a>`;
   }).join("");
 
-  document.getElementById("foot").innerHTML = `Times and rooms from the Faculty of Computer Science <a href="${CMS.sources.catalogue}">course offerings</a> and the course pages, as of ${CMS.updated} — check OPAL for changes. Module texts from the official <a href="${CMS.sources.handbook}">module descriptions</a>.`;
+  document.getElementById("foot").innerHTML = `Dates, times and rooms from OPAL and the course pages, checked ${U.fmtDate(CMS.updated)} ${CMS.updated.slice(0, 4)}, and the <a href="${TERM.src}">TU Dresden academic calendar</a> — check OPAL for changes. Module texts from the official <a href="${CMS.sources.handbook}">module descriptions</a>.`;
 }
 
+document.getElementById("wk-prev").addEventListener("click", () => go(U.addDays(week, -7)));
+document.getElementById("wk-next").addEventListener("click", () => go(U.addDays(week, 7)));
+document.getElementById("wk-today").addEventListener("click", () => go(THIS_WEEK));
+document.addEventListener("keydown", e => {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") go(U.addDays(week, -7));
+  else if (e.key === "ArrowRight") go(U.addDays(week, 7));
+  else return;
+  e.preventDefault();
+});
+window.addEventListener("hashchange", () => { week = weekFromHash(); renderWeek(); });
 render();
 </script>
 </body>

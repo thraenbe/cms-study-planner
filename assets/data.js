@@ -4,12 +4,73 @@
 // with course pages where the catalogue had no times ("src": "course page").
 // Sessions with start === null have no published time yet (day === null: no day either).
 // "tentative": true = listed by the chair but not confirmed to apply to Bela.
+// Date rules (the dashboard's week-by-week calendar, CMSUtil.occurrences): a session runs weekly on
+// "day" from "from" to "to", minus the holidays and breaks in "term" (unless "duringBreaks": true) and
+// the "skip" dates; "dates" lists its only dates instead. "extra" adds one-off dates
+// ({ date, kind, start, end, room, label, tentative }; fields left out come from the session, start: null
+// = all-day item such as a deadline); "labels" names single dates. Enrolled courses only list the group
+// Bela is in; "toConfirm" holds sessions Bela will attend whose time isn't fixed yet (no group yet).
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
 // ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
-// Generated once by a script, now edited directly (last: 2026-10-12).
+// Generated once by a script, now edited directly (last: 2026-10-15).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-12",
+ "updated": "2026-10-15",
+ "term": {
+  "src": "https://tu-dresden.de/studium/im-studium/studienorganisation/studienjahresablauf",
+  "start": "2026-10-01",
+  "end": "2027-03-31",
+  "periods": [
+   {
+    "from": "2026-10-12",
+    "to": "2026-12-19",
+    "kind": "lectures",
+    "label": "Lecture period"
+   },
+   {
+    "from": "2026-12-20",
+    "to": "2027-01-03",
+    "kind": "break",
+    "label": "Christmas and New Year break",
+    "note": "no lectures or exercises"
+   },
+   {
+    "from": "2027-01-04",
+    "to": "2027-02-06",
+    "kind": "lectures",
+    "label": "Lecture period"
+   },
+   {
+    "from": "2027-02-08",
+    "to": "2027-03-06",
+    "kind": "exams",
+    "label": "Main exam period",
+    "note": "your exam dates aren't announced yet"
+   }
+  ],
+  "holidays": [
+   {
+    "date": "2026-10-03",
+    "label": "German Unity Day"
+   },
+   {
+    "date": "2026-10-31",
+    "label": "Reformation Day"
+   },
+   {
+    "date": "2026-11-18",
+    "label": "Buß- und Bettag"
+   },
+   {
+    "date": "2027-03-26",
+    "label": "Good Friday"
+   },
+   {
+    "date": "2027-03-29",
+    "label": "Easter Monday"
+   }
+  ]
+ },
  "enrolled": [
   "CMS-COR-HPC",
   "CMS-COR-VIZ",
@@ -25,12 +86,12 @@ window.CMS = {
   {
    "code": "CMS-COR-HPC",
    "kind": "Exercise",
-   "text": "No exercise group yet: all three are full and you're on the waiting list. Exercises start in the week of 26 Oct."
+   "text": "no exercise group yet; exercises start in the week of 26 Oct"
   },
   {
    "code": "CMS-TRK-APSS",
    "kind": "Tutorial",
-   "text": "Tutorial groups open after the first lecture on 20 Oct; tutorials start on 29 Oct."
+   "text": "tutorial groups open after the first lecture on 20 Oct; tutorials start on 29 Oct"
   }
  ],
  "toRegister": [
@@ -84,7 +145,7 @@ window.CMS = {
    "text": "Enrolled in “Machine Learning 1 – Winter 2026/27” (380 of 500) and in exercise group 1 (Tuesday 16:40, POT/0081/H). Not in your schedule (dropped on 12 Oct); the OPAL enrolment is untouched."
   }
  },
- "opalChecked": "2026-10-12",
+ "opalChecked": "2026-10-15",
  "priorities": [
   {
    "id": "core3",
@@ -2361,7 +2422,9 @@ window.CMS = {
    "end": "10:50",
    "room": "TOE/A317/H",
    "who": "Prof. Dr. Wolfgang E. Nagel",
-   "src": "OPAL"
+   "src": "OPAL (course page and news: starts late, first lecture 21 Oct)",
+   "from": "2026-10-21",
+   "to": "2027-02-03"
   },
   {
    "code": "CMS-COR-VIZ",
@@ -2371,8 +2434,13 @@ window.CMS = {
    "end": "14:30",
    "room": "APB/E023/U",
    "who": "Prof. Dr. Raimund Dachselt",
-   "src": "course page",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310"
+   "src": "course page (mt.inf.tu-dresden.de/lehre/datavis)",
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310",
+   "from": "2026-10-14",
+   "to": "2027-02-03",
+   "labels": {
+    "2026-10-14": "Introduction"
+   }
   },
   {
    "code": "CMS-COR-VIZ",
@@ -2391,7 +2459,15 @@ window.CMS = {
     "2026-12-09",
     "2027-01-06",
     "2027-01-27"
-   ]
+   ],
+   "labels": {
+    "2026-10-14": "E1: Dear Data",
+    "2026-11-04": "E2: Multivariate Data",
+    "2026-12-02": "E3: Networks",
+    "2026-12-09": "E4: Elevation Data",
+    "2027-01-06": "E5: Volume Data",
+    "2027-01-27": "Closing"
+   }
   },
   {
    "code": "CMS-TRK-APSS",
@@ -2401,7 +2477,13 @@ window.CMS = {
    "end": "10:50",
    "room": "GÖR/0226/H",
    "who": "Dr. Sarah Alice Gaggl",
-   "src": "course page"
+   "src": "ICCL course page (20 and 27 Oct listed; later Tuesdays assumed weekly)",
+   "from": "2026-10-20",
+   "to": "2027-02-02",
+   "labels": {
+    "2026-10-20": "Introduction",
+    "2026-10-27": "Informed vs uninformed search"
+   }
   },
   {
    "code": "EXT-LLM",
@@ -2433,7 +2515,56 @@ window.CMS = {
    "room": "APB/E067",
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2840",
    "who": "Chair of Machine Learning for Computer Vision",
-   "src": "course page"
+   "src": "course page (mlcv.cs.tu-dresden.de, schedule)",
+   "from": "2026-10-12",
+   "to": "2027-01-11",
+   "duringBreaks": true,
+   "skip": [
+    "2026-12-07",
+    "2026-12-14"
+   ],
+   "labels": {
+    "2026-10-12": "Kick-off, task selection",
+    "2026-10-19": "Task selection, progress meeting"
+   },
+   "extra": [
+    {
+     "date": "2027-01-18",
+     "kind": "Presentations"
+    },
+    {
+     "date": "2027-01-19",
+     "kind": "Presentations",
+     "start": "13:00",
+     "end": "18:00"
+    },
+    {
+     "date": "2027-01-25",
+     "kind": "Presentations"
+    },
+    {
+     "date": "2027-01-26",
+     "kind": "Presentations",
+     "start": "13:00",
+     "end": "18:00"
+    },
+    {
+     "date": "2027-02-01",
+     "kind": "Presentations"
+    },
+    {
+     "date": "2027-02-02",
+     "kind": "Presentations",
+     "start": "13:00",
+     "end": "18:00"
+    },
+    {
+     "date": "2027-02-06",
+     "kind": "Deadline",
+     "start": null,
+     "label": "Written report due (by email)"
+    }
+   ]
   },
   {
    "code": "CMS-TRK-MLSP",
@@ -2443,7 +2574,9 @@ window.CMS = {
    "end": "10:50",
    "room": "BAR/I86C/U",
    "who": "Dr.-Ing. Meik Dörpinghaus",
-   "src": "OPAL"
+   "src": "OPAL (Termine)",
+   "from": "2026-10-16",
+   "to": "2027-02-05"
   },
   {
    "code": "CMS-TRK-MLSP",
@@ -2453,7 +2586,7 @@ window.CMS = {
    "end": "10:50",
    "room": "BAR/I86C/U",
    "who": "",
-   "src": "OPAL",
+   "src": "OPAL (Termine)",
    "dates": [
     "2026-10-13",
     "2026-10-27",
@@ -2525,7 +2658,9 @@ window.CMS = {
    "end": "12:40",
    "room": "HSZ/AUDI/H",
    "who": "Prof. Dr. Björn Andres",
-   "src": "OPAL"
+   "src": "OPAL and course page (weekly in the lecture period)",
+   "from": "2026-10-12",
+   "to": "2027-02-01"
   },
   {
    "code": "CMS-TRK-CV",
@@ -2535,27 +2670,33 @@ window.CMS = {
    "end": "14:30",
    "room": "SCH/A251",
    "who": "",
-   "src": "OPAL"
+   "src": "OPAL (exercise group 1, start 13 Oct)",
+   "from": "2026-10-13",
+   "to": "2027-02-02"
   },
   {
    "code": "CMS-COR-SAP",
    "kind": "Lecture",
    "day": 1,
-   "start": null,
-   "end": null,
+   "start": "13:00",
+   "end": "14:30",
    "room": "SCH/A117/H",
    "who": "Dr. Nandu Gopan",
-   "src": "catalogue"
+   "src": "OPAL (Winter Semester 26/27 notice; first lecture 19 Oct)",
+   "from": "2026-10-19",
+   "to": "2027-02-01"
   },
   {
    "code": "CMS-COR-SAP",
    "kind": "Exercise",
    "day": 4,
-   "start": null,
-   "end": null,
+   "start": "13:00",
+   "end": "14:30",
    "room": "BEY/0E39/U",
    "who": "Dr. Nandu Gopan",
-   "src": "catalogue"
+   "src": "OPAL (Winter Semester 26/27 notice; first exercise date not announced, assumed 22 Oct)",
+   "from": "2026-10-22",
+   "to": "2027-02-04"
   },
   {
    "code": "CMS-TRK-DLVFA",
@@ -2585,7 +2726,16 @@ window.CMS = {
    "end": "14:30",
    "room": "TOE/317/H",
    "who": "Prof. Dr. Christian Mayr",
-   "src": "course page"
+   "src": "chair's WS 2026/27 timetable (from 12 Oct, weekly)",
+   "from": "2026-10-12",
+   "to": "2027-01-25",
+   "extra": [
+    {
+     "date": "2027-02-01",
+     "tentative": true,
+     "label": "Reserve date, not announced"
+    }
+   ]
   },
   {
    "code": "CMS-TRK-DCD",
@@ -2595,7 +2745,9 @@ window.CMS = {
    "end": "10:50",
    "room": "APB/E008/U",
    "who": "Dr.-Ing. Johannes Partzsch, Dipl.-Ing. Jörg Schreiter",
-   "src": "course page"
+   "src": "chair's WS 2026/27 timetable (CMS group, weekly from 21 Oct)",
+   "from": "2026-10-21",
+   "to": "2027-02-03"
   },
   {
    "code": "CMS-COR-ML",
@@ -2637,7 +2789,33 @@ window.CMS = {
    "end": "10:50",
    "room": "BEY/0245/H",
    "who": "Prof. Dr. Roberto Calandra",
-   "src": "OPAL"
+   "src": "OPAL (structure page, calendar as of 15 Oct)",
+   "from": "2026-10-12",
+   "to": "2027-01-18",
+   "skip": [
+    "2026-10-26"
+   ],
+   "labels": {
+    "2026-10-12": "Lecture 0 + 1",
+    "2026-10-19": "Lecture 3",
+    "2026-11-02": "Lecture 4",
+    "2026-11-09": "Lecture 5",
+    "2026-11-16": "Lecture 6",
+    "2026-11-23": "Lecture 7",
+    "2026-11-30": "Lecture 8",
+    "2026-12-07": "Lecture 9",
+    "2026-12-14": "Lecture 10",
+    "2027-01-04": "Lecture 11",
+    "2027-01-11": "Lecture 12",
+    "2027-01-18": "Lecture 13: recap and exam preparation"
+   },
+   "extra": [
+    {
+     "date": "2026-10-13",
+     "room": "BEY/0137/U",
+     "label": "Lecture 2"
+    }
+   ]
   },
   {
    "code": "CMS-TRK-TSP",
@@ -2647,7 +2825,30 @@ window.CMS = {
    "end": "10:50",
    "room": "APB-E040",
    "who": "Robin Koch",
-   "src": "OPAL"
+   "src": "OPAL (structure page, calendar as of 15 Oct)",
+   "from": "2026-10-20",
+   "to": "2027-01-19",
+   "labels": {
+    "2026-10-20": "Exercise 1",
+    "2026-10-27": "Exercise 3",
+    "2026-11-03": "Exercise 4",
+    "2026-11-10": "Exercise 5",
+    "2026-11-17": "Exercise 6",
+    "2026-11-24": "Exercise 7",
+    "2026-12-01": "Exercise 8",
+    "2026-12-08": "Exercise 9",
+    "2026-12-15": "Exercise 10",
+    "2027-01-05": "Exercise 11",
+    "2027-01-12": "Exercise 12",
+    "2027-01-19": "Exercise 13"
+   },
+   "extra": [
+    {
+     "date": "2026-10-26",
+     "room": "BEY/0245/H",
+     "label": "Exercise 2"
+    }
+   ]
   },
   {
    "code": "CMS-TRK-CSD",
