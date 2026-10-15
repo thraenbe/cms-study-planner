@@ -1784,7 +1784,7 @@ window.CMS = {
    },
    "note": "OPAL calendar: Mondays 9:20–10:50 in BEY/0245/H (lectures) and Tuesdays 9:20–10:50 in APB-E040 (exercises; 13 Oct in BEY/0137/U), 12 Oct – 19 Jan. Questions via teaching@lasr.org.",
    "schedule": {
-    "src": "OPAL (course structure page, 2026-10-12; exercise topics from the practice list, assuming Exercise n = Practice n−1)",
+    "src": "OPAL (course structure page, 2026-10-12, rechecked 2026-10-15: Lecture 3 moved to 19 Oct, Exercise 1 to 20 Oct, Exercise 2 to Mon 26 Oct in BEY/0245/H; exercise topics from the practice list, assuming Exercise n = Practice n−1)",
     "rows": [
      [
       "2026-10-12",
@@ -1796,15 +1796,15 @@ window.CMS = {
      ],
      [
       "2026-10-19",
-      "Exercise 1: PyTorch and Deep Learning"
+      "Lecture 3: Touch Sensing Hardware"
      ],
      [
       "2026-10-20",
-      "Exercise 2: The importance of Touch in Humans and Robots"
+      "Exercise 1: PyTorch and Deep Learning"
      ],
      [
       "2026-10-26",
-      "Lecture 3: Touch Sensing Hardware"
+      "Exercise 2: The importance of Touch in Humans and Robots"
      ],
      [
       "2026-10-27",
@@ -1909,7 +1909,7 @@ window.CMS = {
       "kind": "lecture"
      },
      {
-      "date": "2026-10-19",
+      "date": "2026-10-20",
       "label": "First exercise (PyTorch)",
       "kind": "exercise"
      },
@@ -2028,7 +2028,7 @@ window.CMS = {
      {
       "n": 3,
       "title": "Touch Sensing Hardware",
-      "date": "2026-10-26",
+      "date": "2026-10-19",
       "icon": "🔧",
       "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
      },

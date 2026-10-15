@@ -6,7 +6,9 @@ window.TSP = (function () {
   const fmt = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const daysUntil = iso => Math.round((new Date(iso + "T12:00:00") - new Date(today + "T12:00:00")) / 864e5);
   const KIND_COLOR = { lecture: "var(--c-core)", exercise: "var(--c-trk)", deadline: "var(--warn)" };
-  const roomOn = date => date === "2026-10-13" ? "BEY/0137/U" : CMS.sessions.find(s => s.code === CODE && s.day === 1).room;
+  // Room of the session on a date (date rules in data.js), else the lecture room.
+  const roomOn = date => CMS.sessions.filter(s => s.code === CODE).flatMap(s => U.occurrences(s)).find(o => o.date === date)?.room
+    || CMS.sessions.find(s => s.code === CODE && s.day === 1).room;
   const kindOf = topic => /^Exercise/.test(topic) ? "exe" : "lec";
 
   // Status buttons; the key-dates strip only where asked for (the Orga page).
