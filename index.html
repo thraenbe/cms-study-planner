@@ -108,7 +108,6 @@ a.mod.reg { border-top-style: dashed; }
 .mod .opal { font-size: 12.5px; line-height: 1.4; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); }
 .mod .opal.bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
 .mod .opal.warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); color: var(--ink); }
-.mods.other a.mod { border-top-width: 1px; border-left: 4px solid var(--c); box-shadow: none; }
 
 @media (max-width: 1000px) {
   .week { grid-template-columns: 1fr; }
@@ -129,7 +128,7 @@ a.mod.reg { border-top-style: dashed; }
     <div>
       <div class="eyebrow">TU Dresden · M.Sc. Computational Modeling and Simulation · Applied AI track</div>
       <h1 id="title">My semester</h1>
-      <p class="sub">Your weekly timetable, the courses you're enrolled in, and what else the Applied AI track offers this semester. Click any module for its full description.</p>
+      <p class="sub">Your weekly timetable and the courses you're enrolled in. Click any course for its board or module page.</p>
     </div>
     <a class="btn primary" href="plan.html">Open study plan →</a>
   </div>
@@ -150,10 +149,6 @@ a.mod.reg { border-top-style: dashed; }
   <h2 class="sec">My courses</h2>
   <p class="sec-sub">What you're enrolled in on OPAL. Sessions without published times are listed under the timetable.</p>
   <div class="mods" id="mine"></div>
-
-  <h2 class="sec">Other Applied AI modules this semester</h2>
-  <p class="sec-sub">Offered this winter and open to you in the Applied AI track. The badge shows whether the sessions fit around your current timetable.</p>
-  <div class="mods other" id="other"></div>
 
   <p class="foot" id="foot"></p>
 </div>
@@ -328,29 +323,6 @@ function render() {
       <div class="when">${when}</div>
       ${CMS.opalStatus?.[c] ? `<div class="opal ${CMS.opalStatus[c].level}">OPAL: ${esc(CMS.opalStatus[c].text)}</div>` : ""}
       <div class="go">${m.course?.page ? "Course dashboard →" : "Module page →"}</div>
-    </a>`;
-  }).join("");
-
-  // Other modules offered this winter
-  const order = { trkreq: 0, trk: 1, team: 2, core: 3 };
-  const others = Object.values(CMS.modules)
-    .filter(m => m.group && !U.status(m.code) && U.offeredNow(m))
-    .sort((a, b) => (order[a.group] - order[b.group]) || a.name.localeCompare(b.name));
-  document.getElementById("other").innerHTML = others.map(m => {
-    const ss = CMS.sessions.filter(s => s.code === m.code);
-    const nGroups = ss.filter(s => s.group).length;
-    const clashes = [...new Set(ss.filter(s => s.start && !s.group).flatMap(s => U.clashesWith(s, committed)).map(o => shortName(o.code) + " " + o.kind.toLowerCase()))];
-    const badge = !ss.length ? `<span class="chip offered">Times not listed</span>`
-      : !ss.some(s => s.start) ? `<span class="chip offered">Times TBA</span>`
-      : clashes.length ? `<span class="chip bad">Clashes</span>` : `<span class="chip enrolled">Fits your week</span>`;
-    const when = ss.length
-      ? ss.filter(s => !s.group || s.group === "A").map(s => `<span>${s.kind}${s.group ? ` (${nGroups} groups)` : ""}: ${U.when(s)}</span>`).join("")
-      : `<span>No session times in the faculty catalogue yet</span>`;
-    return `<a class="mod" href="${U.moduleUrl(m.code)}" style="--c:${areaColor(m)}">
-      <div class="top"><span class="mono">${m.code}</span>${badge}</div>
-      <div class="name">${esc(m.name)}${m.group === "trkreq" ? ` <span class="chip warn">Required</span>` : ""}</div>
-      <div class="area">${esc(m.area)} · ${m.lp} LP</div>
-      <div class="when">${when}${clashes.length ? `<span style="color:var(--bad)">Clashes with ${esc(clashes.join(", "))}</span>` : ""}</div>
     </a>`;
   }).join("");
 
