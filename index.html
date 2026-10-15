@@ -105,18 +105,6 @@ a.mod:hover { border-color: var(--c); transform: translateY(-1px); }
 .mod .go { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--c); display: flex; gap: 12px; flex-wrap: wrap; }
 a.mod.reg { border-top-style: dashed; }
 .mod .how { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
-.prio { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-.pr { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
-.pr.done { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
-.pr .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.pr .num { font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
-.pr h3 { margin: 0; font-size: 16px; line-height: 1.3; }
-.pr .why { font-size: 13px; color: var(--ink-2); margin: 0; }
-.pr .opts { display: grid; gap: 6px; margin-top: 2px; }
-.pr a.opt { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-decoration: none; color: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); border-left: 4px solid var(--c); font-size: 13.5px; font-weight: 500; }
-.pr a.opt:hover { border-color: var(--c); }
-.pr a.opt.na { color: var(--ink-3); }
-.pr .hint { font-size: 12.5px; color: var(--ink-2); margin: 0; padding-top: 6px; border-top: 1px solid var(--line); }
 .mod .opal { font-size: 12.5px; line-height: 1.4; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); }
 .mod .opal.bad { background: color-mix(in srgb, var(--bad) 10%, var(--surface)); color: var(--bad); }
 .mod .opal.warn { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); color: var(--ink); }
@@ -148,11 +136,7 @@ a.mod.reg { border-top-style: dashed; }
 
   <section class="stats" id="stats" aria-label="Overview"></section>
 
-  <h2 class="sec" style="margin-top:0">Must enrol this semester</h2>
-  <p class="sec-sub">Your priorities for this winter. Each one is done as soon as you're enrolled in one of its options.</p>
-  <div class="prio" id="prio"></div>
-
-  <h2 class="sec">Weekly schedule</h2>
+  <h2 class="sec" style="margin-top:0">Weekly schedule</h2>
   <p class="sec-sub">Lectures and exercises of your enrolled courses. Where a course has several exercise groups, pick yours; striped blocks are groups you haven't picked yet. Dashed blocks are sessions still to confirm; courses whose times aren't published yet are listed below the week.</p>
   <div class="alerts" id="alerts"></div>
   <div class="week">
@@ -232,14 +216,9 @@ function render() {
   const toPick = current.filter(c => hasTimedGroups(c) && !groups[c]);
   const later = CMS.enrolled.filter(c => !nowEnrolled.includes(c));
   document.getElementById("title").textContent = CMS.semester;
-  const prios = U.priorities();
-  const open = prios.filter(p => !p.done);
-  // credits once each open priority is covered by its first option offered this winter
-  const lpPlanned = lp + open.reduce((a, p) => a + (mod(p.options.find(c => U.offeredNow(mod(c))) || p.options[0]).lp || 0), 0);
   document.getElementById("stats").innerHTML = [
     [nowEnrolled.length, `enrolled this semester${later.length ? ` (+${later.length} in summer)` : ""}`],
-    [open.length || "✓", open.length ? `of ${prios.length} priorities still to enrol` : "all priorities enrolled"],
-    [lpPlanned + " LP", `this semester with the priorities (${lp} LP so far)`],
+    [lp + " LP", "credits this semester"],
     [(Math.round(hours * 10) / 10) + " h", "weekly contact time so far (sessions every week)"],
     [toPick.length || "✓", toPick.length ? `exercise group${toPick.length > 1 ? "s" : ""} still to pick` : "all exercise groups picked"],
   ].map(([n, l]) => `<div class="panel stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
@@ -350,24 +329,6 @@ function render() {
       ${CMS.opalStatus?.[c] ? `<div class="opal ${CMS.opalStatus[c].level}">OPAL: ${esc(CMS.opalStatus[c].text)}</div>` : ""}
       <div class="go">${m.course?.page ? "Course dashboard →" : "Module page →"}</div>
     </a>`;
-  }).join("");
-
-  // Priorities
-  document.getElementById("prio").innerHTML = prios.map((p, i) => {
-    const opts = p.options.map(c => {
-      const m = mod(c), now = U.offeredNow(m), inCat = CMS.sessions.some(s => s.code === c) || m.winter;
-      const chip = p.done === c ? `<span class="chip enrolled">Enrolled</span>`
-        : !now ? `<span class="chip offered">Summer only</span>`
-        : inCat ? `<span class="chip warn">To enrol</span>` : `<span class="chip offered">Not in catalogue</span>`;
-      return `<a class="opt ${!now ? "na" : ""}" href="${U.moduleUrl(c)}" style="--c:${areaColor(m)}"><span>${esc(m.name)}</span>${chip}</a>`;
-    }).join("");
-    return `<div class="pr ${p.done ? "done" : ""}">
-      <div class="top"><span class="num">${i + 1} · ${p.options.length > 1 ? `pick 1 of ${p.options.length}` : "required"}</span>${p.done ? `<span class="chip enrolled">Done</span>` : `<span class="chip warn">Open</span>`}</div>
-      <h3>${esc(p.title)}</h3>
-      <p class="why">${esc(p.why)}</p>
-      <div class="opts">${opts}</div>
-      ${p.hint && !p.done ? `<p class="hint">${esc(p.hint)}</p>` : ""}
-    </div>`;
   }).join("");
 
   // Other modules offered this winter
