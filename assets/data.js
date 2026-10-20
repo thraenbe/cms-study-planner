@@ -78,7 +78,6 @@ window.CMS = {
   "CMS-TRK-CAI",
   "CMS-PRO",
   "CMS-TRK-DCD",
-  "CMS-TRK-MLSP",
   "CMS-COR-SAP",
   "CMS-TRK-TSP"
  ],
@@ -112,8 +111,8 @@ window.CMS = {
    "text": "Enrolled in the WS 26/27 student group of “Digital Circuit Technology / Digitale Schaltungstechnik”. Exercise sign-up isn't open in OPAL yet."
   },
   "CMS-TRK-MLSP": {
-   "level": "ok",
-   "text": "Enrolled for winter 2026/27 (24 of 50 places)."
+   "level": "info",
+   "text": "Not in your schedule (dropped on 20 Oct); the OPAL enrolment in the group Winter Semester 2026/2027 is untouched (unenrolment possible until 31 Mar 2027)."
   },
   "CMS-TRK-CAI": {
    "level": "ok",
@@ -172,7 +171,7 @@ window.CMS = {
     "CMS-TRK-CAI",
     "CMS-TRK-HWSWC"
    ],
-   "why": "You have Problem Solving, Circuit and System Design, Machine Learning in Signal Processing and Conversational AI (Computer Vision dropped on 20 Oct).",
+   "why": "You have Problem Solving, Circuit and System Design and Conversational AI (Computer Vision and Machine Learning in Signal Processing dropped on 20 Oct).",
    "hint": "Hardware-Software Co-Design is only taught in summer, so this semester it's Machine Learning in Signal Processing or Conversational AI."
   }
  ],
