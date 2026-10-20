@@ -15,7 +15,7 @@
 // Generated once by a script, now edited directly (last: 2026-10-20).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-15",
+ "updated": "2026-10-20",
  "term": {
   "src": "https://tu-dresden.de/studium/im-studium/studienorganisation/studienjahresablauf",
   "start": "2026-10-01",
@@ -86,11 +86,6 @@ window.CMS = {
    "code": "CMS-COR-HPC",
    "kind": "Exercise",
    "text": "no exercise group yet; exercises start in the week of 26 Oct"
-  },
-  {
-   "code": "CMS-TRK-APSS",
-   "kind": "Tutorial",
-   "text": "tutorial groups open after the first lecture on 20 Oct; tutorials start on 29 Oct"
   }
  ],
  "toRegister": [
@@ -123,8 +118,8 @@ window.CMS = {
    "text": "Enrolled in the winter 26/27 group “Students2026”. First lecture on 19 October 2026."
   },
   "CMS-TRK-APSS": {
-   "level": "warn",
-   "text": "In the course group. Tutorial groups open after the first lecture on 20 Oct."
+   "level": "ok",
+   "text": "In the course group and in tutorial group 2 (Fridays 13:00–14:30, APB/E006/U; first tutorial on 30 Oct)."
   },
   "CMS-COR-VIZ": {
    "level": "ok",
@@ -1454,7 +1449,7 @@ window.CMS = {
     "web": "https://iccl.inf.tu-dresden.de/web/Advanced_Problem_Solving_and_Search_(WS2026)",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56319377408"
    },
-   "note": "First lecture on 20 October 2026. Sign up for one tutorial group in OPAL after the first lecture; changes are only announced to registered group members. Slides and exercise sheets are uploaded in OPAL per session."
+   "note": "First lecture on 20 October 2026. You're in tutorial group 2 (Fridays, DS4); changes are only announced to registered group members. Slides and exercise sheets are uploaded in OPAL per session."
   },
   "CMS-TRK-CAI": {
    "code": "CMS-TRK-CAI",
@@ -2482,6 +2477,22 @@ window.CMS = {
     "2026-10-20": "Introduction",
     "2026-10-27": "Informed vs uninformed search"
    }
+  },
+  {
+   "code": "CMS-TRK-APSS",
+   "kind": "Tutorial",
+   "day": 5,
+   "start": "13:00",
+   "end": "14:30",
+   "room": "APB/E006/U",
+   "who": "",
+   "src": "ICCL course page (group 2, Fri DS4; only 30 Oct listed, later Fridays assumed weekly)",
+   "from": "2026-10-30",
+   "to": "2027-02-05",
+   "labels": {
+    "2026-10-30": "Traditional Search"
+   },
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110"
   },
   {
    "code": "EXT-LLM",
