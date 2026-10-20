@@ -12,7 +12,7 @@
 // Bela is in; "toConfirm" holds sessions Bela will attend whose time isn't fixed yet (no group yet).
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
 // ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
-// Generated once by a script, now edited directly (last: 2026-10-15).
+// Generated once by a script, now edited directly (last: 2026-10-20).
 window.CMS = {
  "semester": "Winter 2026/27",
  "updated": "2026-10-15",
@@ -75,7 +75,7 @@ window.CMS = {
   "CMS-COR-HPC",
   "CMS-COR-VIZ",
   "CMS-TRK-APSS",
-  "CMS-TRK-CV",
+  "CMS-TRK-CAI",
   "CMS-PRO",
   "CMS-TRK-DCD",
   "CMS-TRK-MLSP",
@@ -95,7 +95,6 @@ window.CMS = {
   }
  ],
  "toRegister": [
-  "CMS-TRK-CAI",
   "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
@@ -105,8 +104,8 @@ window.CMS = {
    "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
   },
   "CMS-TRK-CV": {
-   "level": "ok",
-   "text": "In the CV Group (301/500) and in Exercise Group 1 (Tuesday 13:00, SCH/A251); OPAL registration open until 31 Jan 2027."
+   "level": "info",
+   "text": "Not in your schedule (dropped on 20 Oct in favour of the Conversational AI seminar); the OPAL enrolment (CV Group, Exercise Group 1) is untouched. Unenrol in OPAL if you want to free the place."
   },
   "CMS-TRK-DCD": {
    "level": "ok",
@@ -117,8 +116,8 @@ window.CMS = {
    "text": "Enrolled for winter 2026/27 (24 of 50 places)."
   },
   "CMS-TRK-CAI": {
-   "level": "warn",
-   "text": "The seminar is full (15/15); you're 3rd on the waiting list. Sign-up closes 15 Oct, 11:00."
+   "level": "ok",
+   "text": "Admitted from the waiting list on 20 Oct; you chose topic 1. Seminar Thursdays 11:10–12:40 in APB/E006/U (Charvi Jain). Register for the exam in Selma."
   },
   "CMS-COR-SAP": {
    "level": "ok",
@@ -173,7 +172,7 @@ window.CMS = {
     "CMS-TRK-CAI",
     "CMS-TRK-HWSWC"
    ],
-   "why": "You have three: Problem Solving, Computer Vision and Circuit and System Design. Any of these works.",
+   "why": "You have Problem Solving, Circuit and System Design, Machine Learning in Signal Processing and Conversational AI (Computer Vision dropped on 20 Oct).",
    "hint": "Hardware-Software Co-Design is only taught in summer, so this semester it's Machine Learning in Signal Processing or Conversational AI."
   }
  ],
@@ -2606,6 +2605,8 @@ window.CMS = {
    "room": "APB/E006/U",
    "who": "Charvi Jain",
    "src": "OPAL",
+   "from": "2026-10-15",
+   "to": "2027-02-06",
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110"
   },
   {
