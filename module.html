@@ -110,10 +110,10 @@ function render() {
   }).join("");
   const sessionsHTML = sessions.length
     ? `<table class="sess"><thead><tr><th>Session</th><th>When</th><th>Where</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-    : `<p class="empty">${offeredNow
+    : `<p class="empty">${m.noTimes ? esc(m.noTimes) : offeredNow
         ? "The faculty course catalogue has no session times for this module yet. Modules taught by other faculties (e.g. Electrical Engineering) often aren't listed there; check the course's OPAL page or the chair's website."
         : `Not taught this semester — it's offered ${esc((m.freq || "").toLowerCase())}.`}</p>`;
-  const catalogueLink = m.winter ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
+  const catalogueLink = m.winter?.q ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
 
   page.innerHTML = `
     <p class="crumbs"><a href="index.html">Dashboard</a> / <a href="plan.html">Study plan</a> / ${esc(m.name)}</p>

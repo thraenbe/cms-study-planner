@@ -44,7 +44,7 @@ window.CMSUtil = {
     const m = CMS.modules[code]; if (!m) return "";
     const esc = this.esc;
     const fmt = [m.sws && `${m.sws} SWS (lecture / exercise / seminar / practical)`, m.extra].filter(Boolean).join(", ");
-    const catalogueLink = m.winter ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
+    const catalogueLink = m.winter?.q ? `${CMS.sources.catalogue}?q=${encodeURIComponent(m.winter.q)}` : null;
     const st = CMS.opalStatus?.[code];
     const fact = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : "";
     return `<section class="modinfo">

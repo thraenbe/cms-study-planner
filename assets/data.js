@@ -12,10 +12,11 @@
 // Bela is in; "toConfirm" holds sessions Bela will attend whose time isn't fixed yet (no group yet).
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
 // ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
-// Generated once by a script, now edited directly (last: 2026-10-20).
+// modules[code].noTimes replaces the "no session times yet" text on module.html for courses without sessions.
+// Generated once by a script, now edited directly (last: 2026-10-21).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-20",
+ "updated": "2026-10-21",
  "term": {
   "src": "https://tu-dresden.de/studium/im-studium/studienorganisation/studienjahresablauf",
   "start": "2026-10-01",
@@ -126,8 +127,8 @@ window.CMS = {
    "text": "Signed up for the course."
   },
   "CMS-PRO": {
-   "level": "ok",
-   "text": "Registered for the research project (33 of 35 places taken)."
+   "level": "info",
+   "text": "Your project comes from Michael Färber's group (allocation of 19 Oct), not from OPAL. You're still enrolled in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” of the Chair of Machine Learning for Computer Vision, which has nothing to do with it."
   },
   "CMS-TRK-TSP": {
    "level": "ok",
@@ -499,13 +500,13 @@ window.CMS = {
     "web": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/lehrveranstaltungen/zeitplan_ws",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/26351140878"
    },
-   "note": "Lecture Mondays 4th DS (13:00–14:30) in TOE/317/H from 12 Oct; exercise for CMS students (CMS-AAI-DCT) Wednesdays 2nd DS (9:20–10:50) in APB/E008/U, weekly from 21 Oct (chair timetable as of 12 Oct 2026; it said Tue 11:10 SCH/A285/U before). The Thursday exercise is for the EuI Diplom variant only. Sign up for the exercises in OPAL (not open yet). Register for the exam in Selma.",
+   "note": "Lecture Mondays 4th DS (13:00–14:30) in TOE/317/H from 12 Oct. You attend the Thursday exercise, 2nd DS (9:20–10:50) in BAR/0E85/U (+ TOE/203), every first week (odd calendar weeks) from 22 Oct; the chair's timetable lists it for the EuI Diplom variant. The CMS exercise (CMS-AAI-DCT) runs weekly on Wednesdays, 2nd DS, in APB/E008/U. Sign up for the exercises in OPAL. Register for the exam in Selma.",
    "status": {
     "opal": true,
     "selma": false
    },
    "schedule": {
-    "src": "lecture topics and order from the chair's slide list (materials page, 2022/23 decks), one deck per lecture Monday assumed; dates from the chair's WS 2026/27 timetable (12 Oct 2026) and the TU Dresden academic calendar; exercise topics not published yet",
+    "src": "lecture topics and order from the chair's slide list (materials page, 2022/23 decks), one deck per lecture Monday assumed; dates from the chair's WS 2026/27 timetable (20 Oct 2026; Thursday exercise in odd calendar weeks) and the TU Dresden academic calendar; exercise topics not published yet",
     "rows": [
      [
       "2026-10-12",
@@ -518,8 +519,8 @@ window.CMS = {
       "lec"
      ],
      [
-      "2026-10-21",
-      "Exercise 1 (CMS group)",
+      "2026-10-22",
+      "Exercise 1 (Thursday group)",
       "exe"
      ],
      [
@@ -528,18 +529,13 @@ window.CMS = {
       "lec"
      ],
      [
-      "2026-10-28",
-      "Exercise 2 (CMS group)",
-      "exe"
-     ],
-     [
       "2026-11-02",
       "Lecture 4: Arithmetic circuits 3",
       "lec"
      ],
      [
-      "2026-11-04",
-      "Exercise 3 (CMS group)",
+      "2026-11-05",
+      "Exercise 2 (Thursday group)",
       "exe"
      ],
      [
@@ -548,19 +544,14 @@ window.CMS = {
       "lec"
      ],
      [
-      "2026-11-11",
-      "Exercise 4 (CMS group)",
-      "exe"
-     ],
-     [
       "2026-11-16",
       "Lecture 6: CMOS logic 1",
       "lec"
      ],
      [
-      "2026-11-18",
-      "No exercise: Buß- und Bettag (public holiday in Saxony)",
-      "off"
+      "2026-11-19",
+      "Exercise 3 (Thursday group)",
+      "exe"
      ],
      [
       "2026-11-23",
@@ -568,18 +559,13 @@ window.CMS = {
       "lec"
      ],
      [
-      "2026-11-25",
-      "Exercise 5 (CMS group)",
-      "exe"
-     ],
-     [
       "2026-11-30",
       "Lecture 8: Power and energy in digital circuits",
       "lec"
      ],
      [
-      "2026-12-02",
-      "Exercise 6 (CMS group)",
+      "2026-12-03",
+      "Exercise 4 (Thursday group)",
       "exe"
      ],
      [
@@ -588,18 +574,13 @@ window.CMS = {
       "lec"
      ],
      [
-      "2026-12-09",
-      "Exercise 7 (CMS group)",
-      "exe"
-     ],
-     [
       "2026-12-14",
       "Lecture 10: Mixed-signal circuits 2",
       "lec"
      ],
      [
-      "2026-12-16",
-      "Exercise 8 (CMS group)",
+      "2026-12-17",
+      "Exercise 5 (Thursday group)",
       "exe"
      ],
      [
@@ -613,8 +594,8 @@ window.CMS = {
       "lec"
      ],
      [
-      "2027-01-06",
-      "Exercise 9 (CMS group)",
+      "2027-01-07",
+      "Exercise 6 (Thursday group)",
       "exe"
      ],
      [
@@ -623,18 +604,13 @@ window.CMS = {
       "lec"
      ],
      [
-      "2027-01-13",
-      "Exercise 10 (CMS group)",
-      "exe"
-     ],
-     [
       "2027-01-18",
       "Lecture 13: I/O circuits",
       "lec"
      ],
      [
-      "2027-01-20",
-      "Exercise 11 (CMS group)",
+      "2027-01-21",
+      "Exercise 7 (Thursday group)",
       "exe"
      ],
      [
@@ -643,18 +619,13 @@ window.CMS = {
       "lec"
      ],
      [
-      "2027-01-27",
-      "Exercise 12 (CMS group)",
-      "exe"
-     ],
-     [
       "2027-02-01",
       "Reserve Monday (the 2022 plan had a lab tour and an 'advanced circuits' lecture here; not announced)",
       "off"
      ],
      [
-      "2027-02-03",
-      "Exercise 13 (CMS group)",
+      "2027-02-04",
+      "Exercise 8 (Thursday group)",
       "exe"
      ]
     ]
@@ -663,7 +634,7 @@ window.CMS = {
     "page": "digital-circuit-design.html",
     "rooms": {
      "lecture": "TOE/317/H (Mon 13:00–14:30, 4th DS)",
-     "exercise": "APB/E008/U (Wed 9:20–10:50, 2nd DS, CMS group)"
+     "exercise": "BAR/0E85/U (Thu 9:20–10:50, 2nd DS, every other week)"
     },
     "keyDates": [
      {
@@ -677,14 +648,9 @@ window.CMS = {
       "kind": "deadline"
      },
      {
-      "date": "2026-10-21",
-      "label": "First exercise (CMS group)",
+      "date": "2026-10-22",
+      "label": "First Thursday exercise",
       "kind": "exercise"
-     },
-     {
-      "date": "2026-11-18",
-      "label": "No exercise: Buß- und Bettag",
-      "kind": "break"
      },
      {
       "date": "2026-12-21",
@@ -697,7 +663,7 @@ window.CMS = {
       "kind": "lecture"
      },
      {
-      "date": "2027-02-03",
+      "date": "2027-02-04",
       "label": "Last exercise",
       "kind": "exercise"
      },
@@ -2198,105 +2164,15 @@ window.CMS = {
    "exam": "Project assignment (240 h)",
    "prereq": "None",
    "winter": {
-    "who": "Chair of Machine Learning for Computer Vision: Jannik Presberger, Lucas Fabian Naumann, David Stein, Prof. Dr. Björn Andres",
-    "q": "CMS Research Project Machine Learning"
+    "who": "Michael Färber's research group: Marina Litvak (supervisor)"
    },
    "goals": "Students will master the practical application and implementation of these concepts in an independent research project. They will be able to identify a problem and break it down into work steps that they can tackle independently. They can communicate independently about the project and have mastered the scientific methods of computer modeling—in particular, the design, implementation, and validation of models and simulations—and can apply these to complex application problems.",
    "contents": "The module focuses on a computer-aided modeling or simulation project.",
    "links": {
-    "web": "https://mlcv.cs.tu-dresden.de/courses/26-winter/project-cs/index.html",
-    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56369152004"
+    "web": "https://faerber-lab.github.io/student-projects-ws2026/"
    },
-   "note": "You're doing your research assignment in the OPAL course “Research Projects Machine Learning (Computer Science) - Winter 26/27” at the Chair of Machine Learning for Computer Vision (Jannik Presberger, Lucas Fabian Naumann, David Stein, Björn Andres). The study plan schedules the research assignment for semester 3, at 12 SWS per year. Weekly progress meetings on Mondays 14:50–16:20 in APB-E067 (no meetings on 7 and 14 Dec); task selection and talk-slot selection open in OPAL for registered students. The topic list is linked from the OPAL course (“Topics”) and isn't out yet. On the course page, the exam for module INF-25-Ma-FP is a written report (max. 8 pages, by email by 6 Feb 2027) plus a 20-minute talk; the form depends on the module it is credited to, so check what applies for CMS-PRO.",
-   "schedule": {
-    "src": "course page (mlcv.cs.tu-dresden.de)",
-    "rows": [
-     [
-      "2026-10-12",
-      "Kick-off meeting, task selection"
-     ],
-     [
-      "2026-10-19",
-      "Task selection, progress meeting, consultation"
-     ],
-     [
-      "2026-10-26",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-11-02",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-11-09",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-11-16",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-11-23",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-11-30",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-12-07",
-      "No meeting"
-     ],
-     [
-      "2026-12-14",
-      "No meeting"
-     ],
-     [
-      "2026-12-21",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2026-12-28",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2027-01-04",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2027-01-11",
-      "Progress meeting, consultation"
-     ],
-     [
-      "2027-01-18",
-      "Presentations (14:50–16:20)"
-     ],
-     [
-      "2027-01-19",
-      "Presentations (13:00–18:00)"
-     ],
-     [
-      "2027-01-25",
-      "Presentations (14:50–16:20)"
-     ],
-     [
-      "2027-01-26",
-      "Presentations (13:00–18:00)"
-     ],
-     [
-      "2027-02-01",
-      "Presentations (14:50–16:20)"
-     ],
-     [
-      "2027-02-02",
-      "Presentations (13:00–18:00)"
-     ],
-     [
-      "2027-02-06",
-      "Deadline: written report by email (for INF-25-Ma-FP)"
-     ]
-    ]
-   }
+   "note": "Your research assignment is the project “Context-Aware Code Development with AI Assistance” in Michael Färber's research group, supervised by Marina Litvak (final allocation on 19 Oct, team of four). It looks at how LLM coding assistants can use project context (method descriptions, file and class structure, dependencies and APIs, requirements), e.g. with retrieval-augmented generation; the deliverable is a case-study paper. The study plan schedules the research assignment for semester 3, at 12 SWS per year.",
+   "noTimes": "No timetabled sessions; this is project work."
   },
   "EXT-LLM": {
    "code": "EXT-LLM",
@@ -2516,66 +2392,6 @@ window.CMS = {
    "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310"
   },
   {
-   "code": "CMS-PRO",
-   "kind": "Meeting",
-   "day": 1,
-   "start": "14:50",
-   "end": "16:20",
-   "room": "APB/E067",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2840",
-   "who": "Chair of Machine Learning for Computer Vision",
-   "src": "course page (mlcv.cs.tu-dresden.de, schedule)",
-   "from": "2026-10-12",
-   "to": "2027-01-11",
-   "duringBreaks": true,
-   "skip": [
-    "2026-12-07",
-    "2026-12-14"
-   ],
-   "labels": {
-    "2026-10-12": "Kick-off, task selection",
-    "2026-10-19": "Task selection, progress meeting"
-   },
-   "extra": [
-    {
-     "date": "2027-01-18",
-     "kind": "Presentations"
-    },
-    {
-     "date": "2027-01-19",
-     "kind": "Presentations",
-     "start": "13:00",
-     "end": "18:00"
-    },
-    {
-     "date": "2027-01-25",
-     "kind": "Presentations"
-    },
-    {
-     "date": "2027-01-26",
-     "kind": "Presentations",
-     "start": "13:00",
-     "end": "18:00"
-    },
-    {
-     "date": "2027-02-01",
-     "kind": "Presentations"
-    },
-    {
-     "date": "2027-02-02",
-     "kind": "Presentations",
-     "start": "13:00",
-     "end": "18:00"
-    },
-    {
-     "date": "2027-02-06",
-     "kind": "Deadline",
-     "start": null,
-     "label": "Written report due (by email)"
-    }
-   ]
-  },
-  {
    "code": "CMS-TRK-MLSP",
    "kind": "Lecture",
    "day": 5,
@@ -2751,14 +2567,22 @@ window.CMS = {
   {
    "code": "CMS-TRK-DCD",
    "kind": "Exercise",
-   "day": 3,
+   "day": 4,
    "start": "09:20",
    "end": "10:50",
-   "room": "APB/E008/U",
+   "room": "BAR/0E85/U",
    "who": "Dr.-Ing. Johannes Partzsch, Dipl.-Ing. Jörg Schreiter",
-   "src": "chair's WS 2026/27 timetable (CMS group, weekly from 21 Oct)",
-   "from": "2026-10-21",
-   "to": "2027-02-03"
+   "src": "chair's WS 2026/27 timetable (Thursday 2nd DS, every 1st week = odd calendar week, from 22 Oct)",
+   "dates": [
+    "2026-10-22",
+    "2026-11-05",
+    "2026-11-19",
+    "2026-12-03",
+    "2026-12-17",
+    "2027-01-07",
+    "2027-01-21",
+    "2027-02-04"
+   ]
   },
   {
    "code": "CMS-COR-ML",

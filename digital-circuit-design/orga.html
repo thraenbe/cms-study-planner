@@ -44,13 +44,13 @@ document.getElementById("page").innerHTML = `
   <h2>Enrolment</h2>
   <div class="box">
     <p style="margin:0 0 .4rem"><b>OPAL:</b> enrolled in the course group “Students_digital_circuits_technology_ws26_27” (all participants of WS 26/27). Enrolment and unenrolment close on <b>16 Oct 2026, 00:00</b>.</p>
-    <p style="margin:0 0 .4rem"><b>Exercise groups:</b> the chair's timetable says “for exercises, please sign up in OPAL”, but the OPAL course has no exercise sign-up yet (only the one course group; checked ${CMS.updated}). Watch OPAL mails.</p>
+    <p style="margin:0 0 .4rem"><b>Exercise:</b> you attend the Thursday exercise (2nd DS, BAR/0E85/U, every other week from 22 Oct). The chair's timetable says “for exercises, please sign up in OPAL”; watch OPAL mails for the sign-up.</p>
     <p style="margin:0"><b>Selma:</b> exam registration still open-ended; shown red above until it is done.</p>
   </div>
   <h2>Schedule · ${nLec} lectures, ${nExe} exercises</h2>
-  <div class="legend"><span><span class="sw lec"></span>Lecture · Mon ${lec.start}–${lec.end} · ${esc(lec.room)} · from 12 Oct</span><span><span class="sw exe"></span>Exercise (CMS group) · Wed ${exe.start}–${exe.end} · ${esc(exe.room)} · weekly from 21 Oct</span><span><span class="sw off"></span>No session</span></div>
+  <div class="legend"><span><span class="sw lec"></span>Lecture · Mon ${lec.start}–${lec.end} · ${esc(lec.room)} · from 12 Oct</span><span><span class="sw exe"></span>Exercise · Thu ${exe.start}–${exe.end} · ${esc(exe.room)} · every other week from 22 Oct</span><span><span class="sw off"></span>No session</span></div>
   <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
-  <p class="muted">Source: ${esc(m.schedule.src)}. The Thursday exercise on the chair's timetable (BAR/0E85/U, every first week) is for the electrical-engineering Diplom variant, not for CMS. No calendar events have been created for this course.</p>
+  <p class="muted">Source: ${esc(m.schedule.src)}. The chair's timetable lists the Thursday exercise (BAR/0E85/U + TOE/203) for the electrical-engineering Diplom variant, in every first week, i.e. odd calendar weeks; the weekly CMS group meets on Wednesdays, 2nd DS, in APB/E008/U. No calendar events have been created for this course.</p>
   <h2>Material &amp; links</h2>
   <div class="links">
     <a href="${c.materials}" target="_blank" rel="noopener">Lecture slides on the chair's materials page (password from the first lecture) ↗</a>
