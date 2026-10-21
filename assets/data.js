@@ -725,8 +725,8 @@ window.CMS = {
       "title": "Arithmetic circuits 1",
       "date": "2026-10-19",
       "icon": "➕",
-      "covered": false,
-      "blurb": "Number representations (unsigned, signed, fixed and floating point), addition and subtraction circuits."
+      "covered": true,
+      "blurb": "Number representations (unsigned, Gray code, sign + magnitude, offset, two's complement, fixed point, IEEE 754 floating point) and adders from the half adder to carry lookahead and the Manchester carry chain."
      },
      {
       "n": 3,

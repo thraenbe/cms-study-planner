@@ -146,6 +146,99 @@ function lecture1() {
     <ul class="refs">${c.reading.map(r => `<li>${esc(r.a)} (${r.y}). <i>${esc(r.t)}</i>. ${esc(r.v)}.</li>`).join("")}</ul>
     <p class="muted">Follow-up lectures of the chair: VLSI Processor Design, Neuromorphic VLSI Systems, Schaltkreisentwurf. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
 }
+
+// Lecture 2, slides 4, 7, 8 and 9: the same sixteen 4-bit codes read as unsigned, sign + magnitude, offset (k = 8)
+// and two's complement. Computed, and passed as strings so that tt() does not bold the 1s.
+const sgn = v => typeof v === "number" && v < 0 ? "−" + -v : String(v);
+const CODES4 = Array.from({ length: 16 }, (_, c) => [c.toString(2).padStart(4, "0"), c, c & 8 ? (c & 7 ? -(c & 7) : "−0") : c, c - 8, c & 8 ? c - 16 : c].map(sgn));
+// Slide 26: full adder with propagate and generate, rows in the slide's order.
+const FA = Array.from({ length: 8 }, (_, k) => { const a = k >> 2, b = k >> 1 & 1, ci = k & 1, p = a ^ b, g = a & b; return [a, b, ci, p, g, p ^ ci, g | p & ci]; });
+const sub = t => t.replace(/([CGP])(\d+|G)/g, "$1<sub>$2</sub>");
+function lecture2() {
+  return `${head(l)}
+    <p class="lead">The first of three arithmetic lectures: how integers and real numbers are encoded in bits, and how an adder is built, from the half adder to the carry-lookahead trees that let a 64-bit processor add at more than 4 GHz. Written from the chair's deck as exported on 20 Oct 2025 (35 pages; the footer counts to 37, slides 35 and 36 are not in the file); the copy posted for this term could not be downloaded.</p>
+    <h2>Number representations</h2>
+    <p>Four classes of numbers (slide 3): unsigned and signed integers, and decimals as fixed or floating point. The four integer encodings side by side for the 16 codes of a 4-bit word (slides 4, 7, 8 and 9):</p>
+    <div class="tt-wrap">${tt(["Code", "Unsigned", "Sign + magnitude", "Offset k = 8", "Two's complement"], CODES4)}</div>
+    <h3>Unsigned and Gray code (slides 4–6)</h3>
+    <ul>
+      <li><b>Unsigned.</b> n bits b<sub>n−1</sub> … b<sub>0</sub> encode 0 … 2<sup>n</sup>−1 as Σ b<sub>i</sub>·2<sup>i</sup>; results above 2<sup>n</sup>−1 overflow.</li>
+      <li><b>Gray code.</b> Consecutive values differ in exactly one bit. The use case is counter synchronisation, where a counter is sampled at an arbitrary moment: in binary the step 0111 → 1000 toggles all four bits, so a sampler can catch any mix of old and new bits; in Gray code it reads either the value before or the value after the step.</li>
+      <li><b>Construction.</b> Mirror the (n−1)-bit sequence, prefix the original half with 0 and the mirrored half with 1: the Gray property holds inside both halves, and exactly one new bit flips where they meet. The recursion starts from the empty 0-bit code.</li>
+    </ul>
+    <div class="formula">n = 2: 00 01 11 10 &nbsp;→ mirror, prefix 0 | 1 →&nbsp; n = 3: 000 001 011 010 | 110 111 101 100</div>
+    <h3>Signed integers (slides 7–12)</h3>
+    <ul>
+      <li><b>Sign + magnitude</b> (slide 7). A sign bit s and the absolute value, (−1)<sup>s</sup>·Σ<sub>i=0…n−2</sub> b<sub>i</sub>·2<sup>i</sup>, range −(2<sup>n−1</sup>−1) … 2<sup>n−1</sup>−1. Calculations must treat every sign combination separately, and zero has two codes (0000 and 1000 = −0). Used for the IEEE floating-point mantissa.</li>
+      <li><b>Offset</b> (slide 8). The unsigned value minus a fixed k, range −k … 2<sup>n</sup>−1−k, typically k = 2<sup>n−1</sup> or 2<sup>n−1</sup>−1 (the table uses k = 8). Positive numbers no longer match their unsigned code. Used for the IEEE floating-point exponent.</li>
+      <li><b>Two's complement</b> (slides 9–10), the typical signed format of today's designs. The MSB carries the weight −2<sup>n−1</sup>, range −2<sup>n−1</sup> … 2<sup>n−1</sup>−1. Positive numbers equal their unsigned code, the MSB acts as the sign, addition and subtraction are the unsigned circuits unchanged (within the word), and x + (−x) = 0. The costs: overflow at the boundaries and an unbalanced range (−8 … 7 in 4 bits). The slide's shorthand "bits of negative numbers are inverted" is the first half of negation; the second is adding 1 (3 = 0011 → 1100 + 1 = 1101 = −3).</li>
+      <li><b>Sign extension</b> (slide 11). Widening a word only needs copies of the sign bit: 1000 → 11111000 (−8), 0111 → 00000111 (+7). The new MSB weighs −2<sup>n</sup>, the old one now +2<sup>n−1</sup>, and together they are s·(−2<sup>n−1</sup>) as before.</li>
+      <li><b>Overflow</b> (slide 12). The result cannot be represented and comes out with the wrong sign: 0111 + 0010 = 1001, so 7 + 2 = −7. It can only happen when two numbers of the same sign are added or two of different sign are subtracted, and subtraction is reduced to adding the negated operand. The adder detects it from the carries into and out of the MSB.</li>
+    </ul>
+    <div class="formula">x = s·(−2<sup>n−1</sup>) + Σ<sub>i=0…n−2</sub> b<sub>i</sub>·2<sup>i</sup> &nbsp;&nbsp;&nbsp; overflow o = c<sub>n−1</sub> ⊕ c<sub>n</sub></div>
+    ${tt(["a<sub>n−1</sub> + b<sub>n−1</sub>", "c<sub>n−1</sub>", "s<sub>n−1</sub>", "c<sub>n</sub>", "o"], [["0 + 0", 0, 0, 0, 0], ["0 + 0", 1, 1, 0, 1], ["1 + 1", 0, 0, 1, 1], ["1 + 1", 1, 1, 1, 0], ["0 + 1, 1 + 0", 0, 1, 0, 0], ["0 + 1, 1 + 0", 1, 0, 1, 0]])}
+    <h3>Fixed point (slides 13–15)</h3>
+    <ul>
+      <li><b>Format [s]m.n.</b> A real number is scaled by a power of 2 and rounded to an integer: optional sign (s), m integer bits and n fractional bits, so the integer a stands for a·2<sup>−n</sup> (m + n + 1 bits when signed). Slides 13 and 14 write the scale as 2<sup>−m</sup>; the format definition and the examples use 2<sup>−n</sup>.</li>
+      <li><b>Examples in s3.4</b> (8-bit two's complement): 3.125 → 0011.0010 (3.125·16 = 50) and −4.5625 → 1011.0111 (−73).</li>
+      <li><b>Arithmetic</b> (slide 14) is plain integer arithmetic on the codes. Addition and subtraction keep the scale; a product carries it twice and is shifted right by n; in a quotient the scale cancels, so the result is shifted left by n (if the divider produces the extra fractional digits) or the dividend is prescaled by 2<sup>n</sup>.</li>
+      <li><b>Use</b> (slide 15). Fast, small, and it reuses integer hardware: post-processing of ADC outputs (whose precision is known and limited) and microcontroller software with integer arithmetic only. Its limit is a wide range of magnitudes, as in scientific computing: large intermediate results overflow, small ones lose their fractional bits. That is the case for floating point.</li>
+    </ul>
+    <div class="formula">a·2<sup>−n</sup> ± b·2<sup>−n</sup> = (a ± b)·2<sup>−n</sup> &nbsp;&nbsp;&nbsp; (a·2<sup>−n</sup>)·(b·2<sup>−n</sup>) = (a·b·2<sup>−n</sup>)·2<sup>−n</sup> &nbsp;&nbsp;&nbsp; (a·2<sup>−n</sup>) / (b·2<sup>−n</sup>) = (a/b·2<sup>n</sup>)·2<sup>−n</sup></div>
+    <h3>Floating point and IEEE 754 (slides 16–20)</h3>
+    <ul>
+      <li><b>Idea.</b> At any order of magnitude only a few digits matter, so the number is scaled by a power of a fixed base into a set range and only the exponent and the scaled number are stored: f = ±(1 + m)·2<sup>e</sup> with 0 ≤ m &lt; 1, m the mantissa (significand), e the exponent. Zero needs its own code.</li>
+      <li><b>32-bit IEEE 754</b> (slide 17). Sign s (1 = negative), 8 exponent bits E<sub>7</sub> … E<sub>0</sub>, 23 mantissa bits m<sub>22</sub> … m<sub>0</sub> stored as 0.23 fixed point with the leading 1 implicit. The exponent is stored with an offset (bias) B = 2<sup>8−1</sup>−1 = 127: E = e + 127.</li>
+      <li><b>Special exponents.</b> E = 0 means e = −126 without the implicit 1, f = ±(0 + m)·2<sup>−126</sup>, which includes zero; E = 255 is reserved for error codes and, with m = 0, ±∞. So e runs from −126 to +127.</li>
+      <li><b>Examples</b> (slide 18). 1 00000000 00…01 is −2<sup>−23</sup>·2<sup>−126</sup> ≈ −1.40129846·10<sup>−45</sup>, the negative number closest to zero; 32 zero bits are +0.</li>
+      <li><b>Operations</b> (slide 19). Multiplication and division are the simple case: sign s<sub>a</sub> ⊕ s<sub>b</sub>, multiply or divide 1 + m<sub>a</sub> and 1 + m<sub>b</sub>, shift the result back to the form 1 + m<sub>r</sub>, add or subtract the exponents and correct them by that shift, and treat the corner cases (overflow, division by 0). Addition and subtraction first shift the operand with the smaller exponent to the larger one, add, renormalise and correct the exponent; the low digits of the smaller operand are lost.</li>
+      <li><b>Precision</b> (slide 20). (10<sup>9</sup> + 10<sup>−9</sup>) − 10<sup>9</sup> should be 10<sup>−9</sup>, but in 64-bit double precision the bracket already rounds to 10<sup>9</sup> and the result is 0 (this browser, which also computes in doubles, gets ${(1e9 + 1e-9) - 1e9}). It happens whenever the magnitudes differ by at least 2<sup>n<sub>m</sub></sup> for n<sub>m</sub> mantissa bits, and the error propagates into later products, which numerical mathematics has to handle, for example when solving systems of linear equations.</li>
+    </ul>
+    <div class="formula">f = (−1)<sup>s</sup>·(1 + m)·2<sup>E − 127</sup> &nbsp;for 1 ≤ E ≤ 254 &nbsp;&nbsp;&nbsp; f = (−1)<sup>s</sup>·m·2<sup>−126</sup> &nbsp;for E = 0</div>
+    <h2>Adder circuits</h2>
+    <h3>Half adder, full adder, generate and propagate (slides 21, 22 and 26)</h3>
+    <ul>
+      <li><b>Half adder.</b> Adds two bits A and B: S = A ⊕ B (one XOR), C<sub>o</sub> = A·B (one AND).</li>
+      <li><b>Full adder.</b> Adds A, B and a carry-in C<sub>i</sub>. From the min-terms, S = A ⊕ B ⊕ C<sub>i</sub> and C<sub>o</sub> = A·B + C<sub>i</sub>·(A ⊕ B).</li>
+      <li><b>Generate and propagate.</b> To cut logic stages from the carry path the full adder is rewritten with P = A ⊕ B (the stage passes an incoming carry on) and G = A·B (the stage creates a carry by itself). Then S = P ⊕ C<sub>i</sub> and C<sub>o</sub> = G + P·C<sub>i</sub>, the form every fast adder below builds on.</li>
+    </ul>
+    ${tt(["A", "B", "C<sub>i</sub>", "P", "G", "S", "C<sub>o</sub>"], FA)}
+    <div class="formula">S = A ⊕ B ⊕ C<sub>i</sub> = P ⊕ C<sub>i</sub> &nbsp;&nbsp;&nbsp; C<sub>o</sub> = A·B + C<sub>i</sub>·(A ⊕ B) = G + P·C<sub>i</sub> &nbsp;&nbsp;&nbsp; P = A ⊕ B, G = A·B</div>
+    <h3>Bit-serial adder (slide 23)</h3>
+    <p>One full adder and one flip-flop that feeds the carry back: shift registers present a<sub>i</sub> and b<sub>i</sub> LSB first, one bit per clock, and the sum bits are shifted out. Little hardware, independent of the word width and a short combinational path, so it clocks fast; an n-bit sum takes n + 1 cycles. The same scheme can add a multi-bit block per cycle instead of a single bit.</p>
+    <h3>Ripple-carry adder (slides 24–25)</h3>
+    <ul>
+      <li>Every sum bit and carry depends on the carries of all lower stages: 1001 + 0110 is 0 1111 with carry-in 0 and 1 0000 with carry-in 1, so one carry changes all five result bits. The carry is the limiting factor.</li>
+      <li>The ripple-carry adder chains n full adders (a half adder in the first stage if there is no carry-in C<sub>0</sub>). Its critical path C<sub>0</sub> → C<sub>n</sub> costs 2n gate delays.</li>
+      <li>For 32 bits that is 64 gate delays; at t<sub>gate</sub> ≈ 50 ps in 28 nm, T = 3.2 ns and f<sub>max</sub> ≈ 310 MHz. Yet 64-bit processors run above 4 GHz, and the rest of the lecture explains how.</li>
+    </ul>
+    <h3>Carry lookahead (slides 27–32)</h3>
+    <ul>
+      <li><b>Single block</b> (slide 27). Four cells produce p<sub>i</sub>, g<sub>i</sub> and s<sub>i</sub>; a carry-lookahead (CLA) block computes c<sub>1</sub> … c<sub>4</sub> directly from the p, g and c<sub>0</sub> instead of waiting for the ripple.</li>
+      <li><b>Kogge-Stone</b> (slide 28). Expanding the carry recursion gives sums of products; because AND and OR are associative, commutative and distributive, the terms regroup into a regular structure of small cells.</li>
+      <li><b>Group propagate and generate</b> (slide 29). A 4-bit block also outputs ${sub("PG = P3P2P1P0")} (2 gate levels) and ${sub("GG = G3 + G2P3 + G1P2P3 + G0P1P2P3")} (4 gate levels), so ${sub("C4 = GG + PG·C0")} and the block behaves like one wide full adder.</li>
+      <li><b>Hierarchy</b> (slides 30–32). Four 4-bit CLA adders under a 16-bit lookahead unit, four 16-bit adders under a 64-bit one. C<sub>64</sub> is ready after 1 + 3·4 + 2 = 15 gate levels, with 4 levels of group-generate logic in each of the three tiers; a 64-bit ripple-carry adder needs 128.</li>
+    </ul>
+    <div class="formula">${sub(`C1 = G0 + C0P0<br>C2 = G1 + G0P1 + C0P0P1<br>C3 = G2 + G1P2 + G0P1P2 + C0P0P1P2 = (G2 + G1P2) + (G0 + C0P0)P1P2<br>C4 = G3 + G2P3 + G1P2P3 + G0P1P2P3 + C0P0P1P2P3 = ((G3 + G2P3) + (G1 + G0P1)P3P2) + C0((P3P2)(P1P0))`)}</div>
+    <h3>Manchester carry chain (slides 33–34)</h3>
+    <ul>
+      <li>A half adder makes P and G; a 2:1 multiplexer selected by P passes C<sub>I</sub> on when P = 1 and outputs G when P = 0, which is C<sub>O</sub> = G + P·C<sub>I</sub>; S = P ⊕ C<sub>I</sub>. The carry path C<sub>I</sub> → C<sub>O</sub> is a single multiplexer, and identical cells line up into homogeneous adder chains.</li>
+      <li>FPGAs use this for their fast carry paths: the carry chain in the logic slices of Xilinx 7-series FPGAs (CLB user guide UG474) builds adders and subtractors of configurable width.</li>
+    </ul>
+    <div class="tiles">
+      <div class="tile"><div class="v">128 → 15</div><div class="l">gate levels to C<sub>64</sub>, ripple-carry vs three-tier lookahead</div></div>
+      <div class="tile"><div class="v">≈ 310 MHz</div><div class="l">f<sub>max</sub> of a 32-bit ripple-carry adder in 28 nm</div></div>
+      <div class="tile"><div class="v">n + 1</div><div class="l">clock cycles for an n-bit sum in the bit-serial adder</div></div>
+      <div class="tile"><div class="v">127</div><div class="l">exponent bias of a 32-bit IEEE 754 float</div></div>
+    </div>
+    <h2>Take-home message</h2>
+    <ul>
+      <li>Numbers have several digital representations, chosen by use case: unsigned or signed, integer or decimal, fixed or floating point.</li>
+      <li>Arithmetic circuits such as adders have several implementations, chosen by constraints: combinational, iterative or pipelined; size against speed; power consumption.</li>
+      <li>In an adder the carry sets the speed: 2n gate delays when it ripples, 15 levels for 64 bits with lookahead, one multiplexer per bit in a Manchester chain.</li>
+    </ul>
+    <p class="muted">The closing slide also advertises a student-assistant (SHK) job for the chair's social media; the contact is on slide 37. Next: Arithmetic circuits 2 (<a href="digital-circuit-design/lecture.html?n=3">lecture 3</a>). Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
+}
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -155,11 +248,12 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
+const WRITEUPS = { 1: lecture1, 2: lecture2 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {
   document.title = `Lecture ${l.n} – ${l.title} · Digital Circuit Design`;
-  page.innerHTML = l.n === 1 ? lecture1() : placeholder();
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
   wireChart();
 }
 addEventListener("resize", () => {
