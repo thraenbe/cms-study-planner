@@ -156,3 +156,90 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .legend .sw.exe { background: var(--c-trk); }
 .dcd .cmp .v { display: block; }
 .dcd .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Lecture-2 extras: categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.dcd .viz .f1 { fill: var(--vz-s1); }
+.dcd .viz .f2 { fill: var(--vz-s2); }
+.dcd .viz .f3 { fill: var(--vz-s3); }
+.dcd .viz .f4 { fill: var(--vz-s4); }
+.dcd .viz .bar.s2 { fill: var(--vz-s2); }
+.dcd .viz .line.k2 { stroke: var(--vz-s2); }
+.dcd .viz .dot.gray { fill: var(--vz-gray); }
+.dcd .viz .nohit { pointer-events: none; }
+.dcd .viz .ann, .dcd .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.dcd .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.dcd .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.dcd .viz .code.on .link, .dcd .viz .code.on .vl { opacity: 1; }
+.dcd .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.dcd .viz .code.on .dot { r: 5.5; }
+.dcd .viz .pt.on .bar { filter: brightness(1.12); }
+.dcd .viz .plot:focus { outline: none; }
+.dcd .viz .legend { margin: 0 2px 8px; }
+.dcd .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.dcd .legend .lt { display: inline; }
+.dcd .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.dcd .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.dcd table.tt th .key { margin-right: 5px; }
+.dcd .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.dcd .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.dcd .t1 { --c: var(--vz-s1); } .dcd .t2 { --c: var(--vz-s2); } .dcd .t3 { --c: var(--vz-s3); } .dcd .t4 { --c: var(--vz-s4); }
+.dcd table.tt td.t1, .dcd table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.dcd .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.dcd .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.dcd .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.dcd .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.dcd .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.dcd .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.dcd .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.dcd .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.dcd .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dcd .preset:hover { border-color: var(--ink-3); }
+.dcd .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.dcd .lab button:focus-visible, .dcd .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dcd .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.dcd .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.dcd .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.dcd .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.dcd .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.dcd .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.dcd .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.dcd .cell.one { color: var(--ink); font-weight: 700; }
+.dcd .cell.t1, .dcd .cell.t2, .dcd .cell.t3, .dcd .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.dcd button.cell { cursor: pointer; }
+.dcd button.cell:hover { filter: brightness(1.06); }
+.dcd .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.dcd .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.dcd .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.dcd .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.dcd .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.dcd .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.dcd .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.dcd .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.dcd .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.dcd .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.dcd .fxc { display: grid; gap: 3px; justify-items: center; }
+.dcd .fxc .cell { width: 34px; }
+.dcd .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dcd .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.dcd .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.dcd .fgw { display: grid; gap: 3px; }
+.dcd .fgw small { font-size: 11px; color: var(--ink-3); }
+.dcd .fg { display: inline-flex; gap: 2px; }
+.dcd .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .dcd .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .dcd .fg { gap: 1px; }
+  .dcd .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .dcd .agrid .rl { font-size: 12px; }
+  .dcd .fxc .cell { width: 30px; }
+  .dcd .ro { grid-template-columns: 1fr; gap: 2px; }
+  .dcd .ro dd { margin-bottom: 6px; }
+}
+.dcd .ex, .dcd .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.dcd .ex { --c: var(--focus); }
+.dcd .why { --c: var(--c-team); }
+.dcd .ex p, .dcd .why p { margin: 0 0 0.4rem; }
+.dcd .ex p:last-child, .dcd .why p:last-child { margin-bottom: 0; }
+.dcd .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
