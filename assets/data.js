@@ -82,21 +82,15 @@ window.CMS = {
   "CMS-COR-SAP",
   "CMS-TRK-TSP"
  ],
- "toConfirm": [
-  {
-   "code": "CMS-COR-HPC",
-   "kind": "Exercise",
-   "text": "no exercise group yet; exercises start in the week of 26 Oct"
-  }
- ],
+ "toConfirm": [],
  "toRegister": [
   "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
  "opalStatus": {
   "CMS-COR-HPC": {
-   "level": "bad",
-   "text": "All three exercise groups are full (40/40, 30/30, 60/60); you're on the waiting list. Registration open until 15 Nov."
+   "level": "ok",
+   "text": "In the Wednesday exercise group (1st DS, 07:30–09:00), as of 22 Oct; no longer on the waiting list."
   },
   "CMS-TRK-CV": {
    "level": "info",
@@ -204,70 +198,348 @@ window.CMS = {
     "web": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/55582162944"
    },
-   "note": "Late start: the lecture begins on 21 October, the exercises in the week of 26 October. Until then, students without a computer-science background should check the prerequisites in OPAL: the computer-architecture video (Lectures → videos from previous semesters) and the Linux and C self-tests (Exercises). Slides and exercise sheets are in OPAL.",
+   "note": "Late start: lecture Wednesdays, 2nd DS (09:20–10:50) from 21 Oct, moved to HÜL/S186/H because of the number of participants. You are in the Wednesday exercise group, 1st DS (07:30–09:00), in the same room, from 28 Oct. Exercise sheets are OPAL online exercises, usually published a week ahead; solve them before your exercise. Slides, exercises and exam modalities are announced in OPAL.",
    "schedule": {
-    "src": "OPAL",
+    "src": "lecture dates and topics from the OPAL course page (WiSe 2026/27); exercise start dates from the OPAL news of 9 Oct; your group from the OPAL registration page (22 Oct); exercise topics follow the online exercises in OPAL",
     "rows": [
      [
       "2026-10-14",
-      "No lecture (late start; the Introduction is skipped or merged)"
+      "No lecture: late start (the Introduction deck is part of the first lecture)",
+      "off"
      ],
      [
       "2026-10-21",
-      "Basics of Parallelism (first lecture)"
+      "Lecture 1: Introduction · Basics of Parallelism",
+      "lec"
      ],
      [
       "2026-10-28",
-      "Batch Systems"
+      "Exercise 1 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-10-28",
+      "Lecture 2: Batch Systems",
+      "lec"
      ],
      [
       "2026-11-04",
-      "Shared Memory: Parallelism within a Processor and on a Compute Node"
+      "Exercise 2 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-11-04",
+      "Lecture 3: Shared Memory: Parallelism within a Processor and on a Compute Node",
+      "lec"
      ],
      [
       "2026-11-11",
-      "Shared Memory Programming 1: Threads"
+      "Exercise 3 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-11-11",
+      "Lecture 4: Shared Memory Programming 1: Threads",
+      "lec"
      ],
      [
       "2026-11-18",
-      "No lecture (Buß- und Bettag)"
+      "No lecture or exercise (Buß- und Bettag)",
+      "off"
      ],
      [
       "2026-11-25",
-      "Shared Memory Programming 2: SIMD & Dependencies"
+      "Exercise 4 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-11-25",
+      "Lecture 5: Shared Memory Programming 2: SIMD & Dependencies",
+      "lec"
      ],
      [
       "2026-12-02",
-      "Distributed Memory: Networks"
+      "Exercise 5 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-12-02",
+      "Lecture 6: Distributed Memory: Networks",
+      "lec"
      ],
      [
       "2026-12-09",
-      "Distributed Memory Programming: MPI"
+      "Exercise 6 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-12-09",
+      "Lecture 7: Distributed Memory Programming: MPI",
+      "lec"
      ],
      [
       "2026-12-16",
-      "Distributed Memory Programming: PGAS and Data Layout"
+      "Exercise 7 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2026-12-16",
+      "Lecture 8: Distributed Memory Programming: PGAS and Data Layout",
+      "lec"
+     ],
+     [
+      "2026-12-23",
+      "Christmas break until 3 Jan: no lecture or exercise on 23 and 30 Dec",
+      "off"
      ],
      [
       "2027-01-06",
-      "Accelerators"
+      "Exercise 8 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2027-01-06",
+      "Lecture 9: Accelerators",
+      "lec"
      ],
      [
       "2027-01-13",
-      "Accelerator Programming: CUDA, OpenACC, and OpenMP"
+      "Exercise 9 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2027-01-13",
+      "Lecture 10: Accelerator Programming: CUDA, OpenACC, and OpenMP",
+      "lec"
      ],
      [
       "2027-01-20",
-      "Performance Analysis"
+      "Exercise 10 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2027-01-20",
+      "Lecture 11: Performance Analysis",
+      "lec"
      ],
      [
       "2027-01-27",
-      "Load Balance, Power, and Energy"
+      "Exercise 11 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2027-01-27",
+      "Lecture 12: Load Balance, Power, and Energy",
+      "lec"
      ],
      [
       "2027-02-03",
-      "Summary, Outlook and Questions"
+      "Exercise 12 (Wednesday group, 07:30)",
+      "exe"
+     ],
+     [
+      "2027-02-03",
+      "Lecture 13: Summary, Outlook and Questions",
+      "lec"
      ]
+    ]
+   },
+   "status": {
+    "opal": true,
+    "group": "Wednesday 07:30 group",
+    "selma": false
+   },
+   "course": {
+    "page": "high-performance-computing.html",
+    "rooms": {
+     "lecture": "HÜL/S186/H (Wed 09:20–10:50, 2nd DS)",
+     "exercise": "HÜL/S186/H (Wed 07:30–09:00, 1st DS, your group)"
+    },
+    "types": {
+     "overview": "ℹ️ overview",
+     "software": "📜 software",
+     "hardware": "💻 hardware"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-21",
+      "label": "First lecture (late start)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-28",
+      "label": "First exercise of your Wednesday group",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-11-15",
+      "label": "Exercise-group registration in OPAL closes (23:59)",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-11-18",
+      "label": "Buß- und Bettag: no lecture, no exercise",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-20",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-02-03",
+      "label": "Last lecture (Summary, Outlook and Questions)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-COR-HPC (CMS, basic professional training)",
+      "how": "Written exam, 90 min; the module grade is the exam grade. Exam modalities are announced in OPAL.",
+      "selma": "registration period not announced yet"
+     }
+    ],
+    "selmaNote": "registration period not announced yet",
+    "opalNote": "WiSe 26/27 course",
+    "groupNote": "no group yet",
+    "format": "2 SWS lecture + 2 SWS exercise, 5 LP. Taught in English. The exercises are OPAL online exercises: they appear about a week before they are discussed, you solve them online beforehand, and the exercise slot discusses and solves them together. Questions go to the OPAL forum first. Access to one of ZIH's HPC systems will be granted so you can try out what you learn.",
+    "contact": "Dr. Robert Schöne (Chair of Computer Architecture) runs lecture and exercises; Markus Velten and Josef Weidendorfer also look after the OPAL course; Prof. Wolfgang E. Nagel is the responsible lecturer. Questions the forum cannot answer go through the OPAL contact form",
+    "coursePage": "https://tu-dresden.de/ing/informatik/ti/professur-fuer-rechnerarchitektur/studium/lehrveranstaltungen/vorlesungen/vorlesung-hochleistungsrechner-und-ihre-programmierung",
+    "materialsNote": "Slides (one PDF per lecture), the online exercises with their tutorials and solutions, videos from previous semesters, questions from previous exams and an acronym list are all in OPAL. The slides may not be copied or republished, so the lecture pages here are summaries in our own words.",
+    "roomNote": "The OPAL course page and the announcement of 19 Oct put the lecture and the Wednesday exercise in HÜL/S186/H (the large lecture hall in the south wing of the Hülße-Bau, 1st floor). The introduction slides and the OPAL registration page still name HÜL/S158/H, on the same floor.",
+    "prereq": "Students without a computer-science background should prepare: the computer-architecture video and slides (hardware basics, see the preparation page), the Linux self-test with its solution sheet, and the C self-test with a C tutorial.",
+    "lectures": [
+     {
+      "n": 0,
+      "title": "Preparation: hardware basics",
+      "date": null,
+      "icon": "🖥️",
+      "type": "overview",
+      "covered": true,
+      "blurb": "Self-study before the late start: how a sequential computer runs a program, registers, caches, pipelining, superscalar and out-of-order cores, and what the operating system adds (virtual memory, processes, threads)."
+     },
+     {
+      "n": 1,
+      "title": "Introduction · Basics of Parallelism",
+      "date": "2026-10-21",
+      "icon": "🧭",
+      "type": "overview",
+      "covered": true,
+      "blurb": "Why HPC (simulation, Top500, ZIH's clusters), then the basics: concurrency vs pipelining, the PCAM model, synchronization, Amdahl and Gustafson, Flynn's taxonomy, OpenMP and MPI."
+     },
+     {
+      "n": 2,
+      "title": "Batch Systems",
+      "date": "2026-10-28",
+      "icon": "🗃️",
+      "type": "software",
+      "covered": false,
+      "blurb": "Scheduling basics and scheduling algorithms, Slurm and other batch systems: how jobs get onto a shared cluster."
+     },
+     {
+      "n": 3,
+      "title": "Shared Memory: Parallelism within a Processor and on a Compute Node",
+      "date": "2026-11-04",
+      "icon": "🧩",
+      "type": "hardware",
+      "covered": false,
+      "blurb": "Pipelining and superscalarity, SIMD, multicore and multiprocessor nodes, NUMA."
+     },
+     {
+      "n": 4,
+      "title": "Shared Memory Programming 1: Threads",
+      "date": "2026-11-11",
+      "icon": "🧵",
+      "type": "software",
+      "covered": false,
+      "blurb": "Thread-level parallelism with PThreads and OpenMP, and how loop iterations are scheduled onto threads."
+     },
+     {
+      "n": 5,
+      "title": "Shared Memory Programming 2: SIMD & Dependencies",
+      "date": "2026-11-25",
+      "icon": "➡️",
+      "type": "software",
+      "covered": false,
+      "blurb": "Vectorization and the data dependencies that allow or forbid it."
+     },
+     {
+      "n": 6,
+      "title": "Distributed Memory: Networks",
+      "date": "2026-12-02",
+      "icon": "🕸️",
+      "type": "hardware",
+      "covered": false,
+      "blurb": "Static network types, performance indicators, and the HPC topologies torus, fat tree and dragonfly."
+     },
+     {
+      "n": 7,
+      "title": "Distributed Memory Programming: MPI",
+      "date": "2026-12-09",
+      "icon": "✉️",
+      "type": "software",
+      "covered": false,
+      "blurb": "Processes and the Message Passing Interface: point-to-point and collective communication."
+     },
+     {
+      "n": 8,
+      "title": "Distributed Memory Programming: PGAS and Data Layout",
+      "date": "2026-12-16",
+      "icon": "🗺️",
+      "type": "software",
+      "covered": false,
+      "blurb": "Partitioned global address space (PGAS, DASH), data distribution and domain decomposition."
+     },
+     {
+      "n": 9,
+      "title": "Accelerators",
+      "date": "2027-01-06",
+      "icon": "🚀",
+      "type": "hardware",
+      "covered": false,
+      "blurb": "FPGAs and general-purpose GPUs from NVIDIA and AMD, and other accelerators."
+     },
+     {
+      "n": 10,
+      "title": "Accelerator Programming: CUDA, OpenACC, and OpenMP",
+      "date": "2027-01-13",
+      "icon": "🎛️",
+      "type": "software",
+      "covered": false,
+      "blurb": "Offloading work to accelerators with CUDA, OpenACC, OpenMP and OpenCL."
+     },
+     {
+      "n": 11,
+      "title": "Performance Analysis",
+      "date": "2027-01-20",
+      "icon": "📈",
+      "type": "overview",
+      "covered": false,
+      "blurb": "Evaluating and measuring parallel programs, the tools for it, and typical problems they reveal."
+     },
+     {
+      "n": 12,
+      "title": "Load Balance, Power, and Energy",
+      "date": "2027-01-27",
+      "icon": "⚖️",
+      "type": "hardware",
+      "covered": false,
+      "blurb": "Sources of imbalance and their impact on scalability, energy efficiency and power caps."
+     },
+     {
+      "n": 13,
+      "title": "Summary, Outlook and Questions",
+      "date": "2027-02-03",
+      "icon": "🏁",
+      "type": "overview",
+      "covered": false,
+      "blurb": "Wrap-up of the course, outlook and questions before the exam."
+     }
     ]
    }
   },
@@ -2290,10 +2562,22 @@ window.CMS = {
    "day": 3,
    "start": "09:20",
    "end": "10:50",
-   "room": "TOE/A317/H",
-   "who": "Prof. Dr. Wolfgang E. Nagel",
-   "src": "OPAL (course page and news: starts late, first lecture 21 Oct)",
+   "room": "HÜL/S186/H",
+   "who": "Prof. Dr. Wolfgang E. Nagel, Dr. Robert Schöne",
+   "src": "OPAL (course page; room HÜL/S186/H since the announcement of 19 Oct; late start, first lecture 21 Oct)",
    "from": "2026-10-21",
+   "to": "2027-02-03"
+  },
+  {
+   "code": "CMS-COR-HPC",
+   "kind": "Exercise",
+   "day": 3,
+   "start": "07:30",
+   "end": "09:00",
+   "room": "HÜL/S186/H",
+   "who": "Dr. Robert Schöne",
+   "src": "OPAL registration (your group: Wednesday 07:30–09:00, 1st DS); start 28 Oct per the OPAL news of 9 Oct",
+   "from": "2026-10-28",
    "to": "2027-02-03"
   },
   {

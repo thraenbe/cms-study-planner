@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High-Performance Computing · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖧</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="high-performance-computing/hpc.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="high-performance-computing/hpc.js"></script>
+</head>
+<body class="hpc">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Main page: header, status bar (OPAL course, exercise group, Selma), then one card per lecture plus the Orga card (SML-games grid).
+const { m, c, esc, U, CODE, fmt, TYPES } = HPC;
+const when = l => l.date ? `${fmt(l.date)} · ${TYPES[l.type]}` : "Self-study before the first lecture";
+const cards = c.lectures.map(l => `<a class="game-card" href="high-performance-computing/lecture.html?n=${l.n}">
+    <div class="game-icon">${l.icon}</div>
+    <h2>${l.n ? `Lecture ${l.n} – ` : ""}${esc(l.title)}</h2>
+    <p class="when">${when(l)}</p>
+    <p>${esc(l.blurb)}</p>
+  </a>`).join("") + `<a class="game-card" href="high-performance-computing/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>Next session, your exercise group, exam and Selma, the full schedule with rooms, how the online exercises work, and contacts.</p>
+  </a>`;
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
+  <header class="hero">
+    <h1>🖧 ${esc(m.name)}</h1>
+    <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Wolfgang E. Nagel, Dr. Robert Schöne · Chair of Computer Architecture and ZIH · TU Dresden</p>
+  </header>
+  ${HPC.topbar()}
+  <main class="game-cards">${cards}</main>`;
+</script>
+</body>
+</html>

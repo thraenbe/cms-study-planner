@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>High-Performance Computing · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖧</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="high-performance-computing/hpc.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="high-performance-computing/hpc.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="hpc">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, TYPES } = HPC;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => x.n === Number(q));
+const page = document.getElementById("page");
+const back = `<a class="back" href="high-performance-computing.html">← All lectures</a>`;
+const isNarrow = () => matchMedia("(max-width: 600px)").matches;
+
+function head(l) {
+  const meta = l.date ? `${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who)} · ${TYPES[l.type]}`
+    : "Self-study before the first lecture · slides and a recorded video from a previous semester in OPAL · Dr. Robert Schöne";
+  return `${back}<div class="big-icon">${l.icon}</div><h1>${l.n ? `Lecture ${l.n} – ` : ""}${esc(l.title)}</h1><p class="meta">${meta}</p>`;
+}
+
+// ---------------- Shared chart and explorer helpers (as on the Digital Circuit Design pages) ----------------
+// Colour roles: categorical slots 1-4 from the palette above, gray for reference marks (ideal speedup, Rpeak).
+// Text stays in ink; colour sits on marks, swatches, underlines and tinted cells.
+const key = (s, kind = "") => `<span class="key ${kind}" style="--c:${s === "g" ? "var(--vz-gray)" : `var(--vz-s${s})`}"></span>`;
+const leg = items => `<div class="legend">${items.map(([s, t, k]) => `<span class="li">${s ? key(s, k) : ""}<span class="lt">${t}</span></span>`).join("")}</div>`;
+const flag = (k, t) => `<span class="flag ${k}">${k === "ok" ? "✓" : "⚠"} ${t}</span>`;
+const hbar = (x0, x1, y0, h) => { const r = Math.min(4, (x1 - x0) / 2, h / 2); return `M${x0},${y0} H${x1 - r} Q${x1},${y0} ${x1},${y0 + r} V${y0 + h - r} Q${x1},${y0 + h} ${x1 - r},${y0 + h} H${x0} Z`; };
+const num = (v, d = 2) => v.toLocaleString("en-GB", { maximumFractionDigits: d });
+const pct = v => num(v * 100, 1) + " %";
+const col = s => `var(--vz-${s.slot ? "s" + s.slot : "gray"})`;
+const CHARTS = {}, LINES = {};
+const place = (tip, wrap, x, y) => { tip.classList.add("show"); const half = tip.offsetWidth / 2; tip.style.left = Math.min(Math.max(x, half), wrap.clientWidth - half) + "px"; tip.style.top = y + "px"; };
+const chart = (name, legend = "") => `<figure class="viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div>`;
+const lab = (name, title) => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div><div class="lab-body"></div></div>`;
+
+// Line charts on a log₂ x axis (PEs or instructions): series are functions, direct labels sit at the right end
+// (or at labelAt), and a crosshair snaps to whole numbers and lists every series in the tooltip.
+function lineGeo(cfg, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = narrow ? 34 : 40, R = narrow ? 14 : cfg.labelW || 96, T = 24, B = 30;
+  const PW = W - L - R, PH = H - T - B, lg = Math.log2, [x0, x1] = cfg.x, [y0, y1] = cfg.y;
+  return { W, H, L, R, T, B, PW, PH,
+    x: v => L + (lg(v) - lg(x0)) / (lg(x1) - lg(x0)) * PW,
+    y: v => T + PH - (v - y0) / (y1 - y0) * PH,
+    inv: px => 2 ** (lg(x0) + Math.min(1, Math.max(0, (px - L) / PW)) * (lg(x1) - lg(x0))) };
+}
+function lineSVG(name, narrow) {
+  const cfg = LINES[name], g = lineGeo(cfg, narrow), { W, H, L, R, T, PW, PH, x, y } = g;
+  const xt = (narrow && cfg.xTicksN || cfg.xTicks).map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("");
+  const yt = cfg.yTicks.map(v => `<line class="${v === cfg.y[0] ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const sx = Array.from({ length: 241 }, (_, k) => cfg.x[0] * (cfg.x[1] / cfg.x[0]) ** (k / 240));
+  const d = f => "M" + sx.map(v => `${x(v).toFixed(1)},${y(f(v)).toFixed(1)}`).join(" L");
+  const lines = cfg.series.map(s => `<path class="line${s.dash ? " dash" : ""}" style="stroke:${col(s)}" d="${d(s.f)}"/>`).join("");
+  const lbl = s => { const at = s.labelAt || cfg.x[1], X = x(at), Y = y(Math.min(s.f(at), cfg.y[1])) + (s.dy || 0);
+    return at === cfg.x[1] ? `<text class="lbl" x="${X + 6}" y="${Y + 4}">${s.short || s.name}</text>` : `<text class="lbl" x="${X - 6}" y="${Y}" text-anchor="end">${s.short || s.name}</text>`; };
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">
+    <defs><clipPath id="clip-${name}"><rect x="${L}" y="${T - 3}" width="${PW + 3}" height="${PH + 3}"/></clipPath></defs>
+    ${yt}${xt}<text class="note" x="${L - 30}" y="12">${cfg.yTitle}</text>
+    <g clip-path="url(#clip-${name})">${lines}</g>${cfg.extra ? cfg.extra(g, narrow) : ""}${narrow ? "" : cfg.series.map(lbl).join("")}
+    <g class="xh-layer" style="display:none"><line class="xh" y1="${T}" y2="${T + PH}"/>${cfg.series.map(s => `<circle class="dot" style="fill:${col(s)}" r="4.5"/>`).join("")}</g>
+    <rect class="hit plot" x="${L}" y="${T}" width="${PW}" height="${PH}" tabindex="0" aria-label="${esc(cfg.hitLabel)}"/></svg>`;
+}
+const line = (name, cfg) => { LINES[name] = cfg; CHARTS[name] = narrow => lineSVG(name, narrow); };
+function wireLines() {
+  document.querySelectorAll("[data-chart]").forEach(el => {
+    const cfg = LINES[el.dataset.chart]; if (!cfg) return;
+    const g = lineGeo(cfg, el.dataset.narrow === "true"), svg = el.querySelector("svg"), wrap = el.parentElement, tip = wrap.querySelector(".tip");
+    const layer = svg.querySelector(".xh-layer"), [ln, ...dots] = layer.children, hit = svg.querySelector(".plot");
+    const at = raw => {
+      const v = Math.min(cfg.x[1], Math.max(cfg.x[0], Math.round(raw))), X = g.x(v), ys = cfg.series.map(s => s.f(v));
+      layer.style.display = ""; ln.setAttribute("x1", X); ln.setAttribute("x2", X); hit.dataset.v = v;
+      dots.forEach((dt, i) => { dt.setAttribute("cx", X); dt.setAttribute("cy", g.y(Math.min(ys[i], cfg.y[1]))); dt.style.display = ys[i] > cfg.y[1] ? "none" : ""; });
+      const order = ys.map((_, i) => i).sort((a, b) => ys[b] - ys[a]);
+      tip.innerHTML = `<b>${cfg.tipHead(v)}</b>${order.map(i => `<span class="trow"><i style="--c:${col(cfg.series[i])}"></i><strong>${cfg.fmtY(ys[i])}</strong> ${cfg.series[i].name}</span>`).join("")}`;
+      const s = svg.getBoundingClientRect(), w = wrap.getBoundingClientRect(), top = Math.min(...dots.filter(dt => dt.style.display !== "none").map(dt => dt.getBoundingClientRect().top));
+      place(tip, wrap, s.left - w.left + X / g.W * s.width, top - w.top);
+    };
+    const off = () => { layer.style.display = "none"; tip.classList.remove("show"); };
+    hit.addEventListener("pointermove", e => { const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse()); at(g.inv(p.x)); });
+    hit.addEventListener("pointerleave", off); hit.addEventListener("blur", off); hit.addEventListener("focus", () => at(cfg.focusAt || 16));
+    hit.addEventListener("keydown", e => { const v = +hit.dataset.v, lg = Math.log2(v);
+      const nv = { ArrowRight: 2 ** (Math.floor(lg + 1e-9) + 1), ArrowLeft: 2 ** (Math.ceil(lg - 1e-9) - 1) }[e.key]; if (!nv) return; e.preventDefault(); at(Math.min(cfg.x[1], Math.max(cfg.x[0], nv))); });
+  });
+}
+// Charts by name: <div data-chart="name"> is filled with CHARTS[name](narrow) and redrawn when the width class changes.
+function mountCharts() {
+  document.querySelectorAll("[data-chart]").forEach(el => {
+    el.dataset.narrow = isNarrow(); el.innerHTML = CHARTS[el.dataset.chart](isNarrow());
+    const wrap = el.parentElement, tip = wrap.querySelector(".tip"), svg = el.querySelector("svg");
+    const show = g => { const a = (g.querySelector(".dot") || g.querySelector(".bar.s1") || g.querySelector(".bar") || g).getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      tip.innerHTML = g.dataset.tip; g.classList.add("on"); svg.classList.add("hovering"); place(tip, wrap, a.left + a.width / 2 - w.left, a.top - w.top); };
+    const hide = g => { g.classList.remove("on"); svg.classList.remove("hovering"); tip.classList.remove("show"); };
+    el.querySelectorAll(".pt[data-tip]").forEach(g => { g.addEventListener("pointerenter", () => show(g)); g.addEventListener("focus", () => show(g));
+      g.addEventListener("pointerleave", () => hide(g)); g.addEventListener("blur", () => hide(g)); });
+  });
+  wireLines();
+}
+
+// ---------------- Preparation: hardware basics ----------------
+// Cache slide: typical latencies in cycles (L1 is given as 2-4). Single series on a log axis, so no legend.
+const MEM = [
+  { k: "L1 cache", v: 3, lo: 2, hi: 4, t: "2–4" },
+  { k: "L2 cache", v: 10, t: "≈ 10" },
+  { k: "L3 cache", v: 40, t: "≈ 40" },
+  { k: "Main memory", v: 250, t: "≈ 250" },
+];
+CHARTS.latency = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 92 : 112, R = narrow ? 44 : 60, T = 8, RH = 40, H = T + MEM.length * RH + 26, PW = W - L - R;
+  const x = v => L + Math.log10(v) / 3 * PW;
+  const ticks = [1, 10, 100, 1000].map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("");
+  const rows = MEM.map((d, i) => { const y0 = T + i * RH + 10, bh = 18;
+    const tip = `<b>${d.k}: ${d.t} cycles</b>at 2 GHz ≈ ${num((d.lo || d.v) / 2, 1)}${d.hi ? `–${num(d.hi / 2, 1)}` : ""} ns<br>${num(d.v / 3, 0) > 1 ? `≈ ${num(d.v / 3, 0)}× an L1 hit` : "the fast case"}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - 10}" width="${W}" height="${RH}"/>
+      <path class="bar s1" d="${hbar(x(1), x(d.v), y0, bh)}"/>${d.hi ? `<line class="ann" x1="${x(d.lo)}" x2="${x(d.hi)}" y1="${y0 + bh / 2}" y2="${y0 + bh / 2}"/>` : ""}
+      <text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${d.k}</text><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${d.t}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart on a logarithmic axis: typical access latency in processor cycles. L1 cache 2 to 4, L2 about 10, L3 about 40, main memory about 250.">${ticks}${rows}</svg>`;
+};
+// Pipeline speedup S = k·n / (n + k − 1) for n instructions on a k-stage pipeline (pipelining slide); three depths.
+const pipeS = (k, n) => k * n / (n + k - 1);
+line("pipe", {
+  x: [1, 1024], y: [0, 10], yTicks: [0, 2, 4, 6, 8, 10], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "speedup S",
+  series: [{ slot: 1, name: "k = 3 stages", short: "k = 3", f: v => pipeS(3, v) }, { slot: 2, name: "k = 5 stages", short: "k = 5", f: v => pipeS(5, v) }, { slot: 3, name: "k = 10 stages", short: "k = 10", f: v => pipeS(10, v) }],
+  tipHead: v => `n = ${v} instruction${v > 1 ? "s" : ""}`, fmtY: v => num(v), focusAt: 16, labelW: 64,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of instructions",
+  aria: "Line chart: pipeline speedup versus number of instructions for 3, 5 and 10 stages. Each curve starts at 1 and approaches its stage count.",
+});
+
+// Explorer: an in-order pipeline, cycle by cycle; optionally instruction 3 needs the result of instruction 2.
+const PL = { k: 5, n: 6, dep: false };
+const STAGES = { 2: ["IF", "EX"], 3: ["IF", "ID", "EX"], 4: ["IF", "ID", "EX", "WB"], 5: ["IF", "ID", "EX", "MEM", "WB"], 6: ["IF", "ID", "RF", "EX", "MEM", "WB"] };
+function pipeOut() {
+  const { k, n, dep } = PL, names = STAGES[k], ex = names.indexOf("EX"), start = [];
+  for (let i = 0; i < n; i++) {
+    start.push([]);
+    for (let s = 0; s < k; s++) {
+      let t = i + s;
+      if (s) t = Math.max(t, start[i][s - 1] + 1);
+      // a stage holds one instruction: enter it only once the instruction ahead has moved on
+      if (i) t = Math.max(t, s < k - 1 ? start[i - 1][s + 1] : start[i - 1][s] + 1);
+      if (dep && i === 2 && s === ex) t = Math.max(t, start[1][k - 1] + 1);
+      start[i].push(t);
+    }
+  }
+  const total = start[n - 1][k - 1] + 1, stall = total - (n + k - 1);
+  const cells = start.map((st, i) => {
+    const row = Array(total).fill("");
+    st.forEach((t, s) => { row[t] = `<span class="pc s${s % 4 + 1}">${names[s]}</span>`; if (s && t > st[s - 1] + 1) for (let u = st[s - 1] + 1; u < t; u++) row[u] = `<span class="pc stall" title="stalled: the instruction ahead has not moved on yet">·</span>`; });
+    return `<div class="rl">instr. ${i + 1}${dep && i === 2 ? " ⚠" : ""}</div>${row.map(x => `<div class="gc">${x}</div>`).join("")}`;
+  }).join("");
+  return `<div class="gantt" style="--cols:${total}"><div class="rl"></div>${Array.from({ length: total }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${cells}</div>
+    <dl class="ro">
+      <dt>Unpipelined</dt><dd>k · n = ${k} · ${n} = ${k * n} cycles</dd>
+      <dt>Pipelined</dt><dd>n + k − 1 = ${n + k - 1} cycles${stall ? ` + ${stall} stall cycle${stall > 1 ? "s" : ""} = ${total}` : ""}: the first result after ${k} cycles, then one per cycle</dd>
+      <dt>Speedup</dt><dd>${k * n} / ${total} = ${num(k * n / total)} ${flag(stall ? "bad" : "ok", stall ? `hazard costs ${stall} cycle${stall > 1 ? "s" : ""}` : `limit for many instructions: ${k}`)}</dd>
+    </dl>`;
+}
+function initPipe(body) {
+  body.innerHTML = `<div class="ctl"><label>Stages k <input type="range" min="2" max="6" step="1" value="${PL.k}"> <output>${PL.k}</output></label>
+      <label>Instructions n <input type="range" min="1" max="10" step="1" value="${PL.n}"> <output>${PL.n}</output></label>
+      <label><input type="checkbox"> instruction 3 needs the result of instruction 2</label></div><div class="out"></div>`;
+  const [rk, rn, cb] = body.querySelectorAll("input"), [ok, on] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { ok.textContent = PL.k; on.textContent = PL.n; cb.disabled = PL.n < 3; out.innerHTML = pipeOut(); };
+  rk.addEventListener("input", () => { PL.k = +rk.value; draw(); });
+  rn.addEventListener("input", () => { PL.n = +rn.value; draw(); });
+  cb.addEventListener("change", () => { PL.dep = cb.checked; draw(); });
+  draw();
+}
+
+// Explorer: split a 32-bit virtual address into page-directory index, page-table index and offset (virtual-memory slide).
+const VA = { src: "0xc0a4412f" };
+function vaOut() {
+  const s = VA.src.trim().replace(/^0x/i, "");
+  if (!/^[0-9a-f]{1,8}$/i.test(s)) return `<p class="muted">Type a 32-bit address in hex, for example 0xc0a4412f.</p>`;
+  const a = parseInt(s, 16) >>> 0, pd = a >>> 22, pt = a >>> 12 & 1023, off = a & 4095, bits = a.toString(2).padStart(32, "0");
+  const grp = (from, to, t, label) => `<span class="fgw"><span class="fg">${bits.slice(31 - from, 32 - to).split("").map(b => `<span class="cell fb ${t}${b === "1" ? " one" : ""}">${b}</span>`).join("")}</span><small>${label}</small></span>`;
+  const hx = (v, w) => "0x" + v.toString(16).padStart(w, "0");
+  return `<div class="fbits">${grp(31, 22, "t1", "page directory, 10 bit")}${grp(21, 12, "t2", "page table, 10 bit")}${grp(11, 0, "t3", "offset, 12 bit")}</div>
+    ${leg([[1, "index into the page directory"], [2, "index into one page table"], [3, "byte inside the 4 KiB page"]])}
+    <dl class="ro">
+      <dt>Directory</dt><dd>${hx(pd, 3)} = entry ${pd} of 1024 → points to a page table</dd>
+      <dt>Table</dt><dd>${hx(pt, 3)} = entry ${pt} of 1024 → holds the physical frame of the page</dd>
+      <dt>Offset</dt><dd>${hx(off, 3)} = byte ${off} of 4096, copied unchanged into the physical address</dd>
+      <dt>Page</dt><dd>virtual page ${hx(a >>> 12, 5)}, one of 2<sup>20</sup> = 1,048,576 pages of 4 KiB in a 4 GiB address space</dd>
+    </dl>`;
+}
+function initVa(body) {
+  const P = [["slide example", "0xc0a4412f"], ["first byte", "0x00000000"], ["last byte", "0xffffffff"], ["page boundary", "0x00401000"]];
+  body.innerHTML = `<div class="presets">${P.map(([t, v]) => `<button class="preset" data-v="${v}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Virtual address <input type="text" value="${VA.src}" spellcheck="false"></label></div><div class="out"></div>`;
+  const inp = body.querySelector("input"), out = body.querySelector(".out"), draw = () => { out.innerHTML = vaOut(); };
+  inp.addEventListener("input", () => { VA.src = inp.value; draw(); });
+  body.addEventListener("click", e => { const t = e.target.closest("button[data-v]"); if (!t) return; inp.value = VA.src = t.dataset.v; draw(); });
+  draw();
+}
+
+function lecture0() {
+  return `${head(l)}
+    <p class="lead">Not a lecture but the homework for the late start: a recorded talk with slides by Robert Schöne, meant for students without a computer-science background (many CMS students). It explains how one sequential computer runs a program and which hardware tricks make it fast, because every parallel machine in this course is built from such processors. Two charts and two explorers below; the video and slides are in OPAL under Lectures → Video Links from Previous Semesters.</p>
+
+    <h2>You versus the processor</h2>
+    <p>The deck starts with a small program printed in C and Python and asks what it prints. Working it out by hand takes you a while; a processor needs well under 0.01 µs. Both of you follow the same recipe, though: take the next statement, understand it, execute it, move on. The processor's version is the <b>fetch–decode–execute</b> cycle:</p>
+    <ul>
+      <li><b>Memory</b> holds both the instructions and the data (for a loop summing 0 … 9: <code>sum = 0</code>, <code>i = 0</code>, <code>sum += i</code>, <code>i++</code>, <code>i &lt; 10?</code>, and the variables <code>sum</code> and <code>i</code>).</li>
+      <li>A <b>bus</b> connects memory and processor. The processor's <b>program counter</b> (instruction pointer) says which instruction comes next.</li>
+      <li><b>Fetch</b> copies that instruction into the processor, <b>decode</b> works out which execution unit it needs (ALU, multiplier, floating-point unit, load/store unit) and prepares it, <b>execute</b> does the work, and the program counter moves on.</li>
+      <li><b>Registers</b> are the processor's few fast storage cells, mostly general-purpose (integers and memory addresses), with separate ones for floating point. The program counter can be a register too.</li>
+      <li><b>I/O</b> hangs off further buses (SATA, PCIe, USB): drives, keyboards, network and Bluetooth chips.</li>
+    </ul>
+    <h3>The instruction set architecture (ISA)</h3>
+    <p>The ISA is the contract between software and hardware: which instructions exist, which registers, how memory is addressed and how I/O works. x86, ARM and RISC-V are ISAs (and GPU families have their own, such as AMD's RDNA). Two terms you will meet:</p>
+    <ul class="cmp" aria-label="ISA terms">
+      <li><b>Load/store</b><span class="v"><span class="sw t"></span>Arithmetic only works on registers. Data from memory must first be loaded into a register and results stored back explicitly (ARM, RISC-V).</span><span class="v"><span class="sw v"></span>The alternative, as in x86, lets an instruction use a memory operand directly.</span></li>
+      <li><b>Operands</b><span class="v"><span class="sw t"></span>3-operand format: r<sub>target</sub> = r<sub>source1</sub> op r<sub>source2</sub>, both sources survive.</span><span class="v"><span class="sw v"></span>2-operand format: r<sub>target/source1</sub> = r<sub>target/source1</sub> op r<sub>source2</sub>, the first source is overwritten (x86).</span></li>
+    </ul>
+    <div class="formula">LOAD r1, (r2) &nbsp;# r1 = memory[r2]<br>ADD r3, r3, r1 &nbsp;# sum += value<br>ADD r2, 8 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# next 8-byte element<br>CMP r2, r4 &nbsp;&nbsp;&nbsp;&nbsp;# reached the end?<br>B.LT loop &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# if not, jump back</div>
+    <p class="muted">A summation loop in five generic load/store instructions, in the spirit of the deck's example (the deck jumps back by a byte offset instead of a label).</p>
+
+    <h2>Hardware optimizations</h2>
+    <p>The basic model splits every instruction into five steps: <b>instruction fetch</b>, <b>instruction decode</b>, <b>execute</b>, <b>memory access</b> (optional; it comes after execute because execute may compute the address) and <b>write-back</b> to a register (optional).</p>
+    <div class="ex"><div class="kicker">Worked example: the deck's loop, step by step</div>
+      <p>The loop over i = 0 … 9 needs two instructions per iteration on some ISAs (an add, and a conditional jump that also increments i): 20 instructions. At five steps each, done one after another, that is 100 cycles, or 50 ns at 2 GHz. The deck's target was under 10 ns. The rest of the deck is the way there:</p>
+      <p><b>Pipelined</b> (5 stages, no hazards): 20 + 5 − 1 = 24 cycles = 12 ns. <b>3-wide superscalar on top</b>, in the ideal case: ⌈20 / 3⌉ + 4 = 11 cycles = 5.5 ns. Real code gets less, because i and sum each depend on the previous iteration, but a modern core does get there.</p></div>
+
+    <h3>Caches</h3>
+    <p>Memory over the bus is slow, more than 100 cycles per access, and there are only a few registers, so programs touch memory constantly. A <b>cache</b> is a small, fast buffer inside the processor that keeps recently used memory and the memory right next to it. Accesses to (or near) recent data are fast; everything else is slow.</p>
+    <ul>
+      <li>A cache holds <b>cache lines</b>, typically 64 consecutive bytes (8 doubles or 16 floats), plus the address each line is a copy of. A line is <i>clean</i> (identical to memory) or <i>dirty</i> (changed, memory not yet updated).</li>
+      <li>The cache is small: a new line evicts an old one, and a dirty victim is written back to memory first.</li>
+      <li>There are several levels, L1, L2 and L3, each larger and slower than the one before. A read checks L1, then L2, then goes to memory.</li>
+    </ul>
+    ${chart("latency")}
+      <figcaption>Typical access latency per level, in processor cycles on a logarithmic axis (the deck's numbers, main memory flagged as a very rough estimate). Each step down the hierarchy costs roughly a factor of 4 to 6. Hover or focus a bar for the time at 2 GHz.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Level</th><th>Cycles</th><th>ns at 2 GHz</th></tr>${MEM.map(d => `<tr><td>${d.k}</td><td class="n">${d.t}</td><td class="n">${num((d.lo || d.v) / 2, 1)}${d.hi ? `–${num(d.hi / 2, 1)}` : ""}</td></tr>`).join("")}</table></details>
+    <div class="ex"><div class="kicker">Worked example: why cache lines matter</div>
+      <p>Sum one million doubles (8 MB, too big for the caches). If every access went to memory: 10<sup>6</sup> × 250 = 250 million cycles, 125 ms at 2 GHz. Reading them in order, each 64-byte line brings 8 doubles, so only every 8th access misses: 125,000 × 250 + 875,000 × 3 ≈ 33.9 million cycles, about 17 ms, 7.4 times faster. (A simple model without hardware prefetching, which makes in-order reads faster still.) Jump around in memory instead and you are back near 125 ms.</p></div>
+
+    <h3>Pipelining</h3>
+    <p>Each of the five steps has its own hardware, and without pipelining each unit works only one cycle in five. Pipelining lets them overlap like an assembly line: while instruction 0 executes, instruction 1 is decoded and instruction 2 fetched. The first result still takes k cycles for k stages, but after that one instruction finishes every cycle.</p>
+    <div class="formula">S<sub>k</sub> = T<sub>1</sub> / T<sub>k</sub> = k·n / (n + k − 1) &nbsp;&nbsp;→&nbsp;&nbsp; k &nbsp;for n → ∞</div>
+    ${lab("pipe", "a k-stage pipeline, cycle by cycle")}
+    <p><b>Hazards</b> stall the pipeline: an instruction needs a result that is not written yet (a = b + c; d = 2·a), a branch has to be decided before the next instruction is known, or two stages need the same resource (fetch and memory access both use the memory controller). Tick the checkbox above to see a data hazard push everything behind it back.</p>
+    ${chart("pipe", leg([[1, "3 stages", "ln"], [2, "5 stages", "ln"], [3, "10 stages", "ln"]]))}
+      <figcaption>Pipeline speedup k·n / (n + k − 1) against the number of instructions n (log axis), for three pipeline depths. Short runs gain little; deeper pipelines need longer runs to pay off, and every hazard eats into the gain. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>n</th><th>k = 3</th><th>k = 5</th><th>k = 10</th></tr>${[1, 2, 4, 8, 16, 64, 256, 1024].map(v => `<tr><td class="n">${v}</td>${[3, 5, 10].map(k => `<td class="n">${num(pipeS(k, v))}</td>`).join("")}</tr>`).join("")}</table></details>
+
+    <h3>Harvard caches, superscalar, out of order, branch prediction</h3>
+    <ul>
+      <li><b>Harvard architecture.</b> Fetch (instructions) and memory access (data) compete for the same memory path. Separate memories for instructions and data serve both at once; today this survives in the split L1 caches, L1i and L1d.</li>
+      <li><b>Superscalarity.</b> Most execution units sit idle most of the time (the ALUs wait while the floating-point unit adds). A superscalar core fetches and decodes several instructions per cycle and sends them to several execution units, as long as enough units are free and the instructions do not depend on each other. A 3-wide core is at most 3× faster; it combines with pipelining.</li>
+      <li><b>Out-of-order execution.</b> When one instruction stalls (say on a memory access), later independent instructions could run. The core decouples fetch/decode from execute/write-back, collects decoded instructions, and issues each as soon as its operands are ready. It costs chip area and bookkeeping, and to the ISA everything still looks in order.</li>
+      <li><b>Branch prediction.</b> About every 8th instruction is a branch, and the pipeline cannot continue until the branch's condition is known. The predictor remembers what each branch did before and guesses the same, which works well for loops; better predictors keep a history and the target address per branch.</li>
+    </ul>
+
+    <h2>The operating system</h2>
+    <p>The OS gives programs a common interface to the hardware (a folder looks the same on FAT, ext3, ZFS or NFS), enforces access rights (to files, to other users' programs, to devices), serializes parallel access to single devices such as the network card, and schedules processes fairly onto the CPUs. It runs in privileged mode, usually on the same cores as user code.</p>
+    <h3>Virtual memory</h3>
+    <p>Several programs at once raise four problems: they cannot all use the same physical addresses, they must not read each other's (or the OS's) memory, together they may want more memory than is installed, and a fixed split of memory between them is never fair. The answer is <b>virtual memory</b>: the OS hands out virtual addresses in pages (for example 4 KiB), and page tables record where each page really lives. Hardware and OS translate every access, in several stages; a missing entry raises a <b>page fault</b>. The OS randomizes parts of the layout for security and can move pages to disk when memory runs out.</p>
+    ${lab("va", "a two-level page-table lookup")}
+    <div class="ex"><div class="kicker">Worked example: the deck's address</div>
+      <p>0xc0a4412f in binary is 1100000010 1001000100 000100101111. The top 10 bits, 0x302, pick entry 770 of the page directory; the middle 10 bits, 0x244, pick entry 580 of that page table, which holds the physical frame; the low 12 bits, 0x12f = 303, are the byte inside the 4 KiB page and are copied straight into the physical address. Two levels of 1024 entries cover 2<sup>20</sup> pages without a single table of a million entries per process.</p></div>
+    <h3>Processes and threads</h3>
+    <ul class="cmp" aria-label="Processes versus threads">
+      <li><b>Created by</b><span class="v"><span class="sw t"></span>Process: <code>fork()</code> copies the address space and inherits all file handles; it can then start a new program.</span><span class="v"><span class="sw v"></span>Thread: gets its own instruction pointer and stack inside the existing process.</span></li>
+      <li><b>Memory</b><span class="v"><span class="sw t"></span>Process: after the fork, changes to memory and newly opened files are invisible to the other process.</span><span class="v"><span class="sw v"></span>Thread: heap memory and file handles are shared with all threads of the process.</span></li>
+      <li><b>Talks via</b><span class="v"><span class="sw t"></span>Process: file handles, i.e. files, pipes (<code>ls -la | grep mp3</code> is two processes joined by a pipe) and sockets (browser and web server).</span><span class="v"><span class="sw v"></span>Thread: shared variables, which brings the problem of concurrent access to <code>shared = shared + 1</code>.</span></li>
+    </ul>
+    <div class="ex"><div class="kicker">Worked example: what does the fork program print?</div>
+      <p>Globals a = 2 and b = 3; after <code>fork()</code> the child computes a + b and prints <b>a+b=5</b>, the parent first sets a = 4 and prints <b>a+b=7</b>. The child's copy of a never sees the parent's change, because the address space was copied. Which line appears first is up to the scheduler.</p></div>
+    <p>On a single core the OS switches between processes and threads by saving and restoring their registers, instruction pointer and page tables (preemption). That is parallel only in software. Still, the ISA executes instruction after instruction; real parallel hardware is what the lecture is about, starting with <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">100 → 24</div><div class="l">cycles for the 20-instruction loop, unpipelined vs 5-stage pipeline</div></div>
+      <div class="tile"><div class="v">64 B</div><div class="l">a typical cache line: 8 doubles</div></div>
+      <div class="tile"><div class="v">≈ 250</div><div class="l">cycles for one main-memory access (L1: 2–4)</div></div>
+      <div class="tile"><div class="v">10 + 10 + 12</div><div class="l">bits of a 32-bit virtual address with 4 KiB pages</div></div>
+    </div>
+    <h2>Before the course: self-tests in OPAL</h2>
+    <ul>
+      <li><b>Linux.</b> The OS of every HPC system: test 00a under Exercises, with a solution sheet.</li>
+      <li><b>C.</b> The course's programming language, a small, simple subset of C++ that is still enough for real HPC codes: test 00b with a C tutorial and example solutions.</li>
+    </ul>`;
+}
+
+// ---------------- Lecture 1: introduction and basics of parallelism ----------------
+// Introduction deck, ZIH systems: Rmax (Rpeak) in PFlop/s, Top500 and Green500 ranks as given on the slides.
+const ZIH = [
+  { name: "Capella", year: 2024, vendor: "Megware", rmax: 24.06, rpeak: 37.67, nodes: 156, cpu: "2 × AMD Zen 4 (Genoa), 32 cores each", gpu: "4 × NVIDIA H100", cores: 64, gpus: 4, top: [["11/2024", 51], ["06/2025", 66]], green: 6 },
+  { name: "Alpha Centauri", year: 2021, vendor: "NEC", rmax: 2.59, rpeak: 5.36, nodes: 34, cpu: "2 × AMD Zen 2 (Rome), 24 cores each", gpu: "8 × NVIDIA A100", cores: 48, gpus: 8, top: [["06/2021", 181], ["06/2025", 467]], green: 102 },
+  { name: "Barnard", year: 2023, vendor: "Eviden", rmax: 3.05, rpeak: 4.05, nodes: 630, cpu: "2 × Intel Sapphire Rapids, 52 cores each", gpu: "", cores: 104, gpus: 0, top: [["11/2023", 238], ["06/2025", 392]], green: 147 },
+];
+CHARTS.top500 = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 98 : 120, R = narrow ? 14 : 124, T = 6, RH = narrow ? 52 : 44, H = T + ZIH.length * RH + 26, PW = W - L - R;
+  const x = v => L + v / 40 * PW;
+  const ticks = (narrow ? [0, 20, 40] : [0, 10, 20, 30, 40]).map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = ZIH.map((s, i) => {
+    const y0 = T + i * RH + 10, bh = 20, eff = s.rmax / s.rpeak, val = `${num(s.rmax)} PF · ${Math.round(eff * 100)} %`;
+    const tip = `<b>${s.name} (${s.vendor}, ${s.year})</b>Rmax ${num(s.rmax)} of Rpeak ${num(s.rpeak)} PFlop/s: ${pct(eff)} HPL efficiency<br>${s.nodes} nodes · ${s.cpu}${s.gpus ? `<br>${s.gpu} per node` : ""}<br>≈ ${num(s.rmax * 1000 / s.nodes, 0)} TFlop/s per node · Top500 ${s.top.map(([d, r]) => `#${r} (${d})`).join(", ")}<br>Green500 #${s.green}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - 8}" width="${W}" height="${RH}"/>
+      <path class="bar track" d="${hbar(x(0), x(s.rpeak), y0, bh)}"/><path class="bar s1" d="${hbar(x(0), x(s.rmax), y0 + 5, bh - 10)}"/>
+      <text class="cat" x="${L - 8}" y="${y0 + 14}" text-anchor="end">${s.name}</text>
+      ${narrow ? `<text class="note" x="${L - 8}" y="${y0 + 30}" text-anchor="end">${val}</text>` : `<text class="val" x="${x(s.rpeak) + 6}" y="${y0 + 14}">${val}</text>`}</g>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bullet bars of the three ZIH systems in the Top500: Capella reaches 24.06 of 37.67 PFlop/s peak (64 percent), Alpha Centauri 2.59 of 5.36 (48 percent), Barnard 3.05 of 4.05 (75 percent).">${ticks}${rows}</svg>`;
+};
+
+// Explorer: the slide's dot product A·B (nine elements), on one unit, on a multiply/add pipeline, or on p PEs with a tree reduction.
+const DA = [3, 4, 2, 3, 6, 5, 1, 5, 4], DB = [5, 2, 1, 1, 3, 2, 3, 2, 4];
+const DP = { mode: "conc", N: 9, p: 4 };
+const dpA = i => i < 9 ? DA[i] : (i * 5) % 7 + 1, dpB = i => i < 9 ? DB[i] : (i * 3) % 5 + 1;
+function dpSchedule() {
+  const { mode, N } = DP, prod = Array.from({ length: N }, (_, i) => ({ v: dpA(i) * dpB(i), t: `a${i + 1}·b${i + 1} = ${dpA(i)}·${dpB(i)} = ${dpA(i) * dpB(i)}` }));
+  if (mode === "pipe") { // a multiplier and an adder; from step 3 on, the adder folds in the product finished one step earlier
+    const steps = []; let sum = prod[0].v;
+    for (let t = 0; t <= N; t++) {
+      let add = null;
+      if (t >= 2) { const v = prod[t - 1].v; add = { k: "add", t: `${sum} + ${v} = ${sum + v}` }; sum += v; }
+      steps.push([t < N ? { k: "mul", t: prod[t].t } : null, add]);
+    }
+    return { rows: ["× unit", "+ unit"], steps, units: 2, result: sum };
+  }
+  const p = mode === "seq" ? 1 : DP.p, steps = []; let muls = prod.slice(), ready = [];
+  while (muls.length || ready.length > 1) {
+    const ops = [], next = [];
+    while (ready.length >= 2 && ops.length < p) { const a = ready.shift(), b = ready.shift(); ops.push({ k: "add", t: `${a} + ${b} = ${a + b}`, v: a + b }); }
+    while (muls.length && ops.length < p) { const x = muls.shift(); ops.push({ k: "mul", t: x.t, v: x.v }); }
+    ready = ready.concat(ops.map(o => o.v)); steps.push(ops);
+  }
+  return { rows: Array.from({ length: p }, (_, i) => p === 1 ? "PE" : `PE ${i}`), steps, units: p, result: ready[0] };
+}
+function dpOut() {
+  const { mode, N } = DP, sc = dpSchedule(), T = sc.steps.length, T1 = 2 * N - 1, S = T1 / T, E = S / sc.units;
+  const grid = sc.rows.map((r, u) => `<div class="rl">${r}</div>${sc.steps.map((ops, t) => { const o = ops[u]; return `<div class="gc">${o ? `<span class="pc ${o.k === "mul" ? "s1" : "s2"}" title="step ${t + 1}: ${o.t}">${o.k === "mul" ? "×" : "+"}</span>` : ""}</div>`; }).join("")}`).join("");
+  const rounds = Math.ceil(Math.log2(N));
+  return `<div class="gantt dp" style="--cols:${T}"><div class="rl">step</div>${sc.steps.map((_, t) => `<div class="gh">${t + 1}</div>`).join("")}${grid}</div>
+    ${leg([[1, "multiplication"], [2, "addition"], [0, "hover a cell for its numbers"]])}
+    <dl class="ro">
+      <dt>Result</dt><dd>A·B = ${sc.result}${N === 9 ? " (the slide's vectors)" : ""}</dd>
+      <dt>Steps</dt><dd>${T} with ${sc.units} unit${sc.units > 1 ? "s" : ""}; one unit needs N + (N − 1) = ${T1}</dd>
+      <dt>Speedup</dt><dd>S = ${T1} / ${T} = ${num(S)} · efficiency E = S / ${sc.units} = ${pct(E)} ${mode === "conc" && DP.p >= N ? flag("bad", `more PEs do not help: after one multiplication round, the sum still needs ⌈log₂ ${N}⌉ = ${rounds} addition rounds`) : mode === "pipe" ? flag("ok", "N + 1 steps: one result per step once the pipeline is full") : ""}</dd>
+    </dl>`;
+}
+function initDp(body) {
+  const M = [["seq", "Sequential"], ["pipe", "Multiply/add pipeline"], ["conc", "Concurrent on p PEs"]];
+  body.innerHTML = `<div class="presets">${M.map(([k, t]) => `<button class="preset" data-m="${k}" aria-pressed="${DP.mode === k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Vector length N <input type="range" min="2" max="16" step="1" value="${DP.N}"> <output>${DP.N}</output></label>
+      <label>PEs p <input type="range" min="1" max="16" step="1" value="${DP.p}"> <output>${DP.p}</output></label></div><div class="out"></div>`;
+  const [rN, rp] = body.querySelectorAll("input"), [oN, op] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { oN.textContent = DP.N; op.textContent = DP.p; rp.disabled = DP.mode !== "conc"; body.querySelectorAll("[data-m]").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === DP.mode)); out.innerHTML = dpOut(); };
+  rN.addEventListener("input", () => { DP.N = +rN.value; draw(); });
+  rp.addEventListener("input", () => { DP.p = +rp.value; draw(); });
+  body.addEventListener("click", e => { const t = e.target.closest("[data-m]"); if (!t) return; DP.mode = t.dataset.m; draw(); });
+  draw();
+}
+
+// Explorer: PCAM on a 12 × 12 weather grid with 4 PEs. Agglomerate cells into b × b tasks, map tasks to PEs in 2 × 2 blocks or cyclically
+// (alternating in both directions),
+// and count what one time step of a 4-neighbour stencil costs.
+const PC = { b: 3, map: "block" }, G = 12, PES = 4;
+function pcamOut(narrow) {
+  const { b, map } = PC, tx = G / b, cs = narrow ? 20 : 24, pad = 2, W = G * cs + 2 * pad;
+  const peOf = (ti, tj) => map === "block" ? Math.floor(ti * 2 / tx) * 2 + Math.floor(tj * 2 / tx) : (ti % 2) * 2 + tj % 2;
+  const cellPE = (i, j) => peOf(Math.floor(i / b), Math.floor(j / b));
+  let rects = "", lines = "", cut = 0, cross = 0;
+  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) rects += `<rect class="pe f${cellPE(i, j) + 1}" x="${pad + j * cs}" y="${pad + i * cs}" width="${cs}" height="${cs}"/>`;
+  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
+    [[0, 1], [1, 0]].forEach(([di, dj]) => { const i2 = i + di, j2 = j + dj; if (i2 >= G || j2 >= G) return;
+      const sameTask = Math.floor(i / b) === Math.floor(i2 / b) && Math.floor(j / b) === Math.floor(j2 / b); if (sameTask) return;
+      cut++; const x = cellPE(i, j) !== cellPE(i2, j2); if (x) cross++;
+      const X1 = pad + (dj ? j2 : j) * cs, Y1 = pad + (di ? i2 : i) * cs;
+      lines += `<line class="${x ? "cutpe" : "cut"}" x1="${X1}" y1="${Y1}" x2="${dj ? X1 : X1 + cs}" y2="${dj ? Y1 + cs : Y1}"/>`; });
+  }
+  const tasks = tx * tx, perPE = Array(PES).fill(0);
+  for (let ti = 0; ti < tx; ti++) for (let tj = 0; tj < tx; tj++) perPE[peOf(ti, tj)] += b * b;
+  const busy = perPE.filter(v => v).length, mx = Math.max(...perPE), eff = (G * G / PES) / mx;
+  return `<div class="pcam-wrap"><svg class="pcam" viewBox="0 0 ${W} ${W}" role="img" aria-label="${G} by ${G} grid split into ${tasks} tasks of ${b} by ${b} cells, mapped onto 4 PEs ${map === "block" ? "in blocks" : "cyclically"}">${rects}${lines}<rect class="frame" x="${pad}" y="${pad}" width="${G * cs}" height="${G * cs}"/></svg>
+    <div>
+      ${leg([[1, "PE 0"], [2, "PE 1"], [3, "PE 2"], [4, "PE 3"]])}
+      <div class="legend"><span class="li"><span class="ln-k thin"></span><span class="lt">task border on one PE: data stays in memory</span></span><span class="li"><span class="ln-k thick"></span><span class="lt">task border between PEs: a message</span></span></div>
+      <dl class="ro">
+        <dt>Partition</dt><dd>${G * G} grid cells, the smallest tasks</dd>
+        <dt>Agglomerate</dt><dd>${tasks} task${tasks > 1 ? "s" : ""} of ${b} × ${b} = ${b * b} cell${b > 1 ? "s" : ""}</dd>
+        <dt>Communicate</dt><dd>${2 * cut} halo values per time step (each of ${cut} cut cell edges, both ways); an inner task computes ${b * b} cells and exchanges ${4 * b} values, a ratio of ${num(b / 4)}</dd>
+        <dt>Map</dt><dd>${2 * cross} of them cross between PEs ${cross === 0 ? flag(busy < PES ? "bad" : "ok", busy < PES ? "no messages, but only one PE works" : "no messages") : ""}</dd>
+        <dt>Load</dt><dd>${perPE.map(v => v).join(" / ")} cells on PE 0–3 → efficiency ${pct(eff)} ${eff < 1 ? flag("bad", busy < PES ? `${PES - busy} PE${PES - busy > 1 ? "s" : ""} idle` : "uneven load") : flag("ok", "balanced")}</dd>
+      </dl>
+    </div></div>`;
+}
+function initPcam(body) {
+  const B = [1, 2, 3, 4, 6, 12];
+  body.innerHTML = `<div class="presets">${B.map(v => `<button class="preset" data-b="${v}" aria-pressed="${PC.b === v}">${v} × ${v}</button>`).join("")}</div>
+    <div class="ctl"><span>Mapping</span><label><input type="radio" name="pcmap" value="block" ${PC.map === "block" ? "checked" : ""}> blocks of neighbouring tasks</label><label><input type="radio" name="pcmap" value="cyclic" ${PC.map === "cyclic" ? "checked" : ""}> cyclic: neighbouring tasks on different PEs</label></div><div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const draw = () => { body.querySelectorAll("[data-b]").forEach(x => x.setAttribute("aria-pressed", +x.dataset.b === PC.b)); out.innerHTML = pcamOut(isNarrow()); };
+  body.addEventListener("click", e => { const t = e.target.closest("[data-b]"); if (!t) return; PC.b = +t.dataset.b; draw(); });
+  body.querySelectorAll("input[name=pcmap]").forEach(r => r.addEventListener("change", () => { PC.map = r.value; draw(); }));
+  draw();
+}
+
+// Explorer: the race on a shared buffer. Two threads store one item each with buf[len] = item; len = len + 1.
+// Statement level (as on the slide) or machine level (the increment as load / add / store), optionally inside a lock.
+const RC = { asm: false, lock: false, pc: [0, 0], r: [0, 0], buf: ["?", "?", "?"], len: 0, owner: -1, log: [] };
+const ITEM = ["A", "B"], TN = ["P<sub>i</sub>", "P<sub>j</sub>"];
+const rcProg = () => [...(RC.lock ? ["lock"] : []), "W", ...(RC.asm ? ["L", "A", "S"] : ["I"]), ...(RC.lock ? ["unlock"] : [])];
+const RC_TEXT = { lock: "lock(m);", W: "buf[len] = item;", I: "len = len + 1;", L: "r = len;", A: "r = r + 1;", S: "len = r;", unlock: "unlock(m);" };
+function rcReset() { Object.assign(RC, { pc: [0, 0], r: [0, 0], buf: ["?", "?", "?"], len: 0, owner: -1, log: [] }); }
+function rcCan(t) { const op = rcProg()[RC.pc[t]]; return op !== undefined && !(op === "lock" && RC.owner !== -1 && RC.owner !== t); }
+function rcStep(t) {
+  const op = rcProg()[RC.pc[t]]; if (!rcCan(t)) return;
+  if (op === "lock") RC.owner = t; else if (op === "unlock") RC.owner = -1;
+  else if (op === "W") RC.buf[RC.len] = ITEM[t]; else if (op === "I") RC.len++;
+  else if (op === "L") RC.r[t] = RC.len; else if (op === "A") RC.r[t]++; else if (op === "S") RC.len = RC.r[t];
+  RC.log.push(`${t ? "Pj" : "Pi"}: ${RC_TEXT[op]}`); RC.pc[t]++;
+}
+const RC_PRESETS = [
+  { t: "Pi, then Pj", s: "iiiiiijjjjjj", asm: false, lock: false, note: "One thread after the other: both items stored, len = 2." },
+  { t: "Slide order (1)(2)(3)(4)", s: "ijij", asm: false, lock: false, note: "Both threads write to buf[0] before either increments len: B overwrites A, and buf[1] is counted but never written." },
+  { t: "Lost increment", s: "iijjijij", asm: true, lock: false, note: "Machine level: both threads read len = 0 before either stores it back. Both write into buf[0], and len ends at 1: one result and one increment are lost." },
+  { t: "Same race, with a lock", s: "ij".repeat(12), asm: true, lock: true, note: "The lock makes the whole update a critical section: Pj's attempts to lock simply wait until Pi unlocks, then Pj runs. Both items stored." },
+];
+function rcOut() {
+  const prog = rcProg(), done = RC.pc.every(p => p >= prog.length);
+  const code = t => `<div class="rc-th"><b>${TN[t]}</b> stores “${ITEM[t]}”${t === 1 && RC.owner === 0 && prog[RC.pc[1]] === "lock" ? ` <span class="muted">· waits for the lock</span>` : ""}${t === 0 && RC.owner === 1 && prog[RC.pc[0]] === "lock" ? ` <span class="muted">· waits for the lock</span>` : ""}
+      <ol class="rc-code">${prog.map((op, k) => `<li class="${k < RC.pc[t] ? "done" : k === RC.pc[t] ? "cur" : ""}">${RC_TEXT[op]}</li>`).join("")}</ol>
+      ${RC.asm ? `<div class="muted" style="font-size:.85rem">register r = ${RC.r[t]}</div>` : ""}
+      <button class="preset" data-t="${t}" ${rcCan(t) ? "" : "disabled"}>Run next line of ${t ? "Pj" : "Pi"}</button></div>`;
+  const stored = RC.buf.slice(0, RC.len), probs = [];
+  if (done) {
+    if (!RC.buf.includes("A")) probs.push("A was overwritten by B");
+    if (!stored.includes("B")) probs.push(RC.buf.includes("B") ? "B was written but is not counted" : "B was overwritten");
+    if (stored.includes("?")) probs.push(`buf[${stored.indexOf("?")}] is counted but was never written (garbage)`);
+    if (RC.len < 2) probs.push(`len = ${RC.len}: an increment was lost`);
+  }
+  return `<div class="rc">${code(0)}<div class="rc-mem"><b>shared memory</b>
+      <div class="rc-buf">${RC.buf.map((v, k) => `<span class="cell ${k < RC.len ? "t1" : ""}${v !== "?" ? " one" : ""}">${v}</span>`).join("")}</div>
+      <div class="muted" style="font-size:.85rem">buf[0 … 2]; tinted = counted by len</div><div>len = <b>${RC.len}</b>${RC.lock ? ` · lock: ${RC.owner === -1 ? "free" : RC.owner ? "held by Pj" : "held by Pi"}` : ""}</div></div>${code(1)}</div>
+    <p class="lab-note" style="margin-top:8px">${RC.log.length ? RC.log.map(x => esc(x)).join(" → ") : "Run lines in any order you like, or pick a preset."}</p>
+    ${done ? (probs.length ? flag("bad", "Race: " + probs.join("; ")) : flag("ok", "Both items stored, len = 2")) : ""}`;
+}
+function initRace(body) {
+  body.innerHTML = `<div class="presets">${RC_PRESETS.map((p, k) => `<button class="preset" data-p="${k}">${p.t}</button>`).join("")}</div>
+    <div class="ctl"><label><input type="checkbox" data-o="asm"> machine level: len = len + 1 is load, add, store</label><label><input type="checkbox" data-o="lock"> protect the update with a lock</label><button class="preset" data-reset>Reset</button></div>
+    <p class="lab-note" data-note>Start by running Pi's and Pj's lines in turn.</p><div class="out"></div>`;
+  const out = body.querySelector(".out"), note = body.querySelector("[data-note]"), boxes = body.querySelectorAll("[data-o]");
+  const draw = () => { boxes.forEach(b => b.checked = RC[b.dataset.o]); out.innerHTML = rcOut(); };
+  boxes.forEach(b => b.addEventListener("change", () => { RC[b.dataset.o] = b.checked; rcReset(); draw(); }));
+  body.addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.reset != null) { rcReset(); return draw(); }
+    if (t.dataset.t != null) { rcStep(+t.dataset.t); draw(); body.querySelector(`[data-t="${t.dataset.t}"]:not([disabled])`)?.focus(); return; }
+    if (t.dataset.p != null) { const p = RC_PRESETS[+t.dataset.p]; RC.asm = p.asm; RC.lock = p.lock; rcReset();
+      for (const ch of p.s) { const th = ch === "i" ? 0 : 1; if (rcCan(th)) rcStep(th); }
+      note.textContent = p.note; draw(); }
+  });
+  draw();
+}
+
+// Speedup laws. Amdahl: f is the parallel fraction of the one-PE run time T₁; Gustafson: f is the parallel fraction of the p-PE run.
+const amdahl = (f, p) => 1 / ((1 - f) + f / p), gustafson = (f, p) => (1 - f) + p * f;
+line("amdahl", {
+  x: [1, 1024], y: [0, 100], yTicks: [0, 20, 40, 60, 80, 100], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "speedup S",
+  series: [
+    { name: "ideal, S = p", short: "ideal S = p", f: v => v, dash: true, labelAt: 56 },
+    { slot: 1, name: "f = 0.90 (limit 10)", short: "f = 0.90", f: v => amdahl(0.9, v) },
+    { slot: 2, name: "f = 0.95 (limit 20)", short: "f = 0.95", f: v => amdahl(0.95, v) },
+    { slot: 3, name: "f = 0.99 (limit 100)", short: "f = 0.99", f: v => amdahl(0.99, v) },
+  ],
+  tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}`, fmtY: v => num(v), focusAt: 64, labelW: 72,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of PEs",
+  aria: "Line chart of Amdahl's law: speedup versus number of PEs from 1 to 1024 for parallel fractions 0.90, 0.95 and 0.99, against the ideal line. The curves flatten towards 10, 20 and 100.",
+  extra: (g, narrow) => [10, 20].map((v, i) => `<line class="ann dash" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(v)}" y2="${g.y(v)}"/>${narrow ? "" : `<text class="note" x="${g.L + 4}" y="${g.y(v) - 4}">limit ${v}</text>`}`).join(""),
+});
+const OV = [{ slot: 1, name: "no overhead", f: v => amdahl(0.9, v) }, { slot: 2, name: "+ 0.005·p", f: v => 1 / (0.1 + 0.9 / v + 0.005 * v) }, { slot: 3, name: "+ 0.05·log₂ p", f: v => 1 / (0.1 + 0.9 / v + 0.05 * Math.log2(v)) }];
+const peak = f => { let b = 1; for (let v = 1; v <= 256; v++) if (f(v) > f(b)) b = v; return b; };
+line("overhead", {
+  x: [1, 256], y: [0, 10], yTicks: [0, 2, 4, 6, 8, 10], xTicks: [1, 2, 4, 8, 16, 32, 64, 128, 256], xTicksN: [1, 4, 16, 64, 256], yTitle: "speedup S",
+  series: OV, tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}, f = 0.9`, fmtY: v => num(v), focusAt: 16, labelW: 96,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of PEs",
+  aria: "Line chart: speedup for a 90 percent parallel program with no synchronization overhead, with 0.005 times p, and with 0.05 times log2 p. Without overhead it approaches 10; with overhead it peaks near p = 13 at 4.27 and near p = 12 at 2.82, then falls.",
+  extra: (g, narrow) => OV.slice(1).map((s, i) => { const b = peak(s.f), X = g.x(b), Y = g.y(s.f(b));
+    return `<circle class="dot ring" style="fill:${col(s)}" cx="${X}" cy="${Y}" r="5"/><text class="note" x="${X + 8}" y="${i ? Y + 18 : Y - 8}">max ${num(s.f(b))} at p = ${b}</text>`; }).join(""),
+});
+
+// Explorer: Amdahl and Gustafson side by side for one parallel fraction f and one PE count p.
+const AG = { f: 0.8, k: 3 };
+const AG_PRESETS = [["f = 0.8, p = 8", 0.8, 3], ["f = 0.95, p = 64", 0.95, 6], ["f = 0.999, p = 1024", 0.999, 10], ["f = 0.5, p = 2", 0.5, 1]];
+function agOut() {
+  const { f } = AG, p = 2 ** AG.k, sa = amdahl(f, p), sg = gustafson(f, p), W = 100;
+  const bar = (v, s, label) => `<div class="agrow"><span class="agl">${label}</span><span class="agtrack"><span class="agbar" style="width:${Math.max(0.6, v / p * W)}%;--c:${s ? `var(--vz-s${s})` : "var(--vz-gray)"}"></span></span><span class="agv">${num(v)}</span></div>`;
+  return `<div class="ag">${bar(p, 0, "ideal S = p")}${bar(sa, 1, "Amdahl")}${bar(sg, 2, "Gustafson")}</div>
+    <p class="muted" style="font-size:.85rem;margin:4px 0 0">Bars on a common axis from 0 to p = ${p}.</p>
+    <dl class="ro">
+      <dt>Amdahl</dt><dd>S = 1 / ((1 − ${f}) + ${f} / ${p}) = ${num(sa)} · E = ${pct(sa / p)} · limit 1 / (1 − f) = ${num(1 / (1 - f), 1)}</dd>
+      <dt>Gustafson</dt><dd>S = (1 − ${f}) + ${p} · ${f} = ${num(sg)} · E = ${pct(sg / p)}</dd>
+      <dt>Reading</dt><dd>${sg / sa >= 1.5 ? `Growing the problem with p gives ${num(sg / sa, 1)}× more speedup than solving the same problem faster.` : "With so few PEs or so little serial work, both views almost agree."}</dd>
+    </dl>`;
+}
+function initAg(body) {
+  body.innerHTML = `<div class="presets">${AG_PRESETS.map(([t], k) => `<button class="preset" data-p="${k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Parallel fraction f <input type="range" min="0.5" max="0.999" step="0.001" value="${AG.f}"> <output>${AG.f}</output></label>
+      <label>PEs p <input type="range" min="0" max="10" step="1" value="${AG.k}"> <output>${2 ** AG.k}</output></label></div><div class="out"></div>`;
+  const [rf, rk] = body.querySelectorAll("input"), [of, ok] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { of.textContent = AG.f; ok.textContent = 2 ** AG.k; rf.value = AG.f; rk.value = AG.k; out.innerHTML = agOut(); };
+  rf.addEventListener("input", () => { AG.f = +rf.value; draw(); });
+  rk.addEventListener("input", () => { AG.k = +rk.value; draw(); });
+  body.addEventListener("click", e => { const t = e.target.closest("[data-p]"); if (!t) return; [, AG.f, AG.k] = AG_PRESETS[+t.dataset.p]; draw(); });
+  draw();
+}
+
+// Programming environments: release years of the survivors (added here; the slides name the environments, not the years).
+const ENVS = [
+  { y: 1994, t: "MPI 1.0", c: 1, d: "Message Passing Interface: point-to-point and collective communication" },
+  { y: 1997, t: "MPI-2", c: 1, d: "adds one-sided communication and parallel I/O" },
+  { y: 1995, t: "PThreads", c: 2, d: "POSIX threads (IEEE 1003.1c), the Unix threads API" },
+  { y: 1997, t: "OpenMP 1.0", c: 2, d: "compiler directives for shared memory, first for Fortran (C/C++ in 1998)" },
+  { y: 2013, t: "OpenMP 4.0", c: 2, d: "adds SIMD directives and target offloading to accelerators" },
+  { y: 1999, t: "UPC", c: 3, d: "Unified Parallel C, an early PGAS language" },
+  { y: 2010, t: "Fortran coarrays", c: 3, d: "PGAS built into the Fortran 2008 standard (published 2010)" },
+  { y: 2007, t: "CUDA", c: 4, d: "NVIDIA's GPU programming model" },
+  { y: 2008, t: "OpenCL", c: 4, d: "vendor-neutral kernels for GPUs and other accelerators" },
+  { y: 2011, t: "OpenACC", c: 4, d: "directives for offloading loops to accelerators" },
+  { y: 2020, t: "oneAPI", c: 4, d: "Intel's cross-architecture stack, based on SYCL" },
+];
+const LANES = ["message passing", "shared memory", "PGAS", "accelerators"];
+CHARTS.envs = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 12 : 122, R = narrow ? 14 : 24, T = narrow ? 18 : 10, LH = narrow ? 58 : 50, H = T + 4 * LH + 24, PW = W - L - R;
+  const x = y => L + (y - 1990) / 35 * PW;
+  const ticks = (narrow ? [1990, 2000, 2010, 2020] : [1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]).map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const band = `<rect class="band" x="${x(1990)}" y="${T}" width="${x(2000) - x(1990)}" height="${4 * LH}"/><text class="note" x="${x(1995)}" y="${T + 4 * LH - 6}" text-anchor="middle">the 1990s zoo</text>`;
+  const lanes = LANES.map((t, i) => { const cy = T + i * LH + LH / 2;
+    return `<line class="axis" x1="${L}" x2="${W - R}" y1="${cy}" y2="${cy}"/>${narrow ? `<text class="note" x="${L}" y="${cy - LH / 2 + 2}">${t}</text>` : `<text class="cat" x="${L - 10}" y="${cy + 4}" text-anchor="end">${t}</text>`}`; }).join("");
+  const seen = [0, 0, 0, 0];
+  const dots = ENVS.slice().sort((a, b) => a.y - b.y).map(e => { const cy = T + (e.c - 1) * LH + LH / 2, up = seen[e.c - 1]++ % 2 === 0;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${e.t} · ${e.y}</b>${e.d}`)}"><circle class="hit" cx="${x(e.y)}" cy="${cy}" r="12"/><circle class="dot f${e.c}" cx="${x(e.y)}" cy="${cy}" r="5"/>
+      <text class="vl2" x="${x(e.y)}" y="${up ? cy - 10 : cy + 19}" text-anchor="middle">${e.t}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of the parallel programming environments that survived: MPI 1994, PThreads 1995, OpenMP 1997, UPC 1999, CUDA 2007, OpenCL 2008, Fortran coarrays 2010, OpenACC 2011, OpenMP 4.0 2013, oneAPI 2020.">${band}${ticks}${lanes}${dots}</svg>`;
+};
+
+function lecture1() {
+  const capCores = 156 * 64, capGpus = 156 * 4;
+  return `${head(l)}
+    <p class="lead">The late start compressed two decks into the first lecture: the <b>introduction</b> (why HPC exists, what ZIH runs, how the course is built) and <b>Basics of Parallelism</b>, the vocabulary for the whole semester. Concurrency and pipelining, Foster's four-step PCAM design method, tasks, units of execution and processing elements, synchronization with its two classic bugs, the speedup laws of Amdahl and Gustafson, Flynn's taxonomy, and the programming environments that survived the 1990s. Five charts and four explorers below; the slides are in OPAL, and this page is a summary in our own words.</p>
+
+    <h2>Why high-performance computing</h2>
+    <ul>
+      <li><b>Simulation instead of experiment.</b> Weather and climate prediction, material tests, nuclear tests, astrophysics: things that cannot be tested for real are computed from complex mathematical models. The running example is the COSMO weather model of the German weather service.</li>
+      <li><b>What such models demand.</b> Higher resolution means a better model and more memory. Some results have a deadline (a forecast is useless after the weather has arrived), so they need a lot of compute. Neighbouring data influence each other and must be exchanged, so the network has to be fast. And the model must be written in a way that can use all of that hardware, which needs suitable programming models and languages.</li>
+      <li><b>The Top500 list</b> ranks systems by the High Performance Linpack (HPL): dense linear algebra, mostly matrix–matrix multiplication, easy to parallelize. It is parallel at four levels: instructions (pipelining, superscalarity), SIMD (vectorization), processor (threads on many cores) and system (many nodes over a network). The result is in floating-point operations per second in double precision; the list appears twice a year, in June and November.</li>
+      <li><b>Where the growth came from.</b> Moore's law, the transistor count per chip doubling every 18–24 months, turned into more cores per processor, components moving onto the processor, and smaller transistors with shorter wires that switch faster; on top, systems use more and more processors and accelerators in parallel.</li>
+    </ul>
+    ${chart("top500", leg([[1, "Rmax: measured HPL performance"], ["g", "Rpeak: theoretical peak", "track"]]))}
+      <figcaption>The three ZIH systems in the Top500, in PFlop/s, with their HPL efficiency Rmax / Rpeak. The GPU cluster Capella is eight times faster than Barnard but reaches only 64 % of its peak; the CPU-only Barnard gets 75 %. Per node, Capella delivers about 154 TFlop/s, Barnard about 5. Hover or focus a bar for nodes, processors and ranks.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>System</th><th>Nodes</th><th>Rmax</th><th>Rpeak</th><th>Efficiency</th><th>Top500</th><th>Green500</th></tr>${ZIH.map(s => `<tr><td>${s.name} (${s.year})</td><td class="n">${s.nodes}</td><td class="n">${num(s.rmax)} PF</td><td class="n">${num(s.rpeak)} PF</td><td class="n">${pct(s.rmax / s.rpeak)}</td><td class="n">${s.top.map(([d, r]) => `#${r} (${d})`).join(", ")}</td><td class="n">#${s.green}</td></tr>`).join("")}</table></details>
+    <h3>Four levels of parallelism, in one machine</h3>
+    <div class="levels" aria-label="Levels of parallelism in Capella">
+      <div class="lv"><div class="n">156</div><div class="t">nodes</div><div class="d">joined by InfiniBand · lectures 6–8: networks, MPI, PGAS</div></div>
+      <div class="x" aria-hidden="true">×</div>
+      <div class="lv"><div class="n">64</div><div class="t">CPU cores per node</div><div class="d">2 processors × 32 cores, plus 4 H100 GPUs · lectures 3–4 and 9–10</div></div>
+      <div class="x" aria-hidden="true">×</div>
+      <div class="lv"><div class="n">8</div><div class="t">doubles per SIMD instruction</div><div class="d">512-bit vector registers (AVX-512) on Zen 4 · lecture 5</div></div>
+      <div class="x" aria-hidden="true">×</div>
+      <div class="lv"><div class="n">≫ 1</div><div class="t">instructions in flight</div><div class="d">pipelining, superscalar and out-of-order cores · <a href="high-performance-computing/lecture.html?n=0">preparation</a>, lecture 3</div></div>
+    </div>
+    <p class="muted">156 × 64 × 8 = ${num(156 * 64 * 8, 0)} double-precision lanes on Capella's ${num(capCores, 0)} CPU cores alone, before instruction-level parallelism and the ${capGpus} GPUs. Each up to 4.8 kW per node. HPL uses all four levels at once, which is why its number is hard to reach with real applications. (The vector width is added here from AMD's Zen 4 specification.)</p>
+    <p>The rest of the introduction walked through the course (batch systems, parallelism inside a processor, shared-memory programming, networks, distributed-memory programming, imbalance and energy, accelerators and their programming, performance analysis; see the <a href="high-performance-computing.html">lecture cards</a>) and made one promise: ZIH's hardware and software are a representative HPC stack, so what you learn here applies elsewhere.</p>
+
+    <h2>Two types of parallelism</h2>
+    <p>Sequential processors are running into physical limits: signals cannot travel faster than light, and power turns into heat that has to go somewhere. Much more performance is only possible by <b>splitting a program into parts</b> and <b>running them at the same time on several pieces of hardware</b>. There are two basic ways to do that:</p>
+    <ul class="cmp" aria-label="Concurrency versus pipelining">
+      <li><b>Idea</b><span class="v"><span class="sw t"></span>Concurrency: independent operations run at the same time on separate units.</span><span class="v"><span class="sw v"></span>Pipelining: one operation is cut into stages, and different data items are in different stages at once, like an assembly line.</span></li>
+      <li><b>Dot product</b><span class="v"><span class="sw t"></span>All products a<sub>i</sub>·b<sub>i</sub> at once, then a tree of additions.</span><span class="v"><span class="sw v"></span>A multiplier and an adder: while one product is added, the next is multiplied.</span></li>
+      <li><b>Limit</b><span class="v"><span class="sw t"></span>How much is independent; the reduction tree still needs ⌈log₂ N⌉ rounds.</span><span class="v"><span class="sw v"></span>The number of stages; never more than one result per step.</span></li>
+    </ul>
+    ${lab("dp", "the slide's dot product, three ways")}
+    <div class="ex"><div class="kicker">Worked example: nine products</div>
+      <p>The slide's vectors give A·B = 15 + 8 + 2 + 3 + 18 + 10 + 3 + 10 + 16 = 85. One unit needs 9 multiplications and 8 additions, 17 steps (the slide starts the sum at 0, one addition more). The multiply/add pipeline needs 10 steps: S = 1.7 with 2 units, E = 85 %. With 9 PEs, all products take one step and the additions four more (9 → 5 → 3 → 2 → 1 partial sums): 5 steps, S = 3.4, but E = 38 %, because in every addition round most PEs wait.</p></div>
+
+    <h2>Designing a parallel program: PCAM</h2>
+    <p>The starting point is a problem too big for one computer: it runs too long or needs too much memory. The lecture's example is again the weather forecast. Ian Foster's method answers it in four steps (the slides' overview calls the third one aggregation, the step itself agglomeration):</p>
+    <ol>
+      <li><b>Partition.</b> Split the problem into tasks that could run in parallel, ignoring the machine for now. <i>Data parallelism</i> does the same thing to different data (the weather in each grid cell); <i>function parallelism</i> does different things (clouds, temperature, rain). The size of a task is its <b>granularity</b>, and good partitioning is hard: one algorithm has many possible partitions. Open problem after this step: the tasks are not synchronized, and clouds, temperature and rain depend on each other.</li>
+      <li><b>Communication.</b> Find the data and control dependencies that force an order: neighbouring cells influence each other, rain depends on clouds, humidity and temperature. Those are the synchronization points. Many small tasks mean much synchronization and a high administrative overhead.</li>
+      <li><b>Agglomeration.</b> Judge the task and communication structure against performance and implementation cost, and merge tasks where that helps: one task for all the physics of a cell, or one task for a block of neighbouring cells. This improves performance and cuts development effort.</li>
+      <li><b>Mapping.</b> Assign the final tasks to units of execution (threads, processes), either up front or at run time (a later lecture maps loop iterations), on shared- or distributed-memory machines.</li>
+    </ol>
+    <p>What a task is depends on how the designer thinks about the problem. For the product of two N × N matrices it could be the product of two sub-blocks, the inner product of one row and one column, or a single iteration of one of the loops.</p>
+    ${lab("pcam", "PCAM on a 12 × 12 weather grid with 4 PEs")}
+    <div class="why"><div class="kicker">Why agglomeration pays: surface versus volume</div>
+      <p>In a stencil code each cell needs its four neighbours every time step. A b × b block computes b² cells but only exchanges the 4b cells on its border, so the ratio of computation to communication grows like b / 4. Single-cell tasks create 528 halo values to synchronize per time step; one block per PE leaves 48, and those are exactly the messages between PEs. With the cyclic mapping you can watch agglomeration cut the messages themselves, from 528 down to 48; with the block mapping the messages stay at 48 for every block size, because the PE borders do not move, and agglomeration only saves task overhead inside each PE. Push it too far, though, and the tasks no longer spread evenly: 4 × 4 blocks give 9 tasks, which 4 PEs cannot share fairly (one PE gets 4 tasks, another 1), and a single 12 × 12 block leaves three PEs idle.</p></div>
+    <div class="ex"><div class="kicker">Worked example: the 12 × 12 grid with 3 × 3 tasks</div>
+      <p>16 tasks of 9 cells, 4 per PE in the block mapping. Every task border is 3 cells long; there are 2 · 3 · 12 = 72 cut cell edges, 144 values exchanged per time step, of which the 24 cut edges between PE quadrants (48 values) are real messages. With the cyclic mapping, the same 144 values are all messages, because no neighbouring tasks share a PE: same partition, same agglomeration, three times the network traffic, purely because of the mapping.</p></div>
+
+    <h2>The vocabulary</h2>
+    <ul>
+      <li><b>Task.</b> A sequence of instructions that belong together as one logical part of the algorithm; designing a parallel program starts by splitting the problem into tasks.</li>
+      <li><b>Unit of execution (UE).</b> What a task is mapped to so it can run: a process or a thread. A <i>process</i> owns resources: virtual memory, I/O descriptors, a run-time stack, signal handlers, user and group IDs. A <i>thread</i> is the basic UE of modern operating systems; it belongs to a process and shares its environment.</li>
+      <li><b>Processing element (PE).</b> A piece of hardware that executes one instruction stream. What counts as a PE depends on the context: a hardware thread, a core, or a whole SMP workstation if the programming environment treats it as one stream.</li>
+      <li><b>Load balance</b> is how evenly the work ends up on the PEs; <b>load balancing</b> is the act of distributing it evenly. Both mappings, tasks to UEs and UEs to PEs, decide performance.</li>
+    </ul>
+    <ul class="cmp" aria-label="Shared versus distributed memory">
+      <li><b>Memory</b><span class="v"><span class="sw t"></span>Shared memory: one global memory that all processors or cores can access.</span><span class="v"><span class="sw v"></span>Distributed memory: each processor has a private memory only it can access.</span></li>
+      <li><b>Exchange</b><span class="v"><span class="sw t"></span>One thread writes a shared variable, another reads it; the accesses must be synchronized.</span><span class="v"><span class="sw v"></span>Explicit communication over the interconnection network: message passing.</span></li>
+      <li><b>Usual UE</b><span class="v"><span class="sw t"></span>threads</span><span class="v"><span class="sw v"></span>processes</span></li>
+    </ul>
+
+    <h2>Synchronization</h2>
+    <p>Task scheduling is nondeterministic, so events need not happen in the same order every run. Often the order does not matter; where it does, the programmer has to add synchronization to enforce it. Take a serial program x = f(x); y = g(y); x = x + h(y); z = x + y, split onto two threads:</p>
+    <div class="formula">thread 1: x = f(x); &nbsp;x = x + h(y); &nbsp;&nbsp;&nbsp;&nbsp; thread 2: y = g(y); &nbsp;z = x + y;</div>
+    <p>Without synchronization, thread 2 may compute z before thread 1 has finished x, and thread 1 may use y before g(y) is done. Correct versions make thread 1 wait for y and thread 2 wait for the final x. Two communication styles: <b>synchronous</b> means both events happen together (a sent message must be received before the sender continues); <b>asynchronous</b> means the sender continues regardless, or the receiver computes while waiting for its receive to complete.</p>
+    <h3>Race conditions</h3>
+    <p>A race condition is a bug peculiar to parallel programs: the result depends on the relative scheduling of the tasks. Since the OS, not the programmer, schedules them, the same program on the same data can give different answers. The slide's example: two threads append results to a shared buffer <code>buf</code> whose fill level is <code>len</code>.</p>
+    ${lab("race", "two threads, one buffer")}
+    <h3>Deadlocks</h3>
+    <p>A deadlock is a cycle of tasks in which each waits for the next to do something, so all of them wait forever. The slide's message-passing example and its usual fix:</p>
+    <div class="tt-wrap"><table class="tt syn"><tr><th></th><th>Both receive first</th><th>A sends first</th></tr>
+      <tr><td><b>Task A</b></td><td>receive from B ⏳ … then send to B</td><td>send to B, then receive from B ✓</td></tr>
+      <tr><td><b>Task B</b></td><td>receive from A ⏳ … then send to A</td><td>receive from A ✓, then send to A</td></tr>
+      <tr><td><b>Result</b></td><td>${flag("bad", "deadlock")} A waits for B, B waits for A; neither ever sends</td><td>${flag("ok", "no cycle")} breaking the symmetry breaks the cycle</td></tr>
+    </table></div>
+    <h3>Tools for synchronization</h3>
+    <div class="tt-wrap"><table class="tt syn"><tr><th></th><th>What it does</th><th>Example on the slides</th></tr>
+      <tr><td><b>Lock</b> · access</td><td>Only the UE holding the lock may continue; others wait. The simplest form.</td><td><code>omp_set_lock</code> / <code>omp_unset_lock</code></td></tr>
+      <tr><td><b>Critical section</b> · access</td><td>Only one UE at a time inside a block of code.</td><td><code>#pragma omp critical</code></td></tr>
+      <tr><td><b>Event</b> · sequence</td><td>One UE explicitly signals another, which sleeps until then; orders events across UEs.</td><td>PThreads <code>pthread_cond_wait</code> / <code>pthread_cond_signal</code> (OpenMP has no events)</td></tr>
+      <tr><td><b>Barrier</b> · sequence</td><td>All participating UEs wait until the last one has arrived.</td><td><code>#pragma omp barrier</code></td></tr>
+    </table></div>
+    <p class="muted">Access control (locks, critical sections) protects data; sequence control (events, barriers) orders work. The implementations return in the shared-memory programming lectures.</p>
+
+    <h2>Performance metrics</h2>
+    <p>There are two reasons to write a parallel program: to get a result faster, and to solve a larger problem. Performance can be modelled and measured. The model splits a run into setup, computation and finalization; only the computation gets faster with p PEs:</p>
+    <div class="formula">T<sub>1</sub> = T<sub>setup</sub> + T<sub>compute</sub> + T<sub>final</sub> &nbsp;&nbsp; T<sub>p</sub> = T<sub>setup</sub> + T<sub>compute</sub> / p + T<sub>final</sub> &nbsp;&nbsp; S<sub>p</sub> = T<sub>1</sub> / T<sub>p</sub> &nbsp;&nbsp; E<sub>p</sub> = S<sub>p</sub> / p</div>
+    <h3>Amdahl's law: the same problem, faster</h3>
+    <p>Ideally S = p, a perfect linear speedup. In practice setup and finalization do not shrink. With f the fraction of T<sub>1</sub> that can run in parallel:</p>
+    <div class="formula">S<sub>p</sub> = 1 / ((1 − f) + f / p) &nbsp;&nbsp;→&nbsp;&nbsp; 1 / (1 − f) &nbsp;for p → ∞</div>
+    ${chart("amdahl", leg([["g", "ideal S = p", "ln"], [1, "f = 0.90", "ln"], [2, "f = 0.95", "ln"], [3, "f = 0.99", "ln"]]))}
+      <figcaption>Amdahl's law for three parallel fractions, PEs on a log axis. Even 99 % parallel code reaches only 91 on 1024 PEs, and a 10 % serial part caps any machine at 10. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>p</th><th>f = 0.90</th><th>f = 0.95</th><th>f = 0.99</th></tr>${[1, 2, 4, 8, 16, 32, 64, 128, 256, 1024].map(p => `<tr><td class="n">${p}</td>${[0.9, 0.95, 0.99].map(f => `<td class="n">${num(amdahl(f, p))}</td>`).join("")}</tr>`).join("")}<tr><td>p → ∞</td><td class="n">10</td><td class="n">20</td><td class="n">100</td></tr></table></details>
+    <div class="ex"><div class="kicker">Worked example: f = 0.8 on 8 PEs</div>
+      <p>S = 1 / (0.2 + 0.8 / 8) = 1 / (0.2 + 0.1) = 3.33 and E = 3.33 / 8 = 42 %. The serial 20 % now takes two thirds of the run time. Doubling to 16 PEs gives only 1 / (0.2 + 0.05) = 4, and no number of PEs gets past 1 / 0.2 = 5. That is why the slides insist on knowing the serial fraction before promising speedups.</p></div>
+    <p>Amdahl's law rests on assumptions. Reality can be <b>worse</b>, because creating more parallel tasks costs overhead, or <b>better</b>, when the serial program was limited by something other than CPU cycles (memory, cache size) that the parallel run has more of.</p>
+    <h3>More processors, more synchronization</h3>
+    <p>The overhead can go into the model. Start from 90 % parallel code and add a synchronization cost per participating UE, either linear (0.005·T<sub>1</sub> per UE, also for the first) or growing with each doubling (5 % of T<sub>1</sub> per doubling of p):</p>
+    <div class="formula">no overhead: &nbsp;S<sub>p</sub> = 1 / (0.1 + 0.9 / p)<br>linear: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;S<sub>p</sub> = 1 / (0.1 + 0.9 / p + 0.005·p)<br>per doubling: S<sub>p</sub> = 1 / (0.1 + 0.9 / p + 0.05·log₂ p)</div>
+    ${chart("overhead", leg([[1, "no overhead", "ln"], [2, "+ 0.005·p", "ln"], [3, "+ 0.05·log₂ p", "ln"]]))}
+      <figcaption>The three models for f = 0.9, PEs on a log axis. With overhead, the speedup has a maximum, and beyond it every added PE makes the program slower. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>p</th>${OV.map(s => `<th>${s.name}</th>`).join("")}</tr>${[1, 2, 4, 8, 13, 16, 32, 64, 128, 256].map(p => `<tr><td class="n">${p}</td>${OV.map(s => `<td class="n">${num(s.f(p))}</td>`).join("")}</tr>`).join("")}</table></details>
+    <div class="ex"><div class="kicker">Worked example: where is the best p?</div>
+      <p>For the linear model, minimize the denominator 0.1 + 0.9/p + 0.005p: its derivative −0.9/p² + 0.005 is zero at p = √(0.9 / 0.005) = √180 ≈ 13.4. At p = 13: 0.1 + 0.069 + 0.065 = 0.234, so S = 4.27, less than half of what the overhead-free model promises at 13 PEs (5.91). For the logarithmic model, −0.9/p² + 0.05/(p·ln 2) = 0 gives p = 0.9·ln 2 / 0.05 ≈ 12.5 and S ≈ 2.82.</p></div>
+    <h3>Gustafson's law: a bigger problem, same time</h3>
+    <p>Running exactly the same problem on more and more PEs is often artificial. Given more processors, a weather service refines the model (more detail, more cells) and keeps the run time fixed. Amdahl's fixed-size speedup is pessimistic for that case. Gustafson's scaled (fixed-time) speedup asks how long one PE would need for the problem the p PEs just solved: T<sub>1</sub> = T<sub>setup</sub> + p · T<sub>compute,p</sub> + T<sub>final</sub>. With f now the parallel fraction of the <i>parallel</i> run:</p>
+    <div class="formula">S<sub>p</sub> = (1 − f) + p · f</div>
+    ${lab("ag", "Amdahl versus Gustafson")}
+    <div class="ex"><div class="kicker">Worked example: the same f = 0.8 and p = 8, read Gustafson's way</div>
+      <p>The 8-PE run spends 20 % in serial code and 80 % in parallel work. One PE would need 0.2 + 8 · 0.8 = 6.6 times as long for the same, larger problem, so S = 6.6 and E = 83 %, against Amdahl's 3.33 and 42 %. Neither law is wrong: they answer different questions, and the meaning of f differs (fraction of T<sub>1</sub> versus fraction of T<sub>p</sub>).</p></div>
+
+    <h2>Taxonomy of parallel architectures</h2>
+    <p>Parallel computers differ in their control mechanism, address-space organization, interconnection network and processor granularity. Classifying them tells you what kind of parallelism a machine uses, which architecture is promising and what it has achieved, shows the possible configurations, and supports performance models. The classic scheme is Flynn's, by the number of instruction and data streams:</p>
+    <div class="flynn" role="table" aria-label="Flynn's taxonomy">
+      <div class="fh" role="columnheader"></div><div class="fh" role="columnheader">single data stream</div><div class="fh" role="columnheader">multiple data streams</div>
+      <div class="fh row" role="rowheader">single instruction stream</div>
+      <div class="fc t1"><b>SISD</b>One instruction stream works on one data stream: the classic sequential core and its standard programming model (an add, a multiply, a decrement and a conditional jump per loop iteration on x86).</div>
+      <div class="fc t2"><b>SIMD</b>One instruction stream is broadcast to many function units, each with its own data: vector instructions, extending the programming model (lecture 5).</div>
+      <div class="fh row" role="rowheader">multiple instruction streams</div>
+      <div class="fc t4"><b>MISD</b>Several instruction streams on one data stream. Rare in practice; usually cited for redundant, fault-tolerant computation.</div>
+      <div class="fc t3"><b>MIMD</b>Independent threads or processes on independent PEs, such as cores, joined by an interconnect. Every multicore processor and cluster; each PE may use SIMD inside.</div>
+    </div>
+    <div class="ex"><div class="kicker">Worked example: one SIMD instruction</div>
+      <p>A 256-bit AVX register (ymm) holds four doubles. If ymm0 = (1.5, 2, 3, 4) and ymm1 = (2, 0.5, 3, 10), the single instruction <code>vmulpd</code> leaves (3, 1, 9, 40) in ymm0: four multiplications for the price of one instruction. A following <code>vaddpd</code> adds four lanes at once in the same way. On Capella's AVX-512 registers it is eight lanes.</p>
+      <div class="lanes" aria-hidden="true">${[[1.5, 2], [2, 0.5], [3, 3], [4, 10]].map(([a, b], k) => `<div class="lane"><span class="cell t1 one">${a}</span><span class="op">×</span><span class="cell t2 one">${b}</span><span class="op">=</span><span class="cell t3 one">${a * b}</span><small>lane ${k}</small></div>`).join("")}</div></div>
+
+    <h2>Parallel programming environments</h2>
+    <p>A programming environment provides the tools, language features and APIs to build a parallel program, and implies an abstraction of the machine, the <b>programming model</b>. Sequential computers have one, von Neumann's. Parallel computers have many, mirroring the ways processors can be connected, most of them based on shared memory, distributed memory or a hybrid. A model tied too closely to one machine makes programs that do not port.</p>
+    <p>The slides show the zoo of the mid-1990s, well over a hundred environments from ABCPL to ZPL. By the late 1990s the community had converged on two that are still used today: <b>OpenMP</b> for a global address space (compiler directives for Fortran, C and C++) and <b>MPI</b> for message passing (a library for process management, message passing, collective communication, one-sided communication and parallel I/O). Today MPI, OpenMP and CUDA (for NVIDIA GPUs, which did not exist in the 1990s) dominate HPC; PGAS languages, OpenACC, OpenCL, oneAPI and Boost play smaller roles.</p>
+    ${chart("envs", leg([[1, "message passing"], [2, "shared memory"], [3, "PGAS"], [4, "accelerators"]]))}
+      <figcaption>Release years of the environments that survived, by programming model. Years added here from the standards' first releases; the lecture names the environments, not the years. Hover or focus a dot for what it is.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Year</th><th>Environment</th><th>Model</th><th>What it is</th></tr>${ENVS.slice().sort((a, b) => a.y - b.y).map(e => `<tr><td class="n">${e.y}</td><td>${e.t}</td><td>${LANES[e.c - 1]}</td><td>${e.d}</td></tr>`).join("")}</table></details>
+    <ul class="cmp three" aria-label="Software view of the three programming models">
+      <li><b>Address space</b><span class="v"><span class="sw t"></span>Flat shared memory: one address space over all CPUs and one memory.</span><span class="v"><span class="sw p"></span>PGAS: one address space, partitioned so that each part lives in one CPU's memory.</span><span class="v"><span class="sw v"></span>Message passing: one address space per CPU.</span></li>
+      <li><b>Access</b><span class="v"><span class="sw t"></span>load / store</span><span class="v"><span class="sw p"></span>load / store, remote parts slower</span><span class="v"><span class="sw v"></span>send / receive</span></li>
+      <li><b>Lectures</b><span class="v"><span class="sw t"></span>4–5 (threads, OpenMP)</span><span class="v"><span class="sw p"></span>8 (PGAS, DASH)</span><span class="v"><span class="sw v"></span>7 (MPI)</span></li>
+    </ul>
+    <p>The hardware has three levels: nodes linked by their network interfaces, several processors per node, several cores per processor, each with its memory. No single programming model represents all three completely, and every implementation has to deal with the global address space somehow; in practice HPC codes often combine MPI between nodes with OpenMP inside a node.</p>
+
+    <div class="tiles">
+      <div class="tile"><div class="v">1 / (1 − f)</div><div class="l">Amdahl's ceiling: 10 for 10 % serial code, on any machine</div></div>
+      <div class="tile"><div class="v">P · C · A · M</div><div class="l">partition, communication, agglomeration, mapping</div></div>
+      <div class="tile"><div class="v">${num(capCores, 0)}</div><div class="l">CPU cores in ZIH's Capella, plus ${capGpus} H100 GPUs</div></div>
+      <div class="tile"><div class="v">⌈log₂ N⌉</div><div class="l">addition rounds to sum N numbers, however many PEs</div></div>
+    </div>
+    <h2>Take-home: the lecture's five questions</h2>
+    <ul>
+      <li><b>Two types of parallelization?</b> Concurrency (independent work at the same time) and pipelining (stages of one operation overlapped on a stream of data).</li>
+      <li><b>PCAM?</b> Partition into tasks, find their communication, agglomerate tasks where communication or effort is too high, map them onto UEs and PEs.</li>
+      <li><b>Why synchronization?</b> Scheduling is nondeterministic, so where order matters it must be enforced; done wrong, you get race conditions or deadlocks. Tools: locks and critical sections for access, events and barriers for sequence.</li>
+      <li><b>Limits?</b> The serial fraction caps the speedup (Amdahl, fixed problem size), overhead can turn more PEs into a slowdown, and growing the problem with the machine (Gustafson, fixed time) is the way out.</li>
+      <li><b>Flynn?</b> SISD, SIMD, MISD, MIMD by the number of instruction and data streams; HPC systems are MIMD machines made of SIMD-capable cores.</li>
+    </ul>
+    <h2>Exercise</h2>
+    <p>The first online exercise, on the basics of parallel computing and Amdahl's law, has been in OPAL since 22 Oct. Solve it before your group meets on <b>Wed 28 Oct, 07:30</b> in ${esc(exe.room)}; the session discusses the solutions. Not yet done: the Linux and C self-tests from the <a href="high-performance-computing/lecture.html?n=0">preparation page</a>.</p>
+    <p class="muted">Next: Batch Systems (<a href="high-performance-computing/lecture.html?n=2">lecture 2</a>, 28 Oct). Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
+}
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the course overview: ${esc(l.blurb)}<br>The summary appears here once the slides are in OPAL and the lecture has taken place.</p>
+    </div>`;
+}
+const WRITEUPS = { 0: lecture0, 1: lecture1 };
+const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `${l.n ? `Lecture ${l.n} – ` : ""}${l.title} · High-Performance Computing`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => {
+  if (isNarrow() === narrowNow) return;
+  narrowNow = isNarrow(); mountCharts();
+  if (document.querySelector('[data-lab="pcam"]')) document.querySelector('[data-lab="pcam"] .out').innerHTML = pcamOut(narrowNow);
+});
+</script>
+</body>
+</html>

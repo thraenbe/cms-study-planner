@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>High-Performance Computing · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="high-performance-computing/hpc.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="high-performance-computing/hpc.js"></script>
+</head>
+<body class="hpc">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, lec, exe, slot, today } = HPC;
+const rows = m.schedule.rows;
+const held = rows.filter(r => r[2] !== "off");
+const nx = held.find(r => r[0] >= today);
+const next = held.filter(r => r[0] === nx?.[0]);
+const nextHTML = nx ? (() => { const d = daysUntil(nx[0]); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`} · ${fmt(nx[0])}</p>
+    ${next.map(r => `<p style="font-size:1.15rem;font-weight:700;margin:.35rem 0 0">${esc(r[1])}</p><p style="margin:0">${slot(r[2])} · ${esc(r[2] === "exe" ? exe.who : lec.who)}</p>`).join("")}</div>`; })()
+  : `<div class="box"><p style="margin:0">All sessions are over.</p></div>`;
+const typeOn = d => { const l = c.lectures.find(x => x.date === d); return l ? ` <span class="muted">· ${HPC.TYPES[l.type]}</span>` : ""; };
+const tr = rows.map(([d, topic, k]) => `<tr class="${k === "off" ? "off" : ""} ${d < today ? "past" : ""} ${d === nx?.[0] ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : k === "lec" ? "Lecture" : "No session"}"></span></td><td>${esc(topic)}${k === "lec" ? typeOn(d) : ""}</td></tr>`).join("");
+const nLec = rows.filter(r => r[2] === "lec").length, nExe = rows.filter(r => r[2] === "exe").length;
+document.getElementById("page").innerHTML = `
+  <a class="back" href="high-performance-computing.html">← All lectures</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}; taught as “High Performance Computers and Their Programming”).</p>
+  ${HPC.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  <p>From the module description and the chair's course page. The module ends with a 90-minute written exam and nothing else counts towards the grade. The chair announces the exam modalities and any post-exam review in OPAL. Exam registration in Selma is separate from the OPAL course; the registration period has not been announced. The exam period of the winter semester is 8 Feb – 6 Mar 2027, the date itself is not published yet.</p>
+  <div class="grades">${c.grading.map(g => `<div class="grade mine"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <p>OPAL also has a folder of questions from previous exams, and a box where you can suggest exam questions anonymously; the chair may or may not use them.</p>
+  <h2>Your exercise group</h2>
+  <div class="box">
+    <p style="margin:0 0 .4rem"><b>OPAL:</b> member of the WiSe 2026/27 course.</p>
+    <p style="margin:0 0 .4rem"><b>Exercise:</b> you are registered in the <b>Wednesday group, 1st DS (07:30–09:00)</b>, straight before the lecture and in the same building. It starts on <b>28 Oct</b>. The waiting list is behind you. Changing groups works only in this order: register for the new group first, then leave the old one; anyone found in two groups is removed. Group registration closes on 15 Nov, 23:59.</p>
+    <p style="margin:0"><b>Selma:</b> exam registration still open-ended; shown red above until it is done.</p>
+  </div>
+  <p class="muted">${esc(c.roomNote)}</p>
+  <h2>How the exercises work</h2>
+  <ul>
+    <li>Each exercise is an OPAL online exercise, uploaded about a week before it is discussed. Solve it online before your slot, so you know where to pay extra attention; the slot then discusses and solves it with you.</li>
+    <li>The first one, on the basics of parallel computing and Amdahl's law, went online on 22 Oct and is discussed in your group on 28 Oct. It matches <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>.</li>
+    <li>Discuss the exercises with fellow students in the OPAL forum; what the forum cannot answer goes to the chair through the OPAL contact form.</li>
+    <li>You get access to one of ZIH's HPC systems to try out what you learn.</li>
+    <li>${esc(c.prereq)} See <a href="high-performance-computing/lecture.html?n=0">the preparation page</a>.</li>
+  </ul>
+  <h2>Schedule · ${nLec} lectures, ${nExe} exercises</h2>
+  <div class="legend"><span><span class="sw lec"></span>Lecture · Wed ${lec.start}–${lec.end} · ${esc(lec.room)} · from 21 Oct</span><span><span class="sw exe"></span>Your exercise · Wed ${exe.start}–${exe.end} · ${esc(exe.room)} · from 28 Oct</span><span><span class="sw off"></span>No session</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Source: ${esc(m.schedule.src)}. The OPAL schedule marks each lecture ℹ️, 📜 or 💻; this board reads them as overview, software (programming and tools) and hardware lectures. Exercises are assumed to run every lecture Wednesday until 3 Feb; OPAL does not list an end date. Other exercise groups (Monday online, Tuesday, Friday) are not shown because you are not in them.</p>
+  <h2>Material &amp; links</h2>
+  <div class="links">
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course: slides, online exercises, videos, news, forum ↗</a>
+    <a href="${c.coursePage}" target="_blank" rel="noopener">Chair's course page “High Performance Computers and Their Programming” ↗</a>
+    <a href="https://navigator.tu-dresden.de/etplan/h%C3%BCl/01/raum/145401.0210" target="_blank" rel="noopener">HÜL/S186/H in the campus navigator ↗</a>
+  </div>
+  <p>${esc(c.materialsNote)}</p>
+  <h2>Contact</h2>
+  <p>${esc(c.contact)}.</p>
+  <p class="foot muted">Dates, rooms and organisational facts from OPAL, the chair's page and the introduction slides as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>
