@@ -13,10 +13,10 @@
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
 // ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
 // modules[code].noTimes replaces the "no session times yet" text on module.html for courses without sessions.
-// Generated once by a script, now edited directly (last: 2026-10-21).
+// Generated once by a script, now edited directly (last: 2026-10-22).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-21",
+ "updated": "2026-10-22",
  "term": {
   "src": "https://tu-dresden.de/studium/im-studium/studienorganisation/studienjahresablauf",
   "start": "2026-10-01",
@@ -112,7 +112,7 @@ window.CMS = {
   },
   "CMS-TRK-CAI": {
    "level": "ok",
-   "text": "Admitted from the waiting list on 20 Oct; you chose topic 1. Seminar Thursdays 11:10–12:40 in APB/E006/U (Charvi Jain). Register for the exam in Selma."
+   "text": "Admitted from the waiting list on 20 Oct; you chose topic 1 (Foundational Model Architectures). Seminar on 8 Thursdays, 11:10–12:40 in APB/E006/U (Charvi Jain). Register for the exam in Selma."
   },
   "CMS-COR-SAP": {
    "level": "ok",
@@ -1442,7 +1442,8 @@ window.CMS = {
    "winter": {
     "who": "Hon.-Prof. Dr. Jens Lehmann",
     "q": "Conversational Artificial Intelligence"
-   }
+   },
+   "note": "Seminar “Conversational AI” (Prof. Jens Lehmann, Prof. Sahar Vahdati, Charvi Jain), Thursdays 11:10–12:40 in APB/E006/U, but only on some Thursdays (tentative timeline from the slides of 15 Oct): kick-off on 15 Oct; no seminar from 22 Oct to 26 Nov; intermediate presentations of all projects on 3 and 10 Dec (about 5 minutes each, 10 with Q&A, to say what you'll cover and get feedback); no seminar on 17 Dec; final presentations on 7, 14, 21, 28 Jan and 4 Feb, which may change with the number of talks. Your topic: Topic 1, Foundational Model Architectures. CMS students give a graded 30-minute talk (20–25 minutes plus Q&A); participation in the sessions counts too. The exact dates are in the OPAL course calendar."
   },
   "CMS-TRK-FCG": {
    "code": "CMS-TRK-FCG",
@@ -2430,10 +2431,28 @@ window.CMS = {
    "end": "12:40",
    "room": "APB/E006/U",
    "who": "Charvi Jain",
-   "src": "OPAL",
-   "from": "2026-10-15",
-   "to": "2027-02-06",
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110"
+   "src": "seminar slides of 15 Oct (tentative timeline; the exact dates are in the OPAL course calendar)",
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110",
+   "dates": [
+    "2026-10-15",
+    "2026-12-03",
+    "2026-12-10",
+    "2027-01-07",
+    "2027-01-14",
+    "2027-01-21",
+    "2027-01-28",
+    "2027-02-04"
+   ],
+   "labels": {
+    "2026-10-15": "Kick-off, topics",
+    "2026-12-03": "Intermediate presentations",
+    "2026-12-10": "Intermediate presentations",
+    "2027-01-07": "Final presentations (dates may change)",
+    "2027-01-14": "Final presentations (dates may change)",
+    "2027-01-21": "Final presentations (dates may change)",
+    "2027-01-28": "Final presentations (dates may change)",
+    "2027-02-04": "Final presentations (dates may change)"
+   }
   },
   {
    "code": "CMS-TRK-FCG",
