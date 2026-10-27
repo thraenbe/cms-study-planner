@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Project · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+</head>
+<body class="rp">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Board: header, status bar, one card per paper (the reading list of the project) and the Orga card.
+const { m, c, esc, U, CODE, fmt, cite, paperUrl } = RP;
+const papers = c.papers.map(p => `<a class="game-card paper ${p.covered ? "" : "soon"}" href="${paperUrl(p)}">
+    <div class="game-icon">${p.icon}</div>
+    <h2>${esc(p.title)}</h2>
+    <p class="cite">${esc(p.authors.map(a => a.split(" ").slice(-1)[0]).join(", "))} · ${p.year}${p.date ? ` · shared ${fmt(p.date)}` : ""}</p>
+    <p>${esc(p.blurb)}</p>
+    ${U.doneBox(`${CODE}:paper:${p.n}`, "read")}
+  </a>`).join("");
+const orga = `<a class="game-card" href="research-project/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>The project brief, your team and supervisor, the timeline so far, how the group works, the deliverable and the module's grading.</p>
+  </a>`;
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
+  <header class="hero">
+    <h1>🔬 ${esc(c.project)}</h1>
+    <p class="subtitle">${CODE} · ${esc(m.name)} · ${esc(CMS.semester)} · ${esc(c.group)}</p>
+  </header>
+  ${RP.topbar()}
+  <main>
+    <div class="board-h"><h2>Papers</h2><span class="muted">${c.papers.length} ${c.papers.length === 1 ? "paper" : "papers"} so far · tick “read” once you have worked through one</span></div>
+    <p class="muted board-note">${esc(c.paperNote)}</p>
+    <div class="game-cards">${papers}</div>
+    <div class="board-h"><h2>Project</h2><span class="muted">no timetabled sessions; meetings and milestones go into Orga</span></div>
+    <div class="game-cards">${orga}</div>
+  </main>`;
+U.wireDone();
+</script>
+</body>
+</html>

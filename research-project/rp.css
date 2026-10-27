@@ -1,0 +1,206 @@
+/* Research Project pages (CMS-PRO): the board shares the card look of the other course boards; the paper
+   write-ups read like an annotated paper — a serif for the paper's own words (titles, section heads),
+   the site's sans for everything we add, margin notes for what is context rather than content. */
+body.rp { font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.5; }
+.rp { --rp-accent: #0f7f86; --rp-accent-soft: color-mix(in srgb, var(--rp-accent) 14%, var(--surface)); --rp-serif: "Source Serif 4", "Charter", "Iowan Old Style", "Palatino Linotype", Georgia, serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rp { --rp-accent: #4fc7cf; } }
+:root[data-theme="dark"] .rp { --rp-accent: #4fc7cf; }
+.rp .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.rp .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.rp .crumbs a { color: var(--ink-2); }
+
+/* Board header and status bar (same values as the other boards) */
+.rp header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.rp .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.rp .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+.rp .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.rp .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.rp .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.rp .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.rp .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.rp .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.rp .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.rp .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.rp .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.rp .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.rp .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.rp .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.rp .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.rp .kd.past { opacity: .55; }
+.rp .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.rp .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+.rp .board-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 1.6rem 0 0.6rem; }
+.rp .board-h h2 { margin: 0; font-size: 1.3rem; }
+.rp .board-note { font-size: 0.92rem; margin: 0 0 0.8rem; }
+.rp .muted { color: var(--ink-2); }
+
+/* Card grid (shared values of the course boards) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.game-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.4rem; cursor: pointer; box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08); transition: transform 0.12s ease; }
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+.rp .game-card.paper h2 { font-family: var(--rp-serif); font-weight: 600; font-size: 1.35rem; }
+.rp .game-card .cite { font-size: 0.85rem; color: var(--ink-3); margin: 0 0 0.5rem; }
+.rp .game-card .when { font-size: 0.85rem; color: var(--ink-3); margin-bottom: 0.4rem; }
+.rp .game-card.soon { opacity: .7; border-style: dashed; }
+@media (prefers-reduced-motion: reduce) { .game-card { transition: none; } .game-card:hover { transform: none; } }
+
+/* Detail pages (Orga, paper write-ups) */
+.rp .detail { max-width: 760px; margin: 0 auto; }
+.rp .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.rp .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.rp .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.rp .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.rp .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.rp .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.rp .detail p { margin: 0 0 0.7rem; }
+.rp .detail p.lead { font-size: 1.08rem; }
+.rp .detail ul, .rp .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.rp .detail li { margin: 0.2rem 0; }
+.rp .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.rp .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.rp .foot { text-align: center; margin: 2rem auto 0; font-size: 0.9rem; }
+.rp .timeline { list-style: none; padding: 0; margin: 0.4rem 0 1rem; display: grid; gap: 0; }
+.rp .timeline li { display: grid; grid-template-columns: 96px 14px 1fr; gap: 10px; align-items: start; margin: 0; padding: 6px 0; }
+.rp .timeline .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--ink-2); padding-top: 3px; }
+.rp .timeline .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-top: 7px; box-shadow: 0 0 0 2px var(--surface); }
+.rp .timeline li.past { color: var(--ink-3); }
+.rp .timeline li.past .dot { opacity: .5; }
+.rp .timeline b { display: block; }
+.rp .timeline small { color: var(--ink-2); }
+.rp .ctx-map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0.4rem 0 1rem; }
+.rp .ctx-map > div { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; }
+.rp .ctx-map b { display: block; margin-bottom: 2px; }
+@media (max-width: 760px) { .rp .hero h1 { font-size: 1.55rem; } .rp .ctx-map { grid-template-columns: 1fr; } .rp .timeline li { grid-template-columns: 76px 14px 1fr; } }
+
+/* ---------- Paper write-up: the reading column ---------- */
+.rp .paper { max-width: 760px; margin: 0 auto; }
+.rp .paper .titlepage { border-top: 3px solid var(--rp-accent); padding-top: 1rem; margin-bottom: 1.4rem; }
+.rp .paper .titlepage h1 { font-family: var(--rp-serif); font-weight: 600; font-size: 2rem; line-height: 1.18; letter-spacing: -.005em; margin: 0.2rem 0 0.6rem; }
+.rp .paper .titlepage .authors { font-size: 1rem; margin: 0 0 0.2rem; }
+.rp .paper .titlepage .venue { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 0.8rem; }
+.rp .paper .titlepage .kw { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.4rem 0 0; }
+.rp .paper .kw span { font-size: 12.5px; padding: 3px 9px; border-radius: 999px; background: var(--rp-accent-soft); color: var(--ink); }
+.rp .paper .abstract { font-family: var(--rp-serif); font-size: 1.04rem; line-height: 1.55; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.4rem; margin: 0.6rem 0 1.4rem; }
+.rp .paper .abstract .h { font-family: inherit; font-weight: 700; margin-right: .4em; }
+.rp .paper h2 { font-family: var(--rp-serif); font-weight: 600; font-size: 1.45rem; line-height: 1.25; margin: 2.2rem 0 0.6rem; display: flex; gap: 12px; align-items: baseline; }
+.rp .paper h2 .sec { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.8rem; font-weight: 500; color: var(--rp-accent); letter-spacing: .02em; flex: none; }
+.rp .paper h3 { font-size: 1.04rem; margin: 1.3rem 0 0.4rem; }
+.rp .paper p { margin: 0 0 0.75rem; max-width: 70ch; }
+.rp .paper p.lead { font-size: 1.1rem; line-height: 1.5; }
+.rp .paper ul, .rp .paper ol { margin: 0 0 0.75rem; padding-left: 1.3rem; max-width: 70ch; }
+.rp .paper li { margin: 0.25rem 0; }
+.rp .paper .muted { color: var(--ink-2); }
+.rp .paper .q { font-family: var(--rp-serif); font-style: italic; color: var(--ink-2); border-left: 3px solid var(--line); padding-left: 12px; margin: 0.4rem 0 0.9rem; }
+
+/* Margin notes: what the paper does not say (our reading, context, exam/project relevance). Wide screens
+   put them in the right margin beside the paragraph they belong to; narrow screens inline them. */
+.rp .note { position: relative; }
+.rp .note .mn { font-size: 0.86rem; line-height: 1.4; color: var(--ink-2); border-left: 3px solid var(--rp-accent); background: var(--rp-accent-soft); border-radius: 0 10px 10px 0; padding: 8px 12px; margin: 0.4rem 0 1rem; }
+.rp .note .mn b { color: var(--ink); font-weight: 600; }
+.rp .note .mn .tag { display: inline-block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--rp-accent); font-weight: 700; margin-right: 6px; }
+@media (min-width: 1180px) {
+  .rp .paper { position: relative; }
+  .rp .note .mn { position: absolute; left: calc(100% + 24px); top: 0; width: 230px; margin: 0; background: transparent; border-radius: 0; padding: 0 0 0 12px; }
+}
+
+/* Figures and charts */
+.rp .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.rp .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.rp .viz svg { display: block; width: 100%; height: auto; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+.rp .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.rp .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.rp .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.rp .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.rp .viz .val { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
+.rp .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.rp .viz .note-t { fill: var(--ink-2); font-size: 11px; }
+.rp .viz .hit { fill: transparent; }
+.rp .viz .pt:focus { outline: none; }
+.rp .viz .pt.on .bar, .rp .viz .pt:hover .bar { filter: brightness(1.12); }
+.rp .viz .pt.on .cell { stroke: var(--ink); stroke-width: 2; }
+.rp .viz .pt.on .dot { r: 7; }
+.rp .viz .bar.s1 { fill: var(--vz-s1); }
+.rp .viz .bar.s2 { fill: var(--vz-s2); }
+.rp .viz .bar.s3 { fill: var(--vz-s3); }
+.rp .viz .bar.gray { fill: var(--vz-gray); }
+.rp .viz .f1 { fill: var(--vz-s1); } .rp .viz .f2 { fill: var(--vz-s2); } .rp .viz .f3 { fill: var(--vz-s3); } .rp .viz .fg { fill: var(--vz-gray); }
+.rp .viz .dot { stroke: var(--surface-2); stroke-width: 2; }
+.rp .viz .link { stroke: var(--vz-axis); stroke-width: 2; }
+.rp .viz .ref { stroke: var(--ink-3); stroke-width: 1; }
+.rp .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.rp .viz .cell { stroke: var(--surface-2); stroke-width: 2; }
+.rp .viz .cell.zero { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.rp .viz .cell.na { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+.rp .viz .cl { font-size: 12px; font-weight: 600; pointer-events: none; }
+.rp .viz .cl.dark { fill: #0b0b0b; } .rp .viz .cl.light { fill: #ffffff; } .rp .viz .cl.mute { fill: var(--ink-3); }
+.rp .viz .waffle rect { stroke: var(--surface-2); stroke-width: 1.5; }
+.rp .viz .chart-wrap { position: relative; }
+.rp .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; z-index: 2; }
+.rp .viz .tip.show { opacity: 1; }
+.rp .viz .tip b { display: block; }
+.rp .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.rp .viz .tip .trow i { width: 12px; height: 3px; border-radius: 2px; background: var(--c); }
+.rp .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0 2px 8px; }
+.rp .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.rp .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; }
+.rp .key.ln { width: 14px; height: 3px; border-radius: 1px; }
+.rp .key.ring { background: var(--surface); border: 1px solid var(--line); }
+.rp .ramp { display: inline-flex; align-items: center; gap: 2px; }
+.rp .ramp i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.rp .viz .toggles { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.rp .viz .tg { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.rp .viz .tg:hover { border-color: var(--ink-3); }
+.rp .viz .tg[aria-pressed="true"] { border-color: var(--rp-accent); box-shadow: inset 0 0 0 1px var(--rp-accent); }
+.rp .viz .tg:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rp details.tbl { font-size: 0.88rem; margin: -0.4rem 0 1rem; }
+.rp details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.rp details.tbl .tw { overflow-x: auto; }
+.rp details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.rp details.tbl td, .rp details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; white-space: nowrap; }
+.rp details.tbl th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.rp details.tbl td.n { font-variant-numeric: tabular-nums; text-align: right; padding-right: 14px; }
+.rp details.tbl tr.sum td { font-weight: 700; }
+
+/* Stat tiles, hero figure, comparison rows, step diagrams */
+.rp .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.rp .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.rp .tile .v { font-size: 1.5rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.rp .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.rp .tile .s { font-size: 0.78rem; color: var(--ink-3); margin-top: 4px; }
+.rp .hero-fig { display: grid; grid-template-columns: auto 1fr; gap: 14px 18px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.4rem; margin: 0.6rem 0 1rem; }
+.rp .hero-fig .n { font-size: 3.2rem; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+.rp .hero-fig .t { font-size: 0.95rem; color: var(--ink-2); max-width: 46ch; }
+.rp .hero-fig .t b { color: var(--ink); }
+.rp .steps { display: grid; gap: 8px; margin: 0.4rem 0 1rem; padding: 0; list-style: none; counter-reset: step; }
+.rp .steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; background: var(--surface-2); border-radius: 10px; padding: 9px 12px; margin: 0; font-size: 0.93rem; }
+.rp .steps li::before { counter-increment: step; content: counter(step); width: 24px; height: 24px; border-radius: 50%; background: var(--rp-accent); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+.rp .steps li > div { min-width: 0; }
+.rp .steps b { display: block; }
+.rp .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rp .two .viz { margin-bottom: 0.4rem; }
+.rp .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0.4rem 0 1rem; }
+.rp .vs > div { background: var(--surface-2); border-radius: 10px; padding: 10px 14px; font-size: 0.92rem; border-top: 3px solid var(--c); }
+.rp .vs b { display: block; margin-bottom: 4px; }
+.rp .vs ul { margin: 0; padding-left: 1.1rem; }
+.rp .callout { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.3rem; margin: 0.8rem 0 1.2rem; }
+.rp .callout h3 { margin: 0 0 0.5rem; }
+.rp .callout.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.rp .qa { display: grid; gap: 10px; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.rp .qa li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 0; font-size: 0.95rem; }
+.rp .qa li b { display: block; font-family: var(--rp-serif); font-size: 1.05rem; margin-bottom: 3px; }
+.rp .qa li small { color: var(--ink-2); }
+.rp .refs { font-size: 0.88rem; color: var(--ink-2); line-height: 1.5; }
+.rp .refs li { margin: 0.3rem 0; }
+.rp .vzbar { display: inline-block; height: 8px; border-radius: 4px; background: var(--vz-s1); vertical-align: middle; }
+@media (max-width: 760px) {
+  .rp .paper .titlepage h1 { font-size: 1.6rem; }
+  .rp .vs, .rp .two { grid-template-columns: 1fr; }
+  .rp .hero-fig { grid-template-columns: 1fr; }
+  .rp .hero-fig .n { font-size: 2.6rem; }
+}

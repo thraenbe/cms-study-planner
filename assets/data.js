@@ -3583,7 +3583,87 @@ window.CMS = {
     "web": "https://faerber-lab.github.io/student-projects-ws2026/"
    },
    "note": "Your research assignment is the project “Context-Aware Code Development with AI Assistance” in Michael Färber's research group, supervised by Marina Litvak (final allocation on 19 Oct, team of four). It looks at how LLM coding assistants can use project context (method descriptions, file and class structure, dependencies and APIs, requirements), e.g. with retrieval-augmented generation; the deliverable is a case-study paper. The study plan schedules the research assignment for semester 3, at 12 SWS per year.",
-   "noTimes": "No timetabled sessions; this is project work."
+   "noTimes": "No timetabled sessions; this is project work.",
+   "status": {
+    "allocated": true,
+    "team": "team of four · supervised by Marina Litvak",
+    "selma": false
+   },
+   "course": {
+    "page": "research-project-board.html",
+    "project": "Context-Aware Code Development with AI Assistance",
+    "supervisor": "Marina Litvak",
+    "group": "Michael Färber's research group, TU Dresden",
+    "allocNote": "since 19 Oct",
+    "teamNote": "no team yet",
+    "selmaNote": "project assignment, no exam date; check Selma for the module registration",
+    "keyDates": [
+     {
+      "date": "2026-10-09",
+      "label": "Topics of the winter projects published",
+      "kind": "milestone"
+     },
+     {
+      "date": "2026-10-13",
+      "label": "Joint kick-off: topic pitches, process and expectations",
+      "kind": "meeting"
+     },
+     {
+      "date": "2026-10-16",
+      "label": "Application deadline (23:59): form with CV, transcript and preferences",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-10-19",
+      "label": "Final allocation announced by e-mail",
+      "kind": "milestone"
+     },
+     {
+      "date": "2026-10-26",
+      "label": "First paper from the supervisor: LLM-assisted generation and reuse",
+      "kind": "paper"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-PRO (research assignment, 15 LP)",
+      "how": "Project assignment of 240 h: the case-study research paper plus the work behind it. No written exam.",
+      "selma": "registration period not announced yet"
+     }
+    ],
+    "format": "Independent research project in a team of four, 12 SWS over the year. The group runs student projects like real research projects: a scoped plan with milestones, regular feedback, reproducible experiments, paper-style writing from early on, and a joint publication as the default goal.",
+    "contact": "Marina Litvak (supervisor; Shamoon College of Engineering and TU Dresden) and Prof. Michael Färber (responsible for the student projects of the group)",
+    "coursePage": "https://faerber-lab.github.io/student-projects-ws2026/",
+    "howWeWork": "https://faerber-lab.github.io/how-we-work/",
+    "goal": "Design and evaluate a system that uses project context to improve LLM-based code generation: local context (the function description), structural context (file, class, package), dependency context (APIs, libraries, imports) and semantic context (requirements and intent). Build a context-aware pipeline, possibly with retrieval-augmented generation, and compare it with plain prompt-based generation on correctness, integration and usability.",
+    "questions": [
+     "Which context types matter most for correct, well-integrated code?",
+     "Can more context overload the model and make results worse?",
+     "Does retrieval improve the reuse of code that already exists in the project?"
+    ],
+    "deliverable": "A case-study research paper with extensive experiments using LLMs and different types of context.",
+    "prereq": "Software engineering and LLM background (security knowledge is a plus), experience with PyTorch and Hugging Face.",
+    "paperNote": "One card per paper that the supervisor shares or that the literature review turns up; each opens a visual write-up of the paper's structure, method, numbers and what it means for the project. The paper PDFs themselves are not published here.",
+    "papers": [
+     {
+      "n": 1,
+      "slug": "software-reuse-variability",
+      "title": "LLM-assisted Code Generation and Reuse: An Exploratory Study on Contextual Information",
+      "authors": [
+       "Iris Reinhartz-Berger",
+       "Nurit Gal-Oz",
+       "Marina Litvak",
+       "Aviram Morad"
+      ],
+      "venue": "manuscript in Springer LNCS format, shared by the supervisor; venue not stated in the PDF",
+      "year": 2026,
+      "date": "2026-10-26",
+      "icon": "🧩",
+      "covered": true,
+      "blurb": "240 single-shot runs of Gemini 3.1 Flash Lite on three Java game features, generated from scratch or reused from a sibling game, under eight combinations of structural, behavioural and functional context. Only 40 % compile; the ones that do pass 72 % of their tests. Lean context helps generation, rich context helps reuse."
+     }
+    ]
+   }
   },
   "EXT-LLM": {
    "code": "EXT-LLM",
