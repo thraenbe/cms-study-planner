@@ -28,7 +28,7 @@ const typeOn = d => { const l = c.lectures.find(x => x.date === d); return l ? `
 const tr = rows.map(([d, topic, k]) => `<tr class="${k === "off" ? "off" : ""} ${d < today ? "past" : ""} ${d === nx?.[0] ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : k === "lec" ? "Lecture" : "No session"}"></span></td><td>${esc(topic)}${k === "lec" ? typeOn(d) : ""}</td></tr>`).join("");
 const nLec = rows.filter(r => r[2] === "lec").length, nExe = rows.filter(r => r[2] === "exe").length;
 document.getElementById("page").innerHTML = `
-  <a class="back" href="high-performance-computing.html">← All lectures</a>
+  <a class="back" href="high-performance-computing.html">← All lectures and exercises</a>
   <div class="big-icon">🗂️</div><h1>Orga</h1>
   <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}; taught as “High Performance Computers and Their Programming”).</p>
   ${HPC.topbar({ dates: true })}
@@ -50,7 +50,7 @@ document.getElementById("page").innerHTML = `
   <h2>How the exercises work</h2>
   <ul>
     <li>Each exercise is an OPAL online exercise, uploaded about a week before it is discussed. Solve it online before your slot, so you know where to pay extra attention; the slot then discusses and solves it with you.</li>
-    <li>The first one, on the basics of parallel computing and Amdahl's law, went online on 22 Oct and is discussed in your group on 28 Oct. It matches <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>.</li>
+    <li>The first one, <a href="high-performance-computing/exercise.html?n=2">Exercise 02 on the basics of parallelism and Amdahl's law</a>, went online on 22 Oct and is discussed in your group on 28 Oct. It matches <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>. ${esc(c.exerciseNote)}</li>
     <li>Discuss the exercises with fellow students in the OPAL forum; what the forum cannot answer goes to the chair through the OPAL contact form.</li>
     <li>You get access to one of ZIH's HPC systems to try out what you learn.</li>
     <li>${esc(c.prereq)} See <a href="high-performance-computing/lecture.html?n=0">the preparation page</a>.</li>

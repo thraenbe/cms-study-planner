@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>High-Performance Computing · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="high-performance-computing/hpc.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="high-performance-computing/hpc.js"></script>
+<script src="high-performance-computing/hpc-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="hpc">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, TYPES } = HPC;
+const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = HPCViz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => x.n === Number(q));
+const page = document.getElementById("page");
+const back = `<a class="back" href="high-performance-computing.html">← All lectures and exercises</a>`;
+const nn = n => String(n).padStart(2, "0");
+const title = e => e.title ? `Exercise ${nn(e.n)} – ${esc(e.title)}` : `Exercise ${nn(e.n)}`;
+
+function head(e) {
+  const meta = `${e.published ? `In OPAL since ${fmt(e.published)} · ` : ""}discussed ${fmt(e.date)} · ${exe.start}–${exe.end} · ${esc(exe.room)} · your Wednesday group · ${TYPES.exercise}${e.points ? ` · ${e.points} points in the auto-checked parts` : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// A task of the sheet: its number and points on the left, the question in our own words, then the worked answer.
+const task = (id, pts, t, body) => `<section class="task" id="t${id.replace(/\W/g, "")}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2>${pts ? `<span class="pts">${pts} pt</span>` : `<span class="pts open">discussed in the session</span>`}</div>${body}</section>`;
+const ans = (items) => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const amdahl = (f, p) => 1 / ((1 - f) + f / p);
+const fix = (v, d = 2) => v.toFixed(d), pct2 = v => fix(v * 100) + " %";
+const lg2c = n => Math.ceil(Math.log2(n));
+
+// ---------------- Task 1: a parallel sum, tree reduction ----------------
+// Counting convention (see the box on the page): the serial loop costs 2U additions; a PE with n terms needs n pair
+// additions and n − 1 accumulations; the partial sums of p' = min(p, U) PEs are reduced in ⌈log₂ p'⌉ rounds.
+function treeSim(Uu, p) {
+  const pp = Math.min(p, Uu), base = Math.floor(Uu / pp), rest = Uu % pp;
+  const terms = Array.from({ length: pp }, (_, k) => base + (k < rest ? 1 : 0));
+  const local = terms.map(n => 2 * n - 1), lmax = Math.max(...local), rounds = lg2c(pp);
+  return { pp, terms, local, lmax, rounds, T1: 2 * Uu, Tp: lmax + rounds };
+}
+function treeGantt(Uu, p) {
+  const s = treeSim(Uu, p), cols = s.Tp;
+  const rows = s.terms.map((n, k) => {
+    const row = Array(cols).fill("");
+    let t = 0;
+    for (let i = 0; i < n; i++) { row[t++] = `<span class="pc s1" title="pair sum a+b">a+b</span>`; if (i) row[t++] = `<span class="pc s2" title="add to the local sum">+</span>`; }
+    for (let r = 1; r <= s.rounds; r++) { const st = 2 ** r, half = st / 2;
+      if (k % st === 0 && k + half < s.pp) row[s.lmax + r - 1] = `<span class="pc s3" title="tree round ${r}: add the partner's partial sum">⊕</span>`;
+      else if (k % st === half) row[s.lmax + r - 1] = `<span class="pc out" title="partial sum handed to PE ${k - half + 1}">→</span>`; }
+    return `<div class="rl">PE ${k + 1}</div>${row.map(x => `<div class="gc">${x}</div>`).join("")}`;
+  }).join("");
+  return `<div class="gantt" style="--cols:${cols}"><div class="rl"></div>${Array.from({ length: cols }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${rows}</div>`;
+}
+function treePhases(Uu, p) {
+  const s = treeSim(Uu, p), W = s.Tp;
+  const seg = (w, cls, t) => `<span class="seg ${cls}" style="flex:${w}" title="${t}">${w >= W / 8 ? w : ""}</span>`;
+  const pairs = Math.max(...s.terms), acc = pairs - 1;
+  return `<div class="phases"><div class="agrow"><span class="agl">slowest PE</span><span class="agtrack">${seg(pairs, "s1", `${pairs} pair sums`)}${acc ? seg(acc, "s2", `${acc} local accumulations`) : ""}${seg(s.rounds, "s3", `${s.rounds} tree rounds`)}</span><span class="agv">${s.Tp}</span></div></div>`;
+}
+const TR = { Uu: 6, k: Math.log2(6), inf: false };
+const TR_PRESETS = [["the sheet: U = 6, p = 6", 6, 6, false], ["U = 600, p = 6", 600, 6, false], ["U = 600, unlimited PEs", 600, 600, true], ["U = 6, p = 2", 6, 2, false]];
+function trOut() {
+  const Uu = TR.Uu, p = TR.inf ? Uu : Math.min(Uu, Math.round(2 ** TR.k)), s = treeSim(Uu, p), S = s.T1 / s.Tp;
+  const small = s.pp <= 8 && s.Tp <= 24;
+  return `${small ? treeGantt(Uu, p) : treePhases(Uu, p)}
+    ${leg([[1, "pair sum aᵢ + bᵢ"], [2, "add to the local sum"], [3, "tree round: add the partner's partial sum"]])}
+    <dl class="ro">
+      <dt>Serial</dt><dd>T₁ = 2 · ${Uu} = ${num(s.T1, 0)} additions (the loop adds each pair, then adds it to y)</dd>
+      <dt>Parallel</dt><dd>T<sub>p</sub> = ${s.lmax} local ${s.lmax === 1 ? "step" : "steps"} on the slowest PE (${Math.max(...s.terms)} terms) + ⌈log₂ ${s.pp}⌉ = ${s.rounds} tree rounds = <b>${num(s.Tp, 0)}</b></dd>
+      <dt>Result</dt><dd>S = ${num(s.T1, 0)} / ${num(s.Tp, 0)} = <b>${num(S, 3)}</b> · E = S / ${s.pp} = <b>${pct(S / s.pp)}</b>${p < s.pp ? "" : TR.inf ? ` · with unlimited PEs only ${s.pp} are useful` : ""}</dd>
+    </dl>`;
+}
+function initTree(body) {
+  body.innerHTML = `<div class="presets">${TR_PRESETS.map(([t], k) => `<button class="preset" data-p="${k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Terms U <input type="range" min="2" max="12" step="0.1"> <output></output></label>
+      <label>PEs p <input type="range" min="0" max="10" step="1"> <output></output></label>
+      <label><input type="checkbox"> unlimited PEs</label></div>
+    <p class="lab-note">Step by step: each PE adds its pairs and accumulates them, then the partial sums meet in a binary tree. Rows are PEs, columns are time steps; → marks a partial sum handed to a partner.</p><div class="out"></div>`;
+  const [ru, rp, ci] = body.querySelectorAll("input"), [ou, op] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { ru.value = Math.log2(TR.Uu); rp.value = TR.k; ci.checked = TR.inf; rp.disabled = TR.inf; ou.textContent = TR.Uu; op.textContent = TR.inf ? "∞" : Math.round(2 ** TR.k); out.innerHTML = trOut(); };
+  ru.addEventListener("input", () => { TR.Uu = Math.round(2 ** +ru.value); draw(); });
+  rp.addEventListener("input", () => { TR.k = +rp.value; draw(); });
+  ci.addEventListener("change", () => { TR.inf = ci.checked; draw(); });
+  body.addEventListener("click", ev => { const t = ev.target.closest("[data-p]"); if (!t) return; const [, u, p, inf] = TR_PRESETS[+t.dataset.p]; TR.Uu = u; TR.k = Math.log2(p); TR.inf = inf; draw(); });
+  draw();
+}
+const treeS = (Uu, p) => { const s = treeSim(Uu, p); return s.T1 / s.Tp; };
+line("treeS", {
+  x: [1, 1024], y: [0, 128], yTicks: [0, 32, 64, 96, 128], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "speedup S",
+  series: [{ name: "ideal, S = p", short: "ideal S = p", f: v => v, dash: true, labelAt: 90 }, { slot: 1, name: "U = 600 terms", short: "U = 600", f: v => treeS(600, v) }, { slot: 2, name: "U = 6 terms", short: "U = 6", f: v => treeS(6, v) }],
+  tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}`, fmtY: v => num(v, 1), focusAt: 64, labelW: 72,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of PEs",
+  aria: "Line chart: speedup of the parallel sum versus number of PEs for 600 terms and for 6 terms, against the ideal line. The 600-term curve follows the ideal up to about 64 PEs and reaches 109 at 1024; the 6-term curve stops at 3.",
+});
+
+// ---------------- Task 3 and 4: Amdahl's law ----------------
+const T3 = [[0.9, 4], [0.9, 32], [0.95, 32], [0.99, 32]];
+line("t3", {
+  x: [1, 64], y: [0, 40], yTicks: [0, 10, 20, 30, 40], xTicks: [1, 2, 4, 8, 16, 32, 64], xTicksN: [1, 4, 16, 64], yTitle: "speedup S",
+  series: [{ slot: 1, name: "f = 0.90", short: "f = 0.90", f: v => amdahl(0.9, v) }, { slot: 2, name: "f = 0.95", short: "f = 0.95", f: v => amdahl(0.95, v) }, { slot: 3, name: "f = 0.99", short: "f = 0.99", f: v => amdahl(0.99, v) }],
+  tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}`, fmtY: v => num(v, 2), focusAt: 32, labelW: 64,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of PEs",
+  aria: "Line chart of Amdahl's law from 1 to 64 PEs for parallel fractions 0.90, 0.95 and 0.99, with the four asked points marked: 3.08 at 4 PEs for 0.90, and 7.80, 12.55 and 24.43 at 32 PEs.",
+  extra: (g, narrow) => T3.map(([f, p], i) => { const X = g.x(p), Y = g.y(amdahl(f, p)), s = [0.9, 0.95, 0.99].indexOf(f) + 1;
+    return `<circle class="dot ring" style="fill:var(--vz-s${s})" cx="${X}" cy="${Y}" r="5"/>${narrow ? "" : `<text class="note" x="${X + (p === 32 ? 8 : 8)}" y="${Y + 4}">${num(amdahl(f, p), 2)}</text>`}`; }).join(""),
+});
+const effP = (f, p) => amdahl(f, p) / p;
+line("t4", {
+  x: [1, 1024], y: [0, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "efficiency E",
+  series: [{ slot: 1, name: "E for f = 0.998", short: "f = 0.998", f: v => effP(0.998, v) }],
+  tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}`, fmtY: v => pct(v), focusAt: 64, labelW: 72,
+  hitLabel: "Read the efficiency: arrow keys double or halve the number of PEs",
+  aria: "Line chart: parallel efficiency versus number of PEs for a 99.8 percent parallel program. It stays above 90 percent up to 56 PEs, crosses the 90 percent line between 56 and 57, and falls to 33 percent at 1024.",
+  extra: (g, narrow) => `<rect class="band" x="${g.L}" y="${g.y(1)}" width="${g.PW}" height="${g.y(0.9) - g.y(1)}"/><line class="ann dash" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(0.9)}" y2="${g.y(0.9)}"/>${narrow ? "" : `<text class="note" x="${g.L + 4}" y="${g.y(0.9) + 13}">required: E ≥ 90 %</text>`}
+    <circle class="dot ring" style="fill:var(--vz-s1)" cx="${g.x(56)}" cy="${g.y(effP(0.998, 56))}" r="5"/><text class="note" x="${g.x(56) + 8}" y="${g.y(effP(0.998, 56)) - 8}">p = 56: ${pct(effP(0.998, 56))}</text>`,
+});
+
+// ---------------- Task 5: the loop nest ----------------
+// 1000 values of i, 10 of j, one multiplication and one addition each: 20,000 operations in 1,000 independent chains of 20.
+const LN = { p: 100 };
+function loopOut() {
+  const p = LN.p, ops = 20000;
+  let longest, how, gantt = "";
+  if (p <= 1000) { const per = Math.ceil(1000 / p); longest = per * 20; how = `${per} value${per > 1 ? "s" : ""} of i per PE, each a chain of 10 multiplications and 10 additions run one after the other: ${per} × 20 = ${num(longest, 0)} operations.`; }
+  else { const per = Math.min(10, Math.floor(p / 1000)), chunks = Math.ceil(10 / per), rounds = lg2c(chunks + 1);
+    longest = chunks * 2 - 1 + rounds; how = `${per} PEs share one i: each multiplies ${chunks} product${chunks > 1 ? "s" : ""} b[j]·i and adds them locally (${chunks * 2 - 1} step${chunks * 2 - 1 > 1 ? "s" : ""}), then the ${chunks} partial sums and the old a[i] meet in a tree of ⌈log₂ ${chunks + 1}⌉ = ${rounds} rounds: ${longest} operations.`;
+    const cols = longest, rows = Array.from({ length: per }, (_, k) => { const row = Array(cols).fill(""); let t = 0;
+      for (let i = 0; i < chunks; i++) { row[t++] = `<span class="pc s1" title="b[j]·i">×</span>`; if (i) row[t++] = `<span class="pc s2" title="add to the local sum">+</span>`; }
+      for (let r = 1; r <= rounds; r++) { const st = 2 ** r, half = st / 2; const nodes = per + 1;
+        if (k % st === 0 && k + half < nodes) row[chunks * 2 - 1 + r - 1] = `<span class="pc s3" title="tree round ${r}">⊕</span>`; else if (k % st === half) row[chunks * 2 - 1 + r - 1] = `<span class="pc out">→</span>`; }
+      return `<div class="rl">PE ${k + 1}</div>${row.map(x => `<div class="gc">${x}</div>`).join("")}`; }).join("");
+    gantt = `<div class="gantt" style="--cols:${cols}"><div class="rl"></div>${Array.from({ length: cols }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${rows}<div class="rl">a[i]</div>${Array(cols).fill("").map((_, t) => `<div class="gc">${t === chunks * 2 - 1 ? `<span class="pc out">→</span>` : ""}</div>`).join("")}</div><p class="lab-note">One value of i. The old a[i] joins the tree as the ${per + 1}th operand; PE 1 holds the result.</p>`; }
+  const S = ops / longest;
+  return `${gantt}<dl class="ro">
+      <dt>Mapping</dt><dd>${how}</dd>
+      <dt>Longest UE</dt><dd><b>${num(longest, 0)}</b> operations</dd>
+      <dt>Speedup</dt><dd>S = ${num(ops, 0)} / ${num(longest, 0)} = <b>${num(S, 0)}</b> · E = ${pct(S / p)}</dd>
+      <dt>Difficulty</dt><dd>${p <= 1000 ? (p === 1000 ? "None: one i per PE, every chain is independent, perfect speedup." : "None, as long as 1,000 divides evenly: the work is a thousand identical, independent chains.") : "a[i] is updated ten times in a row, so the ten PEs for one i must restructure the additions into a tree (which assumes associativity and changes floating-point rounding) and synchronize three or four times; most PEs idle during the tree, so efficiency falls to " + pct(S / p) + "."}</dd>
+    </dl>`;
+}
+function initLoop(body) {
+  body.innerHTML = `<div class="presets">${[100, 1000, 10000].map(p => `<button class="preset" data-p="${p}">${num(p, 0)} PEs</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = loopOut(); body.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.p === LN.p)); };
+  body.addEventListener("click", ev => { const t = ev.target.closest("[data-p]"); if (!t) return; LN.p = +t.dataset.p; draw(); });
+  draw();
+}
+
+// ---------------- Task 6 and 7: fitting the parallel fraction, overhead ----------------
+const T6 = [450, 227.03, 152.70, 115.54, 93.24, 78.38, 67.76];
+const f6 = (1 - T6[1] / 450) / (1 - 1 / 2); // from the 2-core measurement
+const T6model = p => 450 * ((1 - f6) + f6 / p);
+line("t6", {
+  x: [1, 16], y: [0, 450], yTicks: [0, 100, 200, 300, 400], xTicks: [1, 2, 4, 8, 16], xTicksN: [1, 2, 4, 8, 16], yTitle: "runtime in s",
+  series: [{ slot: 1, name: `Amdahl model, f = ${pct(f6)}`, short: " ", f: T6model }],
+  tipHead: v => `${v} core${v > 1 ? "s" : ""}`, fmtY: v => num(v, 1) + " s", focusAt: 4, labelW: 60,
+  hitLabel: "Read the runtimes: arrow keys double or halve the number of cores",
+  aria: "Line chart: measured runtime for 1 to 7 cores as dots on the fitted Amdahl curve for a 99.1 percent parallel program, extended to 16 cores where it predicts 31.9 seconds.",
+  extra: (g, narrow) => T6.map((t, i) => `<circle class="dot" style="fill:var(--vz-s2)" cx="${g.x(i + 1)}" cy="${g.y(t)}" r="4.5"/>`).join("") +
+    `<circle class="dot ring" style="fill:var(--vz-s1)" cx="${g.x(16)}" cy="${g.y(T6model(16))}" r="5"/>${narrow ? "" : `<text class="note" x="${g.x(16) - 8}" y="${g.y(T6model(16)) - 10}" text-anchor="end">16 cores: ${num(T6model(16), 1)} s</text>`}`,
+});
+const T7 = [450.9, 227.25, 153.30, 116.78, 95.22, 81.15, 71.36], f7 = 0.998;
+const o7 = T7.map((t, i) => t / 450 - ((1 - f7) + f7 / (i + 1)));
+const S7 = p => 1 / ((1 - f7) + f7 / p + 0.002 * p), S7free = p => amdahl(f7, p);
+const best7 = (() => { let b = 1; for (let p = 1; p <= 256; p++) if (S7(p) > S7(b)) b = p; return b; })();
+line("t7", {
+  x: [1, 256], y: [0, 64], yTicks: [0, 16, 32, 48, 64], xTicks: [1, 2, 4, 8, 16, 32, 64, 128, 256], xTicksN: [1, 4, 16, 64, 256], yTitle: "speedup S",
+  series: [{ slot: 1, name: "Amdahl without overhead, f = 0.998", short: "no overhead", f: S7free }, { slot: 2, name: "with o(p) = 0.002 · p", short: "with overhead", f: S7 }],
+  tipHead: v => `p = ${v} PE${v > 1 ? "s" : ""}`, fmtY: v => num(v, 2), focusAt: 22, labelW: 92,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of PEs",
+  aria: "Line chart: speedup versus PEs for a 99.8 percent parallel program without overhead, rising towards 64 at 256 PEs, and with a linear overhead of 0.002 per PE, which peaks at 10.95 for 22 PEs and falls afterwards. The seven measured speedups sit on the overhead curve.",
+  extra: (g, narrow) => T7.map((t, i) => `<circle class="dot" style="fill:var(--vz-s2)" cx="${g.x(i + 1)}" cy="${g.y(450 / t)}" r="4.5"/>`).join("") +
+    `<circle class="dot ring" style="fill:var(--vz-s2)" cx="${g.x(best7)}" cy="${g.y(S7(best7))}" r="5"/><text class="note" x="${g.x(best7) + 8}" y="${g.y(S7(best7)) - 8}">max ${num(S7(best7), 2)} at p = ${best7}</text>`,
+});
+
+// ---------------- Part A: the 2D heat stencil, partitioned into row bands ----------------
+CHARTS.stencil = narrow => {
+  const n = 14, cs = narrow ? 20 : 26, G = 2, L = narrow ? 8 : 70, T = 8, W = L + n * (cs + G) + (narrow ? 8 : 150), H = T + n * (cs + G) + 8, bands = 4, per = (n - 2) / bands;
+  const cell = (i, j) => { const x = L + j * (cs + G), y = T + i * (cs + G), edge = i === 0 || j === 0 || i === n - 1 || j === n - 1;
+    const b = edge ? 0 : Math.floor((i - 1) / per) + 1;
+    return `<rect x="${x}" y="${y}" width="${cs}" height="${cs}" rx="3" class="${edge ? "edge" : `f${b}`}" opacity="${edge ? 1 : (i - 1) % per === 0 || (i - 1) % per === per - 1 ? 0.9 : 0.55}"/>`; };
+  const cells = []; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) cells.push(cell(i, j));
+  const ci = 6, cj = 7, sx = j => L + j * (cs + G) + cs / 2, sy = i => T + i * (cs + G) + cs / 2;
+  const star = [[ci, cj], [ci - 1, cj], [ci + 1, cj], [ci, cj - 1], [ci, cj + 1]].map(([i, j], k) => `<circle cx="${sx(j)}" cy="${sy(i)}" r="${k ? 4 : 5.5}" class="${k ? "sdot" : "sdot c"}"/>`).join("") +
+    `<line class="sl" x1="${sx(cj)}" x2="${sx(cj)}" y1="${sy(ci - 1)}" y2="${sy(ci + 1)}"/><line class="sl" x1="${sx(cj - 1)}" x2="${sx(cj + 1)}" y1="${sy(ci)}" y2="${sy(ci)}"/>`;
+  const labels = narrow ? "" : Array.from({ length: bands }, (_, b) => `<text class="cat" x="${L - 10}" y="${T + (1 + b * per + per / 2) * (cs + G)}" text-anchor="end">PE ${b + 1}</text>`).join("") +
+    `<text class="note" x="${L + n * (cs + G) + 12}" y="${T + 14}">boundary rows and columns:</text><text class="note" x="${L + n * (cs + G) + 12}" y="${T + 28}">fixed at 0, never computed</text>
+     <text class="note" x="${L + n * (cs + G) + 12}" y="${T + 2.5 * (cs + G) + 4}">darker rows: a band's</text><text class="note" x="${L + n * (cs + G) + 12}" y="${T + 2.5 * (cs + G) + 18}">halo, needed by the</text><text class="note" x="${L + n * (cs + G) + 12}" y="${T + 2.5 * (cs + G) + 32}">neighbouring PE each step</text>
+     <text class="note" x="${L + n * (cs + G) + 12}" y="${sy(ci) + 4}">the 5-point stencil</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="A 14 by 14 grid of cells. The outer ring is the fixed boundary. The twelve interior rows are split into four bands of three rows, one per PE; the first and last row of each band are drawn darker because the neighbouring PE needs them every time step. A five-point stencil is drawn on one cell.">${cells.join("")}${star}${labels}</svg>`;
+};
+
+// ---------------- Part B: copy versus pointer swap; Part C: the mean temperature ----------------
+const COPY = [{ k: "copy, 1 thread", k2: "copy ×1", v: 32768, t: "16,384 elements × (1 load + 1 store)", s: "s1" }, { k: "copy, 128 threads", k2: "copy ×128", v: 256, t: "128 elements per thread × 2 operations", s: "s1" }, { k: "pointer swap, 1 thread", k2: "swap ×1", v: 4, t: "2 loads + 2 stores, whatever N", s: "s1" }, { k: "pointer swap, 128 threads", k2: "swap ×128", v: 4, t: "nothing to split: still 4 operations", s: "s1" }];
+CHARTS.copy = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 84 : 170, R = narrow ? 52 : 70, T = 8, RH = 36, H = T + COPY.length * RH + 26, PW = W - L - R;
+  const x = v => L + Math.log10(v) / Math.log10(40000) * PW;
+  const ticks = [1, 10, 100, 1000, 10000].map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("");
+  const rows = COPY.map((d, i) => { const y0 = T + i * RH + 8, bh = 18;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}: ${num(d.v, 0)} operations</b>${d.t}`)}"><rect class="hit" x="0" y="${y0 - 8}" width="${W}" height="${RH}"/>
+      <path class="bar s1" d="${hbar(x(1), x(d.v), y0, bh)}"/><text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${narrow ? d.k2 : d.k}</text><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${num(d.v, 0)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart on a logarithmic axis: operations to move u_new into u. Copying with one thread 32,768, with 128 threads 256, a pointer swap 4 with one thread and still 4 with 128.">${ticks}${rows}</svg>`;
+};
+const MEAN = [{ k: "one thread reduces", k2: "one thread", a: 128, b: 128 }, { k: "binary tree reduces", k2: "binary tree", a: 128, b: 7 }];
+CHARTS.mean = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 80 : 160, R = narrow ? 80 : 110, T = 8, RH = 40, H = T + MEAN.length * RH + 26, PW = W - L - R, max = 280;
+  const x = v => L + v / max * PW;
+  const ticks = [0, 64, 128, 192, 256].map(v => `<line class="${v === 0 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = MEAN.map((d, i) => { const y0 = T + i * RH + 10, bh = 18, tot = d.a + d.b;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}: ${tot} steps</b>${d.a} additions per thread for its 128 values, then ${d.b} for the final reduction<br>S = 16,384 / ${tot} = ${num(16384 / tot, 2)}`)}"><rect class="hit" x="0" y="${y0 - 10}" width="${W}" height="${RH}"/>
+      <path class="bar s1" d="M${x(0)},${y0} H${x(d.a) - 1} V${y0 + bh} H${x(0)} Z"/><path class="bar s2" d="${hbar(x(d.a) + 1, x(tot), y0, bh)}"/>
+      <text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${narrow ? d.k2 : d.k}</text><text class="val" x="${x(tot) + 6}" y="${y0 + 13}">${tot}${narrow ? "" : ` · S = ${fix(16384 / tot)}`}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stacked bar chart: time steps of the parallel mean. With one thread reducing, 128 local additions plus 128 final ones, 256 steps and speedup 64. With a binary tree, 128 plus 7, 135 steps and speedup 121.36.">${ticks}${rows}</svg>`;
+};
+
+// ---------------- The write-up ----------------
+function exercise2() {
+  const S3 = T3.map(([f, p]) => amdahl(f, p));
+  const pmax = Math.floor((1 / 0.9 - 0.998) / 0.002);
+  return `${head(e)}
+    <p class="lead">The first online exercise turns <a href="high-performance-computing/lecture.html?n=1">lecture 1</a> into numbers: speedup S<sub>p</sub> = T₁ / T<sub>p</sub> and efficiency E<sub>p</sub> = S<sub>p</sub> / p for a parallel sum, for Amdahl's law with different parallel fractions and PE counts, for a loop nest, for measured runtimes, and for a synchronization-overhead model, then PCAM applied to a 2D heat solver. Below, every task is restated in our own words with a worked answer, the reasoning, and a chart or explorer to play with. Numbers are kept unrounded until the final value, as the sheet asks.</p>
+    <div class="box status"><p style="margin:0"><b>Your OPAL attempt:</b> one attempt started and paused (OPAL offers “resume test”); nothing counts until it is finished. Attempts are unlimited and the tutors can see them. Finish it before your group meets on <b>${fmt(e.date)}, ${exe.start}</b> in ${esc(exe.room)}; the session discusses the solutions.</p></div>
+    <div class="why"><div class="kicker">How the sheet counts · a convention to settle in the session</div>
+      <p>“One addition = one task = one time step”, loop headers are free, and the serial reference is the loop as written: <code>y = 0; for i: y = y + (aᵢ + bᵢ)</code> costs two additions per term, so a sum of U terms costs 2U. In the parallel version only additions that actually happen are counted: a PE with n terms needs n pair sums and n − 1 accumulations, and p partial sums are reduced in ⌈log₂ p⌉ rounds. The lecture's dot-product slide counts the same way (it starts its sum at 0). Where another reading changes the answer, it is noted; the online test lets you retry, and the session will say which count the chair uses.</p></div>
+
+    ${task("1", 4, "Parallelize a six-term sum", `
+      <p>The sum y = Σ<sub>i=1…6</sub> (aᵢ + bᵢ) on six PEs. Each pair aᵢ + bᵢ is independent; partial sums may be combined two at a time, a <b>binary-tree reduction</b>. Then the same with 600 terms, and the general formula for unlimited PEs.</p>
+      ${lab("tree", "the sum, PE by PE and step by step")}
+      ${ans([["S = 3", "six terms, six PEs: T₁ = 12, T₆ = 4"], ["E = 50 %", "3 / 6"], ["S = 5.94", "600 terms on six PEs: 1200 / 202"], ["E = 99.0 %", "5.94 / 6"]])}
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p><b>Six terms.</b> Serially the loop does 6 pair additions and 6 accumulations: T₁ = 12. In parallel, step 1 computes all six pairs at once; the six partial sums then need ⌈log₂ 6⌉ = 3 rounds (6 → 3 → 2 → 1, one odd sum carried in round two). T₆ = 4, S = 12 / 4 = 3, E = 3 / 6 = 50 %. Half of the PE-steps are idle: in the tree rounds only 3, 1 and 1 PEs work.</p>
+        <p><b>600 terms.</b> Each PE owns 100 terms: 100 pair sums and 99 accumulations, 199 steps, then the same 3 tree rounds: T₆ = 202. S = 1200 / 202 = 5.94, E = 99.0 %. The tree is a fixed cost that disappears next to the local work, which is the whole point of agglomeration: more work per PE, less relative synchronization.</p>
+        <p class="muted">If you do not count the loop's first addition into y = 0, T₁ is 11 and 1199 instead: S = 2.75 and E = 45.8 % for six terms, S = 5.94 for 600. If you also count the local accumulation as a loop with its own 0 + … step, T₆ = 203 and S = 5.91. Keep the alternatives in mind if the auto-check disagrees.</p></div>
+      <h3>1.2 Unlimited PEs</h3>
+      <p>With as many PEs as terms, all U pairs take one step and the reduction tree ⌈log₂ U⌉ rounds, so the number of time steps is</p>
+      <div class="formula">T<sub>∞</sub>(U) = 1 + ⌈log₂ U⌉ &nbsp;&nbsp;&nbsp;&nbsp; LaTeX: <code>1 + \\lceil \\log_2 U \\rceil</code></div>
+      <p>For U = 6 that is 4 (the first answer), for U = 600 it is 11, for a million terms 21. More than U PEs cannot help, and the speedup 2U / (1 + ⌈log₂ U⌉) grows only like U / log U: the sum is a reduction, and reductions have a logarithmic critical path. The chart shows what that means for a fixed problem as p grows.</p>
+      ${chart("treeS", leg([["g", "ideal S = p", "ln"], [1, "U = 600 terms", "ln"], [2, "U = 6 terms", "ln"]]))}
+        <figcaption>Speedup of the parallel sum for 600 and for 6 terms, PEs on a log axis. The 600-term sum tracks the ideal line as long as each PE keeps dozens of terms, then the tree rounds dominate: 1024 PEs give 109. Six terms never exceed 3. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+      </figure>
+      <details class="tbl"><summary>Table view</summary><table><tr><th>p</th><th>T<sub>p</sub>, U = 600</th><th>S, U = 600</th><th>S, U = 6</th></tr>${[1, 2, 4, 6, 8, 16, 32, 64, 128, 256, 600, 1024].map(p => `<tr><td class="n">${p}</td><td class="n">${treeSim(600, p).Tp}</td><td class="n">${num(treeS(600, p), 2)}</td><td class="n">${num(treeS(6, p), 2)}</td></tr>`).join("")}</table></details>`)}
+
+    ${task("2", 0, "Amdahl's law, in your own words", `
+      <p>Two free-text answers: describe the law to a fellow student, and say why it matters for parallel computing. The sheet asks for your own words, so write them; this is a model answer to check against.</p>
+      <div class="ex"><div class="kicker">a) The law</div>
+        <p>Take a program that runs in time T₁ on one processor and split its work into a part that can be spread over p processors (a fraction f of T₁) and a part that cannot (1 − f): setup, I/O, anything inherently sequential. Only the first part gets faster, so T<sub>p</sub> = (1 − f) · T₁ + f · T₁ / p and the speedup is S<sub>p</sub> = 1 / ((1 − f) + f / p). As p grows, f / p vanishes and S approaches 1 / (1 − f): the serial fraction alone caps the speedup, no matter how many processors you add. The problem size is fixed; the law describes solving the same problem faster.</p></div>
+      <div class="ex"><div class="kicker">b) Why it matters</div>
+        <p>It sets expectations and priorities. A code with 5 % serial work can never run more than 20× faster, so buying 1,000 cores for it wastes 980; the useful first step is to shrink the serial part, not to add processors. It explains why efficiency falls as p grows, which is what computing centres bill and what task 4 asks about. And it tells you what to measure: the parallel fraction f, which task 6 fits from runtimes. Its blind spots matter too: it ignores synchronization overhead (task 7), and it is pessimistic when a bigger machine is used for a bigger problem, where Gustafson's fixed-time view applies instead.</p></div>`)}
+
+    ${task("3", 8, "Varying the parallel fraction and the processor count", `
+      <p>Speedup and efficiency for f = 90 % on 4 processors, then for 90 %, 95 % and 99 % on 32 processors, with a fixed problem size. Amdahl's law in four evaluations: S = 1 / ((1 − f) + f / p), E = S / p.</p>
+      ${chart("t3", leg([[1, "f = 0.90", "ln"], [2, "f = 0.95", "ln"], [3, "f = 0.99", "ln"]]))}
+        <figcaption>Amdahl's law up to 64 PEs, with the four asked points marked. Eight times the processors (4 → 32) at f = 0.90 give 2.5× more speedup; moving from 90 % to 99 % parallel at 32 processors gives 3.1×. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+      </figure>
+      ${ans(T3.map(([f, p], i) => [`S = ${fix(S3[i])}`, `f = ${f}, p = ${p} · E = ${pct2(S3[i] / p)}`]))}
+      <details class="tbl"><summary>Table view and unrounded values</summary><table><tr><th>f</th><th>p</th><th>1 − f + f / p</th><th>S</th><th>E</th></tr>${T3.map(([f, p], i) => `<tr><td class="n">${f}</td><td class="n">${p}</td><td class="n">${num((1 - f) + f / p, 6)}</td><td class="n">${num(S3[i], 4)}</td><td class="n">${pct(S3[i] / p)}</td></tr>`).join("")}</table></details>
+      <div class="ex"><div class="kicker">Worked answer, first row</div>
+        <p>f = 0.9, p = 4: the denominator is 0.1 + 0.9 / 4 = 0.1 + 0.225 = 0.325, so S = 1 / 0.325 = 3.0769 and E = 3.0769 / 4 = 76.92 %. On 32 processors the serial 0.1 dominates the 0.9 / 32 = 0.028 of parallel time: S = 7.80, E = 24.39 %. Three quarters of the machine idle.</p>
+        <p><b>Reading the comparison.</b> At p = 32 the three fractions give 7.8, 12.5 and 24.4: halving the serial share (10 % → 5 %) almost doubles the speedup, and halving it again (5 % → 1 %) doubles it once more, because the serial time 1 − f is most of the denominator. Adding processors to a 90 % code, by contrast, runs into the ceiling of 10 quickly: 4 → 32 processors only moves S from 3.1 to 7.8. Serial fraction first, processors second.</p></div>`)}
+
+    ${task("4", 4, "The largest processor count that stays 90 % efficient", `
+      <p>The computing centre requires E ≥ 90 %. Measurements put the parallel fraction at f = 99.8 %. How many processors may you use at most?</p>
+      <div class="formula">E<sub>p</sub> = S<sub>p</sub> / p = 1 / (p · (1 − f) + f) ≥ 0.9 &nbsp;⇔&nbsp; p ≤ (1 / 0.9 − f) / (1 − f) = (1.1111 − 0.998) / 0.002 = 56.56</div>
+      ${ans([[`p = ${pmax}`, `largest integer with E ≥ 90 %`], [`E = ${pct2(effP(0.998, 56))}`, "at 56 processors"], [`E = ${pct2(effP(0.998, 57))}`, "at 57: already below the bar"]])}
+      ${chart("t4", "")}
+        <figcaption>Efficiency of a 99.8 % parallel program against the number of PEs, with the 90 % requirement as a band. The curve crosses the line between 56 and 57 PEs. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+      </figure>
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p>Multiply Amdahl's denominator by p: E = 1 / (p (1 − f) + f). The requirement E ≥ 0.9 means p (1 − f) + f ≤ 1 / 0.9 = 1.1111…, so p ≤ (1.1111… − 0.998) / 0.002 = 0.11311… / 0.002 = 56.56. The largest whole number is 56: there E = 1 / (56 · 0.002 + 0.998) = 1 / 1.110 = 90.09 %; at 57 it is 1 / 1.112 = 89.93 %. Even a 99.8 % parallel code, which sounds almost perfect, may only use 56 processors under this rule, because the efficiency loss grows linearly with p: every extra PE adds another 0.002 of serial time, measured in PE-time.</p>
+        <p class="muted">Pitfall: rounding f or 1 / 0.9 first moves 56.56 around; with 1.11 instead of 1.1111… you get 56.0 and might answer 55. The sheet's warning against rounded interim values is aimed at exactly this.</p></div>`)}
+
+    ${task("5", 8, "Parallelize a loop nest", `
+      <p>A nest over i = 1000 … 1999 and j = 0 … 9 that updates a[i] = a[i] + b[j] · i, one time step per multiplication and per addition, free loop headers. How many operations in total, how could 100, 1,000 and 10,000 PEs share them, how long is the longest unit of execution, and what speedup follows?</p>
+      <div class="formula">1,000 values of i × 10 values of j × (1 multiplication + 1 addition) = <b>20,000 operations</b></div>
+      <p><b>Tasks.</b> The natural task is one inner iteration: multiply b[j] by i, add the product to a[i]. The ten products for one i are independent of each other, but the ten additions form a chain, because each adds to the same a[i]. Different i never touch the same data, so the thousand chains are independent: data parallelism over i, with a reduction inside each chain.</p>
+      ${lab("loop", "the same nest on 100, 1,000 and 10,000 PEs")}
+      ${ans([["200 ops · S = 100", "100 PEs: 10 chains each"], ["20 ops · S = 1,000", "1,000 PEs: one chain each"], ["5 ops · S = 4,000", "10,000 PEs: 10 PEs per chain, tree"]])}
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p><b>100 PEs.</b> Give each PE 10 values of i. It runs 10 chains of 20 operations one after the other: 200 operations, S = 20,000 / 200 = 100, perfect efficiency, no synchronization at all.</p>
+        <p><b>1,000 PEs.</b> One i per PE, 20 operations, S = 1,000. Still perfect, still no communication.</p>
+        <p><b>10,000 PEs.</b> Now ten PEs must share one i. Each computes one product in step 1. The ten products and the old a[i] are eleven values to add; sequentially that is ten steps, so the only way to use the ten PEs is to add them as a tree: 11 → 6 → 3 → 2 → 1, four rounds. The longest UE does 1 + 4 = 5 operations, S = 20,000 / 5 = 4,000, E = 40 %. Difficulties: the additions must be reassociated (fine for integers, a different rounding for floating point), the ten PEs synchronize after every round, and from round two on most of them idle. If instead you keep the ten products in a tree and add the old a[i] only at the end, it is 1 + 4 + 1 = 6 operations and S = 3,333; the session will settle which the chair expects.</p></div>`)}
+
+    ${task("6", 4, "Find the parallel fraction from measurements", `
+      <p>A program measured on an 8-core desktop with 1 to 7 cores: 450 s, 227.03 s, 152.70 s, 115.54 s, 93.24 s, 78.38 s, 67.76 s. Which parallel fraction explains the numbers, and how long will 16 cores take?</p>
+      ${chart("t6", leg([[1, `Amdahl model, f = ${pct(f6)}`, "ln"], [2, "measured runtime"]]))}
+        <figcaption>The seven measured runtimes (dots) on the Amdahl curve fitted to them, f = ${pct(f6)}, extended to 16 cores. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+      </figure>
+      ${ans([[`f = ${fix(f6 * 100, 1)} %`, "parallel fraction"], [`${fix(T6model(16), 1)} s`, "projected on 16 cores"]])}
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p>Solve Amdahl's law for f. With T<sub>p</sub> / T₁ = (1 − f) + f / p you get f = (1 − T<sub>p</sub> / T₁) / (1 − 1 / p). Take p = 2: f = (1 − 227.03 / 450) / (1 − 0.5) = 2 · (1 − 0.50451) = 0.99098, so <b>99.1 %</b>. Every other core count gives the same value to four digits (table below), which is the sign that the data were generated from the law.</p>
+        <p>Projection with the unrounded f: T<sub>16</sub> = 450 · (0.00902 + 0.99098 / 16) = 450 · 0.070956 = 31.93 s, so <b>31.9 s</b>. (With f rounded to 0.991 it is 31.92 s: same answer, but keep the unrounded one.) Speedup 14.1 on 16 cores, efficiency 88 %; the serial 0.9 % already costs 4 s of the 32.</p></div>
+      <details class="tbl"><summary>f from each core count</summary><table><tr><th>p</th><th>T<sub>p</sub></th><th>T<sub>p</sub> / T₁</th><th>f</th></tr>${T6.slice(1).map((t, i) => { const p = i + 2, f = (1 - t / 450) / (1 - 1 / p); return `<tr><td class="n">${p}</td><td class="n">${num(t, 2)} s</td><td class="n">${num(t / 450, 5)}</td><td class="n">${pct(f)}</td></tr>`; }).join("")}</table></details>`)}
+
+    ${task("7", 4, "Synchronization overhead", `
+      <p>Amdahl's law puts all overhead into the serial fraction. Now the overhead grows with p: an overhead function o(p), a fraction of T₁, is added to the denominator, S<sub>p</sub> = 1 / ((1 − f) + f / p + o(p)). The same program is measured again with overhead: 450.9 s, 227.25 s, 153.30 s, 116.78 s, 95.22 s, 81.15 s, 71.36 s; without overhead it takes 450 s serially and is f = 99.8 % parallel. Find o(p), the processor count with the highest speedup against 450 s, and the efficiency there.</p>
+      <details class="tbl" open><summary>Reading o(p) off the measurements</summary><table><tr><th>p</th><th>T<sub>p</sub> / 450</th><th>(1 − f) + f / p</th><th>o(p)</th></tr>${T7.map((t, i) => `<tr><td class="n">${i + 1}</td><td class="n">${num(t / 450, 5)}</td><td class="n">${num((1 - f7) + f7 / (i + 1), 5)}</td><td class="n">${num(o7[i], 3)}</td></tr>`).join("")}</table></details>
+      ${ans([["o(p) = 0.002 · p", "linear in p (0.2 % of T₁ per PE)"], [`p = ${best7}`, "highest speedup"], [`S = ${fix(S7(best7))}`, "at 22 PEs"], [`E = ${pct2(S7(best7) / best7)}`, "efficiency there"]])}
+      ${chart("t7", leg([[1, "Amdahl without overhead, f = 0.998", "ln"], [2, "with o(p) = 0.002 · p", "ln"], [2, "measured, 450 / Tp"]]))}
+        <figcaption>Speedup against the 450 s serial run, with and without the overhead. The measured points sit on the overhead curve, which peaks at p = ${best7} and then falls: beyond it, every PE costs more synchronization than it saves. Move the pointer over the chart, or focus it and use the arrow keys.</figcaption>
+      </figure>
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p><b>o(p).</b> Divide each runtime by 450 and subtract Amdahl's share (1 − f) + f / p: the remainder is 0.002, 0.004, 0.006, … 0.014 for p = 1 … 7, so o(p) = 0.002 · p. (The one-core run already pays 0.9 s of overhead.)</p>
+        <p><b>Best p.</b> Minimize the denominator D(p) = 0.002 + 0.998 / p + 0.002 p. Its derivative −0.998 / p² + 0.002 vanishes at p = √(0.998 / 0.002) = √499 = 22.34; check the neighbours: D(22) = 0.002 + 0.045364 + 0.044 = 0.091364, D(23) = 0.091391, so <b>p = 22</b> with S = 1 / 0.091364 = 10.95 and T<sub>22</sub> = 41.1 s. Without overhead the same code would reach 20.6 at 22 PEs and keep climbing.</p>
+        <p><b>Efficiency.</b> E = 10.945 / 22 = <b>49.75 %</b>: at the speedup optimum half of the machine is already wasted, which is why centres ask for efficiency bounds (task 4) rather than for maximal speedup.</p></div>`)}
+
+    <h2>The 2D heat solver</h2>
+    <p>The last three parts share one program: an explicit finite-difference solver (forward in time, centred in space) for heat spreading over an N × N grid. Each time step replaces every interior temperature by itself plus a constant times the sum of its four neighbours minus four times itself, the <b>five-point stencil</b>; the edges stay at 0, and the new grid u_new is copied back into u before the next step. The sheet's first version holds two 1000 × 1000 arrays on the stack and copies them element by element; the second allocates them on the heap and swaps two pointers instead.</p>
+
+    ${task("A", 0, "PCAM on the heat solver", `
+      <p>Four questions to discuss: which tasks, how they synchronize, what that means for agglomeration, and whether load balance is a problem. (The textbox only asks whether you will do that.)</p>
+      ${chart("stencil", "")}
+        <figcaption>A 14 × 14 grid cut into four row bands of three rows, one per PE. Every interior cell needs its four neighbours from the previous time step; the darker rows at a band's edge are what the neighbouring PE must receive before it can compute its own edge row.</figcaption>
+      </figure>
+      <div class="ex"><div class="kicker">Worked discussion</div>
+        <p><b>Partition.</b> The finest task is one cell update per time step: (N − 2)² tasks per step, all identical, all independent within a step. Data parallelism, like the weather grid in lecture 1.</p>
+        <p><b>Communication.</b> A cell update reads the four neighbours' values from the previous step and writes one new value. So every task depends on five tasks of the previous step and feeds five of the next: no dependencies inside a step, a complete dependency wall between steps. The synchronization is a barrier after each step (and after the copy-back) plus the exchange of border values between neighbouring tasks.</p>
+        <p><b>Agglomeration.</b> Single cells would communicate four values for one update. Merging a block of rows (or a 2D block) per PE keeps the communication to the block's border, the halo: a band of r rows exchanges 2 rows for r · N updates, so the ratio of computation to communication grows with r. One band per PE, as in the picture, turns the exchange into one message to each neighbour per step. Within a PE the stencil runs as plain loops.</p>
+        <p><b>Load balance.</b> Every interior cell costs the same, so equal bands are balanced; the only imbalance is the boundary (the edge rows are not computed, and the top and bottom PEs have one halo neighbour instead of two). On 128 cores and a 128 × 128 grid that is one row per core: 126 cores computing, 2 holding fixed edges. Static partitioning is enough; nothing moves between PEs during the run.</p></div>`)}
+
+    ${task("B", 2, "Parallelize the copy-back", `
+      <p>128 × 128 field, 128 cores, no synchronization cost, equal shares, no hardware limit on throughput. Copying an element is one load and one store. What speedup does parallelizing the copy give, and what does double buffering give, where two pointers are swapped instead (two loads, two stores)?</p>
+      ${chart("copy", "")}
+        <figcaption>Operations for moving u_new into u, on a log axis. Hover or focus a bar for the breakdown.</figcaption>
+      </figure>
+      ${ans([["S = 128", "copy: 32,768 / 256"], ["S = 1", "pointer swap: 4 operations, serial or parallel"]])}
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p>The copy moves 16,384 elements with 2 operations each: 32,768 operations serially. 128 threads take 128 elements each, 256 operations: S = 32,768 / 256 = <b>128</b>, perfect, because there is nothing to synchronize.</p>
+        <p>Double buffering does not copy at all. Swapping two pointers is 4 operations, and it cannot be split across threads, so parallelizing it gives <b>S = 1</b>. The speedup <i>from parallelization</i> is 1, but the swap is 8,192× faster than the serial copy and still 64× faster than the 128-thread copy. The lesson, in the chair's words on the sheet: changing the algorithm beats parallelizing a bad one. Real codes also save the memory bandwidth, which the “no hardware limit” assumption hides.</p></div>`)}
+
+    ${task("C", 2, "Speedup of the mean temperature", `
+      <p>A check that energy is conserved: sum all u[x][y] and divide by N². Same assumptions as in B, the division is free, and in the final phase one thread adds up the 128 local sums; then the same with a binary-tree reduction. Two decimals.</p>
+      ${chart("mean", leg([[1, "local sum of 128 values per thread"], [2, "final reduction"]]))}
+        <figcaption>Time steps of the two parallel versions of the sum of 16,384 values on 128 threads. The serial version needs 16,384 additions. Hover or focus a bar.</figcaption>
+      </figure>
+      ${ans([["S = 64.00", "one thread reduces: 16,384 / (128 + 128)"], ["S = 121.36", "binary tree: 16,384 / (128 + 7)"]])}
+      <div class="ex"><div class="kicker">Worked answer</div>
+        <p>Serially the sum loop does 16,384 additions. Each of the 128 threads adds its 128 values in 128 steps (the loop form, starting from 0). If one thread then adds the 128 local sums one after the other, that is another 128 steps: T = 256 and S = 16,384 / 256 = <b>64.00</b>, half of the 128 you paid for, because the whole machine waits while one thread reduces.</p>
+        <p>A binary tree reduces 128 partial sums in log₂ 128 = 7 rounds: T = 135, S = 16,384 / 135 = <b>121.36</b>, E = 94.8 %. The 7 is task 1.2 again, and this is exactly what <code>reduction(+:sum)</code> in OpenMP or <code>MPI_Reduce</code> do for you in the later lectures.</p>
+        <p class="muted">Alternative counts: without the 0 + … additions, 16,383 / (127 + 127) = 64.50 and 16,383 / (127 + 7) = 122.26; with the reducing thread starting from its own sum, 16,384 / 255 = 64.25. Try the loop-form answers first.</p></div>`)}
+
+    <h2>Before Wednesday</h2>
+    <ul>
+      <li><b>Finish the OPAL attempt</b> with the values above, unrounded until the last step; the free-text parts (1.2, 2, A) are read in the session, not auto-checked.</li>
+      <li><b>Reread</b> the performance-metrics section of <a href="high-performance-computing/lecture.html?n=1">lecture 1</a> (Amdahl, overhead, Gustafson) and its PCAM explorer; tasks 3, 4, 6, 7 and A are those slides as arithmetic.</li>
+      <li><b>Ask in the session</b> which counting convention the chair uses for sums (task 1 and C) and whether a[i] joins the tree in task 5, if the auto-check disagreed with you.</li>
+      <li><b>Context / not on the sheet.</b> Speedup, efficiency and Amdahl calculations like tasks 3, 4 and 6 are standard written-exam material for this kind of course (OPAL has a folder of previous exam questions; it is not read here), so being able to do them without a calculator helping is worth the practice: the 1 / (1 − f) ceiling, E = 1 / (p (1 − f) + f), and the derivative trick of task 7.</li>
+    </ul>
+    <p class="muted">Next: lecture 2, Batch Systems, follows this session in the same room at ${lec.start}. The next online exercise is expected in OPAL about a week before the <a href="high-performance-computing/exercise.html?n=3">4 Nov session</a>. The sheet itself may not be republished; the tasks above are restated in our own words.</p>`;
+}
+
+function placeholder() {
+  const d = daysUntil(e.date), prev = c.lectures.find(x => x.n === e.lecture);
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">Not published yet</h2>
+      <p class="muted">This exercise session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(e.blurb)}${prev ? ` <a href="high-performance-computing/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it will draw on.` : ""}<br>The write-up appears here once the online exercise is in OPAL.</p>
+    </div>`;
+}
+const WRITEUPS = { 2: exercise2 };
+const LABS = { tree: initTree, loop: initLoop };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
+if (!e) {
+  page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(q)}.</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · High-Performance Computing`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>
