@@ -2356,7 +2356,311 @@ window.CMS = {
     "who": "Hon.-Prof. Dr. Jens Lehmann",
     "q": "Conversational Artificial Intelligence"
    },
-   "note": "Seminar “Conversational AI” (Prof. Jens Lehmann, Prof. Sahar Vahdati, Charvi Jain), Thursdays 11:10–12:40 in APB/E006/U, but only on some Thursdays (tentative timeline from the slides of 15 Oct): kick-off on 15 Oct; no seminar from 22 Oct to 26 Nov; intermediate presentations of all projects on 3 and 10 Dec (about 5 minutes each, 10 with Q&A, to say what you'll cover and get feedback); no seminar on 17 Dec; final presentations on 7, 14, 21, 28 Jan and 4 Feb, which may change with the number of talks. Your topic: Topic 1, Foundational Model Architectures. CMS students give a graded 30-minute talk (20–25 minutes plus Q&A); participation in the sessions counts too. The exact dates are in the OPAL course calendar."
+   "note": "Seminar “Conversational AI” (Prof. Jens Lehmann, Prof. Sahar Vahdati, Charvi Jain), Thursdays 11:10–12:40 in APB/E006/U, but only on some Thursdays (tentative timeline from the slides of 15 Oct): kick-off on 15 Oct; no seminar from 22 Oct to 26 Nov; intermediate presentations of all projects on 3 and 10 Dec (about 5 minutes each, 10 with Q&A, to say what you'll cover and get feedback); no seminar on 17 Dec; final presentations on 7, 14, 21, 28 Jan and 4 Feb, which may change with the number of talks. Your topic: Topic 1, Foundational Model Architectures. CMS students give a graded 30-minute talk (20–25 minutes plus Q&A); participation in the sessions counts too. The exact dates are in the OPAL course calendar.",
+   "course": {
+    "page": "conversational-ai.html",
+    "room": "APB/E006/U (Thu 11:10–12:40, 3rd DS)",
+    "keyDates": [
+     {
+      "date": "2026-10-15",
+      "label": "Kick-off (the only meeting before December)",
+      "kind": "kick"
+     },
+     {
+      "date": "2026-10-16",
+      "label": "Topic selection opened in OPAL, 10:00",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-12-03",
+      "label": "Intermediate presentations I",
+      "kind": "mid"
+     },
+     {
+      "date": "2026-12-10",
+      "label": "Intermediate presentations II",
+      "kind": "mid"
+     },
+     {
+      "date": "2026-12-20",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-01-07",
+      "label": "Final presentations start",
+      "kind": "final"
+     },
+     {
+      "date": "2027-02-04",
+      "label": "Last final-presentation slot",
+      "kind": "final"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-TRK-CAI (CMS, Applied AI track)",
+      "how": "Graded 30-minute final presentation: 20–25 minutes talk plus questions. One ungraded intermediate presentation (about 5 minutes, 10 with Q&A) in December. Participation and activity in the sessions count as one of the evaluation criteria.",
+      "selma": "register for the module exam; period not announced yet"
+     },
+     {
+      "variant": "INF-PM-FOR (computer-science research module)",
+      "how": "15-minute oral exam without a grade",
+      "selma": "not Bela’s variant"
+     }
+    ],
+    "selmaNote": "exam registration still to do",
+    "opalNote": "admitted from the waiting list on 20 Oct",
+    "topicNote": "chosen on 20 Oct",
+    "format": "2 SWS seminar, 5 LP, in English. No lectures: one kick-off meeting, then each student works through the papers of one topic on their own, gives a 5-minute intermediate presentation in December and a graded 30-minute final talk in January or February. Only eight Thursdays are used; the dates are in the OPAL course calendar.",
+    "contact": "Charvi Jain (SECAI, TU Dresden) runs the seminar for Hon.-Prof. Dr. Jens Lehmann; Prof. Sahar Vahdati (Leibniz University Hannover) co-teaches. The kick-off slides invite master students interested in conversational AI, reasoning or LLMs to send a CV and research interests to the seminar organiser (address on the last slide) for theses, research projects and student-assistant roles",
+    "coursePage": "https://jens-lehmann.org/seminars-and-teaching/courses-at-tu-dresden/seminar-conversational-ai/",
+    "materialsNote": "OPAL has the kick-off slides (47 pages), the course calendar with the exact dates, the topic selection and the forum. The papers of each topic are public (arXiv, ACL Anthology, OpenReview). The slides recommend the book “Conversational AI” by Andrew Freed (Manning), available online through SLUB, for anyone who wants to build an agent.",
+    "topic": {
+     "n": 1,
+     "title": "Foundational Model Architectures",
+     "summary": "How a conversational model is built inside: how it represents context, mixes information across positions and generates the reply. The topic spans dense attention (the Transformer), sparse mixture-of-experts layers and state-space models.",
+     "refs": [
+      {
+       "a": "Vaswani et al.",
+       "y": 2017,
+       "t": "Attention Is All You Need",
+       "v": "NeurIPS 2017",
+       "note": "the Transformer",
+       "url": "https://arxiv.org/abs/1706.03762",
+       "family": "dense"
+      },
+      {
+       "a": "Fedus, Zoph & Shazeer",
+       "y": 2021,
+       "t": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
+       "v": "JMLR 2022 (arXiv 2021)",
+       "note": "mixture-of-experts routing",
+       "url": "https://arxiv.org/abs/2101.03961",
+       "family": "moe"
+      },
+      {
+       "a": "Gu & Dao",
+       "y": 2023,
+       "t": "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+       "v": "COLM 2024 (arXiv 2023)",
+       "note": "selective state-space model",
+       "url": "https://arxiv.org/abs/2312.00752",
+       "family": "ssm"
+      }
+     ],
+     "current": [
+      {
+       "a": "DeepSeek-AI",
+       "y": 2024,
+       "t": "DeepSeek-V3 Technical Report",
+       "note": "671 B-parameter MoE, 37 B active, multi-head latent attention",
+       "url": "https://arxiv.org/abs/2412.19437",
+       "family": "moe",
+       "v": "arXiv, Dec 2024"
+      },
+      {
+       "a": "Google DeepMind",
+       "y": 2025,
+       "t": "Gemma 3 Technical Report",
+       "note": "dense open models with local/global attention layers",
+       "url": "https://arxiv.org/abs/2503.19786",
+       "family": "dense",
+       "v": "arXiv, Mar 2025"
+      },
+      {
+       "a": "Yang et al.",
+       "y": 2025,
+       "t": "Qwen3 Technical Report",
+       "note": "dense and MoE models, thinking / non-thinking modes",
+       "url": "https://arxiv.org/abs/2505.09388",
+       "family": "moe",
+       "v": "arXiv, May 2025"
+      },
+      {
+       "a": "Lahoti et al.",
+       "y": 2026,
+       "t": "Mamba-3: Improved Sequence Modeling using State Space Principles",
+       "v": "ICLR 2026",
+       "note": "the latest state-space design",
+       "url": "https://arxiv.org/abs/2603.15569",
+       "family": "ssm"
+      }
+     ],
+     "decision": "Open: talk about one paper in depth or compare several of the topic (the slides ask for a conscious decision). Leaning: one architecture family per section with the Transformer as the common baseline."
+    },
+    "schedule": {
+     "src": "tentative timeline from the kick-off slides of 15 Oct; the exact dates are in the OPAL course calendar, and the final-presentation split changes with the number of talks",
+     "rows": [
+      [
+       "2026-10-15",
+       "Kick-off: organisation, introduction to conversational AI, topic catalogue",
+       "kick"
+      ],
+      [
+       "2026-10-16",
+       "Topic selection opens in OPAL at 10:00 (first come, first served)",
+       "deadline"
+      ],
+      [
+       "2026-10-22",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-10-29",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-11-05",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-11-12",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-11-19",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-11-26",
+       "No seminar: read your papers and prepare the intermediate presentation",
+       "off"
+      ],
+      [
+       "2026-12-03",
+       "Intermediate presentations I (5 minutes each, 10 with Q&A)",
+       "mid"
+      ],
+      [
+       "2026-12-10",
+       "Intermediate presentations II",
+       "mid"
+      ],
+      [
+       "2026-12-17",
+       "No seminar",
+       "off"
+      ],
+      [
+       "2026-12-24",
+       "No seminar (Christmas break until 3 Jan)",
+       "off"
+      ],
+      [
+       "2027-01-07",
+       "Final presentations I (30-minute slots; split may change)",
+       "final"
+      ],
+      [
+       "2027-01-14",
+       "Final presentations II (30-minute slots; split may change)",
+       "final"
+      ],
+      [
+       "2027-01-21",
+       "Final presentations III (30-minute slots; split may change)",
+       "final"
+      ],
+      [
+       "2027-01-28",
+       "Final presentations IV (30-minute slots; split may change)",
+       "final"
+      ],
+      [
+       "2027-02-04",
+       "Final presentations V (30-minute slots; split may change)",
+       "final"
+      ]
+     ]
+    },
+    "meetings": [
+     {
+      "n": 1,
+      "date": "2026-10-15",
+      "title": "Kick-off: rules of the seminar, a first look at conversational AI, the topics",
+      "icon": "💬",
+      "kind": "kick",
+      "covered": true,
+      "blurb": "Who teaches, the timeline, what a graded 30-minute talk must contain, the evaluation criteria and the dos and don'ts; then a short tour of conversational AI (history, components, knowledge graphs, use cases) and the catalogue of topics.",
+      "page": true
+     },
+     {
+      "n": 2,
+      "date": "2026-12-03",
+      "title": "Intermediate presentations I",
+      "icon": "🗣️",
+      "kind": "mid",
+      "covered": false,
+      "blurb": "Everyone says in about 5 minutes (10 with questions) what their talk will cover and gets feedback from the lecturers and the group."
+     },
+     {
+      "n": 3,
+      "date": "2026-12-10",
+      "title": "Intermediate presentations II",
+      "icon": "🗣️",
+      "kind": "mid",
+      "covered": false,
+      "blurb": "Second round of the 5-minute intermediate presentations; which round you are in is announced in OPAL."
+     },
+     {
+      "n": 4,
+      "date": "2027-01-07",
+      "title": "Final presentations I",
+      "icon": "🎓",
+      "kind": "final",
+      "covered": false,
+      "blurb": "First final-talk Thursday, straight after the Christmas break: up to three graded 30-minute talks (20–25 minutes plus questions)."
+     },
+     {
+      "n": 5,
+      "date": "2027-01-14",
+      "title": "Final presentations II",
+      "icon": "🎓",
+      "kind": "final",
+      "covered": false,
+      "blurb": "Second final-talk Thursday: up to three graded 30-minute talks. Attending the others' talks counts towards the participation criterion."
+     },
+     {
+      "n": 6,
+      "date": "2027-01-21",
+      "title": "Final presentations III",
+      "icon": "🎓",
+      "kind": "final",
+      "covered": false,
+      "blurb": "Third final-talk Thursday: up to three graded 30-minute talks. The split over the five Thursdays follows the final number of talks and may still move."
+     },
+     {
+      "n": 7,
+      "date": "2027-01-28",
+      "title": "Final presentations IV",
+      "icon": "🎓",
+      "kind": "final",
+      "covered": false,
+      "blurb": "Fourth final-talk Thursday: up to three graded 30-minute talks; which Thursday is yours is announced in OPAL."
+     },
+     {
+      "n": 8,
+      "date": "2027-02-04",
+      "title": "Final presentations V",
+      "icon": "🎓",
+      "kind": "final",
+      "covered": false,
+      "blurb": "Last final-talk slot of the semester (lectures end on 6 Feb): up to three graded 30-minute talks."
+     }
+    ],
+    "slides": "OPAL → Course materials: “Slides Seminar Conversational AI WiSe2026-2027” (47 pages, kick-off of 15 Oct)"
+   },
+   "status": {
+    "opal": true,
+    "selma": false,
+    "topic": "Topic 1 · Foundational Model Architectures"
+   }
   },
   "CMS-TRK-FCG": {
    "code": "CMS-TRK-FCG",

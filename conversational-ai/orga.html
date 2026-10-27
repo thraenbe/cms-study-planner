@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Conversational AI · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="conversational-ai/cai.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="conversational-ai/cai.js"></script>
+</head>
+<body class="cai">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, sess, slot, today, KINDS, next } = CAI;
+const rows = c.schedule.rows;
+const COLOR = { kick: "var(--vz-s1)", mid: "var(--vz-s2)", final: "var(--vz-s3)", deadline: "var(--warn)", off: "" };
+const nextHTML = next ? (() => { const d = daysUntil(next.date); return `<div class="box"><p class="muted" style="margin:0">Next meeting · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`} · ${fmt(next.date)}</p>
+    <p style="font-size:1.15rem;font-weight:700;margin:.35rem 0 0">Meeting ${next.n} – ${esc(next.title)}</p><p style="margin:0">${slot} · ${esc(sess.who)}</p>
+    <p class="muted" style="margin:.4rem 0 0">${esc(next.blurb)}</p></div>`; })()
+  : `<div class="box"><p style="margin:0">All meetings are over.</p></div>`;
+const tr = rows.map(([d, topic, k]) => `<tr class="${k === "off" ? "off" : ""} ${d < today ? "past" : ""} ${d === next?.date ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k === "off" ? "off" : ""}" style="--c:${COLOR[k] || "var(--ink-3)"}" title="${KINDS[k] || k}"></span></td><td>${esc(topic)}</td></tr>`).join("");
+const nMeet = rows.filter(r => ["kick", "mid", "final"].includes(r[2])).length;
+document.getElementById("page").innerHTML = `
+  <a class="back" href="conversational-ai.html">← All meetings and papers</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}; taught as the seminar “Conversational AI”).</p>
+  ${CAI.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
+  <h2>Next meeting</h2>
+  ${nextHTML}
+  <h2>Your topic and status</h2>
+  <div class="me"><div class="kicker">Topic ${c.topic.n}</div>
+    <p><b>${esc(c.topic.title)}.</b> ${esc(c.topic.summary)}</p>
+    <p>${esc(c.topic.decision)}</p>
+    <p class="muted" style="font-size:.9rem">OPAL: ${esc(c.opalNote)}; topic ${esc(c.topicNote)} in the OPAL topic selection (one person per topic, first come first served, at most 15 topics assigned). Selma: ${esc(c.selmaNote)}.</p>
+  </div>
+  <ul class="refs">${[...c.topic.refs, ...c.topic.current].map(r => `<li>${esc(r.a)} (${r.y}). <i><a href="${r.url}" target="_blank" rel="noopener">${esc(r.t)}</a></i>. ${esc(r.v || "")}${r.note ? ` — ${esc(r.note)}` : ""}</li>`).join("")}</ul>
+  <h2>How the seminar is graded</h2>
+  <p>From the kick-off slides. The grade comes from the final presentation; there is no written assignment despite the module description's “assignment” wording, and no exam. Exam registration in Selma is separate from the OPAL enrolment and still to do.</p>
+  <div class="grades">${c.grading.map((g, i) => `<div class="grade ${i === 0 ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <p>The slides list eight evaluation criteria: a self-contained talk (what the kick-off covered counts as common knowledge), a clear structure, clear and coherent content in speech and on the slides, effective use of facts, statistics and images, a personal opinion or reflection at the end, finishing in the allotted time, depth of knowledge in the Q&amp;A, and participation in the other sessions. The <a href="conversational-ai/session.html?n=1">kick-off write-up</a> works through them with a time-budget explorer.</p>
+  <h2>Format</h2>
+  <p>${esc(c.format)}</p>
+  <ul>
+    <li><b>Intermediate presentation</b> (3 or 10 Dec, which round is announced in OPAL): about 5 minutes, 10 with questions, to say what the talk will cover and collect feedback. Ungraded.</li>
+    <li><b>Final presentation</b> (one of the five Thursdays from 7 Jan to 4 Feb): 20–25 minutes plus questions in a strictly enforced 30-minute slot, three slots per meeting. Graded.</li>
+    <li>Each topic rests on one or more papers; the talk may go deep on one paper or compare several of the same topic (“make a conscious decision”).</li>
+    <li>Attendance and activity in the other students' sessions count as one of the criteria.</li>
+  </ul>
+  <h2>Timeline · ${nMeet} meetings</h2>
+  <div class="legend"><span class="li"><span class="sw" style="--c:var(--vz-s1)"></span>Kick-off</span><span class="li"><span class="sw" style="--c:var(--vz-s2)"></span>Intermediate presentations</span><span class="li"><span class="sw" style="--c:var(--vz-s3)"></span>Final presentations</span><span class="li"><span class="sw" style="--c:var(--warn)"></span>Deadline</span><span class="li"><span class="sw off"></span>No seminar</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Source: ${esc(c.schedule.src)}. All meetings are Thursdays, ${slot}.</p>
+  <h2>Material &amp; links</h2>
+  <div class="links">
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course: slides, course calendar, topic selection, forum ↗</a>
+    <a href="${c.coursePage}" target="_blank" rel="noopener">Course page on jens-lehmann.org ↗</a>
+    <a href="${sess.roomUrl || "https://navigator.tu-dresden.de/"}" target="_blank" rel="noopener">${esc(sess.room)} in the campus navigator ↗</a>
+  </div>
+  <p>${esc(c.materialsNote)}</p>
+  <h2>Contact</h2>
+  <p>${esc(c.contact)}.</p>
+  <p class="foot muted">Dates and organisational facts from OPAL and the kick-off slides as of ${CMS.updated}; check the OPAL course calendar and announcements for changes.</p>`;
+</script>
+</body>
+</html>

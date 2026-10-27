@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversational AI · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="conversational-ai/cai.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="conversational-ai/cai.js"></script>
+</head>
+<body class="cai">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Board: header, status bar (OPAL, topic, Selma), the semester strip, one card per seminar meeting plus the Orga card,
+// and one card per paper of Bela's topic (the reading list). Future meetings are quiet placeholders.
+const { m, c, esc, U, CODE, fmt, today, KINDS, slot, next, chart, leg, CHARTS, mountCharts } = CAI;
+const kindOf = x => `kind-${x.kind}`;
+const when = x => `${fmt(x.date)} · ${slot}`;
+const meetings = c.meetings.map(x => `<a class="game-card meet ${kindOf(x)} ${x.date <= today ? "" : "soon"}" href="conversational-ai/session.html?n=${x.n}">
+    <div class="game-icon">${x.icon}</div>
+    <h2>Meeting ${x.n} – ${esc(x.title)}</h2>
+    <p class="when">${when(x)}${x.date > today ? ` · ${x.date === next?.date ? "next" : "planned"}` : ""}</p>
+    <p>${esc(x.blurb)}</p>
+    ${U.doneBox(`${CODE}:meeting:${x.n}`)}
+  </a>`).join("") + `<a class="game-card" href="conversational-ai/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>Next meeting, your topic and status, how the talk is graded, the full timeline with the quiet weeks, materials and contacts.</p>
+  </a>`;
+// Reading list of Bela's topic: the fundamental references first, then the current papers; each card opens the paper.
+const FAM = { dense: "dense attention", moe: "mixture of experts", ssm: "state space" };
+const papers = [...c.topic.refs.map(r => ({ ...r, tier: "Fundamental reference" })), ...c.topic.current.map(r => ({ ...r, tier: "Current paper" }))];
+const paperCards = papers.map((r, i) => `<a class="game-card paper fam-${r.family}" href="${r.url}" target="_blank" rel="noopener">
+    <span class="fam">${FAM[r.family]}</span>
+    <h2>${esc(r.t)}</h2>
+    <p class="cite">${esc(r.a)} · ${r.v ? esc(r.v) : r.y} · ${esc(r.tier)}</p>
+    <p>${esc(r.note)}</p>
+    ${U.doneBox(`${CODE}:paper:${i + 1}`)}
+  </a>`).join("");
+
+// The semester strip: every Thursday from the kick-off to the last final-presentation slot, meetings filled, quiet
+// Thursdays hollow, the Christmas break shaded. Hover or focus a Thursday for what happens on it.
+const thursdays = (() => { const out = []; for (let d = new Date("2026-10-15T12:00:00"); d <= new Date("2027-02-04T12:00:00"); d.setDate(d.getDate() + 7)) out.push(d.toISOString().slice(0, 10)); return out; })();
+const BREAK = CMS.term.periods.find(p => p.kind === "break");
+CHARTS.strip = narrow => {
+  const W = narrow ? 340 : 900, H = narrow ? 86 : 96, L = 14, R = 14, cy = narrow ? 40 : 44, PW = W - L - R, n = thursdays.length;
+  const x = i => L + (i + 0.5) / n * PW;
+  const mt = Object.fromEntries(c.meetings.map(mm => [mm.date, mm]));
+  const b0 = thursdays.findIndex(d => d >= BREAK.from), b1 = thursdays.findIndex(d => d > BREAK.to);
+  const band = b0 >= 0 ? `<rect class="band" x="${x(b0) - PW / n / 2}" y="${cy - 26}" width="${(x(b1) - PW / n / 2) - (x(b0) - PW / n / 2)}" height="52" rx="8"/>` : "";
+  const months = []; thursdays.forEach((d, i) => { const mo = d.slice(0, 7); if (!months.length || months[months.length - 1].mo !== mo) months.push({ mo, i, label: new Date(d + "T12:00:00").toLocaleDateString("en-GB", { month: "short" }) }); });
+  const mlab = months.map(mm => `<text class="tick" x="${x(mm.i) - PW / n / 2 + 2}" y="${H - 6}">${mm.label}</text>`).join("");
+  const dots = thursdays.map((d, i) => { const mm = mt[d], past = d < today, isNext = d === next?.date;
+    const tip = mm ? `<b>Meeting ${mm.n} · ${fmt(d)}</b>${esc(mm.title)}<br><span class="muted">${slot}${isNext ? " · next" : past ? " · held" : ""}</span>`
+      : `<b>${fmt(d)}</b>No seminar${BREAK.from <= d && d <= BREAK.to ? " (Christmas break)" : ": read and prepare"}`;
+    const r = narrow ? 6 : 8;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}">
+      <circle class="hit" cx="${x(i)}" cy="${cy}" r="${narrow ? 10 : 16}"/>
+      ${mm ? `<circle class="dot anchor" cx="${x(i)}" cy="${cy}" r="${r}" style="fill:var(--vz-s${{ kick: 1, mid: 2, final: 3 }[mm.kind]})"/>` : `<circle class="ring anchor" cx="${x(i)}" cy="${cy}" r="${r - 1.5}"/>`}
+      ${isNext ? `<circle cx="${x(i)}" cy="${cy}" r="${r + 5}" fill="none" stroke="var(--ink)" stroke-width="1.5"/>` : ""}
+      ${mm && !narrow ? `<text class="val" x="${x(i)}" y="${cy - 16}" text-anchor="middle">${mm.n}</text>` : ""}
+      ${!narrow ? `<text class="tick" x="${x(i)}" y="${cy + 24}" text-anchor="middle">${d.slice(8)}</text>` : ""}
+    </g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The seventeen Thursdays of the seminar from 15 October to 4 February: eight meetings (kick-off, two rounds of intermediate presentations, five final-presentation Thursdays) and nine Thursdays without a seminar">
+    ${band}<line class="axis" x1="${L}" x2="${W - R}" y1="${cy}" y2="${cy}"/>${dots}${mlab}</svg>`;
+};
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
+  <header class="hero">
+    <h1>💬 ${esc(m.name)}</h1>
+    <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Seminar “Conversational AI” · Prof. Jens Lehmann, Prof. Sahar Vahdati, Charvi Jain · SECAI / ScaDS.AI · TU Dresden</p>
+  </header>
+  ${CAI.topbar()}
+  <div class="strip viz">
+    <div class="chart-wrap"><div data-chart="strip"></div><div class="tip" role="tooltip"></div></div>
+    ${leg([[1, "Kick-off"], [2, "Intermediate presentations"], [3, "Final presentations"], ["", "No seminar", "ring"]])}
+  </div>
+  <main>
+    <div class="board-h"><h2>Meetings</h2><span class="muted">Thursdays ${slot} · only ${c.meetings.length} of the ${thursdays.length} Thursdays · ${CAI.held.length} held so far</span></div>
+    <p class="board-note">Each meeting card opens a write-up: the kick-off is summarised in full; the presentation rounds get their page once they have taken place. The split of the final talks over the five January and February Thursdays can still move.</p>
+    <div class="game-cards">${meetings}</div>
+    <div class="board-h"><h2>Your topic: ${esc(c.topic.title)}</h2><span class="muted">reading list · ${c.topic.refs.length} fundamental references, ${c.topic.current.length} current papers</span></div>
+    <p class="board-note">${esc(c.topic.summary)} Tick a paper when you have read it; the cards open the public paper pages.</p>
+    <div class="game-cards">${paperCards}</div>
+  </main>`;
+mountCharts();
+U.wireDone();
+</script>
+</body>
+</html>
