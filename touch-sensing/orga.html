@@ -27,7 +27,7 @@ const nextHTML = nx ? (() => { const s = sessFor(nx[1]), d = daysUntil(nx[0]); r
   : `<div class="box"><p style="margin:0">All ${rows.length} sessions are over.</p></div>`;
 const tr = rows.map(([d, topic]) => { const k = kindOf(topic); return `<tr class="${d < today ? "past" : ""} ${d === nextDate ? "next" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Exercise" : "Lecture"}"></span></td><td>${esc(topic)}</td></tr>`; }).join("");
 document.getElementById("page").innerHTML = `
-  <a class="back" href="touch-sensing.html">← All lectures</a>
+  <a class="back" href="touch-sensing.html">← All lectures and exercises</a>
   <div class="big-icon">🗂️</div><h1>Orga</h1>
   <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}).</p>
   ${TSP.topbar({ dates: true })}
@@ -38,7 +38,10 @@ document.getElementById("page").innerHTML = `
   <h2>Exam &amp; grading</h2>
   <p>From Lecture 0. Which variant applies depends on the module the course is registered under; Bela's study plan lists it as CMS-TRK-TSP (portfolio). Exam registration in Selma is required in addition to the OPAL enrolment; the dates are the lecturers' and not legally binding.</p>
   <div class="grades">${c.grading.map(g => `<div class="grade ${/TRK-TSP/.test(g.variant) ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma registration ${esc(g.selma)}</div></div>`).join("")}</div>
-  <p>${c.homeExercises} home exercises during the semester (20 % for the oral-exam variant). ${esc(c.format)}</p>
+  <p>${c.homeExercises} home exercises during the semester (20 points of the portfolio, 20 % in the oral-exam variant). ${esc(c.format)}</p>
+  <h2>Home exercises</h2>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${c.homeExerciseWindows.map(([a, b], i) => { const e = c.exercises.find(x => x.n === "h" + (i + 1)); return `<tr class="${b < today ? "past" : ""}"><td class="d">${U.fmtDate(a)}</td><td>${e ? `<a href="touch-sensing/exercise.html?n=${e.n}">${esc(e.title)}</a>` : `Home Exercise ${i + 1}`} · due ${U.fmtDate(b)}${e && e.covered ? "" : " · not released yet"}</td></tr>`; }).join("")}</tbody></table></div>
+  <p class="muted">Windows from Practice 0; Home Exercise 1 is uploaded under its task in OPAL (open until 14 Nov, 00:15).</p>
   <h2>Schedule · ${rows.length} sessions</h2>
   <div class="legend"><span><span class="sw lec" style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-core)"></span>Lecture · Mon 9:20–10:50 · ${esc(c.rooms.lecture)}</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c-trk)"></span>Exercise · Tue 9:20–10:50 · ${esc(c.rooms.exercise)}</span></div>
   <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
@@ -48,6 +51,7 @@ document.getElementById("page").innerHTML = `
     <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course (slides, PDFs, feedback links) ↗</a>
     <a href="${m.links.web}" target="_blank" rel="noopener">LASR Lab teaching page ↗</a>
     <a href="${c.feedback}" target="_blank" rel="noopener">Feedback form after each session ↗</a>
+    <a href="${c.colab}" target="_blank" rel="noopener">Colab notebook of the PyTorch extra exercise ↗</a>
   </div>
   <p>Questions: ${esc(c.contact)}.</p>
   <h2>Reading list (OPAL bibliography)</h2>

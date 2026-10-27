@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Touch Sensing · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫙</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="touch-sensing/tsp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="touch-sensing/tsp.js"></script>
+<script src="touch-sensing/tsp-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="tsp">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, roomOn, today, exShort } = TSP;
+const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = TSPViz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => x.n === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="touch-sensing.html">← All lectures and exercises</a>`;
+const ctx = `<span class="ctx">context · not on the slides</span>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const qbox = (t, items) => `<div class="q"><div class="kicker">${t}</div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+const LABS = {};
+const title = e => e.kind === "home" ? esc(e.title) : `${exShort(e)} – ${esc(e.title)}`;
+function head(e) {
+  const room = e.n === "2" ? "BEY/0245/H" : e.n === "x" || e.n === "0" || e.n === "1" ? "APB-E040" : esc(roomOn(e.date));
+  const meta = e.kind === "home" ? `Released ${fmt(e.date)} · due ${fmt(e.due)} · upload in OPAL · Roberto Calandra, Robin Koch`
+    : `${fmt(e.date)} · 09:20–10:50 · ${room} · Robin Koch${e.n === "0" || e.n === "1" ? " (two practices in one session)" : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// Timeline of date windows against the semester (12 Oct – 29 Jan), with a today marker.
+function timeline(rows, t0 = "2026-10-12", t1 = "2027-02-01") {
+  const d = s => new Date(s + "T12:00:00"), span = d(t1) - d(t0), px = s => Math.min(100, Math.max(0, (d(s) - d(t0)) / span * 100));
+  const months = ["2026-11-01", "2026-12-01", "2027-01-01"].map(s => `<span style="left:${px(s)}%">${d(s).toLocaleDateString("en-GB", { month: "short" })}</span>`).join("");
+  const tp = px(today);
+  return `<div class="timeline">${rows.map(([l, a, b, cc, t]) => { const w = Math.max(1.5, px(b) - px(a)), inside = w >= 22;
+    return `<div class="tl-row"><div class="rl">${l}</div><div class="tl-track"><div class="tl-bar" style="left:${px(a)}%;width:${w}%;--c:${cc}" title="${esc(t || "")}">${inside ? t || "" : ""}</div>${inside ? "" : `<span class="tl-lab" style="left:${px(a) + w + 1}%">${t || ""}</span>`}${tp > 0 && tp < 100 ? `<div class="tl-today" style="left:${tp}%" title="today"></div>` : ""}</div></div>`; }).join("")}
+    <div class="tl-axis"><div></div><div class="ax">${months}<span style="left:${px(t0)}%">Oct</span></div></div></div>
+    <p class="muted" style="font-size:.85rem">The blue line is today (${fmt(today)}).</p>`;
+}
+const HE = c.homeExerciseWindows;
+
+// ======================================================================================
+// Exercise 0 – Practice 0: Intro
+// ======================================================================================
+CHARTS.points = narrow => {
+  const parts = [{ k: "Home exercises", v: 20, slot: 2 }, { k: "Oral exam", v: 80, slot: 1 }];
+  const W = narrow ? 340 : 600, L = 10, R = 10, T = 26, BH = 34, PW = W - L - R, H = T + BH + 40; let x0 = L;
+  const segs = parts.map(p => { const w = p.v / 100 * PW - 2, s = `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>${p.v} of 100 points`)}"><rect class="hit" x="${x0}" y="${T - 10}" width="${w + 2}" height="${BH + 20}"/><rect class="bar" style="fill:var(--vz-s${p.slot})" x="${x0}" y="${T}" width="${w}" height="${BH}" rx="4"/><text class="val" x="${x0 + w / 2}" y="${T + BH / 2 + 5}" text-anchor="middle" style="fill:#fff">${p.v}</text><text class="cat" x="${x0 + w / 2}" y="${T + BH + 18}" text-anchor="middle">${p.k}</text></g>`; x0 += w + 2; return s; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Portfolio points: home exercises 20, oral exam 80, out of 100"><text class="note" x="${L}" y="12">100 points in total · the final grade follows the combined points</text>${segs}</svg>`;
+};
+function exercise0() {
+  return `${head(e)}
+    <p class="lead">The first ten minutes of the first exercise session: what the practices are for, how the course is graded in each study regulation, when to register in Selma, which topics the practices cover, when the three home exercises run, and the house rule on generative AI.</p>
+    <h2>Goal of the practice sessions</h2>
+    <ul>
+      <li>Get hands-on experience with touch sensing, working with <b>vision-based tactile sensors</b>.</li>
+      <li>Extract information from the sensors, first with <b>analytical models</b>, then with <b>machine learning</b>.</li>
+    </ul>
+    ${why("What that means for the next weeks", `<p>Practices 1 and 2 are discussion sessions without code. From Practice 3 on (3 Nov) the sessions sit in front of real sensors and notebooks, which is why Practice 2 asks you to bring a Linux laptop and why the extra PyTorch session was slotted in on 27 Oct.</p>`)}
+    <h2>Grading: three variants</h2>
+    <div class="grades">${c.grading.map(g => `<div class="grade ${/TRK-TSP/.test(g.variant) ? "mine" : ""}"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma registration ${esc(g.selma)}</div></div>`).join("")}</div>
+    <p>Bela's variant is the portfolio of the new study regulation: a points-based grade in which the home exercises contribute 20 and the oral exam 80 points.</p>
+    ${chart("points")}<figcaption>Composition of the portfolio grade (CMS-TRK-TSP, new study regulation) as given in Practice 0.</figcaption></figure>
+    ${ex("Worked example · what one home exercise is worth", `<p>Three home exercises share 20 points, so with equal weight each is worth about 6.7 points, i.e. 6.7 % of the final grade. The oral exam alone decides 80 %; the home exercises cannot rescue a weak exam, but skipping one costs the same as roughly a third of a grade step ${ctx}. The weighting per exercise was not stated, equal weight is an assumption.</p>`)}
+    <h2>Registration deadlines</h2>
+    <p>The exam registration in Selma is required <b>in addition</b> to the OPAL enrolment. The dates are for information, not legally binding and may contain errors: verify them with the examination office.</p>
+    ${timeline([
+      ["Selma: written exam", "2026-12-14", "2027-03-31", "var(--vz-gray)", "14 Dec – 31 Mar"],
+      ["Selma: portfolio / oral", "2026-12-14", "2027-01-25", "var(--vz-s1)", "14 Dec – 25 Jan"],
+    ])}
+    <h2>Topics of the practices</h2>
+    <ol>
+      <li>The importance of touch in humans and robots (<a href="touch-sensing/exercise.html?n=1">Exercise 1</a>)</li>
+      <li>Brief introduction to the physiology of touch (<a href="touch-sensing/exercise.html?n=2">Exercise 2</a>)</li>
+      <li>PyTorch and deep learning (<a href="touch-sensing/exercise.html?n=x">extra exercise</a>)</li>
+      <li>Vision-based tactile sensors (three sessions)</li>
+      <li>Simulating touch</li>
+      <li>Perception with touch</li>
+      <li>ML for touch (three sessions)</li>
+      <li>Depth estimation</li>
+    </ol>
+    <h2>Dates of the home exercises</h2>
+    ${timeline([
+      ["Home Exercise 1", HE[0][0], HE[0][1], "var(--warn)", "26 Oct – 13 Nov"],
+      ["Home Exercise 2", HE[1][0], HE[1][1], "var(--warn)", "1 – 18 Dec"],
+      ["Home Exercise 3", HE[2][0], HE[2][1], "var(--warn)", "11 – 29 Jan"],
+    ])}
+    <h2>Use of generative AI</h2>
+    <p>Not prohibited, but use it with care: mistakes of the AI are treated as your mistakes. Think about what you want to take away from this class.</p>
+    <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>; organisational details on the <a href="touch-sensing/orga.html">Orga page</a>.</p>`;
+}
+
+// ======================================================================================
+// Exercise 1 – Practice 1: the importance of touch
+// ======================================================================================
+const USES = [
+  ["Measuring mechanical properties", "material, inertia, softness, roughness, temperature of an object", 1],
+  ["Mapping and localisation", "where am I touching, what shape is this, where is the object in the hand", 2],
+  ["Force and slip control", "how hard to squeeze, is it slipping, is the contact stable", 3],
+  ["Human interaction", "handshakes, hugs, guiding a hand; the social side of Lecture 1", 4],
+];
+const SENSES = [["weight / inertia", "✓", "~", "✗"], ["softness", "✓", "~", "✗"], ["roughness / texture", "✓", "~", "~"], ["temperature", "✓", "✗", "✗"], ["global shape", "✓", "✓", "✗"], ["colour", "✗", "✓", "✗"], ["slip onset", "✓", "~", "~"], ["contact force", "✓", "✗", "✗"]];
+LABS.jar = body => {
+  const render = () => { const h = +body.querySelector("#t-hand").value || 0, t = +body.querySelector("#t-tw").value || 0, mx = Math.max(h, t, 1);
+    body.querySelector(".ag").innerHTML = [["hands", h, "var(--vz-s1)"], ["tweezers", t, "var(--vz-s2)"]].map(([k, v, cc]) => `<div class="agrow"><span class="agl">${k}</span><span class="agtrack"><span class="agbar" style="width:${v / mx * 100}%;--c:${cc}"></span></span><span class="agv">${v ? v + " s" : "–"}</span></div>`).join("")
+      + (h && t ? `<p class="lab-note" style="margin:8px 0 0">Tweezers took ${num(t / h, 1)}× as long${t / h > 1.5 ? ": the loss of tactile feedback and compliance costs more than the loss of dexterity alone" : ""}.</p>` : ""); };
+  body.innerHTML = `<div class="ctl"><label>hands <input id="t-hand" type="number" min="0" step="1" value="45" style="width:5em"> s</label><label>tweezers <input id="t-tw" type="number" min="0" step="1" value="150" style="width:5em"> s</label></div><div class="ag"></div>`;
+  body.querySelectorAll("input").forEach(i => i.addEventListener("input", render)); render();
+};
+function exercise1() {
+  return `${head(e)}
+    <p class="lead">The first real practice: groups of three to five introduce themselves and say what they want from the course, then two questions turn Lecture 1 into something you can feel: what is touch actually useful for, and what happens when you take it away.</p>
+    <h2>Recap of Lecture 1</h2>
+    <ul class="cmp" aria-label="Touch versus vision">
+      <li><b>Scope</b><span class="v"><span class="sw t"></span>touch: local</span><span class="v"><span class="sw v"></span>vision: global</span></li>
+      <li><b>Occlusion</b><span class="v"><span class="sw t"></span>touch: not really</span><span class="v"><span class="sw v"></span>vision: can be occluded</span></li>
+      <li><b>Noise</b><span class="v"><span class="sw t"></span>touch: noiseless</span><span class="v"><span class="sw v"></span>vision: can be noisy</span></li>
+    </ul>
+    <p>Touch in robotics gives simultaneous contact and force estimation, and is still not accepted as necessary for manipulation in all communities.</p>
+    <h2>Question 1 · What is touch useful for?</h2>
+    ${qbox("Discussed in the groups", ["Think of everyday tasks where you use touch. Can you list some?", "How is touch used in each of them? Is it always used in the same way?", "Can the information that touch provides be collected by other senses?"])}
+    <p>The slides' own answer groups the everyday tasks into four uses:</p>
+    <div class="levels">${USES.map(([t, d, s]) => `<div class="lv" style="border-top-color:var(--vz-s${s})"><div class="t">${t}</div><div class="d">${d}</div></div>`).join("")}</div>
+    <p>Touch is used in different ways in each (a fingertip sliding over a surface, a whole hand squeezing, a static hold), and the information overlaps only partly with other senses: geometry and softness can be guessed from vision, most of the rest cannot.</p>
+    ${ex("Worked example · which sense can deliver which property", `<div class="tt-wrap"><table class="tt"><tr><th>property</th><th>${key(1)} touch</th><th>${key("g")} vision</th><th>${key(4)} hearing</th></tr>${SENSES.map(r => `<tr><td style="text-align:left">${r[0]}</td>${r.slice(1).map(v => `<td class="${v === "✓" ? "one" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></div><p>✓ measured, ~ guessed from cues (a shiny surface looks smooth, a thud sounds heavy), ✗ not available. Our filling of the slides' statement "some overlap, but mostly complementary" ${ctx}.</p>`)}
+    <h2>Question 2 · Do we need touch?</h2>
+    ${qbox("The experiment", ["Open a jar, remove the string inside, close the jar, tie the string around the jar.", "First with your hands, then with two tweezers. Time both runs with your phone.", "Share the results and your takeaway."])}
+    <p>The tweezers keep the vision and most of the dexterity but remove the sense of touch: no force feedback, no slip detection, no conformance of the fingertip to the object. Log your two times to see the ratio:</p>
+    ${lab("jar", "the jar-and-string times")}
+    ${why("What the experiment models", `<p>Two tweezers are a fair model of a rigid two-finger robot gripper without tactile sensing: hard contacts, no compliance, no feedback except what the eyes see. The tasks that get slow or fail, tying the knot and regrasping the lid, are exactly the ones where the contact is occluded or where force matters, the two arguments of Lecture 1. The time ratio you measured is a one-number summary of what touch is worth for that task.</p>`)}
+    <h2>Readings</h2>
+    <ul class="refs">
+      <li>Li, Kroemer, Su, Veiga, Kaboli &amp; Ritter (2020). A review of tactile information: perception and action through touch. IEEE Transactions on Robotics 36(6).</li>
+      <li>Johansson &amp; Flanagan (2009). Coding and use of tactile signals from the fingertips in object manipulation tasks. Nature Reviews Neuroscience 10(5).</li>
+    </ul>
+    <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>; the lecture behind this practice is <a href="touch-sensing/lecture.html?n=1">Lecture 1</a>.</p>`;
+}
+
+// ======================================================================================
+// Exercise 2 – Practice 2: physiology of touch
+// ======================================================================================
+const EPS = [
+  ["lateral motion", "texture, roughness", "rub the fingertip sideways", 1],
+  ["pressure", "hardness, compliance", "press into the surface", 2],
+  ["static contact", "temperature, thermal conductivity", "rest the hand on it", 3],
+  ["unsupported holding", "weight", "lift it", 4],
+  ["enclosure", "global shape, volume", "wrap the hand around it", 1],
+  ["contour following", "exact shape", "trace the edges", 2],
+];
+const WORDS = ["smooth", "rough", "gritty", "silky", "sticky", "slippery", "cold", "warm", "soft", "hard", "rubbery", "brittle", "fuzzy", "ridged", "waxy", "damp", "heavy", "hollow", "sharp", "spongy"];
+function aristotleSVG() {
+  return `<svg viewBox="0 0 240 170" role="img" aria-label="Two crossed fingers touching one small object with their outer sides">
+    <path d="M40,165 C60,120 110,95 150,58" stroke="var(--vz-s1)" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M200,165 C180,120 130,95 90,58" stroke="var(--vz-s2)" stroke-width="22" fill="none" stroke-linecap="round" opacity=".92"/>
+    <circle cx="120" cy="36" r="9" fill="var(--ink)"/>
+    <text x="120" y="16" text-anchor="middle" class="lbl">one object</text>
+    <text x="30" y="150" class="tick">index</text><text x="190" y="150" class="tick" text-anchor="end">middle</text>
+    <text x="172" y="50" class="tick" style="fill:var(--vz-s1)">outer side</text><text x="68" y="50" class="tick" text-anchor="end" style="fill:var(--vz-s2)">outer side</text></svg>`;
+}
+function exercise2() {
+  return `${head(e)}
+    <p class="lead">A practice without code: after a recap of the receptors you explore objects with closed eyes, compare touching with and without moving, fool your own somatotopic map with the Aristotle illusion, and receive Home Exercise 1. Held on a Monday in the lecture hall because the Tuesday slot was given to the extra PyTorch session.</p>
+    <h2>Recap of Lecture 2</h2>
+    <p>Five receptor families in the skin (mechano-, thermo-, noci-, proprio- and chemoreceptors), and for the mechanoreceptors the split into rapidly adapting (Meissner, Pacinian: capture changes, dynamic stimuli) and slowly adapting (Merkel, Ruffini: capture static stimuli). The receptor figure is from Clark, Choi &amp; Douglas, <i>Biology 2e</i> (2020). Full write-up: <a href="touch-sensing/lecture.html?n=2">Lecture 2</a>.</p>
+    <h2>Question 1 · What do we sense?</h2>
+    ${qbox("Collect a few objects with different tactile properties, close your eyes, sense them carefully with a finger", ["Which properties can you sense? Which one dominates (weight, material, geometric features, …)?", "How would you describe it? Write down every word you can think of.", "How easy is it to distinguish the objects?"])}
+    <p>The slides link a list of 400 texture words; a sample of the vocabulary, grouped by the receptor channel that most likely carries it ${ctx}:</p>
+    <div class="words">${WORDS.map((w, i) => `<span class="${i < 6 ? "hi" : ""}" style="--c:var(--vz-s${i < 6 ? 2 : i < 8 ? 3 : i < 12 ? 1 : 4})">${w}</span>`).join("")}</div>
+    ${leg([[2, "texture: rapidly adapting, from sliding"], [3, "thermal: thermoreceptors"], [1, "compliance: slowly adapting pressure"], [4, "shape, weight: proprioception + skin stretch"]])}
+    <h2>Task 2 · Active vs passive touch</h2>
+    ${qbox("Now a third party presents the objects, so you do not know which is which", ["Touch the objects without moving your fingers.", "Touch the objects while moving your fingers around."])}
+    <p>The contrast is Gibson's (1962) distinction between passive touch, being touched, and active touch, touching: the same skin yields far more with movement, because sliding excites the rapidly adapting channels and because the brain can choose what to measure.</p>
+    ${ex("Worked example · exploratory procedures", `<p>Lederman &amp; Klatzky (1987) found that people use a small, stereotyped set of hand movements, each tuned to one property. If a tactile property is hard to get at, the procedure is probably missing ${ctx}:</p>
+      <div class="tt-wrap"><table class="tt syn"><tr><th>procedure</th><th>property</th><th>movement</th></tr>${EPS.map(([p, pr, mv, s]) => `<tr><td>${key(s)} ${p}</td><td>${pr}</td><td>${mv}</td></tr>`).join("")}</table></div>
+      <p>For a robot this is the design argument for active perception: a tactile sensor on a finger that cannot move is a passive sensor, and the controller has to supply the exploratory procedure.</p>`)}
+    <h2>The Aristotle illusion</h2>
+    ${qbox("Try it", ["Cross your index and middle finger.", "Close your eyes and touch your nose (or a pea) with the crossing point.", "How many objects are you touching?"])}
+    <div class="hands">
+      <div class="hand"><b>What the skin reports</b>${aristotleSVG()}The object presses on the outer side of the index finger and the outer side of the middle finger at the same time.</div>
+      <div class="hand"><b>What the brain concludes</b><p>In the normal, uncrossed hand those two outer sides face away from each other and can never touch the same object. The somatotopic map (Lecture 2: spatial adjacency is preserved in the brain) interprets the two contacts in skin coordinates and reports two objects.</p><p>The illusion shows that touch is computed in body coordinates and that the posture signal (proprioception) is not used to correct it here ${ctx}.</p></div>
+    </div>
+    <h2>Home Exercise 1 handed out</h2>
+    <p><b>Benchmarking Digital Touch:</b> as a touch-sensing expert you help NIST design their next standard for benchmarking tactile sensors; write a short technical document (2–4 pages) that defines the experiments and their protocol, what and how for each experiment. Due 13 November. Full page: <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>.</p>
+    <h2>Logistics for the next practices</h2>
+    <p>If possible, bring a laptop with Linux. From Practice 3 on the sessions work with the sensors.</p>
+    <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
+// ======================================================================================
+// Extra exercise – PyTorch and deep learning (Colab)
+// ======================================================================================
+const A11 = [[3.28749502, 2.02109447], [2.96351597, 2.67578113], [2.74616036, 2.81257467], [3.6001338, 2.2393872], [3.18944582, 4.04328521], [3.40064454, 3.60451965], [2.80375306, 1.63133047]];
+const colMean = (M, j) => M.reduce((a, r) => a + r[j], 0) / M.length;
+const mat = (M, cls = "", fmtv = v => v) => `<div class="mat" style="grid-template-columns:repeat(${M[0].length}, auto)">${M.flat().map(v => `<span class="cell ${cls}">${fmtv(v)}</span>`).join("")}</div>`;
+const mw = (M, cap, cls = "", f) => `<div class="mwrap">${mat(M, cls, f)}<span class="cap">${cap}</span></div>`;
+const LENET = [
+  ["input", "1×28×28", "MNIST digit", 0, "g"],
+  ["conv1 6@5×5 + ReLU", "6×24×24", "6·(1·25)+6 = 156", 156, 1],
+  ["maxpool 2×2", "6×12×12", "no parameters", 0, "g"],
+  ["conv2 16@5×5 + ReLU", "16×8×8", "16·(6·25)+16 = 2,416", 2416, 1],
+  ["maxpool 2×2", "16×4×4", "no parameters", 0, "g"],
+  ["flatten", "256", "16·4·4", 0, "g"],
+  ["fc1 + ReLU", "120", "256·120+120 = 30,840", 30840, 2],
+  ["fc2 + ReLU", "84", "120·84+84 = 10,164", 10164, 2],
+  ["fc3", "10", "84·10+10 = 850", 850, 2],
+];
+CHARTS.lenet = narrow => {
+  const rows = LENET.filter(r => r[3]), W = narrow ? 340 : 600, L = narrow ? 60 : 90, R = 70, T = 8, RH = 30, PW = W - L - R, H = T + rows.length * RH + 26, mx = 32000, x = v => L + v / mx * PW;
+  const ticks = [0, 10000, 20000, 30000].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v / 1000}k</text>`).join("");
+  const bars = rows.map((r, i) => { const y0 = T + i * RH + 6; return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${r[0]}</b>${r[2]} parameters`)}"><rect class="hit" x="0" y="${y0 - 6}" width="${W}" height="${RH}"/><path class="bar" style="fill:var(--vz-s${r[4]})" d="${hbar(x(0), x(r[3]), y0, 18)}"/><text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${r[0].split(" ")[0]}</text><text class="val" x="${x(r[3]) + 6}" y="${y0 + 13}">${r[3].toLocaleString("en-GB")}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of trainable parameters per LeNet layer: conv1 156, conv2 2416, fc1 30840, fc2 10164, fc3 850.">${ticks}${bars}</svg>`;
+};
+LABS.bcast = body => {
+  const parse = s => s.split(",").map(t => t.trim()).filter(Boolean).map(Number);
+  const run = () => { const a = parse(body.querySelector("#sa").value), b = parse(body.querySelector("#sb").value), out = body.querySelector(".bc-out");
+    if (!a.length || !b.length || [...a, ...b].some(v => !(v > 0) || v % 1)) { out.innerHTML = `<p class="lab-note">Enter two shapes as comma-separated positive integers.</p>`; return; }
+    const n = Math.max(a.length, b.length), A = Array(n - a.length).fill(1).concat(a), B = Array(n - b.length).fill(1).concat(b), res = [], steps = [];
+    let ok = true; for (let i = 0; i < n; i++) { const p = A[i], r = B[i]; if (p === r || p === 1 || r === 1) { res.push(Math.max(p, r)); steps.push(`dim ${i}: ${p} vs ${r} → ${Math.max(p, r)}${p !== r ? " (stretched)" : ""}`); } else { ok = false; steps.push(`dim ${i}: ${p} vs ${r} → incompatible`); } }
+    out.innerHTML = `<p style="margin:6px 0">${flag(ok ? "ok" : "bad", ok ? `result shape (${res.join(", ")})` : "RuntimeError: shapes cannot be broadcast")}</p><ol class="muted" style="font-size:.9rem">${steps.map(s => `<li>${s}</li>`).join("")}</ol>`; };
+  body.innerHTML = `<p class="lab-note">Right-align the two shapes; walking from the last dimension, each pair must be equal or one of them 1 (it is then stretched).</p><div class="ctl"><label>shape A <input id="sa" type="text" value="1, 3"></label><label>shape B <input id="sb" type="text" value="4, 1"></label></div><div class="bc-out"></div>`;
+  body.querySelectorAll("input").forEach(i => i.addEventListener("input", run)); run();
+};
+function exerciseX() {
+  const cm = [colMean(A11, 0), colMean(A11, 1)];
+  const A = [[1, 2], [3, 4], [5, 6]], B = [[5, 6]], C = A.map(r => r.map((v, j) => v + B[0][j])), E = C.map(r => r.map(v => v + 1));
+  const X = [1, 2, 3], Y = [1, 2, 3, 4], XY = Y.map(y => X.map(x => x + y));
+  return `${head(e)}
+    <p class="lead">A Colab notebook to get everyone to the same PyTorch level before the sensor practices: tensor manipulation and broadcasting, a LeNet-5 on MNIST, transfer learning with a pre-trained ResNet-18 on rock-paper-scissors, and finally augmentation and a validation split. The notebook is linked from the OPAL structure page (<a href="${c.colab}" target="_blank" rel="noopener">open in Colab ↗</a>).</p>
+    <h2>Task 1 · Tensor manipulation</h2>
+    <h3>1.1 Column means</h3>
+    <p>Build the 7×2 matrix A as a tensor and take the mean of each column: the mean over dimension 0.</p>
+    <div class="code"><span class="kw">import</span> torch
+A = torch.tensor([[3.2875, 2.0211], [2.9635, 2.6758], [2.7462, 2.8126], [3.6001, 2.2394], [3.1894, 4.0433], [3.4006, 3.6045], [2.8038, 1.6313]])
+A.mean(dim=<span class="nb">0</span>)   <span class="cm"># → tensor([${num(cm[0], 4)}, ${num(cm[1], 4)}])</span></div>
+    ${ex("Worked answer", `<p>Column 1: ${A11.map(r => num(r[0], 3)).join(" + ")} = ${num(A11.reduce((a, r) => a + r[0], 0), 4)}, divided by 7 gives <b>${num(cm[0], 4)}</b>. Column 2: the sum is ${num(A11.reduce((a, r) => a + r[1], 0), 4)}, so the mean is <b>${num(cm[1], 4)}</b>. The pitfall: dim=0 means "collapse the rows", i.e. one number per column; dim=1 would give one mean per row.</p>`)}
+    <h3>1.2 Broadcasting</h3>
+    <p>Sum a 3×2 matrix, a 1×2 row vector and a scalar. The row vector is stretched over the three rows, the scalar over everything:</p>
+    <div class="matrow">${mw(A, "A (3×2)", "t1")}<span class="op">+</span>${mw(B, "B (1×2)", "t2")}<span class="op">=</span>${mw(C, "C")}<span class="op">;</span>${mw(C, "C", "")}<span class="op">+</span>${mw([[1]], "d", "t3")}<span class="op">=</span>${mw(E, "E")}</div>
+    <p>The second case is the one to remember: a row vector X (1×3) plus a column vector Y (4×1). Nothing is "wrong", PyTorch stretches both and returns a 4×3 matrix of all pairwise sums, which is rarely what a beginner expects.</p>
+    <div class="matrow">${mw([X], "X (1×3)", "t1")}<span class="op">+</span>${mw(Y.map(v => [v]), "Y (4×1)", "t2")}<span class="op">=</span>${mw(XY, "X + Y (4×3)")}</div>
+    ${lab("bcast", "the broadcasting rule")}
+    ${why("Why this matters later in the course", `<p>Tactile images come in batches of shape (batch, channels, height, width); normalising them with a per-channel mean of shape (3, 1, 1) or subtracting a reference frame of shape (1, 3, H, W) is broadcasting. A silent 4×3 instead of an error is the kind of bug that costs an afternoon.</p>`)}
+    <h2>Task 2 · LeNet on MNIST</h2>
+    <p>Code a LeNet-5-like network and train it on the digits. The notebook gives the layers and asks you to put them in the right order in <code>forward</code>; the shapes tell you whether you did.</p>
+    <div class="net">${LENET.map(r => `<div class="ly" style="--c:${r[4] === "g" ? "var(--vz-gray)" : `var(--vz-s${r[4]})`}"><b>${r[0]}</b><span class="sh">${r[1]}</span><span class="pr">${r[2]}</span></div>`).join("")}</div>
+    ${leg([[1, "convolution"], [2, "fully connected"], ["g", "no parameters"]])}
+    ${ex("Worked example · where the 256 comes from", `<p>A 5×5 convolution without padding shrinks each side by 4: 28 → 24, then max-pooling halves it to 12; the second convolution gives 8, pooling 4. Sixteen channels of 4×4 flatten to 16·4·4 = 256, which is why the first linear layer is <code>nn.Linear(256, 120)</code>. Change the kernel or add padding and that number moves; the "mat1 and mat2 shapes cannot be multiplied" error is PyTorch telling you to recompute it.</p>`)}
+    ${chart("lenet")}<figcaption>Trainable parameters per layer: almost everything sits in the first fully connected layer, the convolutions are cheap. 44,426 parameters in total.</figcaption></figure>
+    ${tbl(["Layer", "Output shape", "Parameters"], LENET.map(r => [r[0], r[1], r[3] ? r[3].toLocaleString("en-GB") : "0"]))}
+    <h3>2b · Train it</h3>
+    <p>The training loop of the notebook, step by step, with early stopping after five epochs without improvement:</p>
+    <div class="steps">${["<code>optimizer.zero_grad()</code>: forget the gradients of the previous batch", "<code>outputs = net(inputs)</code>: the forward pass", "<code>loss = CrossEntropyLoss(outputs, targets)</code>: softmax and negative log-likelihood in one", "<code>loss.backward()</code>: backpropagation fills <code>.grad</code>", "<code>optimizer.step()</code>: Adam moves the weights", "after each epoch: average loss, compare with the best, stop after 5 epochs without improvement"].map((s, i) => `<div class="step"><span class="n">${i + 1}</span><span>${s}</span></div>`).join("")}</div>
+    <p>The notebook's guide for picking parameters: if the loss does not decrease, play with the learning rate and the batch size; if training is too slow, fewer epochs, smaller batches or a larger learning rate; the loss is better the smaller it is. The sliders default to batch size 16, 100 epochs, learning rate 0.001. Validation accuracy is computed on the 10,000 MNIST test images with <code>argmax</code> over the ten outputs.</p>
+    ${why("Two things the notebook quietly does wrong", `<p>The MNIST loader has <code>shuffle=True</code> commented out, so every epoch sees the batches in the same order; and the early stopping watches the <i>training</i> loss, which only tells you that the optimiser got stuck, not that the model generalises. Both are fixed in the last part of the notebook, where augmentation and a validation split appear ${ctx}.</p>`)}
+    <h2>Task 3 · Transfer learning: rock, paper, scissors</h2>
+    <p>Load <code>resnet18(weights=ResNet18_Weights.DEFAULT)</code>, pre-trained on ImageNet, download the rock-paper-scissors image set, resize everything to 224×224 and normalise with the ImageNet mean and standard deviation, replace the last layer by <code>nn.Linear(model.fc.in_features, 3)</code>, move the model and every batch to the GPU, and train with the same loop. The blanks to fill are the number of classes, the learning rate and the epochs.</p>
+    ${ex("Worked example · what is actually being learned", `<p>ResNet-18 has about 11.7 million parameters; the new head has 512·3 + 3 = 1,539. The notebook fine-tunes all of them (the optimiser gets <code>model.parameters()</code>), which works with a small learning rate such as 1e-4 and a few epochs; freezing the backbone and training only the head is the cheaper alternative when data are scarce. The ImageNet normalisation is not optional: the pre-trained filters expect inputs in that range ${ctx}.</p>`)}
+    <h2>Data augmentation and a validation split</h2>
+    <p>The last part adds <code>RandomHorizontalFlip</code>, <code>RandomRotation(15)</code> and <code>ColorJitter</code> to the training transform, splits the training set 80/20 with <code>random_split</code>, and uses the <b>validation</b> loss for early stopping, while the test set is touched only once at the end. Three random test images are shown with the predicted and the true label, green if they match.</p>
+    ${why("Why three sets", `<p>Training data fit the weights, validation data pick the stopping point and the hyper-parameters, test data estimate how the result will do on new data. If the early stopping looked at the test loss, the reported accuracy would be optimistic. Note one wrinkle in the notebook: the validation subset inherits the augmented transform of the training set, so validation images are flipped and rotated too; harmless here, but not what one usually wants ${ctx}.</p>`)}
+    <p class="muted">The notebook is linked from the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL structure page ↗</a>. The session was announced as "Extra Exercise" in the calendar.</p>`;
+}
+
+// ======================================================================================
+// Home Exercise 1 – Benchmarking Digital Touch
+// ======================================================================================
+const PROTO = [
+  ["Spatial resolution", "the smallest distance between two contacts the sensor still separates", "press a two-point probe at decreasing spacings, or indent on a grid with a 1 mm pitch and report the smallest resolved pitch", 1],
+  ["Force resolution and range", "the smallest force change the sensor reports, and the largest before saturation", "indent with a calibrated probe on a force-torque reference, increasing in steps; report the step at which the reading changes and the saturation level", 2],
+  ["Sensitivity threshold", "the lightest touch that is detected at all", "lower the probe until the reading leaves the noise floor; repeat at several points of the surface", 2],
+  ["Linearity and hysteresis", "whether loading and unloading give the same reading", "run loading-unloading cycles to the same peak force; report the maximum difference between the two branches", 3],
+  ["Repeatability", "whether the same contact gives the same reading every time", "repeat one indentation N times; report the standard deviation relative to the mean", 3],
+  ["Temporal response", "how fast the sensor follows a change (bandwidth, latency)", "apply a step and a frequency sweep; report rise time and the -3 dB frequency", 4],
+  ["Localisation accuracy", "how far the reported contact position is from the true one", "indent at known positions on a grid; report the mean position error", 1],
+  ["Durability and drift", "how the readings change over use and time", "repeat a fixed indentation for thousands of cycles and log the drift; also at several temperatures", 4],
+];
+function hystSVG(narrow) {
+  const W = narrow ? 340 : 560, H = 230, L = 46, R = 16, T = 14, B = 36, PW = W - L - R, PH = H - T - B;
+  const x = f => L + f / 5 * PW, y = v => T + PH - v * PH;
+  const up = [], dn = []; for (let i = 0; i <= 40; i++) { const f = i / 40 * 5, s = f / 5; up.push([x(f), y(Math.pow(s, 1.4))]); dn.push([x(f), y(Math.min(1, Math.pow(s, 0.75) * 1.0))]); }
+  const d = pts => "M" + pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" L");
+  const xt = [0, 1, 2, 3, 4, 5].map(f => `<line class="${f ? "grid" : "axis"}" x1="${x(f)}" x2="${x(f)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(f)}" y="${T + PH + 16}" text-anchor="middle">${f} N</text>`).join("");
+  const yt = [0, .5, 1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const f0 = 2.5, gap = `<line class="ann dash" x1="${x(f0)}" x2="${x(f0)}" y1="${y(Math.pow(.5, 1.4))}" y2="${y(Math.pow(.5, .75))}"/><text class="lbl" x="${x(f0) + 8}" y="${(y(Math.pow(.5, 1.4)) + y(Math.pow(.5, .75))) / 2 + 4}">hysteresis at ${f0} N</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Illustrative hysteresis loop: sensor reading against applied force, loading branch below the unloading branch">${xt}${yt}
+    <path class="line" style="stroke:var(--vz-s1)" d="${d(up)}"/><path class="line" style="stroke:var(--vz-s2)" d="${d(dn)}"/>${gap}
+    <text class="note" x="${L + PW / 2}" y="${H - 4}" text-anchor="middle">applied force (reference sensor)</text><text class="note" transform="translate(12,${T + PH / 2}) rotate(-90)" text-anchor="middle">normalised reading</text></svg>`;
+}
+CHARTS.hyst = narrow => hystSVG(narrow);
+function exerciseH1() {
+  const d = daysUntil(e.due);
+  return `${head(e)}
+    <p class="lead">NIST has asked you, as an expert in touch sensing, to help design their next standard for benchmarking tactile sensors. Deliverable: a short technical document (about 2–4 pages) that defines the experiments and their protocol, i.e. <b>what</b> is measured and <b>how</b>, for each experiment. The worked reference is NIST's "Touch sensitivity v1.0" document for touchscreens; the IEEE RA-L LaTeX template is provided on OPAL.</p>
+    <div class="box status"><p style="margin:0"><b>${d > 0 ? `${d} days left` : d === 0 ? "Due today" : "Past due"}</b> · released ${fmt(e.date)}, due ${fmt(e.due)}; the OPAL upload stays open until 14 Nov, 00:15. Upload the PDF under the task in OPAL. (The task text on OPAL says "September 13", an obvious slip; the slides and the access window say 13 November.)</p></div>
+    ${timeline([["Home Exercise 1", HE[0][0], HE[0][1], "var(--warn)", "26 Oct – 13 Nov"]])}
+    <h2>What a benchmark document contains</h2>
+    <p>The NIST example is for touchscreens, but its skeleton transfers: scope and definitions, the apparatus with its own reference accuracy, one section per experiment with the quantity, the procedure, the number of repetitions and the reported metric, and a reporting template so that two labs produce comparable numbers ${ctx}.</p>
+    <div class="steps">${["<b>Scope.</b> Which sensors (fingertip arrays? skins? vision-based?) and which quantities are in scope; define taxel, spatial resolution, force resolution.", "<b>Apparatus.</b> A calibrated indenter on a motion stage with a reference force-torque sensor; state its accuracy, the probe shapes, the environmental conditions.", "<b>Experiments.</b> One subsection each: what is measured, how (procedure, repetitions), what is reported (metric, units, plots).", "<b>Reporting.</b> A fixed table so results can be compared across sensors and labs."].map((s, i) => `<div class="step"><span class="n">${i + 1}</span><span>${s}</span></div>`).join("")}</div>
+    <h2>Experiments to consider</h2>
+    <p>Lecture 3's performance criteria (what, how fast, at what resolution) and its reliability trio (reliability, durability, robustness) map one-to-one onto measurable experiments. A first draft of the "what and how" for each ${ctx}:</p>
+    <div class="proto">${PROTO.map(([t, w, h, s]) => `<div class="pr-card" style="--c:var(--vz-s${s})"><b>${t}</b><dl class="wh"><dt>what</dt><dd>${w}</dd><dt>how</dt><dd>${h}</dd></dl></div>`).join("")}</div>
+    ${leg([[1, "spatial"], [2, "force"], [3, "consistency"], [4, "time and lifetime"]])}
+    <h3>Worked example · reporting hysteresis</h3>
+    <p>Elastomer-based sensors (BioTac, magnetic skins, vision-based gels) are viscoelastic, so the reading during unloading differs from the reading during loading at the same force. A benchmark should prescribe the peak force, the loading speed and how the difference is reported, for example as the maximum gap between the two branches in percent of full scale:</p>
+    ${chart("hyst", leg([[1, "loading", "ln"], [2, "unloading", "ln"]]))}<figcaption>Illustrative loading-unloading cycle, not measured data: the reading against the reference force, with the hysteresis measured at mid-range. The protocol should fix the speed, because viscoelastic hysteresis grows with it.</figcaption></figure>
+    ${why("Connecting the document to the lectures", `<p>Spatial and force resolution are the two axes of the chart in Lectures 2 and 3; the human finger sits at about 1 mm and a few hundredths of a newton, which gives the benchmark a natural reference row. A force-torque sensor at the wrist has no spatial resolution and is therefore out of scope (Lecture 3's "not tactile sensors"). The receptor physiology suggests two further experiments the slides do not mention: a vibration test up to a few hundred hertz (the Pacinian band) and a shear or slip test, since Ruffini and Meissner afferents code stretch and slip.</p>`)}
+    <h2>Checklist before uploading</h2>
+    ${["2–4 pages in the RA-L template, with a title, your name and the date", "every experiment has a what, a how, the repetitions and the reported metric with units", "the apparatus and its reference accuracy are stated", "a reporting table or template is included", "scope says which sensor types the benchmark is for", "exported as PDF and uploaded in OPAL before 14 Nov, 00:15"].map(s => `<div class="check"><span class="bx"></span><span>${s}</span></div>`).join("")}
+    <p class="muted" style="margin-top:1rem">Worth one third of the 20 home-exercise points of the portfolio if the three exercises are weighted equally (<a href="touch-sensing/exercise.html?n=0">Practice 0</a>). Slides and the template are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
+function placeholder() {
+  const d = daysUntil(e.date);
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.kind === "home" ? "Not released yet" : "Material not yet covered"}</h2>
+      <p class="muted">${e.kind === "home" ? `The window is ${fmt(e.date)} – ${fmt(e.due)} according to Practice 0.` : `This practice is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(e.date)}, 09:20–10:50, ${esc(roomOn(e.date))}.`}<br>The write-up appears here once the slides are on OPAL.</p>
+    </div>`;
+}
+const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1 };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
+if (!e) {
+  page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise "${esc(q)}".</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · Touch Sensing`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts(); mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() !== narrowNow) { narrowNow = isNarrow(); mountCharts(); } });
+</script>
+</body>
+</html>

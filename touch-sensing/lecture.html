@@ -11,11 +11,12 @@
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <script src="touch-sensing/tsp.js"></script>
+<script src="touch-sensing/tsp-viz.js"></script>
 <style>
 /* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
-:root { --vz-s1: #2a78d6; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
-:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
 </style>
 </head>
 <body class="tsp">
@@ -23,41 +24,46 @@
 <div class="wrap"><div class="detail" id="page"></div></div>
 <script>
 const { m, c, esc, U, fmt, daysUntil, roomOn, today } = TSP;
+const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = TSPViz;
 const n = Number(new URLSearchParams(location.search).get("n"));
 const l = c.lectures.find(x => x.n === n);
 const page = document.getElementById("page");
-const back = `<a class="back" href="touch-sensing.html">← All lectures</a>`;
+const back = `<a class="back" href="touch-sensing.html">← All lectures and exercises</a>`;
+const ctx = `<span class="ctx">context · not on the slides</span>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const ro = pairs => `<dl class="ro">${pairs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+const LABS = {};
 
-// Lecture 1's one quantitative result (Calandra et al. 2017, The Feeling of Success):
-// grasp success on 22 unseen objects, vision only vs vision + touch. Emphasis form: accent vs de-emphasis gray.
+function head(l) {
+  const who = l.n === 0 ? "Roberto Calandra, Robin Koch" : "Roberto Calandra";
+  const room = l.n === 2 ? "BEY/0137/U" : esc(roomOn(l.date));
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1>
+    <p class="meta">${fmt(l.date)} · 09:20–10:50 · ${room} · ${who}</p>`;
+}
+
+// ======================================================================================
+// Lecture 1 (kept from the first write-up): grasp success with and without touch
+// ======================================================================================
 const GRASP = [{ k: "Vision only", v: 56.6, cls: "gray" }, { k: "Vision + touch", v: 83.8, cls: "s1" }];
-const isNarrow = () => matchMedia("(max-width: 600px)").matches;
-function graspSVG(narrow) {
+CHARTS.grasp = narrow => {
   const data = GRASP;
   const W = narrow ? 340 : 560, L = narrow ? 8 : 118, R = narrow ? 50 : 40, T = narrow ? 24 : 14, BH = 22, GAP = narrow ? 34 : 18, PW = W - L - R;
   const x = v => L + v / 100 * PW;
   const H = T + data.length * (BH + GAP) + 26;
   const grid = [0, 25, 50, 75, 100].map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T - 4}" y2="${H - 24}"/><text class="tick" x="${x(v)}" y="${H - 8}" text-anchor="middle">${v}%</text>`).join("");
   const bars = data.map((d, i) => {
-    const y = T + i * (BH + GAP), w = x(d.v) - L, r = 4;
-    const path = `M${L},${y} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${BH - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - r} z`; // 4px rounded data end
+    const y = T + i * (BH + GAP);
     const label = narrow ? `<text class="cat" x="${L}" y="${y - 7}">${d.k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${d.k}</text>`;
-    return `<g class="row" tabindex="0"><title>${d.k}: ${d.v}% grasp success on 22 unseen objects</title>
-      <rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}
-      <path class="bar ${d.cls}" d="${path}"/>
-      <text class="val" x="${x(d.v) + 8}" y="${y + BH / 2 + 4}">${d.v}%</text></g>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}</b>${d.v} % grasp success on 22 unseen objects`)}"><rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}
+      <path class="bar ${d.cls}" d="${hbar(L, x(d.v), y, BH)}"/><text class="val" x="${x(d.v) + 8}" y="${y + BH / 2 + 4}">${d.v}%</text></g>`;
   }).join("");
   const y0 = T + BH / 2, y1 = T + BH + GAP + BH / 2;
-  const delta = narrow ? "" : `<line class="delta-line" x1="${x(56.6)}" x2="${x(56.6)}" y1="${y0 + BH / 2 + 2}" y2="${y1 - BH / 2 - 2}"/>
-    <text class="delta" x="${x(56.6) + 6}" y="${(y0 + y1) / 2 + 4}">+27.2 points with touch</text>`;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grasp success on unseen objects: vision only 56.6 percent, vision plus touch 83.8 percent">
-        ${grid}<line class="axis" x1="${L}" x2="${L}" y1="${T - 4}" y2="${H - 24}"/>${bars}${delta}</svg>`;
-}
+  const delta = narrow ? "" : `<line class="delta-line" x1="${x(56.6)}" x2="${x(56.6)}" y1="${y0 + BH / 2 + 2}" y2="${y1 - BH / 2 - 2}"/><text class="delta" x="${x(56.6) + 6}" y="${(y0 + y1) / 2 + 4}">+27.2 points with touch</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grasp success on unseen objects: vision only 56.6 percent, vision plus touch 83.8 percent">${grid}<line class="axis" x1="${L}" x2="${L}" y1="${T - 4}" y2="${H - 24}"/>${bars}${delta}</svg>`;
+};
 
-function head(l) {
-  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1>
-    <p class="meta">${fmt(l.date)} · 09:20–10:50 · ${esc(roomOn(l.date))} · ${l.n === 0 ? "Roberto Calandra, Robin Koch" : "Roberto Calandra"}</p>`;
-}
 function lecture1() {
   return `${head(l)}
     <p class="lead">Why give machines a sense of touch at all? The lecture answers in two halves: touch is indispensable for humans, and the first hard evidence says the same for robots, even though robotics has been slow to adopt it.</p>
@@ -88,13 +94,8 @@ function lecture1() {
       <div class="tile"><div class="v">2</div><div class="l">GelSight sensors, one per finger</div></div>
       <div class="tile"><div class="v">22</div><div class="l">unseen test objects</div></div>
     </div>
-    <figure class="viz">
-      <div id="grasp-chart" data-narrow="${isNarrow()}">${graspSVG(isNarrow())}</div>
-      <figcaption>Grasp success on 22 unseen objects when the policy uses the outcome predictor, vision only vs vision + touch (as shown in the lecture).</figcaption>
-    </figure>
-    <details class="tbl"><summary>Table view of the chart</summary>
-      <table><tr><th>Input</th><th>Grasp success (22 unseen objects)</th></tr>${GRASP.map(d => `<tr><td>${d.k}</td><td class="n">${d.v} %</td></tr>`).join("")}</table>
-    </details>
+    ${chart("grasp")}<figcaption>Grasp success on 22 unseen objects when the policy uses the outcome predictor, vision only vs vision + touch (as shown in the lecture).</figcaption></figure>
+    ${tbl(["Input", "Grasp success (22 unseen objects)"], GRASP.map(d => [d.k, d.v + " %"]))}
     <h2>Example 2 · General in-hand object rotation with vision and touch</h2>
     <p class="muted">Qi, Yi, Suresh, Lambeta, Ma, Calandra &amp; Malik, CoRL 2023.</p>
     <p>A multi-fingered hand rotates unseen objects in-hand around arbitrary axes; the policy fuses vision and touch, and touch is what keeps the rotation robust when the object is occluded by the hand itself.</p>
@@ -125,11 +126,397 @@ function lecture0() {
     <ul>
       <li>12 lectures and 12 practices, everything in English; 3 home exercises during the semester.</li>
       <li>No formal admission requirements, but Python/PyTorch and Machine Learning 1 are strongly recommended; robotics, mechanical engineering, optics and electronics help. Catch-up tip: MIT's "The missing semester of your CS education".</li>
-      <li>Grading and Selma registration periods: see the <a href="touch-sensing/orga.html">Orga page</a>.</li>
+      <li>Grading and Selma registration periods: see the <a href="touch-sensing/orga.html">Orga page</a>; the points of the portfolio variant were given in <a href="touch-sensing/exercise.html?n=0">Practice 0</a>.</li>
     </ul>
     <h2>Logistics</h2>
     <p>OPAL is the channel for announcements, rooms, slides and the feedback form after each session. Contact: teaching@lasr.org or the OPAL mail form, not personal e-mails.</p>`;
 }
+
+// ======================================================================================
+// Lecture 2 – physiology of touch
+// ======================================================================================
+// The four mechanoreceptors of glabrous skin as the slides sort them (depth, capsule, adaptation, stimulus),
+// plus the Krause end-bulb the slides mention as not well understood. Innervation densities at the fingertip are
+// context from Johansson & Vallbo 1979 (the lecture's reference), rounded.
+const RECEPTORS = [
+  { id: "merkel", slot: 1, name: "Merkel cells / disks", aff: "SA1 · slowly adapting type 1", depth: "shallow", caps: "unencapsulated", adapt: "slow", feels: "light touch, edges and bars, fine spatial detail (high spatial resolution)", density: 70, rf: "small, sharp receptive field", short: "Merkel", pos: [92, 86] },
+  { id: "meissner", slot: 2, name: "Meissner corpuscles", aff: "RA · rapidly adapting", depth: "shallow", caps: "encapsulated", adapt: "rapid", feels: "touch onset and low-frequency vibration, slip", density: 140, rf: "small receptive field", short: "Meissner", pos: [178, 84] },
+  { id: "pacinian", slot: 3, name: "Pacinian corpuscles", aff: "PC · rapidly adapting", depth: "deep", caps: "encapsulated (onion-like)", adapt: "rapid", feels: "deep pressure and high-frequency vibration (hundreds of Hz)", density: 21, rf: "large, diffuse receptive field", short: "Pacinian", pos: [128, 178] },
+  { id: "ruffini", slot: 4, name: "Ruffini corpuscles", aff: "SA2 · slowly adapting type 2", depth: "deep", caps: "encapsulated", adapt: "slow", feels: "skin stretch (hand shape, direction of forces)", density: 9, rf: "large receptive field", short: "Ruffini", pos: [252, 150] },
+];
+const KRAUSE = { id: "krause", name: "Krause end-bulb", aff: "nerve ending, function not well understood", feels: "maybe temperature (the slides put a question mark here)", short: "Krause", pos: [292, 100] };
+
+// Skin cross-section: epidermis with ridges, dermis, subcutis; receptors as simple symbols with a nerve to the right.
+function skinSVG() {
+  const W = 360, H = 230;
+  const sym = r => {
+    const [x, y] = r.pos;
+    const body = r.id === "merkel" ? `<circle class="body" cx="${x}" cy="${y}" r="7"/><circle class="body" cx="${x + 11}" cy="${y - 4}" r="5"/>`
+      : r.id === "meissner" ? `<ellipse class="body" cx="${x}" cy="${y}" rx="9" ry="16"/><path class="nerve" d="M${x - 5},${y + 10} q5,-8 10,0 q-5,-8 -10,-16"/>`
+      : r.id === "pacinian" ? `<ellipse class="body" cx="${x}" cy="${y}" rx="26" ry="17"/><ellipse class="body" cx="${x}" cy="${y}" rx="17" ry="11" style="fill:var(--surface);opacity:.9"/><ellipse class="body" cx="${x}" cy="${y}" rx="8" ry="5"/>`
+      : r.id === "ruffini" ? `<ellipse class="body" cx="${x}" cy="${y}" rx="28" ry="9"/><path class="nerve" d="M${x - 20},${y} h40 M${x - 14},${y - 4} h28 M${x - 14},${y + 4} h28"/>`
+      : `<circle class="body" cx="${x}" cy="${y}" r="7"/><path class="nerve" d="M${x - 3},${y - 3} l6,6 M${x + 3},${y - 3} l-6,6"/>`;
+    const ny = r.id === "pacinian" ? y + 17 : y + 12;
+    return `<g class="rc" data-r="${r.id}" tabindex="0" role="button" aria-label="${esc(r.name)}" style="--c:${r.slot ? `var(--vz-s${r.slot})` : "var(--vz-gray)"}">
+      <path class="nerve" d="M${x},${ny} C${x},${ny + 30} ${x + 40},${H - 36} ${W - 24},${H - 36}"/>${body}
+      <text class="nm" x="${x}" y="${r.id === "pacinian" ? y - 22 : r.id === "ruffini" ? y - 14 : y - 20}" text-anchor="middle">${r.short}</text></g>`;
+  };
+  const ridges = Array.from({ length: 9 }, (_, i) => { const x = 20 + i * 40; return `M${x},46 q20,-14 40,0`; }).join(" ");
+  return `<svg class="skin" viewBox="0 0 ${W} ${H}" role="group" aria-label="Skin cross-section: epidermis, dermis and subcutis with the four mechanoreceptors; press a receptor to read its properties">
+    <rect class="sub" x="0" y="130" width="${W}" height="${H - 130}"/>
+    <rect class="derm" x="0" y="56" width="${W}" height="74"/>
+    <path class="epi" d="M0,36 ${Array.from({ length: 9 }, (_, i) => `q${20},-10 ${40},0`).join(" ")} V56 H0 Z"/>
+    <path class="ridge" d="${ridges}"/>
+    <text class="ll" x="6" y="52">epidermis · wears, heals, regenerates</text>
+    <text class="ll" x="6" y="126">dermis</text>
+    <text class="ll" x="6" y="${H - 8}">subcutis</text>
+    <text class="ll" x="${W - 6}" y="${H - 40}" text-anchor="end">→ afferent nerve</text>
+    ${[...RECEPTORS, KRAUSE].map(sym).join("")}</svg>`;
+}
+function receptorFacts(id) {
+  const r = [...RECEPTORS, KRAUSE].find(x => x.id === id);
+  const c = r.slot ? `var(--vz-s${r.slot})` : "var(--vz-gray)";
+  if (!r.slot) return `<div class="rfacts" style="--c:${c}"><h3>${r.name}</h3><p>${r.aff}. ${r.feels}.</p><p class="muted">Not one of the four mechanoreceptors the lecture sorts; listed on the slide as an open question.</p></div>`;
+  return `<div class="rfacts" style="--c:${c}"><h3>${r.name}</h3>
+    <div><span class="fb">${r.depth}</span><span class="fb">${r.caps}</span><span class="fb">${r.adapt}ly adapting</span></div>
+    ${ro([["afferent", r.aff], ["responds to", r.feels], ["field", r.rf], ["fingertip", `≈ ${r.density} units / cm² ${ctx}`]])}</div>`;
+}
+LABS.skin = body => {
+  body.innerHTML = `<p class="lab-note">Click or tab to a receptor. The four are sorted by the three questions of the slides: how deep, encapsulated or free nerve ending, fast or slow adapting.</p>
+    <div class="skin-wrap"><div>${skinSVG()}</div><div class="rf-out">${receptorFacts("merkel")}</div></div>`;
+  const out = body.querySelector(".rf-out"), rcs = body.querySelectorAll(".rc");
+  const pick = id => { rcs.forEach(g => g.classList.toggle("on", g.dataset.r === id)); out.innerHTML = receptorFacts(id); };
+  rcs.forEach(g => { g.addEventListener("click", () => pick(g.dataset.r)); g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(g.dataset.r); } }); });
+  pick("merkel");
+};
+const rgrid = () => `<div class="rgrid" role="table" aria-label="Receptor properties">
+  <div class="h"></div><div class="h">depth</div><div class="h">capsule</div><div class="h">adaptation</div>
+  ${RECEPTORS.map(r => `<div class="rl">${key(r.slot)}${r.short}</div>
+    <div class="c ${r.depth === "shallow" ? "hi" : ""}" style="--c:var(--vz-s${r.slot})">${r.depth}</div>
+    <div class="c ${r.caps.startsWith("encap") ? "hi" : ""}" style="--c:var(--vz-s${r.slot})">${r.caps.startsWith("encap") ? "encapsulated" : "free ending"}</div>
+    <div class="c ${r.adapt === "rapid" ? "hi" : ""}" style="--c:var(--vz-s${r.slot})">${r.adapt}</div>`).join("")}</div>`;
+
+// Spike lab: a toy stimulus (indentation x(t) in mm) and integrate-and-fire rasters for the four afferents.
+// Rates: SA1 ∝ x (plus a little onset emphasis), SA2 ∝ x more weakly (it mainly codes stretch), RA ∝ |dx/dt| weighted for
+// vibration near 30 Hz, PC ∝ |dx/dt| weighted near 250 Hz. It is a cartoon of "slow = static, rapid = change", not a model fit.
+const SP = { preset: "hold" };
+const SP_PRESETS = [["press and hold", "hold"], ["tap", "tap"], ["vibrate 30 Hz", "v30"], ["vibrate 250 Hz", "v250"], ["slow stretch", "stretch"]];
+function stimulus(p) {
+  const N = 1000, dt = 1 / N, x = new Float64Array(N + 1);
+  const ramp = (t, a, b) => t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a);
+  for (let i = 0; i <= N; i++) { const t = i * dt;
+    x[i] = p === "hold" ? 1.2 * (ramp(t, .1, .22) - ramp(t, .72, .82))
+      : p === "tap" ? 1.0 * (ramp(t, .3, .34) - ramp(t, .36, .4))
+      : p === "v30" ? (t > .15 && t < .85 ? .5 + .25 * Math.sin(2 * Math.PI * 30 * (t - .15)) : 0)
+      : p === "v250" ? (t > .15 && t < .85 ? .5 + .08 * Math.sin(2 * Math.PI * 250 * (t - .15)) : 0)
+      : 1.2 * ramp(t, .05, .95); }
+  return { x, dt, f: p === "v30" ? 30 : p === "v250" ? 250 : 0, stretch: p === "stretch" };
+}
+function rasters(st) {
+  const { x, dt, f, stretch } = st, N = x.length - 1, w = (f0, s) => f ? Math.exp(-(((Math.log(f) - Math.log(f0)) / s) ** 2)) : 1;
+  const rate = { merkel: [], meissner: [], pacinian: [], ruffini: [] };
+  for (let i = 0; i < N; i++) { const d = Math.abs(x[i + 1] - x[i]) / dt;
+    rate.merkel.push(stretch ? 12 * x[i] : 45 * x[i] + 0.12 * d);
+    rate.ruffini.push(stretch ? 45 * x[i] : 10 * x[i]);
+    rate.meissner.push(Math.min(260, 0.9 * d * w(30, 1.0)));
+    rate.pacinian.push(Math.min(320, (f ? 0.9 * d : 0.05 * d) * w(250, 0.8))); }
+  const spikes = {};
+  for (const k in rate) { let acc = 0.5, s = []; rate[k].forEach((r, i) => { acc += r * dt; if (acc >= 1) { s.push(i * dt); acc -= 1; } }); spikes[k] = s; }
+  return spikes;
+}
+CHARTS.spikes = narrow => {
+  const st = stimulus(SP.preset), sp = rasters(st), W = narrow ? 340 : 600, L = narrow ? 70 : 110, R = 12, T = 14, SH = 54, RH = 26, PW = W - L - R;
+  const H = T + SH + 4 * RH + 22, x = t => L + t * PW, ys = v => T + SH - 6 - v / 1.3 * (SH - 10);
+  const path = "M" + Array.from(st.x).map((v, i) => `${x(i * st.dt).toFixed(1)},${ys(v).toFixed(1)}`).filter((_, i) => i % 2 === 0).join(" L");
+  const rows = RECEPTORS.map((r, k) => { const y0 = T + SH + k * RH, ticks = sp[r.id].map(t => `<line x1="${x(t).toFixed(1)}" x2="${x(t).toFixed(1)}" y1="${y0 + 5}" y2="${y0 + RH - 5}" stroke="var(--vz-s${r.slot})" stroke-width="1.4"/>`).join("");
+    return `<g><line class="grid" x1="${L}" x2="${W - R}" y1="${y0}" y2="${y0}"/><text class="cat" x="${L - 8}" y="${y0 + RH / 2 + 4}" text-anchor="end">${r.short} <tspan class="tick">${r.aff.split(" ")[0]}</tspan></text>${ticks}
+      <text class="tick" x="${W - R}" y="${y0 + RH / 2 + 4}" text-anchor="end">${sp[r.id].length ? sp[r.id].length + " spikes" : "silent"}</text></g>`; }).join("");
+  const xt = [0, .25, .5, .75, 1].map(t => `<text class="tick" x="${x(t)}" y="${H - 6}" text-anchor="middle">${t} s</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Toy stimulus trace and spike rasters of the four mechanoreceptor afferents for the chosen stimulus">
+    <text class="note" x="${L - 8}" y="${T + 8}" text-anchor="end">indentation</text><line class="axis" x1="${L}" x2="${W - R}" y1="${ys(0)}" y2="${ys(0)}"/>
+    <path class="line" style="stroke:var(--ink)" d="${path}"/>${rows}${xt}</svg>`;
+};
+LABS.spikes = body => {
+  body.innerHTML = `<div class="presets">${SP_PRESETS.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === SP.preset}">${t}</button>`).join("")}</div>
+    <div class="viz bare"><div class="chart-wrap"><div data-chart="spikes"></div><div class="tip" role="tooltip"></div></div></div>
+    <p class="lab-note" style="margin-top:8px">Slowly adapting afferents keep firing while the skin stays indented (static stimuli); rapidly adapting ones fire only while something changes. Meissner corpuscles like low-frequency flutter, Pacinian corpuscles high-frequency vibration, Ruffini endings stretch. A toy integrate-and-fire cartoon, not measured data.</p>`;
+  const draw = () => body.querySelector("[data-chart]").innerHTML = CHARTS.spikes(isNarrow());
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { SP.preset = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  draw();
+};
+
+// Innervation density at the fingertip (Johansson & Vallbo 1979, rounded): one bar per receptor, coloured by receptor.
+CHARTS.density = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 86 : 150, R = 60, T = 22, RH = 34, PW = W - L - R, H = T + RECEPTORS.length * RH + 26, x = v => L + v / 150 * PW;
+  const ticks = [0, 50, 100, 150].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = RECEPTORS.map((r, i) => { const y0 = T + i * RH + 7, bh = 20;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${r.name}</b>≈ ${r.density} units per cm² at the fingertip · ${r.rf}`)}"><rect class="hit" x="0" y="${y0 - 7}" width="${W}" height="${RH}"/>
+      <path class="bar" style="fill:var(--vz-s${r.slot})" d="${hbar(x(0), x(r.density), y0, bh)}"/><text class="cat" x="${L - 8}" y="${y0 + 14}" text-anchor="end">${r.short}</text><text class="val" x="${x(r.density) + 6}" y="${y0 + 14}">${r.density}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: approximate mechanoreceptive units per square centimetre at the fingertip. Meissner 140, Merkel 70, Pacinian 21, Ruffini 9.">${ticks}${rows}<text class="note" x="${L}" y="12">mechanoreceptive units per cm² of fingertip skin</text></svg>`;
+};
+
+// Resolution chart (log-log) as drawn on the slides: spatial resolution against normal-force resolution.
+// Lecture 2 shows only the human finger; Lecture 3 adds four non-vision sensors. Values are read off the slide chart.
+const RES = [
+  { k: "Human finger", f: 0.058, s: 1.0, slot: 0, note: "about 1 mm spatial, tens of mN force (slide chart)", lx: -10, ly: 4, a: "end" },
+  { k: "ReSkin", f: 0.2, s: 1.0, slot: 1, note: "magnetic elastomer skin", lx: 0, ly: 22, a: "middle" },
+  { k: "Epstein et al.", f: 0.65, s: 1.08, slot: 2, note: "slide chart", lx: -4, ly: -12, a: "end" },
+  { k: "BioTac", f: 0.85, s: 1.26, slot: 3, note: "SynTouch, 19 or 29 taxels", lx: 2, ly: -12, a: "start" },
+  { k: "SaLoutos et al.", f: 1.6, s: 1.2, slot: 4, note: "slide chart", lx: 10, ly: 4, a: "start" },
+];
+function resSVG(narrow, pts) {
+  const W = narrow ? 340 : 600, H = narrow ? 300 : 320, L = narrow ? 44 : 56, R = 16, T = 18, B = 44, PW = W - L - R, PH = H - T - B;
+  const lg = Math.log10, x = v => L + (lg(v) + 3) / 4 * PW, y = v => T + PH - (lg(v) + 3) / 4 * PH;
+  const tv = [0.001, 0.01, 0.1, 1, 10];
+  const xt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${T + PH + 16}" text-anchor="middle">${v}</text>`).join("");
+  const yt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const dots = pts.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>≈ ${p.f} N force resolution · ≈ ${p.s} mm spatial resolution<br>${p.note}`)}"><circle class="hit" cx="${x(p.f)}" cy="${y(p.s)}" r="14"/><circle class="dot ring" style="fill:${p.slot ? `var(--vz-s${p.slot})` : "var(--vz-gray)"}" cx="${x(p.f)}" cy="${y(p.s)}" r="6"/>
+    ${narrow ? "" : `<text class="vl2" x="${x(p.f) + p.lx}" y="${y(p.s) + p.ly}" text-anchor="${p.a}" style="opacity:1">${p.k}</text>`}</g>`).join("");
+  const better = `<text class="note" x="${L + 6}" y="${T + PH - 8}">← finer is better, towards the bottom-left</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter chart on log axes: spatial resolution in millimetres against normal-force resolution in newtons. ${pts.map(p => `${p.k} about ${p.f} newtons and ${p.s} millimetres`).join("; ")}.">
+    ${xt}${yt}${better}<text class="note" x="${L + PW / 2}" y="${H - 6}" text-anchor="middle">normal-force resolution [N]</text><text class="note" transform="translate(12,${T + PH / 2}) rotate(-90)" text-anchor="middle">spatial resolution [mm]</text>${dots}</svg>`;
+}
+CHARTS.resFinger = narrow => resSVG(narrow, RES.slice(0, 1));
+CHARTS.resAll = narrow => resSVG(narrow, RES);
+
+// Somatotopy: a schematic strip of the primary somatosensory cortex, neighbouring skin stays neighbouring in cortex,
+// and the hand, face and lips take far more cortex than their skin area (the sensory homunculus). Widths are illustrative.
+function homunculus() {
+  const parts = [["toes", 4], ["leg", 6], ["trunk", 6], ["arm", 6], ["hand", 12], ["thumb", 7], ["fingers", 14], ["face", 10], ["lips", 12], ["tongue", 8]];
+  const total = parts.reduce((a, p) => a + p[1], 0);
+  return `<div class="levels" aria-label="Schematic somatotopic strip">${parts.map(([t, w], i) => `<div class="lv" style="flex:${w} 1 0; border-top-color:${i >= 4 && i <= 6 ? "var(--vz-s1)" : i >= 7 ? "var(--vz-s2)" : "var(--vz-gray)"}"><div class="t">${t}</div><div class="d">${Math.round(w / total * 100)} %</div></div>`).join("")}</div>
+    ${leg([[1, "hand and fingers"], [2, "face, lips, tongue"], ["g", "the rest of the body"]])}`;
+}
+// Reflex arc: receptor → sensory neuron → spinal cord → motor neuron → muscle, the brain is informed in parallel.
+function reflexSVG() {
+  const W = 640, H = 170, node = (x, y, t, c) => `<g><circle cx="${x}" cy="${y}" r="22" fill="color-mix(in srgb, ${c} 18%, var(--surface))" stroke="${c}" stroke-width="2"/><text x="${x}" y="${y + 4}" text-anchor="middle" class="lbl" style="font-size:11px">${t}</text></g>`;
+  const arrow = (x1, y1, x2, y2, dash) => `<path d="M${x1},${y1} L${x2},${y2}" stroke="var(--ink-3)" stroke-width="1.6" fill="none" marker-end="url(#ah)" ${dash ? 'stroke-dasharray="4 3"' : ""}/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reflex arc: receptor, sensory neuron, spinal cord, motor neuron, muscle; a dashed branch informs the brain in parallel" style="width:100%;height:auto;display:block">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>
+    ${node(50, 110, "receptor", "var(--vz-s1)")}${arrow(74, 110, 148, 110)}<text class="tick" x="111" y="100" text-anchor="middle">sensory neuron</text>
+    ${node(172, 110, "spinal cord", "var(--vz-s4)")}${arrow(196, 110, 270, 110)}<text class="tick" x="233" y="100" text-anchor="middle">motor neuron</text>
+    ${node(294, 110, "muscle", "var(--vz-s3)")}
+    ${arrow(185, 88, 230, 40, true)}${node(254, 32, "brain", "var(--vz-s2)")}<text class="tick" x="330" y="30">informed in parallel: you feel the sting</text><text class="tick" x="330" y="44">after the hand has already moved</text>
+    <text class="tick" x="330" y="112">local loop: tens of milliseconds, no cortex involved</text>
+    <text class="tick" x="330" y="128">(robotics analogue: a fast low-level controller next to the sensor,</text><text class="tick" x="330" y="144">a slow planner on top)</text></svg>`;
+}
+
+function lecture2() {
+  return `${head(l)}
+    <p class="lead">What is touch in humans, and why should a roboticist care? The lecture stays at the functional level: which receptors the skin has, what each of them picks up, how fine the finger's resolution is, and how little is known about the processing. The point is to have a reference against which the artificial sensors of the next lectures can be compared. Chemistry and cell biology are explicitly left out.</p>
+    <h2>Touch as a perceptual system</h2>
+    <p>Following Gibson (<i>The senses considered as perceptual systems</i>), touch sensing is the composition of three parts. The same split structures the whole course: hardware in Lectures 3–5, the infrastructure (simulation, data) in Lecture 6, processing from Lecture 7 on.</p>
+    <div class="levels">
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="n">1</div><div class="t">Sensing hardware</div><div class="d">the receptors in the skin; later: tactile sensors</div></div><div class="x">+</div>
+      <div class="lv" style="border-top-color:var(--vz-s4)"><div class="n">2</div><div class="t">Computational infrastructure</div><div class="d">nerves, spinal cord, cortex; later: electronics, drivers, simulators</div></div><div class="x">+</div>
+      <div class="lv" style="border-top-color:var(--vz-s3)"><div class="n">3</div><div class="t">Processing algorithms</div><div class="d">what the brain makes of the spikes; later: perception and ML for touch</div></div>
+    </div>
+    ${why("Why the functional level is enough", `<p>For a comparison with artificial sensors the questions are the engineer's: what quantity is measured, where, how fast, with what resolution, and how the signal is coded. Those questions can be answered for a Merkel cell without knowing its ion channels, and exactly these questions become the evaluation criteria of Lecture 3.</p>`)}
+
+    <h2>Many sensors in one</h2>
+    <p>The skin is not one sensor but at least five receptor families, grouped by the kind of stimulus each one transduces. The course cares about the first family; the others explain why "touch" also means warmth, pain and body position.</p>
+    <div class="tiles">
+      <div class="tile" style="box-shadow:inset 0 3px var(--vz-s1)"><div class="v">Mechano</div><div class="l">mechanical stimulation: pressure, vibration, stretch · the topic of this course</div></div>
+      <div class="tile"><div class="v">Thermo</div><div class="l">temperature (warm and cold fibres)</div></div>
+      <div class="tile"><div class="v">Noci</div><div class="l">pain: tissue damage, heat, chemicals</div></div>
+      <div class="tile"><div class="v">Proprio</div><div class="l">position and movement of joints and muscles</div></div>
+      <div class="tile"><div class="v">Chemo</div><div class="l">chemical stimuli (itch, irritants)</div></div>
+    </div>
+
+    <h2>The four mechanoreceptors</h2>
+    <p>Glabrous (hairless) skin, the palm and the fingertips, has four kinds of mechanoreceptive units, named after their afferent fibre type (SA1, RA, PC, SA2) or the structure the nerve ends in. The slides sort them along three binary questions; the explorer below answers them per receptor.</p>
+    ${lab("skin", "the skin cross-section")}
+    ${rgrid()}
+    <ul>
+      <li><b>Shallow vs deep.</b> Merkel and Meissner sit just under the epidermis and therefore see small, sharp patches of skin; Pacinian and Ruffini sit deep in the dermis and integrate over a large area.</li>
+      <li><b>Encapsulated vs unencapsulated.</b> Three of the four end in a capsule; Merkel endings are free nerve endings on Merkel cells. The capsule is a mechanical filter: the layered onion of the Pacinian corpuscle lets fast changes through and blocks steady pressure ${ctx}.</li>
+      <li><b>Slow vs rapid adaptation.</b> Slowly adapting units keep firing for as long as the stimulus lasts and thus encode static stimuli; rapidly adapting units fire at changes only, and thus encode dynamic stimuli.</li>
+      <li><b>Krause end-bulbs</b> are listed too: nerve endings whose role is not well understood, possibly temperature.</li>
+    </ul>
+    <h3>Static or dynamic: watch the spikes</h3>
+    ${lab("spikes", "adaptation")}
+    ${why("Why this matters for sensor design", `<p>A robot finger wants both channels. A slowly adapting signal is the one you need to hold a glass; a rapidly adapting one tells you the glass is slipping before it is gone. Lecture 3 shows that most artificial technologies deliver only one of the two: resistive and capacitive pads are "slowly adapting" (they report static force), piezoelectric films are "rapidly adapting" (they only report changes).</p>`)}
+
+    <h3>How densely the fingertip is innervated</h3>
+    <p>The lecture's reference paper (Johansson &amp; Vallbo 1979) counted the mechanoreceptive units of the hand: roughly 17,000 units in the glabrous skin of one hand, with the fingertips innervated several times more densely than the palm. The rounded fingertip numbers per receptor type ${ctx}:</p>
+    ${chart("density")}<figcaption>Approximate innervation density at the fingertip, units per cm², after Johansson &amp; Vallbo (1979). The two shallow, small-field types dominate, which is what gives the fingertip its spatial acuity.</figcaption></figure>
+    ${tbl(["Receptor", "≈ units / cm² (fingertip)", "Field"], RECEPTORS.map(r => [r.short, r.density, r.rf]))}
+
+    <h2>The epidermis</h2>
+    <p>Every touch wears the skin. The epidermis is the sacrificial layer that protects the receptors, and it heals and regenerates. That is a property no artificial sensor has yet: in Lecture 3 the same fact reappears as "touch is an active sense, sampling degrades the interface", and durability becomes an evaluation criterion.</p>
+
+    <h2>Characterising human touch: very difficult</h2>
+    <p>The slides give one chart for the whole question, a log-log plot of spatial resolution against normal-force resolution with a single point for the human finger. Both axes span four orders of magnitude on purpose: the artificial sensors of the next lecture will be placed on the same axes.</p>
+    ${chart("resFinger")}<figcaption>Spatial resolution against normal-force resolution of the human finger, log-log, as on the slide: about 1 mm and a few hundredths of a newton. Lecture 3 adds four sensors to this chart.</figcaption></figure>
+    ${why("Where the numbers come from", `<p>Psychophysics gives several "resolutions", which is why the slide calls characterisation very difficult: the classic two-point discrimination threshold at the fingertip is about 2–3 mm, grating-orientation tasks go down to about 1 mm, and through vibration during sliding people distinguish surface textures with features far below the spatial resolution of the receptors. Force thresholds depend on the probe, the speed and the site in the same way. A single point on the chart is a convenient summary, not a measurement.</p>`)}
+
+    <h2>Processing of touch</h2>
+    <p>The lecture is candid: the processing is relatively poorly understood. Two things are established.</p>
+    <ul>
+      <li><b>Separate central processing per receptor type.</b> The channels are not merged at the receptor level; the evidence points to separate pathways being combined later.</li>
+      <li><b>Spatial adjacency is preserved in the brain.</b> Neighbouring skin maps to neighbouring cortex (somatotopy), and the cortical area a body part gets follows its receptor density, not its size: the sensory homunculus with its huge hands and lips.</li>
+    </ul>
+    ${homunculus()}
+    <p class="muted">Schematic strip of the primary somatosensory cortex; the widths are illustrative, only the ordering and the over-representation of hand and face are the point ${ctx}.</p>
+    <h3>Event-based</h3>
+    <p>The slide shows the receptor anatomy next to the neural signal and the percept: each afferent delivers a train of spikes. A rapidly adapting fibre produces a spike at contact onset and one at release and is silent in between; a slowly adapting fibre fires throughout steady pressure. Touch is thus coded as events, not as sampled frames, which is the natural counterpart of the event cameras in vision and a reason why neuromorphic tactile sensing is a research direction ${ctx}.</p>
+    <h3>The reflex arc</h3>
+    <p>Not all processing waits for the cortex. A reflex closes the loop in the spinal cord: receptor, sensory neuron, interneuron, motor neuron, muscle. The brain is told in parallel and perceives the stimulus after the reaction has started.</p>
+    <figure class="viz">${reflexSVG()}<figcaption>The reflex arc as a diagram: the fast local loop through the spinal cord and the slower parallel path to the brain.</figcaption></figure>
+
+    <h2>Summary</h2>
+    <ul>
+      <li>Human touch is composed of many different receptor types; for mechanical stimuli four, sorted by depth, encapsulation and adaptation.</li>
+      <li>The processing of touch is complex and relatively poorly understood, but it is separate per receptor type, somatotopic, event-based and partly reflexive.</li>
+    </ul>
+    ${ex("Likely exam questions", `<p>Name the four mechanoreceptors and sort them by depth, capsule and adaptation speed. Explain what slowly and rapidly adapting means and which stimulus each class encodes. Give the three parts of touch as a perceptual system. Explain why the fingertip's resolution is hard to characterise and roughly where the human finger sits on the resolution chart. This list is a guess from the slide structure ${ctx}.</p>`)}
+    <h2>References named in the lecture</h2>
+    <ul class="refs">
+      <li>Gibson, J. J. (1966). The senses considered as perceptual systems.</li>
+      <li>Johansson, R. S. &amp; Vallbo, Å. B. (1979). Tactile sensibility in the human hand: relative and absolute densities of four types of mechanoreceptive units in glabrous skin. J. Physiol.</li>
+      <li>Johnson, K. O. (2001). The roles and functions of cutaneous mechanoreceptors. Current Opinion in Neurobiology.</li>
+    </ul>
+    <p class="muted">Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>. The practice to this lecture is <a href="touch-sensing/exercise.html?n=2">Exercise 2</a>.</p>`;
+}
+
+// ======================================================================================
+// Lecture 3 – touch sensing hardware (everything except vision-based sensors)
+// ======================================================================================
+const CRITERIA = [
+  ["Form factor", "compact flat surface, fingertip, or skin (large, possibly flexible arrays)", 1],
+  ["Availability & cost", "most sensors are research prototypes; the few products are low-volume and expensive", 2],
+  ["Ease of manufacture", "some technologies scale to large arrays, some do not; many wires = hard to build", 3],
+  ["Ease of use", "how to make sense of the raw readings, and whether calibration is needed", 4],
+  ["Reliability", "robustness and durability: touch is active and sampling degrades the interface", 2],
+  ["Performance", "what is measured, how fast (Hz), at what resolution (the taxel)", 1],
+];
+// Technology matrix as the slides discuss it (✓ advantage, ✗ limitation, ~ depends); rows carry a one-line principle.
+const TECH = [
+  { k: "Capacitive", p: "a conductive object adds capacitance in parallel", static: "ok", multi: "ok", liquids: "bad", calib: "mid", vib: "bad", cost: "ok", notes: "no touch required (proximity), noisy, false triggers with water, mostly binary; software can partly compensate", slot: 1 },
+  { k: "Resistive", p: "V = I·R, the resistance changes with force", static: "ok", multi: "bad", liquids: "ok", calib: "bad", vib: "bad", cost: "ok", notes: "insensitive to liquids, low cost, needs calibration, no multi-touch", slot: 2 },
+  { k: "Piezoelectric", p: "pressure generates a voltage proportional to the force change", static: "bad", multi: "mid", liquids: "ok", calib: "mid", vib: "ok", cost: "mid", notes: "captures vibrations and high frequencies, cannot measure static forces (active force only)", slot: 3 },
+  { k: "Magnetic", p: "magnetometers read the field of magnetic particles in a deforming elastomer", static: "ok", multi: "mid", liquids: "ok", calib: "bad", vib: "mid", cost: "ok", notes: "soft, cheap interface; the slide leaves the cons open: field mapping is learned, interference, hysteresis", slot: 4 },
+  { k: "Optical", p: "light paths or time of flight change when the surface deforms", static: "ok", multi: "mid", liquids: "ok", calib: "mid", vib: "mid", cost: "mid", notes: "Piacenza et al.: contact localisation and indentation depth from light transport", slot: 0 },
+  { k: "Vision-based", p: "a camera films a deforming gel", static: "ok", multi: "ok", liquids: "ok", calib: "mid", vib: "bad", cost: "ok", notes: "next lectures; the main technology of the course", slot: 0 },
+];
+const TCOLS = [["static", "static force"], ["multi", "multi-touch"], ["liquids", "liquids"], ["calib", "no calibration"], ["vib", "vibration"], ["cost", "cost / availability"]];
+const MARK = { ok: "✓", bad: "✗", mid: "~" };
+const techMatrix = () => `<div class="tm-wrap"><table class="tm"><tr><th class="r">technology</th>${TCOLS.map(([, t]) => `<th>${t}</th>`).join("")}</tr>
+  ${TECH.map(t => `<tr><td class="r">${t.k}<small>${t.p}</small></td>${TCOLS.map(([k]) => `<td class="${t[k]}" title="${esc(t.notes)}">${MARK[t[k]]}</td>`).join("")}</tr>`).join("")}</table></div>
+  <p class="tm-note">✓ strength · ✗ limitation · ~ depends on the design. The slides give the pros and cons per technology; the column form is ours, and the "cost" and "vibration" cells for optical and magnetic are judgement calls ${ctx}.</p>`;
+
+// Signal lab: the same indentation profile seen through four transduction principles.
+const SG = { preset: "hold" };
+function sigTraces(p) {
+  const st = stimulus(p), x = st.x, N = x.length - 1, dt = st.dt, F = Array.from(x, v => Math.max(0, v));
+  const res = F.map(f => Math.pow(f / 1.2, 0.7) * (1 + 0.04 * Math.sin(37 * f)));
+  const cap = F.map((f, i) => { const ahead = Math.max(f, x[Math.min(N, i + 40)] || 0); return 1 - Math.exp(-6 * (f + 0.6 * ahead)); });
+  const piezo = []; let q = 0; for (let i = 0; i < N; i++) { const dF = (F[i + 1] - F[i]) / dt; q += (dF * 0.7 - q / 0.15) * dt; piezo.push(q); } piezo.push(q);
+  const mag = F.map((f, i) => 0.9 * f / 1.2 + 0.06 * (i > 0 && F[i] < F[i - 1] ? 1 : 0));
+  return { x, F, res, cap, piezo, mag, dt };
+}
+function sigRow(label, sub, vals, c, lo, hi) {
+  const W = 500, H = 44, n = vals.length, mx = Math.max(hi, ...vals.map(Math.abs)) || 1;
+  const px = i => (i / (n - 1) * W).toFixed(1), py = v => (H / 2 - v / mx * (H / 2 - 4)).toFixed(1);
+  const d = "M" + vals.map((v, i) => `${px(i)},${py(v)}`).join(" L");
+  return `<div class="sig-row"><div class="rl">${label}<small>${sub}</small></div><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="--c:${c}" aria-hidden="true"><line class="base" x1="0" x2="${W}" y1="${H / 2}" y2="${H / 2}"/><path class="tr" d="${d}"/></svg></div>`;
+}
+LABS.signals = body => {
+  const draw = () => { const t = sigTraces(SG.preset);
+    body.querySelector(".sig-out").innerHTML = sigRow("stimulus", "indentation / force", Array.from(t.F), "var(--ink)", 0, 1.2)
+      + sigRow("capacitive", "proximity + contact, saturates", t.cap, "var(--vz-s1)", 0, 1)
+      + sigRow("resistive", "∝ force, non-linear", t.res, "var(--vz-s2)", 0, 1)
+      + sigRow("piezoelectric", "∝ dF/dt, charge leaks away", t.piezo, "var(--vz-s3)", -0.6, 0.6)
+      + sigRow("magnetic", "∝ deformation, slight hysteresis", t.mag, "var(--vz-s4)", 0, 1); };
+  body.innerHTML = `<div class="presets">${SP_PRESETS.filter(p => p[1] !== "stretch").map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === SG.preset}">${t}</button>`).join("")}</div><div class="sig-out"></div>
+    <p class="lab-note" style="margin-top:8px">Cartoon responses: the capacitive pad already reacts as the finger approaches and then saturates (mostly binary); the resistive pad follows the force but not linearly (calibration); the piezoelectric film reports only the change and returns to zero during a hold (no static force), but is the only one that resolves the 250 Hz vibration; the magnetic skin follows the deformation with a little hysteresis.</p>`;
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { SG.preset = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  draw();
+};
+
+// Worked example: a force-sensing resistor in a voltage divider. R(F) ≈ 10 kΩ·N / F is a typical FSR data-sheet shape
+// (about 1 MΩ unloaded, 100 kΩ at 0.1 N, 10 kΩ at 1 N, 1 kΩ at 10 N). V_out = Vcc · R_fix / (R_fix + R(F)).
+const fsrR = F => F <= 0 ? 1e6 : Math.min(1e6, 1e4 / F);
+const vout = (F, Rf) => 5 * Rf / (Rf + fsrR(F));
+line("fsr", {
+  x: [1 / 64, 16], y: [0, 5], yTicks: [0, 1, 2, 3, 4, 5], xTicks: [1 / 64, 1 / 16, 1 / 4, 1, 4, 16], xTicksN: [1 / 64, 1 / 4, 4], yTitle: "V_out [V]",
+  series: [{ slot: 1, name: "R_fix = 3 kΩ", short: "3 kΩ", f: v => vout(v, 3e3) }, { slot: 2, name: "R_fix = 10 kΩ", short: "10 kΩ", f: v => vout(v, 1e4) }, { slot: 3, name: "R_fix = 50 kΩ", short: "50 kΩ", f: v => vout(v, 5e4) }],
+  tipHead: v => `F = ${num(v, 3)} N · R_FSR ≈ ${num(fsrR(v) / 1000, 1)} kΩ`, fmtY: v => num(v, 2) + " V", focusAt: 1, labelW: 60, aria: "Line chart: output voltage of a force-sensing resistor in a voltage divider against force on a log axis, for three fixed resistors. The curve is S-shaped; a larger fixed resistor shifts the sensitive range to smaller forces.", hitLabel: "Read the voltages: arrow keys double or halve the force",
+});
+
+function lecture3() {
+  return `${head(l)}
+    <p class="lead">How do today's tactile sensors work, what are the advantages and limitations of each technology, and which few sensors should one know? The lecture covers everything except vision-based tactile sensors, which get the next two lectures. Its one-line verdict: there is currently no all-round technology.</p>
+    <h2>Six criteria to judge a tactile sensor</h2>
+    <p>Before any technology the lecture fixes the yardsticks. They come straight from the questions of Lecture 2 (what is measured, where, how fast, how finely) plus the engineering ones.</p>
+    <div class="levels">${CRITERIA.map(([t, d, s]) => `<div class="lv" style="border-top-color:var(--vz-s${s})"><div class="t">${t}</div><div class="d">${d}</div></div>`).join("")}</div>
+    <h3>Reliability, durability, robustness</h3>
+    <p>In contrast to vision, touch is an active sense: every sample is a physical interaction that degrades the interface (compare the self-healing epidermis of Lecture 2). The slides borrow NASA's engineering definitions to keep three words apart:</p>
+    <div class="levels">
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="t">Reliability</div><div class="d">performing consistently well, "free of failures throughout its mission"</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s3)"><div class="t">Durability</div><div class="d">how long the device is designed to last, e.g. the duration of the mission</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s4)"><div class="t">Robustness</div><div class="d">performing without failure under a wide range of conditions, "tolerant of unexpected conditions should they arise"</div></div>
+    </div>
+    <h3>Performance: what, how fast, how fine</h3>
+    <p>Three questions: <b>what</b> is measured (normal force, shear, vibration, temperature, contact geometry), <b>how fast</b> (sampling rate in Hz; human Pacinian corpuscles follow vibrations of hundreds of Hz, so a 50 Hz sensor misses slip signatures), and at <b>what resolution</b>, spatial and in force. The basic tactile sensing unit is called a <b>taxel</b>, by analogy with a pixel.</p>
+    ${why("Why cost and manufacture are on the list at all", `<p>A sensor that exists only as five hand-built prototypes in one lab cannot change robotics. Technologies with one wire per taxel do not scale to a hand-sized skin; this is the argument that later makes vision-based sensors attractive, where one camera cable serves hundreds of thousands of "taxels".</p>`)}
+
+    <h2>Technologies and examples</h2>
+    <p>Many transduction principles exist: capacitive, (piezo)resistive, piezoelectric, thermoresistive, inductive, magnetic, optical, vision-based. The slides go through five of them; the matrix summarises their pros and cons, and the lab below shows the same indentation seen through four of them.</p>
+    ${techMatrix()}
+    ${lab("signals", "one touch, four transduction principles")}
+    <h3>(Projected) capacitive</h3>
+    <p>An external conductive object (a finger, the human body is a capacitor) adds capacitance in parallel with the electrode. <b>Pro:</b> multiple contacts, and no force is required. <b>Con:</b> the same fact is the weakness: the presence of a conductive material is enough to trigger a load, so there are false or unintended triggers (water!), the signal is noisy and mostly binary; software can partially compensate. This is the technology of touch screens.</p>
+    <h3>Resistive</h3>
+    <p>Ohm's law, V = I·R: the electrical resistance of the material changes under force, and a current reads it out. <b>Pro:</b> insensitive to liquids, lower cost. <b>Con:</b> requires calibration (the response is non-linear and drifts), no multi-touch in the simple layouts.</p>
+    ${ex("Worked example · a force-sensing resistor in a voltage divider", `<p>Put the FSR in series with a fixed resistor R_fix across 5 V and read the voltage over R_fix: V_out = 5 V · R_fix / (R_fix + R_FSR). A typical FSR is about 1 MΩ untouched and drops roughly like 10 kΩ·N / F. Unloaded, V_out ≈ 5 V · 10 kΩ / 1.01 MΩ ≈ 0.05 V; at 1 N (R ≈ 10 kΩ) it is 2.5 V; at 10 N (1 kΩ) 4.5 V. The curve is S-shaped on a log force axis, so one fixed resistor gives a usable range of only about two decades, and the choice of R_fix places that range. Both facts are what "requires calibration" means in practice ${ctx}.</p>`)}
+    ${chart("fsr", leg([[1, "R_fix = 3 kΩ: sensitive to large forces", "ln"], [2, "R_fix = 10 kΩ", "ln"], [3, "R_fix = 50 kΩ: sensitive to small forces", "ln"]]))}<figcaption>Output voltage of the divider against force (log axis) for three fixed resistors, with the data-sheet-like R(F) ≈ 10 kΩ·N / F. Hover or focus the plot and use the arrow keys.</figcaption></figure>
+    ${tbl(["Force", "R_FSR", "V_out (10 kΩ)"], [0.01, 0.1, 1, 10].map(F => [`${F} N`, `${num(fsrR(F) / 1000, 0)} kΩ`, `${num(vout(F, 1e4), 2)} V`]))}
+    <h3>Piezoelectric</h3>
+    <p>Deforming a piezoelectric material (quartz, PVDF film, PZT) separates charge; the generated voltage is proportional to the applied pressure. <b>Pro:</b> captures vibrations and high frequencies. <b>Con:</b> it cannot measure static forces: the charge leaks away through any finite input resistance, so a constant load reads as zero after a short time. Piezoelectric sensors are suitable for active forces only, which makes them the artificial Pacinian corpuscle ${ctx}.</p>
+    <h3>Magnetic</h3>
+    <p>Magnetic particles are mixed into the elastomer of the contact surface; one or more magnetometers underneath read how the magnetic field changes when the interface deforms. The slide shows the principle (an elastomer composite loaded with magnetic microparticles, cured over the sensing chips) and leaves the cons as a question for the audience. ReSkin, one of the points on the resolution chart below, is of this kind ${ctx}: the mapping from field to force is learned, the field depends on the particular skin, and the skin must be re-characterised after replacement.</p>
+    <h3>Optical</h3>
+    <p>Optical sensors often measure the time of flight of light, or more generally how light transport through a transparent or diffusive medium changes under contact. The slide's example (Piacenza et al., <i>Accurate contact localization and indentation depth prediction with an optics-based tactile sensor</i>) uses emitter and receiver pairs around a clear elastomer: undisturbed, the light travels straight or reflects off the top surface; an indentation deflects rays towards the receiver (first mode) or, pressed deeper, blocks and scatters them (second mode). A learned model turns the receiver pattern into contact location and depth.</p>
+
+    <h2>Two sensors to know</h2>
+    <div class="tiles">
+      <div class="tile" style="box-shadow:inset 0 3px var(--vz-s1)"><div class="v">iSkin</div><div class="l">Cannata, Maggiali, Metta &amp; Sandini 2008: embedded artificial skin for humanoids (iCub). Capacitive transducer, 50 Hz, strong thermal drift.</div></div>
+      <div class="tile" style="box-shadow:inset 0 3px var(--vz-s3)"><div class="v">BioTac</div><div class="l">SynTouch: three sensors in one (force, vibration, temperature), 19 or 29 taxels, vibrations up to 330 Hz, about 15,000 $.</div></div>
+      <div class="tile"><div class="v">330 Hz</div><div class="l">BioTac vibration bandwidth: Fishel &amp; Loeb 2012 compared its microvibration sensing with human sensitivity</div></div>
+      <div class="tile"><div class="v">~15 k$</div><div class="l">why "availability &amp; cost" is a criterion: a fingertip for the price of a car</div></div>
+    </div>
+    <p>The BioTac is the biomimetic answer: a rigid core with electrodes, a conductive fluid under an elastomer skin, a pressure sensor for vibrations and a thermistor; the fluid couples deformation anywhere on the skin to the electrodes, giving a few taxels that cover the whole fingertip ${ctx}. The iSkin shows the other extreme, a large capacitive array that covers the body of a robot, and the price of that: drift and a low rate.</p>
+
+    <h2>Spatial resolution: sensors on the finger's chart</h2>
+    <p>The resolution chart of Lecture 2 again, now with four non-vision sensors. None of them reaches the finger in force resolution, and all cluster around a millimetre of spatial resolution.</p>
+    ${chart("resAll", leg([["g", "human finger (reference)"], [1, "ReSkin"], [2, "Epstein et al."], [3, "BioTac"], [4, "SaLoutos et al."]]))}<figcaption>Spatial resolution against normal-force resolution, log-log, as on the slide. The values are read off the slide's chart and rounded; the human finger is the reference mark. Hover or focus a point for details.</figcaption></figure>
+    ${tbl(["Sensor", "≈ force resolution", "≈ spatial resolution"], RES.map(r => [r.k, `${r.f} N`, `${r.s} mm`]))}
+
+    <h2>Not tactile sensors</h2>
+    <p>Some literature counts joint-torque and wrist force-torque sensors as touch sensors. The lecturer calls this wrong and misleading: they provide no information about the <b>position</b> of the contact. A six-axis force-torque sensor measures the net wrench on the hand; the same reading can come from a light push far from the wrist or a firm push close to it, and from one contact or several. A tactile sensor, by definition here, resolves where on the surface the contact is.</p>
+    ${why("Why the distinction is more than vocabulary", `<p>Lecture 1 argued that touch gives contact position and intensity together, which is what yields the torque for manipulation. A wrist sensor gives the torque but not the position; it is a force sensor on the arm, useful, but it does not digitise touch. Keep the two apart in the exam and in Home Exercise 1, which asks you to benchmark tactile sensors: spatial resolution is a criterion only for sensors that localise contact.</p>`)}
+
+    <h2>Next lecture</h2>
+    <p>Vision-based tactile sensors: currently the most popular technology, and the one used throughout the course and at the LASR lab.</p>
+    <h2>Summary</h2>
+    <ul>
+      <li>Multiple evaluation criteria: form factor, availability and cost, ease of manufacture, ease of use, reliability, performance.</li>
+      <li>Several different technologies digitise touch: capacitive, resistive, piezoelectric, magnetic, optical, vision-based, and more.</li>
+      <li>Currently no technology is good at all criteria.</li>
+    </ul>
+    ${ex("Likely exam questions", `<p>List the evaluation criteria and explain reliability vs durability vs robustness. For a given technology name the principle, one advantage and one limitation (static force for piezoelectric, water for capacitive, calibration for resistive). Define a taxel. Say why a force-torque sensor is not a tactile sensor. This list is a guess from the slide structure ${ctx}.</p>`)}
+    <h2>References named in the lecture</h2>
+    <ul class="refs">
+      <li>Dahiya, Metta, Valle &amp; Sandini (2010). Tactile sensing: from humans to humanoids. IEEE Transactions on Robotics 26(1).</li>
+      <li>Cannata, Maggiali, Metta &amp; Sandini (2008). An embedded artificial skin for humanoid robots. IEEE MFI.</li>
+      <li>Fishel &amp; Loeb (2012). Sensing tactile microvibrations with the BioTac: comparison with human sensitivity. BioRob.</li>
+      <li>Piacenza, Dang, Hannigan, Espinal, Hussain, Kymissis &amp; Ciocarlie. Accurate contact localization and indentation depth prediction with an optics-based tactile sensor.</li>
+      <li>NASA Engineering and Safety Center: definitions of reliability, durability and robustness.</li>
+    </ul>
+    <p class="muted">Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>. The home exercise that builds on this lecture is <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -139,16 +526,17 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, 09:20–10:50, ${esc(roomOn(l.date))}.<br>The summary appears here once the slides are on OPAL.</p>
     </div>`;
 }
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3 };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {
   document.title = `Lecture ${l.n} – ${l.title} · Touch Sensing`;
-  page.innerHTML = l.n === 1 ? lecture1() : l.n === 0 ? lecture0() : placeholder();
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts(); mountLabs();
 }
-addEventListener("resize", () => {
-  const el = document.getElementById("grasp-chart");
-  if (el && el.dataset.narrow !== String(isNarrow())) { el.dataset.narrow = String(isNarrow()); el.innerHTML = graspSVG(isNarrow()); }
-});
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() !== narrowNow) { narrowNow = isNarrow(); mountCharts(); document.querySelectorAll("[data-lab]").forEach(el => { if (el.dataset.lab !== "skin") LABS[el.dataset.lab](el.querySelector(".lab-body")); }); } });
 </script>
 </body>
 </html>
