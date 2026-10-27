@@ -15,17 +15,28 @@
 <header class="sitebar" data-page="course"></header>
 <div class="wrap" id="page"></div>
 <script>
-// Main page: header, status bar (OPAL/Selma), then one card per lecture plus the Orga card (SML-games grid).
-const { m, c, esc, U, CODE } = DCD;
-const cards = c.lectures.map(l => `<a class="game-card" href="digital-circuit-design/lecture.html?n=${l.n}">
+// Main page: header, status bar (OPAL/Selma), then one card per lecture plus the Orga card, and one card per
+// exercise of the Thursday group (SML-games grid). Each card has a "done" checkbox (CMSUtil.doneBox).
+const { m, c, esc, U, CODE, fmt, lec, exe, today } = DCD;
+const lectures = c.lectures.map(l => `<a class="game-card lec ${l.covered ? "" : "soon"}" href="digital-circuit-design/lecture.html?n=${l.n}">
     <div class="game-icon">${l.icon}</div>
     <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
+    <p class="when">${fmt(l.date)} · ${lec.start} · ${esc(lec.room)}${l.covered ? "" : l.date > today ? " · upcoming" : " · not written up yet"}</p>
     <p>${esc(l.blurb)}</p>
+    ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("") + `<a class="game-card" href="digital-circuit-design/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
     <p>Next session, exam and Selma, the full schedule with rooms, slides and OPAL links, reading list and contacts.</p>
   </a>`;
+const exercises = c.exercises.map(x => `<a class="game-card exe ${x.covered ? "" : "soon"}" href="digital-circuit-design/exercise.html?n=${x.n}">
+    <div class="game-icon">${x.icon}</div>
+    <h2>Exercise ${x.n}${x.title ? ` – ${esc(x.title)}` : ""}</h2>
+    <p class="when">${fmt(x.date)} · ${exe.start} · ${esc(exe.room)}${x.published ? ` · sheet in OPAL since ${fmt(x.published)}` : x.date > today ? " · upcoming" : " · sheet not published"}</p>
+    <p>${esc(x.blurb)}</p>
+    ${U.doneBox(`${CODE}:exercise:${x.n}`)}
+  </a>`).join("");
+const nLec = c.lectures.filter(l => l.covered).length, nExe = c.exercises.filter(x => x.covered).length;
 document.getElementById("page").innerHTML = `
   <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
   <header class="hero">
@@ -33,7 +44,14 @@ document.getElementById("page").innerHTML = `
     <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Christian Mayr · Chair of Highly-Parallel VLSI Systems and Neuromorphic Circuits · TU Dresden</p>
   </header>
   ${DCD.topbar()}
-  <main class="game-cards">${cards}</main>`;
+  <main>
+    <div class="board-h"><h2>Lectures</h2><span class="muted">Mondays ${lec.start} · ${esc(lec.room)} · ${nLec} of ${c.lectures.length} written up</span></div>
+    <div class="game-cards">${lectures}</div>
+    <div class="board-h"><h2>Exercises</h2><span class="muted">Thursday group, ${exe.start} · ${nExe} of ${c.exercises.length} held</span></div>
+    <p class="muted board-note">${esc(c.exerciseNote)}</p>
+    <div class="game-cards">${exercises}</div>
+  </main>`;
+U.wireDone();
 </script>
 </body>
 </html>

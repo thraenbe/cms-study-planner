@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Digital Circuit Design · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="digital-circuit-design/dcd.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="digital-circuit-design/dcd.js"></script>
+<script src="digital-circuit-design/dcd-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-s5: #e87ba4; --vz-s6: #008300; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-s5: #d55181; --vz-s6: #008300; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-s5: #d55181; --vz-s6: #008300; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="dcd">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, exe, today } = DCD;
+const { bin, bits, fmtv, isNarrow, key, leg, flag, barPath, tt, CHARTS, LABS, chart, lab, mountCharts, mountLabs } = DCDViz;
+const n = Number(new URLSearchParams(location.search).get("n"));
+const x = c.exercises.find(e => e.n === n);
+const page = document.getElementById("page");
+const back = `<a class="back" href="digital-circuit-design.html">← All lectures and exercises</a>`;
+const title = x => `Exercise ${x.n}${x.title ? ` – ${esc(x.title)}` : ""}`;
+function head(x) {
+  return `${back}<div class="big-icon">${x.icon}</div><h1>${title(x)}</h1>
+    <p class="meta">${fmt(x.date)} · ${exe.start}–${exe.end} · ${esc(exe.room)} · Thursday group (German) · ${x.published ? `sheet in OPAL since ${fmt(x.published)}` : "sheet not published yet"}</p>`;
+}
+// A task: number, title, the question, then the solution behind a toggle.
+const task = (id, t, body, sol) => `<section class="task" id="t${id}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2><span class="pts open">practice task</span></div>${body}
+  <details class="sol"><summary>Solution</summary><div class="sol-body">${sol}</div></details></section>`;
+const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const cellRow = (label, arr, cls = {}) => `<div class="rl">${label}</div>${arr.map((v, i) => `<div class="cell ${v === 1 ? "one" : ""} ${cls[i] || ""}">${v}</div>`).join("")}`;
+
+// ---------------- Task 1: Karnaugh map with a minimiser ----------------
+// Quine-McCluskey for 4 variables: every implicant is a mask over A B C D with 0, 1 or "-"; primes are the maximal
+// valid ones; the cover takes the essential primes first, then the prime covering most of the rest.
+const KV = ["A", "B", "C", "D"], GRAY2 = [0, 1, 3, 2];
+const KM = { ones: new Set([0, 2, 5, 7, 8, 10, 13, 15]) };
+function implicants(ones) {
+  const all = [];
+  for (let k = 0; k < 81; k++) {
+    const mask = [k % 3, Math.floor(k / 3) % 3, Math.floor(k / 9) % 3, Math.floor(k / 27) % 3]; // 2 = don't care
+    const cov = [];
+    for (let mt = 0; mt < 16; mt++) if (mask.every((v, i) => v === 2 || v === (mt >> 3 - i & 1))) cov.push(mt);
+    if (cov.every(mt => ones.has(mt))) all.push({ mask, cov });
+  }
+  const primes = all.filter(p => !all.some(q => q !== p && q.cov.length > p.cov.length && p.cov.every(mt => q.cov.includes(mt))));
+  const left = new Set(ones), chosen = [];
+  primes.forEach(p => { if (p.cov.some(mt => primes.filter(q => q.cov.includes(mt)).length === 1)) { chosen.push(p); p.cov.forEach(mt => left.delete(mt)); } });
+  while (left.size) { const best = primes.filter(p => !chosen.includes(p)).sort((a, b) => b.cov.filter(mt => left.has(mt)).length - a.cov.filter(mt => left.has(mt)).length)[0]; chosen.push(best); best.cov.forEach(mt => left.delete(mt)); }
+  return chosen.sort((a, b) => b.cov.length - a.cov.length);
+}
+const termStr = mask => mask.every(v => v === 2) ? "1" : mask.map((v, i) => v === 2 ? "" : v ? KV[i] : KV[i] + "̅").join("");
+function kmapOut() {
+  const terms = implicants(KM.ones), colorOf = {};
+  terms.forEach((t, i) => t.cov.forEach(mt => { if (colorOf[mt] === undefined) colorOf[mt] = i; }));
+  const cells = GRAY2.map(ab => `<div class="h row">${bin(ab, 2)}</div>` + GRAY2.map(cd => { const mt = ab << 2 | cd, on = KM.ones.has(mt);
+    return `<button type="button" class="cell ${on ? "one" : ""} ${on && colorOf[mt] !== undefined ? `hl t${colorOf[mt] % 6 + 1}` : ""}" data-mt="${mt}" aria-pressed="${on}" aria-label="minterm ${mt}"><small>${mt}</small>${on ? 1 : 0}</button>`; }).join("")).join("");
+  const chips = terms.map((t, i) => `<span class="term t${i % 6 + 1}" tabindex="0" data-cov="${t.cov.join(",")}">${termStr(t.mask)}</span>`);
+  return `<div class="kmap"><div class="h">AB \\ CD</div>${GRAY2.map(v => `<div class="h">${bin(v, 2)}</div>`).join("")}${cells}</div>
+    <div class="terms">${chips.join('<span class="muted" style="align-self:center">+</span>') || '<span class="muted">f = 0</span>'}</div>
+    <dl class="ro"><dt>Minimal form</dt><dd>f = ${terms.map(t => termStr(t.mask)).join(" + ") || "0"} &nbsp;(${terms.length} term${terms.length === 1 ? "" : "s"}, ${KM.ones.size} ones, all ${terms.length ? "covered" : ""})</dd></dl>`;
+}
+function initKmap(body) {
+  const render = () => { body.innerHTML = kmapOut(); };
+  render();
+  body.addEventListener("click", e => { const b = e.target.closest("[data-mt]"); if (!b) return; const mt = +b.dataset.mt; KM.ones.has(mt) ? KM.ones.delete(mt) : KM.ones.add(mt); render(); });
+  const hl = (cov, on) => body.querySelectorAll("[data-mt]").forEach(cell => { const cls = [...cell.classList].find(k => /^t\d$/.test(k)); if (!cls) return; cell.classList.toggle("hl", on ? cov.includes(+cell.dataset.mt) : true); if (on) cell.style.setProperty("--c", cov.includes(+cell.dataset.mt) ? `var(--vz-s${[...body.querySelectorAll(".term")].findIndex(t => t.dataset.cov === cov.join(",")) % 6 + 1})` : ""); else cell.style.removeProperty("--c"); });
+  ["pointerenter", "focus"].forEach(ev => body.addEventListener(ev, e => { const t = e.target.closest?.(".term"); if (t) hl(t.dataset.cov.split(",").map(Number), true); }, true));
+  ["pointerleave", "blur"].forEach(ev => body.addEventListener(ev, e => { const t = e.target.closest?.(".term"); if (t) hl([], false); }, true));
+}
+
+// ---------------- Task 2: 8-bit two's complement on the number line ----------------
+const TC = { a: 100, b: 50 };
+function tcOut() {
+  const W = 8, M = 1 << W, wrap = v => ((v % M) + M) % M, tc = u => u >= M / 2 ? u - M : u;
+  const sum = TC.a + TC.b, res = tc(wrap(sum)), ovf = sum !== res;
+  const narrow = isNarrow(), SW = narrow ? 340 : 600, L = 20, R = 20, PW = SW - L - R, X = v => L + (v + 128) / 255 * PW, Y = 46;
+  const ticks = [-128, -64, 0, 64, 127].map(v => `<line class="axis" x1="${X(v)}" x2="${X(v)}" y1="${Y - 5}" y2="${Y + 5}"/><text class="note" x="${X(v)}" y="${Y + 20}" text-anchor="middle">${fmtv(v)}</text>`).join("");
+  const mark = (v, cls, lbl, dy) => `<circle class="${cls}" cx="${X(v)}" cy="${Y}" r="6"/><text class="note" x="${X(v)}" y="${Y + dy}" text-anchor="middle" font-weight="700">${lbl}</text>`;
+  const ghost = ovf ? `<text class="note" x="${X(sum > 0 ? 127 : -128)}" y="${Y - 30}" text-anchor="${sum > 0 ? "end" : "start"}">${narrow ? `${fmtv(sum)} is off the line → ${fmtv(res)}` : `true sum ${fmtv(sum)} is off the line → wraps to ${fmtv(res)}`}</text>` : "";
+  return `<div class="ctl"><label>a <input type="range" min="-128" max="127" value="${TC.a}" data-k="a"> <output>${fmtv(TC.a)} = ${bin(wrap(TC.a), W)}</output></label>
+      <label>b <input type="range" min="-128" max="127" value="${TC.b}" data-k="b"> <output>${fmtv(TC.b)} = ${bin(wrap(TC.b), W)}</output></label></div>
+    <svg viewBox="0 0 ${SW} 80" role="img" aria-label="Number line from −128 to 127 with the two operands and the 8-bit result">
+      <line class="axis" x1="${L}" x2="${SW - R}" y1="${Y}" y2="${Y}" stroke-width="2"/>${ticks}${ghost}
+      ${mark(TC.a, "f1", "a", -12)}${mark(TC.b, "f2", "b", -12)}${mark(res, ovf ? "f4" : "f3", ovf ? "a+b wrapped" : "a+b", -24)}</svg>
+    <dl class="ro"><dt>Bits</dt><dd>${bin(wrap(TC.a), W)} + ${bin(wrap(TC.b), W)} = ${bin(wrap(sum), W)}${wrap(TC.a) + wrap(TC.b) >= M ? " (carry out 1, dropped)" : " (carry out 0)"}</dd>
+      <dt>Value</dt><dd>${fmtv(res)} ${ovf ? flag("bad", `overflow: ${fmtv(sum)} needs more than 8 bits`) : flag("ok", `equals ${fmtv(sum)}`)}</dd>
+      <dt>Carries</dt><dd>into the MSB: ${(wrap(TC.a) & 127) + (wrap(TC.b) & 127) >= 128 ? 1 : 0}, out of the MSB: ${wrap(TC.a) + wrap(TC.b) >= M ? 1 : 0} → overflow = ${ovf ? 1 : 0}</dd></dl>`;
+}
+function initTc(body) { const render = () => { body.innerHTML = tcOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { TC[e.target.dataset.k] = +e.target.value; render(); })); }; render(); addEventListener("resize", () => { if (body.dataset.narrow !== String(isNarrow())) { body.dataset.narrow = String(isNarrow()); render(); } }); }
+
+// ---------------- Task 3: adder speed ----------------
+const TG = 0.05; // ns per gate level (lecture 2, slide 25: 28 nm)
+const SPEED = [4, 8, 16, 32, 64].map(n => { const rc = 2 * n, cla = 3 + 4 * Math.ceil(Math.log(n) / Math.log(4) - 1e-9); return { n, rc, cla, frc: 1 / (rc * TG), fcla: 1 / (cla * TG) }; });
+CHARTS.fmax = narrow => {
+  const W = narrow ? 340 : 600, H = 220, L = 40, R = 12, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const band = PW / 5, bw = Math.min(24, band * 0.28), y = v => T + PH - v / 3 * PH;
+  const grid = [0, 1, 2, 3].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v} GHz</text>`).join("");
+  const ref = `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(1)}" y2="${y(1)}" stroke-dasharray="3 3"/>`;
+  const bars = SPEED.map((d, k) => { const cx = L + band * (k + 0.5);
+    return [["frc", "rc", 1, "ripple-carry", cx - bw - 1], ["fcla", "cla", 2, "carry lookahead", cx + 1]].map(([f, lv, slot, name, x0]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d[f].toFixed(2)} GHz</b>${d.n}-bit ${name}: ${d[lv]} gate levels · ${(d[lv] * TG).toFixed(2)} ns`)}">
+        <rect class="hit" x="${x0 - 3}" y="${T}" width="${bw + 6}" height="${PH}"/><path class="bar s${slot}" d="${barPath(x0, bw, y(d[f]), y(0))}"/>${d.n === 32 ? `<text class="val" x="${x0 + bw / 2}" y="${y(d[f]) - 6}" text-anchor="middle">${d[f].toFixed(2)}</text>` : ""}</g>`).join("")
+      + `<text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">${d.n} bit</text>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped columns: maximum clock of ripple-carry and carry-lookahead adders from 4 to 64 bits at 50 picoseconds per gate. Ripple-carry falls from 2.5 GHz to 0.16 GHz, lookahead from 2.9 to 1.3 GHz">${grid}${ref}${bars}</svg>`;
+};
+
+// ---------------- Task 4 and 5: static bit fields ----------------
+const fx = (v, n) => Math.round(v * 2 ** n), fxbits = (v, int, frac) => { const w = int + frac + 1, code = ((fx(v, frac) % (1 << w)) + (1 << w)) % (1 << w); return { code, b: bits(code, w) }; };
+function fxRow(label, v, int, frac) {
+  const { code, b } = fxbits(v, int, frac), w = int + frac + 1;
+  const cls = {}; cls[0] = "t2"; for (let i = 1; i <= int; i++) cls[i] = "t1"; for (let i = int + 1; i < w; i++) cls[i] = "t3";
+  return `<div class="tt-wrap"><div class="agrid" style="grid-template-columns:minmax(110px,auto) repeat(${w}, 32px)"><div></div>${["−2<sup>" + int + "</sup>", ...Array.from({ length: int }, (_, i) => `2<sup>${int - 1 - i}</sup>`), ...Array.from({ length: frac }, (_, i) => `2<sup>−${i + 1}</sup>`)].map(h => `<div class="h">${h}</div>`).join("")}${cellRow(`${label} = ${code}`, b, cls)}</div></div>`;
+}
+const F32 = new Float32Array(1), U32 = new Uint32Array(F32.buffer);
+function ieeeRow(v) {
+  F32[0] = v; const u = U32[0], s = u >>> 31, E = u >>> 23 & 255, mant = u & 0x7fffff;
+  return `<div class="fbits"><div class="fgw"><small>sign</small><div class="fg"><span class="cell fb t1 ${s ? "one" : ""}">${s}</span></div></div>
+      <div class="fgw"><small>exponent E = ${E} → e = ${E - 127}</small><div class="fg">${bits(E, 8).map(b => `<span class="cell fb t2 ${b ? "one" : ""}">${b}</span>`).join("")}</div></div>
+      <div class="fgw"><small>mantissa m = ${(mant / 2 ** 23).toString()}</small><div class="fg">${bits(mant, 23).map(b => `<span class="cell fb t3 ${b ? "one" : ""}">${b}</span>`).join("")}</div></div></div>
+    <p class="muted" style="margin:0 0 .6rem">0x${u.toString(16).toUpperCase().padStart(8, "0")} = (−1)<sup>${s}</sup> · (1 + ${mant / 2 ** 23}) · 2<sup>${E - 127}</sup> = ${F32[0]}</p>`;
+}
+
+// ---------------- Task 6: state diagram ----------------
+function fsmSVG() {
+  const S = [[80, 60], [260, 60], [260, 180], [80, 180]], names = ["00", "01", "10", "11"], order = [0, 1, 2, 3];
+  const st = S.map(([x, y], i) => `<circle class="st ${i === 0 ? "reset" : ""}" cx="${x}" cy="${y}" r="26"/><text class="sl" x="${x}" y="${y + 5}" text-anchor="middle">S${i} · ${names[i]}</text>`).join("");
+  const tr = order.map(i => { const j = (i + 1) % 4, [x1, y1] = S[i], [x2, y2] = S[j], dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+    return `<line class="tr en" x1="${x1 + ux * 28}" y1="${y1 + uy * 28}" x2="${x2 - ux * 30}" y2="${y2 - uy * 30}"/><text class="tl" x="${(x1 + x2) / 2 + uy * 12}" y="${(y1 + y2) / 2 - ux * 12 + 4}" text-anchor="middle">en = 1</text>`; }).join("");
+  const loops = S.map(([x, y], i) => { const sx = i === 1 || i === 2 ? 1 : -1; return `<path class="tr" d="M${x + sx * 20},${y - 18} C${x + sx * 70},${y - 50} ${x + sx * 70},${y + 50} ${x + sx * 22},${y + 16}"/><text class="tl" x="${x + sx * 58}" y="${y + 4}" text-anchor="middle">en = 0</text>`; }).join("");
+  return `<figure class="viz fsm"><svg viewBox="0 0 340 240" role="img" aria-label="State diagram of a 2-bit counter with enable: four states in a ring, en = 1 moves to the next state, en = 0 stays"><defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0,0 L8,4 L0,8 Z"/></marker></defs>
+    <text class="tl" x="80" y="18" text-anchor="middle">reset state</text>${tr}${loops}${st}</svg><figcaption>Moore machine: the output is the state itself (the count). The orange circle is the reset state; the gray loops are the "hold" transitions.</figcaption></figure>`;
+}
+
+Object.assign(LABS, { kmap: initKmap, tc: initTc });
+
+function exercise1() {
+  return `${head(x)}
+    <p class="lead">The first Thursday session of the German exercise group, one week after lecture 2. The chair posts each sheet with solutions in OPAL; sheet 1 is there but has not been read yet, so this page is a practice set of six tasks on everything lectures 1 and 2 covered, in the style the chair's sheets use (short calculations, a map to simplify, a circuit to size). Each task has an explorer or a figure and a solution to unfold.</p>
+    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Sheet 1 (tasks and solutions) is in the OPAL exercise folder, English version since 21 Oct, German since 22 Oct. Opening it downloads a PDF, so it is left for you to fetch; once it is read, the real tasks replace this practice set.</p>
+      <p style="margin:0"><b>How the sessions work.</b> Every other Thursday, 2nd DS, in ${esc(exe.room)} (plus TOE/203 as overflow room), run by the chair's exercise staff, in German with English slides. The sheet is worked through at the board; there are no points, the written exam is the only graded part. Last year's full collection and a mock exam are also in OPAL and are the best indicator of exam style.</p></div>
+
+    ${task(1, "Simplify a four-variable function", `<p>Given f(A, B, C, D) = Σm(0, 2, 5, 7, 8, 10, 13, 15). Draw the Karnaugh map, find the prime implicants and write the minimal sum of products. Which groups wrap around the edges?</p>
+      ${lab("kmap", "Karnaugh map with minimiser")}
+      <p class="muted">Rows are AB, columns CD, both in Gray order (00, 01, 11, 10) so that neighbouring cells differ in one variable and the left/right and top/bottom edges are neighbours too. Click cells to change the function; hover a term to see the cells it covers.</p>`,
+      `<p>The eight ones form two groups of four. The corners (minterms 0, 2, 8, 10) are one group, since the map wraps in both directions: in all four cells B = 0 and D = 0, so the term is B̅D̅. The centre square (5, 7, 13, 15) has B = 1 and D = 1: BD. Both are essential (no other prime covers their cells), so</p>
+      ${ans([["f = B̅D̅ + BD", "two prime implicants of four cells each"], ["f = B ⊙ D", "the same thing: an XNOR of B and D, A and C are don't cares"], ["2 gates", "after simplification instead of 8 four-input AND terms"]])}
+      <p>Pitfall: a group must have 1, 2, 4, 8 or 16 cells and be a rectangle after wrapping; the corner group is the one most people miss.</p>`)}
+
+    ${task(2, "Two's complement addition and overflow", `<p>In 8-bit two's complement, compute 100 + 50, −100 − 50 and 100 − 50. Give the bit patterns of the operands and the result, state the carry out of the MSB, and decide for each whether an overflow occurs and how the adder detects it.</p>
+      ${lab("tc", "8-bit addition on the number line")}`,
+      `<p>Encode: 100 = 01100100, 50 = 00110010, −100 = 10011100, −50 = 11001110.</p>
+      ${ans([["100 + 50 → 10010110", "= −106: overflow, two positives gave a negative; carry into the MSB 1, out of it 0"], ["−100 − 50 → 01101010", "= 106: overflow, two negatives gave a positive; carry into the MSB 0, out of it 1"], ["100 − 50 → 00110010", "= 50 with carry out 1 (dropped): no overflow, the carries into and out of the MSB are both 1"]])}
+      <p>The rule from lecture 2: overflow = c<sub>7</sub> ⊕ c<sub>8</sub>, and it can only happen when both operands have the same sign. Subtraction is done as 100 + (−50) = 01100100 + 11001110, whose carry out is simply ignored. Move the sliders above to −128 + (−1) for the classic wrap to +127.</p>`)}
+
+    ${task(3, "How fast can an adder be?", `<p>A 32-bit adder is built in 28 nm with t<sub>gate</sub> ≈ 50 ps per gate level. (a) Give the critical path and the maximum clock rate of a ripple-carry adder. (b) The same for a carry-lookahead adder with 4-bit groups and three lookahead tiers. (c) How many bits can a ripple-carry adder have if the clock is 1 GHz and the whole cycle is available to it?</p>
+      ${chart("fmax", leg([[1, "Ripple-carry"], [2, "Carry lookahead, 4-bit groups"]]))}
+        <figcaption>Maximum clock of the two adder types versus word width, counting 2n gate levels for ripple-carry and 1 + 4·tiers + 2 for lookahead (lecture 2, slides 25 and 32), at 50 ps per level. The dashed line is the 1 GHz of part (c).</figcaption>
+      </figure>
+      <details class="tbl"><summary>Table view</summary><table><tr><th>Width</th><th>Ripple levels</th><th>f<sub>max</sub></th><th>Lookahead levels</th><th>f<sub>max</sub></th></tr>${SPEED.map(d => `<tr><td class="n">${d.n} bit</td><td class="n">${d.rc}</td><td class="n">${d.frc.toFixed(2)} GHz</td><td class="n">${d.cla}</td><td class="n">${d.fcla.toFixed(2)} GHz</td></tr>`).join("")}</table></details>`,
+      `${ans([["64 levels · 3.2 ns", "(a) ripple-carry: 2n gate delays, f<sub>max</sub> ≈ 312 MHz"], ["15 levels · 0.75 ns", "(b) lookahead: 1 + 3·4 + 2, f<sub>max</sub> ≈ 1.33 GHz"], ["10 bits", "(c) 1 ns = 20 gate delays = 2n"]])}
+      <p>The counting is the lecture's: in the ripple-carry adder each full adder adds two gate levels to the carry path; in the lookahead adder one level makes p and g, each of the three tiers of group-generate logic costs four, and the sum bit costs two more. Real timing adds wire delays and setup time, so a 1 GHz cycle leaves room for far fewer than 20 levels of logic.</p>`)}
+
+    ${task(4, "Fixed point in s3.4", `<p>Encode 5.6875 and −2.375 in the signed 8-bit fixed-point format s3.4 (one sign bit, three integer bits, four fractional bits). Add them in the format and check the result. Then multiply 2.5 by 1.75 and show how the binary point is restored.</p>
+      ${fxRow("5.6875", 5.6875, 3, 4)}${fxRow("−2.375", -2.375, 3, 4)}
+      <p class="muted">Orange: sign bit with weight −8; blue: integer bits; green: fractional bits. The integer code is the value times 2<sup>4</sup>.</p>`,
+      `${ans([["0101.1011", "5.6875 · 16 = 91"], ["1101.1010", "−2.375 · 16 = −38 → 256 − 38 = 218"], ["0011.0101", "91 − 38 = 53 → 53/16 = 3.3125 ✓"], ["0100.0110", "2.5 × 1.75: 40 · 28 = 1120, ≫ 4 → 70 = 4.375 ✓"]])}
+      <p>Addition and subtraction are plain integer operations on the codes, the scale 2<sup>−4</sup> is implicit. A product carries the scale twice (eight fractional bits), so the 16-bit integer product is shifted right by four; here nothing is lost because 1120 is divisible by 16, in general the low bits are rounded away. The format's range is −8 … 7.9375 in steps of 0.0625, so 5.6875 + 5.6875 would overflow.</p>`)}
+
+    ${task(5, "IEEE 754 single precision", `<p>Decode the 32-bit word 0x41C80000 and encode 12.375 as a single-precision float. Name the bias and the two reserved exponent codes.</p>
+      ${ieeeRow(25)}${ieeeRow(12.375)}`,
+      `${ans([["25.0", "0x41C80000: s = 0, E = 131 → e = 4, m = 0.5625, 1.5625 · 16"], ["0x41460000", "12.375 = 1100.011 = 1.100011 · 2<sup>3</sup>, E = 130"], ["127", "bias: E = e + 127"], ["0 and 255", "E = 0: subnormals and zero; E = 255: infinity (m = 0) and NaN"]])}
+      <p>Steps for encoding: write the number in binary, normalise it to 1.xxx · 2<sup>e</sup>, store e + 127 in eight bits and the digits after the leading 1 in the 23 mantissa bits (padded with zeros). The leading 1 is never stored, which is why E = 0 needs the separate rule.</p>`)}
+
+    ${task(6, "A counter as a state machine", `<p>Design a 2-bit counter with an enable input en: with en = 1 it counts 0, 1, 2, 3, 0, …, with en = 0 it holds. Draw the state diagram, decide whether it is a Moore or a Mealy machine, derive the next-state equations for binary state coding with a Karnaugh map, and compare the number of state-bit toggles per full cycle for binary and Gray coding.</p>
+      ${fsmSVG()}`,
+      `<p>It is a Moore machine: the output (the count) depends on the state only. With state bits s<sub>1</sub>s<sub>0</sub> and binary coding the transition table gives</p>
+      <div class="formula">s<sub>0</sub>′ = s<sub>0</sub> ⊕ en &nbsp;&nbsp;&nbsp; s<sub>1</sub>′ = s<sub>1</sub> ⊕ (s<sub>0</sub> · en)</div>
+      ${ans([["2 flip-flops", "plus one XOR, one AND and one XOR"], ["6 toggles", "binary 00 → 01 → 10 → 11 → 00: 1 + 2 + 1 + 2"], ["4 toggles", "Gray 00 → 01 → 11 → 10 → 00: one per step"]])}
+      <p>The Gray-coded counter toggles fewer flip-flops (less switching power, the lecture-1 argument), but its next-state logic is no longer a plain increment, and its output has to be decoded if a binary count is needed. The unused-state question does not arise here because all four codes are used; with three states the fourth code would have to be sent to the reset state.</p>`)}
+
+    <h2>What to take from this sheet</h2>
+    <ul>
+      <li>Karnaugh maps wrap in both directions; look for the corner group and the largest rectangles first.</li>
+      <li>Two's complement overflow is a carry question: c<sub>n−1</sub> ⊕ c<sub>n</sub>, never the carry out alone.</li>
+      <li>Delays are counted in gate levels; the carry path decides, and lookahead turns 2n into a few levels per tier.</li>
+      <li>Fixed point is integer arithmetic with an implicit scale; floating point stores sign, biased exponent and a mantissa without its leading 1.</li>
+    </ul>
+    <p class="muted">Next exercise: <a href="digital-circuit-design/exercise.html?n=2">exercise 2 on 5 Nov</a>, expected to cover lectures 3 and 4. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=1">lecture 1</a> and <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a>.</p>`;
+}
+function placeholder() {
+  const d = daysUntil(x.date);
+  return `${head(x)}
+    <div class="box placeholder">
+      <div class="big-icon">${x.icon}</div>
+      <h2 style="margin-top:.4rem">${d >= 0 ? "Not held yet" : "Not written up yet"}</h2>
+      <p class="muted">This exercise is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(x.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(x.blurb)}<br>The write-up appears here once the sheet is available and the session has been held.</p>
+    </div>`;
+}
+const WRITEUPS = { 1: exercise1 };
+if (!x) {
+  page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(n)}.</p>`;
+} else {
+  document.title = `${title(x).replace(/<[^>]+>/g, "")} · Digital Circuit Design`;
+  page.innerHTML = (WRITEUPS[x.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+</script>
+</body>
+</html>

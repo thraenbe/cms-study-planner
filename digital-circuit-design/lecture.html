@@ -26,7 +26,7 @@ const { m, c, esc, U, fmt, daysUntil, lec, today } = DCD;
 const n = Number(new URLSearchParams(location.search).get("n"));
 const l = c.lectures.find(x => x.n === n);
 const page = document.getElementById("page");
-const back = `<a class="back" href="digital-circuit-design.html">← All lectures</a>`;
+const back = `<a class="back" href="digital-circuit-design.html">← All lectures and exercises</a>`;
 
 // Lecture 1, slide "Advantage: Size Scaling": the same D flip-flop drawn in 180 nm, 65 nm and 28 nm, and
 // "2 nm in 2027 (Intel) -> no end of the road yet". The slide names the nodes; the years of the first three
@@ -556,6 +556,374 @@ function lecture2() {
     </ul>
     <p class="muted">The closing slide also advertises a student-assistant (SHK) job for the chair's social media; the contact is on slide 37. Next: Arithmetic circuits 2 (<a href="digital-circuit-design/lecture.html?n=3">lecture 3</a>). Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
 }
+// ───────────────────────────── Lecture 3: Arithmetic circuits 2 ─────────────────────────────
+// Dadda's sequence of maximum bits per column (slides 10 and 17): 2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 94, …
+const DADDA_SEQ = (() => { const s = [2]; while (s[s.length - 1] < 200) s.push(Math.floor(s[s.length - 1] * 3 / 2)); return s; })();
+const stagesFor = h => Math.max(0, DADDA_SEQ.findIndex(d => d >= h)); // reduction stages until at most 2 bits per column
+const bits = (v, w) => Array.from({ length: w }, (_, i) => v >> (w - 1 - i) & 1); // MSB first
+const tcv = (v, w) => v & 1 << w - 1 ? v - (1 << w) : v;
+const SUBS = "₀₁₂₃₄₅₆₇";
+
+// Slides 3–5: carry delays to add m operands of 16 bits. Ripple chain: n for the first sum, one more per operand.
+// Lookahead chain: log2 n per addition. Carry-save: one full-adder delay per reduction stage, then one lookahead add.
+const MO_N = 16, MO_LOG = 4;
+const MULTI = Array.from({ length: 9 }, (_, k) => { const m = k + 2; return { m, rc: MO_N + m - 2, cla: (m - 1) * MO_LOG, csa: stagesFor(m) + MO_LOG }; });
+CHARTS.multi = narrow => {
+  const W = narrow ? 340 : 600, H = 240, L = 34, R = narrow ? 14 : 150, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = m => L + (m - 2) / 8 * PW, y = v => T + PH - v / 40 * PH;
+  const grid = [0, 10, 20, 30, 40].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = MULTI.map(d => `<text class="tick" x="${x(d.m)}" y="${H - 10}" text-anchor="middle">${d.m}</text>`).join("");
+  const ln = (k, cls) => `<path class="line ${cls} nohit" d="M${MULTI.map(d => `${x(d.m).toFixed(1)},${y(d[k]).toFixed(1)}`).join(" L")}"/>`;
+  const names = { rc: "ripple-carry chain", cla: "lookahead chain", csa: "carry-save tree + lookahead" };
+  const cols = MULTI.map(d => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.m} operands · 16 bit</b>${["rc", "cla", "csa"].map((k, i) => `<span class="trow"><i style="--c:var(--vz-s${i + 1})"></i><strong>${d[k]}</strong> ${names[k]}</span>`).join("")}`)}">
+      <rect class="hit" x="${x(d.m) - PW / 16}" y="${T}" width="${PW / 8}" height="${PH}"/>
+      <circle class="dot f3" cx="${x(d.m)}" cy="${y(d.csa)}" r="4"/><circle class="dot f1" cx="${x(d.m)}" cy="${y(d.rc)}" r="4"/><circle class="dot f2" cx="${x(d.m)}" cy="${y(d.cla)}" r="4"/></g>`).join("");
+  const last = MULTI[MULTI.length - 1];
+  const lbl = narrow ? "" : `<text class="lbl" x="${W - R + 8}" y="${y(last.cla) + 4}">lookahead chain</text><text class="lbl" x="${W - R + 8}" y="${y(last.rc) + 4}">ripple chain</text><text class="lbl" x="${W - R + 8}" y="${y(last.csa) + 4}">carry-save tree</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart: carry delays to add 2 to 10 sixteen-bit operands. Ripple chain grows from 16 to 24, lookahead chain from 4 to 36, carry-save tree with a final lookahead adder from 4 to 9">
+    ${grid}${xt}<text class="axl" x="${W - R}" y="${H - 10}" text-anchor="end">operands m →</text>${ln("rc", "")}${ln("cla", "k2")}${ln("csa", "k3")}${cols}${lbl}</svg>`;
+};
+
+// Slides 10 and 17: reduction stages a Dadda tree needs for a given maximum column height.
+const DD_MARK = [8, 16, 32, 64].flatMap(n => [{ h: n, s: 1, t: `${n} × ${n} multiplier` }, { h: n + 1, s: 2, t: `${n}-bit multiply-accumulate (one extra row)` }]);
+CHARTS.dadda = narrow => {
+  const W = narrow ? 340 : 600, H = 230, L = 30, R = 14, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = h => L + (h - 1) / 99 * PW, y = s => T + PH - s / 11 * PH;
+  const grid = [0, 2, 4, 6, 8, 10].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = (narrow ? [1, 25, 50, 75, 100] : [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("");
+  let d = `M${x(1)},${y(0)} H${x(2)}`;
+  DADDA_SEQ.forEach((v, i) => { if (i === 0) return; const nx = Math.min(100, v); d += ` V${y(i)} H${x(nx)}`; if (v >= 100) return; });
+  const steps = DADDA_SEQ.filter(v => v <= 100).map((v, i) => i ? `<text class="note" x="${x(v) + 3}" y="${y(i) - 4}">${v}</text>` : "").join("");
+  const marks = DD_MARK.map(m => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${m.h} bits in the tallest column</b>${stagesFor(m.h)} reduction stages<br>${m.t}`)}"><circle class="hit" cx="${x(m.h)}" cy="${y(stagesFor(m.h))}" r="12"/><circle class="dot f${m.s}" cx="${x(m.h)}" cy="${y(stagesFor(m.h))}" r="4.5"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Step chart: reduction stages of a Dadda tree versus the tallest column, 1 to 100 bits. Steps at 3, 4, 6, 9, 13, 19, 28, 42, 63 and 94 bits. The markers for 8, 16, 32 and 64 bits and for one more bit each sit on the same step">
+    ${grid}${xt}<text class="axl" x="${W - R}" y="${H - 10}" text-anchor="end" dy="-14">bits in the tallest column →</text><path class="line nohit" d="${d}"/>${narrow ? "" : steps}${marks}</svg>`;
+};
+
+// Slide 11: adders in the 6 × 6 reduction, Wallace vs Dadda.
+const COST = [{ k: "Full adders", w: 17, d: 15 }, { k: "Half adders", w: 9, d: 5 }];
+CHARTS.cost = narrow => {
+  const W = narrow ? 340 : 600, H = 190, L = 34, R = 14, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const band = PW / 2, bw = Math.min(40, band * 0.22), y = v => T + PH - v / 20 * PH;
+  const grid = [0, 5, 10, 15, 20].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = COST.map((c, k) => { const cx = L + band * (k + 0.5);
+    return [["w", 1, "Wallace tree", cx - bw - 1], ["d", 2, "Dadda tree", cx + 1]].map(([s, slot, name, x0]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${c[s]} ${c.k.toLowerCase()}</b>${name}, 6 × 6 multiplier (slide 11)`)}">
+        <rect class="hit" x="${x0 - 3}" y="${T}" width="${bw + 6}" height="${PH}"/><path class="bar s${slot}" d="${barPath(x0, bw, y(c[s]), y(0))}"/><text class="val" x="${x0 + bw / 2}" y="${y(c[s]) - 6}" text-anchor="middle">${c[s]}</text></g>`).join("")
+      + `<text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">${c.k}</text>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped columns: a 6 by 6 Wallace tree uses 17 full adders and 9 half adders, a Dadda tree 15 and 5">${grid}${bars}</svg>`;
+};
+
+// Slide 27: error of the linear starting value X0 = 48/17 − 32/17·d over 0.5 ≤ d ≤ 1 (equioscillation at ±1/17).
+const NR_T1 = 48 / 17, NR_T2 = -32 / 17, NR_E0 = 1 / 17;
+const nrF = d => 1 - d * (NR_T1 + NR_T2 * d);
+CHARTS.nr0 = narrow => {
+  const W = narrow ? 340 : 600, H = 220, L = 46, R = 14, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = d => L + (d - 0.5) / 0.5 * PW, y = e => T + PH / 2 - e / 0.08 * PH;
+  const yt = [-0.08, -0.04, 0, 0.04, 0.08].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v === 0 ? "0" : fmtv(v).replace("0.", ".")}</text>`).join("");
+  const xt = [0.5, 0.6, 0.7, 0.8, 0.9, 1].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("");
+  const N = 60, path = "M" + Array.from({ length: N + 1 }, (_, i) => { const d = 0.5 + i / N * 0.5; return `${x(d).toFixed(1)},${y(nrF(d)).toFixed(1)}`; }).join(" L");
+  const ref = [NR_E0, -NR_E0].map(e => `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(e)}" y2="${y(e)}" stroke-dasharray="3 3"/>`).join("");
+  const pts = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1].map(d => { const e = nrF(d), ext = [0.5, 0.75, 1].includes(d);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>d = ${d}</b>X<sub>0</sub> = ${(NR_T1 + NR_T2 * d).toFixed(4)}, 1/d = ${(1 / d).toFixed(4)}<br>ε<sub>0</sub> = 1 − d·X<sub>0</sub> = ${e >= 0 ? "" : "−"}${Math.abs(e).toFixed(4)}${ext ? " (extreme: ±1/17)" : ""}`)}"><circle class="hit" cx="${x(d)}" cy="${y(e)}" r="12"/><circle class="dot${ext ? " f2" : ""}" cx="${x(d)}" cy="${y(e)}" r="${ext ? 5 : 3.5}"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of the starting error 1 minus d times X0 for d from 0.5 to 1. It is +1/17 at both ends and −1/17 at d = 0.75, the three extremes of the best linear start">
+    ${yt}${xt}${ref}<text class="note" x="${W - R - 2}" y="${y(NR_E0) - 5}" text-anchor="end">+1/17 ≈ 0.059</text><text class="note" x="${W - R - 2}" y="${y(-NR_E0) + 13}" text-anchor="end">−1/17</text>
+    <path class="line nohit" d="${path}"/>${pts}</svg>`;
+};
+
+// Slide 26: quadratic convergence. ε_i = ε_0^(2^i), correct bits ≈ −log2 ε_i, doubling every iteration.
+const NR_BITS = Array.from({ length: 6 }, (_, i) => ({ i, bits: 2 ** i * Math.log2(17) }));
+CHARTS.conv = narrow => {
+  const W = narrow ? 340 : 600, H = 220, L = 34, R = 14, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const band = PW / 6, bw = Math.min(34, band * 0.5), y = v => T + PH - v / 140 * PH;
+  const grid = [0, 35, 70, 105, 140].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const refs = [[24, "float32 mantissa: 24 bits"], [53, "double: 53 bits"]].map(([v, t]) => `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke-dasharray="3 3"/><text class="note" x="${L + 6}" y="${y(v) - 4}">${t}</text>`).join("");
+  const bars = NR_BITS.map(d => { const cx = L + band * (d.i + 0.5), b = Math.min(d.bits, 140);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>after ${d.i} iteration${d.i === 1 ? "" : "s"}</b>|ε| ≤ (1/17)<sup>${2 ** d.i}</sup> ≈ ${(17 ** -(2 ** d.i)).toExponential(1).replace(/e(-?\d+)/, "·10<sup>$1</sup>")}<br>≈ ${d.bits.toFixed(1)} correct bits`)}">
+      <rect class="hit" x="${cx - band / 2}" y="${T}" width="${band}" height="${PH}"/><path class="bar s1" d="${barPath(cx - bw / 2, bw, y(b), y(0))}"/>
+      <text class="val" x="${cx}" y="${y(b) - 6}" text-anchor="middle">${d.bits.toFixed(0)}</text><text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">${d.i}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Columns: correct bits of the reciprocal after 0 to 5 Newton-Raphson iterations from the 1/17 start: about 4, 8, 16, 33, 65 and 131. Reference lines at 24 bits (float32) and 53 bits (double)">${grid}${refs}${bars}</svg>`;
+};
+
+// ── Explorers ──
+const cellRow = (label, arr, cls = "", opts = {}) => `<div class="rl">${label}</div>${arr.map((v, i) => v === null ? `<div class="cell blank"></div>` : `<div class="cell ${v === 1 ? "one" : ""} ${cls} ${opts.cls?.[i] || ""}">${opts.text?.[i] ?? v}</div>`).join("")}`;
+const bitBtns = (name, v, w) => bits(v, w).map((b, i) => `<button type="button" class="bit ${b ? "on" : ""}" data-op="${name}" data-i="${w - 1 - i}" aria-label="${name} bit ${w - 1 - i}" aria-pressed="${!!b}">${b}</button>`).join("");
+const wireBits = (body, st, render) => body.addEventListener("click", e => { const b = e.target.closest("button.bit"); if (!b) return; st[b.dataset.op] ^= 1 << +b.dataset.i; render(); });
+
+// Explorer: carry-save addition of three 4-bit numbers (slide 4).
+const CS = { a: 11, b: 7, c: 13 };
+function csaOut() {
+  const W = 4, s = [], c = [];
+  for (let i = 0; i < W; i++) { const t = (CS.a >> i & 1) + (CS.b >> i & 1) + (CS.c >> i & 1); s[i] = t & 1; c[i] = t >> 1; }
+  const S = s.reduce((v, b, i) => v | b << i, 0), C = c.reduce((v, b, i) => v | b << i, 0) << 1, R = S + C;
+  const row = (lbl, v, cls = "") => cellRow(lbl, bits(v, 6), cls);
+  return `<div class="agrid six">
+      <div></div>${[32, 16, 8, 4, 2, 1].map(w => `<div class="h">${w}</div>`).join("")}
+      <div class="rl">a<sub>1</sub> = ${CS.a}</div><div class="cell blank"></div><div class="cell blank"></div>${bitBtns("a", CS.a, 4)}
+      <div class="rl">a<sub>2</sub> = ${CS.b}</div><div class="cell blank"></div><div class="cell blank"></div>${bitBtns("b", CS.b, 4)}
+      <div class="rl">a<sub>3</sub> = ${CS.c}</div><div class="cell blank"></div><div class="cell blank"></div>${bitBtns("c", CS.c, 4)}
+      ${row(`sum s = ${S}`, S, "t1")}
+      ${row(`carry c = ${C}`, C, "t2")}
+      ${row(`r = ${R}`, R, "")}
+    </div>
+    <dl class="ro"><dt>Stage 1</dt><dd>four full adders in parallel, one full-adder delay: ${CS.a} + ${CS.b} + ${CS.c} → ${S} + ${C} (carry-save form)</dd>
+      <dt>Stage 2</dt><dd>one carry-propagate adder for s + c = ${R} ${R === CS.a + CS.b + CS.c ? flag("ok", "equals a₁ + a₂ + a₃") : flag("bad", "mismatch")}</dd></dl>`;
+}
+function initCsa(body) { const render = () => { body.innerHTML = csaOut(); }; render(); wireBits(body, CS, render); }
+
+// Explorer: the 4 × 4 bit-product matrix, unsigned (slide 7) or two's complement rearranged (slide 14).
+const MM = { a: 6, b: 5, signed: 0 };
+function mmxOut() {
+  const n = 4, cols = 2 * n, sg = MM.signed, head = Array.from({ length: cols }, (_, i) => `<div class="h">2<sup>${cols - 1 - i}</sup></div>`).join("");
+  const av = sg ? tcv(MM.a, n) : MM.a, bv = sg ? tcv(MM.b, n) : MM.b;
+  const rows = [], extra = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const cells = Array(cols).fill(null), text = {}, cls = {};
+    for (let j = 0; j < n; j++) {
+      const p = (MM.a >> j & 1) & (MM.b >> i & 1), inv = sg && (i === n - 1) !== (j === n - 1);
+      const v = inv ? 1 - p : p, col = cols - 1 - (i + j);
+      cells[col] = v; total += v << i + j;
+      text[col] = `<small>${inv ? "<s>" : ""}a${SUBS[j]}b${SUBS[i]}${inv ? "</s>" : ""}</small>${v}`; cls[col] = inv ? "t2" : "t1";
+    }
+    rows.push(cellRow(`row ${i}`, cells, "", { text, cls }));
+  }
+  if (sg) { const cells = Array(cols).fill(null); cells[cols - 1 - n] = 1; cells[0] = 1; total += (1 << n) + (1 << cols - 1); extra.push(cellRow("constants", cells, "t3")); }
+  const prod = total & (1 << cols) - 1, pv = sg ? tcv(prod, cols) : prod;
+  return `<div class="presets" role="group" aria-label="Operand encoding">${[["Unsigned", 0], ["Two's complement", 1]].map(([t, v]) => `<button type="button" class="preset" data-sg="${v}" aria-pressed="${sg === v}">${t}</button>`).join("")}</div>
+    <div class="agrid mgrid"><div></div>${head}
+      <div class="rl">a = ${av}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("a", MM.a, n)}
+      <div class="rl">b = ${bv}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("b", MM.b, n)}
+      ${rows.join("")}${extra.join("")}
+      ${cellRow(`r = ${pv}`, bits(prod, cols), "")}
+    </div>
+    <dl class="ro"><dt>Product</dt><dd>${av} × ${bv} = ${av * bv} ${pv === av * bv ? flag("ok", "the matrix sums to it") : flag("bad", "overflow")}</dd>
+      <dt>Column sum</dt><dd>${total} before dropping bit 2<sup>${cols}</sup> and above${sg ? ` (the two constants add ${(1 << n) + (1 << cols - 1)})` : ""}</dd></dl>`;
+}
+function initMmx(body) {
+  const render = () => { body.innerHTML = mmxOut(); }; render(); wireBits(body, MM, render);
+  body.addEventListener("click", e => { const b = e.target.closest("[data-sg]"); if (!b) return; MM.signed = +b.dataset.sg; render(); });
+}
+
+// Explorer: Dadda reduction for an n × n multiplier (slides 9–11); the counting reproduces slide 11 for n = 6.
+function daddaStages(n) {
+  let h = Array.from({ length: 2 * n }, (_, i) => Math.max(0, Math.min(i + 1, n, 2 * n - 1 - i)));
+  const stages = [{ h: [...h], fa: 0, ha: 0, t: n }];
+  DADDA_SEQ.filter(d => d < n).reverse().forEach(t => {
+    let fa = 0, ha = 0, carry = 0; const nh = [];
+    for (let i = 0; i < h.length; i++) { let x = h[i] + carry; carry = 0; while (x > t) { if (x - t >= 2) { fa++; x -= 2; } else { ha++; x -= 1; } carry++; } nh[i] = x; }
+    h = nh; stages.push({ h: [...h], fa, ha, t });
+  });
+  return stages;
+}
+const DD = { n: 6 };
+function daddaOut() {
+  const n = DD.n, st = daddaStages(n), cols = 2 * n, cw = 13, dh = 11, pad = 4;
+  const narrow = isNarrow(), W = narrow ? 340 : 600, left = narrow ? 84 : 150;
+  let y = pad, svg = "";
+  st.forEach((s, k) => {
+    const maxh = Math.max(...s.h), H = maxh * dh;
+    const dots = s.h.map((hh, i) => Array.from({ length: hh }, (_, r) => `<circle class="f${k === 0 ? 1 : hh <= s.t ? 3 : 1}" cx="${W - pad - (cols - i) * cw + cw / 2}" cy="${y + H - r * dh - dh / 2}" r="3.6"/>`).join("")).join("");
+    const lbl = k === 0 ? `<tspan class="cat">matrix</tspan> ${n} × ${n}, tallest column ${maxh}` : `<tspan class="cat">stage ${k}</tspan> → ≤ ${s.t}: ${s.fa} FA, ${s.ha} HA`;
+    svg += `<text class="note" x="${pad}" y="${y + Math.min(H, 26) / 2 + 4}">${lbl}</text>${dots}<line class="axis" x1="${left}" x2="${W - pad}" y1="${y + H + pad}" y2="${y + H + pad}"/>`;
+    y += H + 2 * pad + 2;
+  });
+  const fa = st.reduce((a, s) => a + s.fa, 0), ha = st.reduce((a, s) => a + s.ha, 0);
+  return `<div class="ctl"><label>n <input type="range" min="3" max="8" value="${n}" data-n> <output>${n} × ${n}</output></label></div>
+    <svg viewBox="0 0 ${W} ${y}" role="img" aria-label="Dot diagram of the ${n} by ${n} multiplication matrix and its ${st.length - 1} Dadda reduction stages">${svg}</svg>
+    <dl class="ro"><dt>Stages</dt><dd>${st.length - 1} reduction stages (${st.slice(1).map(s => s.t).join(", ")} bits per column), then one carry-propagate adder of ${cols - 1} bits</dd>
+      <dt>Adders</dt><dd>${fa} full adders and ${ha} half adders${n === 6 ? ` ${flag("ok", "slide 11: 15 and 5")}` : ""}</dd></dl>`;
+}
+function initDadda(body) {
+  const render = () => { body.innerHTML = daddaOut(); body.querySelector("[data-n]").addEventListener("input", e => { DD.n = +e.target.value; render(); }); };
+  render(); addEventListener("resize", () => { if (body.dataset.narrow !== String(isNarrow())) { body.dataset.narrow = String(isNarrow()); render(); } });
+}
+
+// Explorer: sequential (shift-and-add) multiplication, one matrix row per clock (slide 18).
+const SQ = { a: 11, b: 13 };
+function seqOut() {
+  const n = 4, rows = []; let p = 0;
+  for (let i = 0; i < n; i++) { const line = (SQ.b >> i & 1) ? SQ.a << i : 0; const before = p; p += line;
+    rows.push([`${i + 1}`, `${SQ.b >> i & 1}`, `<span class="t${(SQ.b >> i & 1) ? 1 : 0}">${bin(line, 2 * n)}</span>`, bin(before, 2 * n), `<b>${bin(p, 2 * n)}</b>`]); }
+  return `<div class="ctl"><label>a <input type="range" min="0" max="15" value="${SQ.a}" data-k="a"> <output>${SQ.a} = ${bin(SQ.a, 4)}</output></label>
+      <label>b <input type="range" min="0" max="15" value="${SQ.b}" data-k="b"> <output>${SQ.b} = ${bin(SQ.b, 4)}</output></label></div>
+    <div class="tt-wrap"><table class="tt steps"><tr><th>Cycle</th><th>b<sub>i</sub></th><th>Matrix row a·b<sub>i</sub>·2<sup>i</sup></th><th>Result before</th><th>Result after</th></tr>
+      ${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Product</dt><dd>${SQ.a} × ${SQ.b} = ${p} after ${n} cycles on one ${n}-bit adder ${p === SQ.a * SQ.b ? flag("ok", "correct") : ""}</dd></dl>`;
+}
+function initSeq(body) { const render = () => { body.innerHTML = seqOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { SQ[e.target.dataset.k] = +e.target.value; render(); })); }; render(); }
+
+// Explorer: restoring division, the slide-22 algorithm for base 2 with n-bit registers.
+const DV = { x: 27, d: 5 }, DV_N = 5;
+function divOut() {
+  const n = DV_N, D = DV.d << n; let r = DV.x, q = 0; const rows = [];
+  for (let i = 0; i < n; i++) { r <<= 1; const sh = r, sub = r - D, ok = sub >= 0; if (ok) r = sub; q = q << 1 | (ok ? 1 : 0);
+    rows.push([`${i + 1}`, bin(sh, 2 * n).replace(/^(\d{5})/, "<b>$1</b>"), `${sh >> n} − ${DV.d} = ${(sh >> n) - DV.d}`, ok ? flag("ok", "keep") : flag("bad", "restore"), `${ok ? 1 : 0}`, bin(r, 2 * n).replace(/^(\d{5})/, "<b>$1</b>")]); }
+  const rem = r >> n;
+  return `<div class="ctl"><label>x <input type="range" min="0" max="31" value="${DV.x}" data-k="x"> <output>${DV.x}</output></label>
+      <label>d <input type="range" min="1" max="31" value="${DV.d}" data-k="d"> <output>${DV.d}</output></label></div>
+    <div class="tt-wrap"><table class="tt steps"><tr><th>Cycle</th><th>r after shift</th><th>Upper half − d</th><th>Sign</th><th>q bit</th><th>r after cycle</th></tr>
+      ${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Result</dt><dd>q = ${bin(q, n)} = ${q}, remainder = upper half of r = ${rem}: ${DV.x} = ${q}·${DV.d} + ${rem} ${q * DV.d + rem === DV.x && rem < DV.d ? flag("ok", "x = q·d + rem") : flag("bad", "check")}</dd>
+      <dt>Register</dt><dd>r has 2n = ${2 * n} bits; d sits in the upper half (2<sup>n</sup>·d = ${D}), the bold bits are compared against it</dd></dl>`;
+}
+function initDiv(body) { const render = () => { body.innerHTML = divOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { DV[e.target.dataset.k] = +e.target.value; render(); })); }; render(); }
+
+// Explorer: Newton-Raphson reciprocal from the slide-27 start, iterated five times (slide 25).
+const NR = { d: 0.7 };
+function nrOut() {
+  const d = NR.d; let X = NR_T1 + NR_T2 * d; const rows = [];
+  for (let i = 0; i <= 5; i++) { const e = 1 - d * X; rows.push([`${i}`, X.toFixed(12), (d * X).toFixed(12), Math.abs(e) < 1e-15 ? "&lt; 10<sup>−15</sup>" : e.toExponential(2).replace(/e(-?\d+)/, "·10<sup>$1</sup>"), Math.abs(e) < 1e-15 ? "≥ 50" : (-Math.log2(Math.abs(e))).toFixed(1)]); X = X * (2 - d * X); }
+  return `<div class="ctl"><label>d <input type="range" min="0.5" max="1" step="0.01" value="${d}" data-k="d"> <output>${d.toFixed(2)}</output></label><span>1/d = ${(1 / d).toFixed(12)}</span></div>
+    <div class="tt-wrap"><table class="tt steps"><tr><th>i</th><th>X<sub>i</sub></th><th>d·X<sub>i</sub></th><th>ε<sub>i</sub> = 1 − d·X<sub>i</sub></th><th>Correct bits</th></tr>
+      ${rows.map(r => `<tr>${r.map(v => `<td class="n">${v}</td>`).join("")}</tr>`).join("")}</table></div>
+    <p class="muted" style="margin:8px 0 0">Doubles stop at about 53 bits, so the table bottoms out after iteration 4; in hardware each iteration would run at the precision it needs.</p>`;
+}
+function initNr(body) { const render = () => { body.innerHTML = nrOut(); body.querySelector("[data-k]").addEventListener("input", e => { NR.d = +e.target.value; render(); }); }; render(); }
+Object.assign(LABS, { csa: initCsa, mmx: initMmx, dadda: initDadda, seq: initSeq, div: initDiv, nr: initNr });
+
+function lecture3() {
+  return `${head(l)}
+    <p class="lead">The second arithmetic lecture goes from adding two numbers to adding many, which is what a multiplier does: carry-save addition, the bit-product matrix, Wallace and Dadda reduction trees, signed and multiply-accumulate variants, sequential multiplication, and finally division by restoring steps or by Newton's method. Five charts and six explorers; written from the chair's 2022/23 deck (28 pages in the file; the footer counts to 31, slides 28 to 30 are missing, which is where the deck 4 list says division continues).</p>
+    <p class="muted">Slides 3–5 recap the end of lecture 2 (number representations, addition and subtraction) before the new material starts; the structure of all three arithmetic lectures is representations → add/subtract → multiply → divide.</p>
+
+    <h2>Adding multiple operands</h2>
+    <h3>The naive way and why it is slow (slide 3)</h3>
+    <ul>
+      <li><b>Chain of adders.</b> a<sub>1</sub> + a<sub>2</sub> + a<sub>3</sub> is computed as (a<sub>1</sub> + a<sub>2</sub>) + a<sub>3</sub> with two ordinary adders. With ripple-carry adders the first sum costs about n carry delays and the second only one more, because the carry path of the second adder runs one carry delay behind the first: its bit i is ready as soon as the first adder's bit i is. For m operands that is about n + m carry delays.</li>
+      <li><b>Lookahead does not help as much as expected.</b> A carry-lookahead adder needs about log<sub>2</sub> n carry delays for most bits, but the second adder cannot start before the first is done, so two stages cost 2·log<sub>2</sub> n and m operands cost about m·log<sub>2</sub> n. The chain of fast adders grows linearly in m.</li>
+    </ul>
+    <h3>Carry-save addition (slides 4–5)</h3>
+    <ul>
+      <li><b>Idea.</b> Addition is associative and commutative, so the bits may be summed in any order. Add the three bits of the same position with one full adder: a<sub>1,i</sub> + a<sub>2,i</sub> + a<sub>3,i</sub> = 2·c<sub>i</sub> + s<sub>i</sub>. All n full adders work in parallel, nothing ripples, and after a single full-adder delay the three operands have become two: the sum word s and the carry word c shifted one position left.</li>
+      <li><b>Generalisation.</b> For m operands, form groups of three, reduce every group to two numbers in one full-adder delay, and repeat until two numbers remain. Each stage removes about a third of the operands. The last pair is in carry-save form; one fast adder (carry-lookahead) turns it into the result.</li>
+      <li><b>Accumulators.</b> If very many numbers are summed over many cycles, the running total can stay in carry-save form (two words) and is only resolved into one number in the last cycle: one full-adder delay per cycle instead of a whole carry chain.</li>
+    </ul>
+    ${lab("csa", "carry-save addition of three numbers")}
+    <p class="muted">Click the bits of a<sub>1</sub>, a<sub>2</sub>, a<sub>3</sub>. Every column is one full adder: its sum bit stays in the column, its carry bit moves one column left. The carries never travel further than that, so stage 1 is exactly one full-adder delay for any width.</p>
+    ${chart("multi", leg([[1, "Chain of ripple-carry adders"], [2, "Chain of lookahead adders"], [3, "Carry-save tree + one lookahead adder"]]))}
+      <figcaption>Carry delays to add m operands of 16 bits. The ripple chain costs 16 + (m − 2), the lookahead chain (m − 1)·4, and the carry-save tree one full-adder delay per reduction stage (Dadda's sequence, below) plus one final 4-level lookahead add. The slides round the first two to n + m and m·log<sub>2</sub> n. Hover a column to read all three.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Operands</th><th>Ripple chain</th><th>Lookahead chain</th><th>Carry-save tree</th></tr>${MULTI.map(d => `<tr><td class="n">${d.m}</td><td class="n">${d.rc}</td><td class="n">${d.cla}</td><td class="n">${d.csa}</td></tr>`).join("")}</table></details>
+    <div class="ex"><div class="kicker">Worked example: 11 + 7 + 13 in carry-save form</div>
+      <p>Column by column (LSB first): 1+1+1 = 11<sub>2</sub> → s = 1, c = 1; 1+1+0 = 10<sub>2</sub> → s = 0, c = 1; 0+1+1 = 10<sub>2</sub> → s = 0, c = 1; 1+0+1 = 10<sub>2</sub> → s = 0, c = 1. So s = 0001 = 1 and c = 1111 shifted left = 11110 = 30, and 1 + 30 = 31 = 11 + 7 + 13. Only the final 1 + 30 needs a carry-propagating adder. This is the default setting of the explorer above.</p></div>
+
+    <h2>Multipliers</h2>
+    <h3>The multiplication matrix (slides 6–7)</h3>
+    <ul>
+      <li><b>Bit products.</b> Multiplying out (Σ a<sub>j</sub>2<sup>j</sup>)·(Σ b<sub>k</sub>2<sup>k</sup>) gives Σ<sub>i</sub> 2<sup>i</sup>·Σ<sub>j+k=i</sub> a<sub>j</sub>b<sub>k</sub>: every pair of bits contributes a<sub>j</sub>·b<sub>k</sub> (a single AND gate) at weight 2<sup>j+k</sup>. All n<sup>2</sup> AND gates work at once, so the whole matrix exists after one AND delay.</li>
+      <li><b>Shape.</b> Row i is a·b<sub>i</sub>·2<sup>i</sup>, the multiplicand shifted by i positions, so the matrix is a parallelogram: columns in the middle hold up to n bits, the outer columns only one. The product has 2n bits.</li>
+      <li><b>Reduction.</b> The matrix is just a multi-operand addition with a particular shape, so the carry-save idea applies, with the columns of different height taken into account.</li>
+    </ul>
+    ${lab("mmx", "4 × 4 bit-product matrix, unsigned or two's complement")}
+    <p class="muted">Cells show which bit product sits at which weight (orange ones are inverted in the signed form, green ones are the two constant 1s). Switch to two's complement and try a = 1101 (−3) × b = 0101 (5): the same matrix shape, only the sign-row and sign-column products are inverted and two 1s added, and it sums to −15 in 8-bit two's complement.</p>
+
+    <h3>Wallace tree (slide 8)</h3>
+    <ul>
+      <li>Reduce the matrix in stages, column by column: wherever a column holds three bits, a full adder turns them into one sum bit in the same column and one carry bit in the next; if two bits remain (or a carry would make a third), a half adder does the same; a single leftover bit is passed to the next stage untouched.</li>
+      <li>Repeat until no column holds more than two bits, then a fast adder sums the two remaining rows. "Tree" because a tree of half and full adders leads to every bit of the final two rows.</li>
+      <li>The greedy rule reduces as much as possible in every stage, which costs more adders than necessary, especially half adders.</li>
+    </ul>
+    <h3>Dadda tree (slides 9–12)</h3>
+    <ul>
+      <li><b>Goal.</b> Minimise the number of full and half adders. The trick is to reduce no further than needed: fix a target height per stage and only use adders where a column exceeds it.</li>
+      <li><b>Target heights.</b> The final adder takes 2 bits per column. A full adder reduces 3 to 2, so a stage that ends at n<sub>k</sub> bits may start from n<sub>k−1</sub> = ⌊3n<sub>k</sub>/2⌋: the sequence 2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 94, … Start from the smallest entry that is at least the tallest column, and in every stage reduce each column exactly to the next target with full adders and at most one half adder.</li>
+      <li><b>Example 6 × 6</b> (slide 11). Tallest column 6, so the targets are 6 → 4 → 3 → 2: three stages with 15 full adders and 5 half adders; the Wallace tree takes 17 and 9. The price is a slightly wider final adder, which needs about 2.5 more inputs, the equivalent of two full adders and one half adder.</li>
+      <li><b>Complexity</b> (slide 12). The number of stages grows with log<sub>1.5</sub> of the column height, so the delay is logarithmic in the operand width, and so is the final adder if it is a carry-lookahead type. The area of the reduction stages is minimal (no redundant operations); the final adder decides between small (ripple-carry) and fast (lookahead).</li>
+    </ul>
+    ${lab("dadda", "Dadda reduction of an n × n matrix")}
+    <p class="muted">Each band is one stage: blue dots are bits still above the target, green columns already fit. The counting rule is the slide's (full adders freely, at most one half adder per column and stage); for 6 × 6 it reproduces the 15 + 5 of slide 11.</p>
+    ${chart("cost", leg([[1, "Wallace tree"], [2, "Dadda tree"]]))}
+      <figcaption>Adders in the reduction of a 6 × 6 multiplier, from slide 11. Dadda saves two full adders and four half adders and pays with a final adder that is about 2.5 inputs wider.</figcaption>
+    </figure>
+    ${chart("dadda", leg([[1, "n × n multiplier"], [2, "n-bit multiply-accumulate (one more row)"]]))}
+      <figcaption>Reduction stages versus the tallest column of the matrix. The staircase is Dadda's sequence: every step at 3, 4, 6, 9, 13, 19, 28, 42, 63, 94 adds one stage. The multiply-accumulate markers (one bit taller) sit on the same step as the plain multiplier for 8, 16, 32 and 64 bits.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Tallest column</th><th>Stages</th><th>Tallest column</th><th>Stages</th></tr>${[8, 9, 16, 17, 32, 33, 64, 65].reduce((acc, h, i, a) => i % 2 ? acc : [...acc, [h, a[i + 1]]], []).map(([h1, h2]) => `<tr><td class="n">${h1}</td><td class="n">${stagesFor(h1)}</td><td class="n">${h2}</td><td class="n">${stagesFor(h2)}</td></tr>`).join("")}</table></details>
+    <div class="why"><div class="kicker">Context, not on the slides: why reduce "as little as possible"</div>
+      <p>Every adder in a reduction tree costs area and switching energy, but the delay is set by the number of stages, not by how much each stage reduces. Dadda's observation is that the heights 2, 3, 4, 6, 9, … are the latest moments at which a column may still be brought down to 2 in time, so reducing a column earlier than that wastes adders without saving a stage. The slide's 6 × 6 numbers are small, but in a 64 × 64 multiplier the difference is hundreds of cells.</p></div>
+
+    <h3>Signed multiplication (slides 13–15)</h3>
+    <ul>
+      <li><b>Expand the two's-complement values.</b> With a = −a<sub>n−1</sub>2<sup>n−1</sup> + Σ a<sub>i</sub>2<sup>i</sup> and the same for b, the product has four parts: a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> (positive), the unsigned (n−1) × (n−1) matrix of the lower bits (positive), and two negative sums −Σ a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> and −Σ b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup>.</li>
+      <li><b>Rearranged matrix</b> (slide 14). A subtracted bit −p·2<sup>w</sup> equals (1 − p)·2<sup>w</sup> − 2<sup>w</sup>, so the negative terms become inverted bit products plus a constant. Summing the constants modulo 2<sup>2n</sup> leaves a single 1 at weight 2<sup>n</sup> and a single 1 at weight 2<sup>2n−1</sup>. The result is a matrix of the same height as the unsigned one, which the Wallace or Dadda reduction handles unchanged.</li>
+      <li><b>Notes</b> (slide 15). Complexity is the same as unsigned. The literature has other, equivalent rearrangements. A combined signed/unsigned multiplier extends both operands by one bit (a 0 for unsigned, a copy of the sign bit for signed) and always multiplies signed.</li>
+    </ul>
+    <div class="formula">a·b = a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> − Σ<sub>i=0…n−2</sub> a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> − Σ<sub>i=0…n−2</sub> b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup> + Σ<sub>i=0…2n−4</sub> 2<sup>i</sup> Σ<sub>j+k=i, j,k≤n−2</sub> a<sub>j</sub>b<sub>k</sub></div>
+    <div class="ex"><div class="kicker">Worked example: −3 × 5 in 4 bits through the rearranged matrix</div>
+      <p>a = 1101 (−3), b = 0101 (5). The nine products of the low three bits of each are the plain unsigned part: 101 × 101 = 25. The products with the sign bit of a (a<sub>3</sub>b<sub>0</sub>, a<sub>3</sub>b<sub>1</sub>, a<sub>3</sub>b<sub>2</sub> at weights 8, 16, 32) are 1, 0, 1 and appear inverted: 0, 1, 0 → 16. The products with b<sub>3</sub> = 0 are all 0 and appear inverted as 1, 1, 1 at weights 8, 16, 32 → 56. a<sub>3</sub>b<sub>3</sub> = 0 at weight 64. The constants add 16 + 128 = 144. Total 25 + 16 + 56 + 0 + 144 = 241 = 11110001<sub>2</sub>, which in 8-bit two's complement is 241 − 256 = −15. Select "two's complement" in the matrix explorer and set these bits to see each cell.</p></div>
+
+    <h3>Multiply-accumulate (slides 16–17)</h3>
+    <ul>
+      <li><b>Why.</b> Sums of products Σ a<sub>i</sub>b<sub>i</sub> are everywhere: FIR and IIR filters, matrix multiplication (every element c<sub>ij</sub> = Σ<sub>k</sub> a<sub>ik</sub>b<sub>kj</sub>, which is the fully-connected layer of a neural network and also every coordinate transformation), and 2-D convolution in convolutional networks. An instruction that computes a + b·c in one cycle gives software a large speedup.</li>
+      <li><b>How.</b> Put the extra summand into the matrix as one more row and reduce as before. Dadda's sequence has gaps: 9 ≥ 8 + 1, 19 ≥ 16 + 1, 42 ≥ 32 + 1, 94 ≥ 64 + 1, so an 8-, 16-, 32- or 64-bit multiply-accumulate needs no extra stage. The area overhead is comparable to one ripple-carry adder, the delay overhead is roughly zero (chart above).</li>
+    </ul>
+    <div class="why"><div class="kicker">Context, not on the slides: where this course goes with it</div>
+      <p>The multiply-accumulate unit is the atom of every AI accelerator: a systolic array or a GPU tensor core is a grid of them, and their energy per operation (a few picojoules in current nodes) sets the energy of inference. Lecture 14 on hardware for deep neural networks picks this up; the exercise sheets of the chair count adders and delays exactly as on slides 11 and 17.</p></div>
+
+    <h3>Sequential multiplication (slides 18–19)</h3>
+    <ul>
+      <li><b>One row per cycle.</b> Instead of building the whole tree, sum the matrix over several clock cycles: add one matrix row (a·b<sub>i</sub>) to the intermediate result and shift the window of the result by one position. An n-bit adder suffices (the ALU's adder can be reused); strictly n − 1 additions are needed, but the implementation starts from 0 and runs n identical iterations.</li>
+      <li><b>Unrolling.</b> Several rows per step is possible. The design space (slide 19): a single carry-propagate adder reused every cycle gives homogeneous steps suited to iterative multi-cycle multiplication; a mix of carry-save stages and one final carry-propagate adder gives heterogeneous steps suited to pipelining, where every stage works on a different multiplication at the same time.</li>
+    </ul>
+    ${lab("seq", "shift-and-add multiplication, one cycle per row")}
+    <div class="tiles">
+      <div class="tile"><div class="v">1 FA</div><div class="l">delay to reduce three operands to two in carry-save form</div></div>
+      <div class="tile"><div class="v">15 + 5</div><div class="l">full and half adders of a 6 × 6 Dadda tree (Wallace: 17 + 9)</div></div>
+      <div class="tile"><div class="v">10</div><div class="l">Dadda stages for a 64 × 64 multiplier, with or without accumulate</div></div>
+      <div class="tile"><div class="v">n</div><div class="l">cycles of a sequential n-bit multiplier on one adder</div></div>
+    </div>
+
+    <h2>Division</h2>
+    <h3>Definition (slide 20)</h3>
+    <ul>
+      <li>Division reverses multiplication: x = q·d + rem with dividend x, divisor d, quotient q and remainder rem, where |rem| &lt; |d|·ulp and the remainder takes the sign of the dividend. The unit in the last position ulp is 1 for an integer quotient and r<sup>−n</sup> for an n-digit fractional quotient in radix r.</li>
+      <li>Examples: 1000 / 7 = 142 remainder 6 (1000 = 142·7 + 6); 446.6 / 5.5 = 81 remainder 1.1. The lecture focuses on unsigned integer division.</li>
+    </ul>
+    <h3>Slow and fast algorithms (slide 21)</h3>
+    <ul class="cmp" aria-label="Slow versus fast division">
+      <li><b>Digits per step</b><span class="v"><span class="sw t"></span>Slow: a fixed number of quotient digits per iteration</span><span class="v"><span class="sw v"></span>Fast: start from a close approximation and double the correct digits every iteration</span></li>
+      <li><b>Algorithms</b><span class="v"><span class="sw t"></span>Restoring division; non-restoring division, e.g. the SRT algorithm</span><span class="v"><span class="sw v"></span>Newton-Raphson division; Goldschmidt division</span></li>
+      <li><b>Hardware</b><span class="v"><span class="sw t"></span>One subtractor, one shift register, n cycles</span><span class="v"><span class="sw v"></span>Multipliers (or MAC units) reused per iteration, a few iterations</span></li>
+    </ul>
+    <h3>Restoring division (slides 22–24)</h3>
+    <ul>
+      <li><b>Algorithm.</b> Used for fixed-point numbers, n cycles for n-bit numbers, written for any base B but practical only for B = 2 (for B &gt; 2 the "how many times does d fit" loop becomes expensive). Registers hold the partial remainder r and the quotient q; start with r = x and q = 0. In each of the n iterations: shift r left by one digit, subtract B<sup>n</sup>·d while r stays non-negative and count the subtractions k, then restore by adding B<sup>n</sup>·d back once, and append k − 1 as the next quotient digit. At the end q holds the quotient and r the remainder.</li>
+      <li><b>Hardware for B = 2</b> (slide 23). A multiplexer loads x into the r register at the start; afterwards the register takes the shifted r each cycle. One subtractor computes r − 2<sup>n</sup>·d; its sign decides, via a second multiplexer, whether the difference or the unchanged r is written back, and the inverted sign is shifted into the q register (one flip-flop per quotient bit). Every iteration maps to one clock cycle.</li>
+      <li><b>Optimisation</b> (slide 24). For B = 2 the inner loop runs at most once, so "subtract, test, restore" collapses: compute the difference, and let the sign choose between it and the old value. The adder that restored r is gone and only the multiplexer remains, which is what the right-hand schematic shows.</li>
+    </ul>
+    ${lab("div", "restoring division, 5-bit registers")}
+    <div class="ex"><div class="kicker">Worked example: 27 / 5 in five cycles</div>
+      <p>n = 5, so d is aligned at 2<sup>5</sup>·5 = 160 and r starts as 27. Cycle 1: 54 &lt; 160, quotient bit 0. Cycle 2: 108 &lt; 160, bit 0. Cycle 3: 216 ≥ 160, keep 56, bit 1. Cycle 4: 112 &lt; 160, bit 0. Cycle 5: 224 ≥ 160, keep 64, bit 1. q = 00101 = 5, and the upper half of r = 64 is 64/32 = 2: 27 = 5·5 + 2. The explorer above shows the same run bit by bit.</p></div>
+    <div class="why"><div class="kicker">Context, not on the slides: non-restoring and SRT</div>
+      <p>Non-restoring division goes one step further than slide 24: instead of restoring a negative remainder it keeps it and adds d in the next cycle rather than subtracting, which removes the multiplexer from the critical path; the quotient is corrected at the end. SRT division (named after Sweeney, Robertson and Tocher) chooses quotient digits from a redundant set such as {−1, 0, 1} by looking at only a few leading bits of the remainder, which is what hardware dividers in processors use; a wrong lookup table in this unit was the Pentium FDIV bug of 1994. The 2022 deck lists these under "slow algorithms" and continues the topic in lecture 4.</p></div>
+
+    <h3>Newton-Raphson division (slides 25–27)</h3>
+    <ul>
+      <li><b>Concept.</b> Compute the reciprocal 1/d with Newton's method and multiply: q = x·(1/d). Choose a function with a zero at X = 1/d, f(X) = 1/X − d; Newton's step X<sub>i+1</sub> = X<sub>i</sub> − f(X<sub>i</sub>)/f′(X<sub>i</sub>) simplifies to X<sub>i+1</sub> = X<sub>i</sub>·(2 − d·X<sub>i</sub>) = X<sub>i</sub> + X<sub>i</sub>·(1 − d·X<sub>i</sub>): only multiplications and a subtraction, or two multiply-accumulate operations.</li>
+      <li><b>Quadratic convergence</b> (slide 26). With the error ε<sub>i</sub> = 1 − d·X<sub>i</sub>, one step gives ε<sub>i+1</sub> = (1 − d·X<sub>i</sub>)<sup>2</sup> = ε<sub>i</sub><sup>2</sup>. The error squares every iteration, so the number of correct digits roughly doubles, which is valuable for wide numbers, but the whole thing depends on a good X<sub>0</sub>. The form X<sub>i</sub> + X<sub>i</sub>(1 − dX<sub>i</sub>) is cheaper in precision than X<sub>i</sub>(2 − dX<sub>i</sub>), because 2 − dX<sub>i</sub> must be computed with 2n bits while 1 − dX<sub>i</sub> is small.</li>
+      <li><b>Starting value</b> (slide 27). Scale d into 0.5 ≤ d ≤ 1 by shifting (and shift x the same way), then use a straight line X<sub>0</sub> = T<sub>1</sub> + T<sub>2</sub>·d. Minimising the maximum of |ε<sub>0</sub>| = |1 − d(T<sub>1</sub> + T<sub>2</sub>d)| over the interval is a minimax problem: by the equioscillation theorem the error at the two endpoints and at the interior extremum d = −T<sub>1</sub>/(2T<sub>2</sub>) must be equal and opposite, F(½) = F(1) = −F(−T<sub>1</sub>/2T<sub>2</sub>), which has the unique solution T<sub>1</sub> = 48/17, T<sub>2</sub> = −32/17 and |ε<sub>0</sub>| ≤ 1/17 ≈ 0.059. Other coefficients work too, just less well.</li>
+    </ul>
+    <div class="formula">X<sub>i+1</sub> = X<sub>i</sub>·(2 − d·X<sub>i</sub>) &nbsp;&nbsp;&nbsp; ε<sub>i+1</sub> = ε<sub>i</sub><sup>2</sup> &nbsp;&nbsp;&nbsp; X<sub>0</sub> = 48/17 − 32/17·d &nbsp;for ½ ≤ d ≤ 1, &nbsp;|ε<sub>0</sub>| ≤ 1/17</div>
+    ${chart("nr0")}
+      <figcaption>Starting error ε<sub>0</sub> = 1 − d·X<sub>0</sub> of the slide-27 line over the scaled divisor. The curve touches +1/17 at d = 0.5 and d = 1 and −1/17 at d = 0.75: three equal extremes with alternating sign, the signature of the best possible straight line. Hover a point for X<sub>0</sub> and 1/d.</figcaption>
+    </figure>
+    ${chart("conv")}
+      <figcaption>Correct bits of the reciprocal after each Newton-Raphson iteration from the worst-case start 1/17 (log<sub>2</sub> 17 ≈ 4.1 bits). Doubling per step: a float32 mantissa (24 bits) is reached after 3 iterations, a double (53 bits) after 4. Each iteration is two multiplications, so a 64-bit divide costs about eight multiplications plus the final x·X<sub>n</sub>.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Iteration</th><th>|ε| at most</th><th>Correct bits</th></tr>${NR_BITS.map(d => `<tr><td class="n">${d.i}</td><td class="n">(1/17)<sup>${2 ** d.i}</sup></td><td class="n">${d.bits.toFixed(1)}</td></tr>`).join("")}</table></details>
+    ${lab("nr", "Newton-Raphson reciprocal")}
+    <div class="ex"><div class="kicker">Worked example: 1/0.75 by hand</div>
+      <p>X<sub>0</sub> = 48/17 − 32/17·0.75 = 48/17 − 24/17 = 24/17 ≈ 1.4118; the true value is 4/3 ≈ 1.3333, and ε<sub>0</sub> = 1 − 0.75·24/17 = 1 − 18/17 = −1/17. First step: X<sub>1</sub> = X<sub>0</sub>(2 − 0.75·X<sub>0</sub>) = 1.4118·(2 − 1.0588) = 1.4118·0.9412 = 1.3287, ε<sub>1</sub> = (1/17)<sup>2</sup> = 1/289 ≈ 0.0035. Second step: X<sub>2</sub> ≈ 1.33333 with ε<sub>2</sub> = 1/83521 ≈ 1.2·10<sup>−5</sup>; third: ε<sub>3</sub> ≈ 1.4·10<sup>−10</sup>. For 1000/7 one would first scale 7 to 0.875 (shift by 3), compute 1/0.875 this way, and multiply by 1000·2<sup>−3</sup>.</p></div>
+    <div class="why"><div class="kicker">Context, not on the slides: why the derivation on slide 27 is worth following</div>
+      <p>Slide 27 is the only place in the three arithmetic lectures where a design parameter is derived rather than stated, and it is a typical exam-style question: given f(X) = 1/X − d, derive the iteration; given a linear start, show where its error is extreme and why the extremes must alternate. The computation only needs F′(d) = −T<sub>1</sub> − 2T<sub>2</sub>d = 0 and the three equalities, and the "wrong" sign-free answer X<sub>0</sub> = 1 would give |ε<sub>0</sub>| up to 0.5 and need two extra iterations.</p></div>
+
+    <h2>Take-home message (slide 31)</h2>
+    <ul>
+      <li>Numbers have several digital representations, chosen by use case: unsigned or signed, integer or decimal, fixed or floating point.</li>
+      <li>Arithmetic circuits have several implementations, chosen by constraints: combinational, iterative or pipelined; size against speed; power consumption.</li>
+      <li>For this lecture specifically: carry-save form postpones the carry chain to the very end; a multiplier is a shaped multi-operand addition whose reduction tree is logarithmic in depth; a divider is either n slow steps of subtract-and-shift or a few fast steps of multiply-and-square-the-error.</li>
+    </ul>
+    <p class="muted">Previous: <a href="digital-circuit-design/lecture.html?n=2">lecture 2, Arithmetic circuits 1</a>. Next: Arithmetic circuits 3 (<a href="digital-circuit-design/lecture.html?n=4">lecture 4</a>), which starts again at division and continues with filters, the ALU and floating-point operations. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
+}
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -565,7 +933,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2 };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {

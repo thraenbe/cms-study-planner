@@ -1141,8 +1141,8 @@ window.CMS = {
       "title": "Arithmetic circuits 2",
       "date": "2026-10-26",
       "icon": "✖️",
-      "covered": false,
-      "blurb": "Adding multiple operands, multipliers and sequential multiplication; carry delays of ripple-carry vs carry-lookahead adders."
+      "covered": true,
+      "blurb": "Carry-save addition, the bit-product matrix, Wallace and Dadda reduction trees, signed and multiply-accumulate multipliers, sequential multiplication, and division by restoring steps or Newton's method."
      },
      {
       "n": 4,
@@ -1232,7 +1232,82 @@ window.CMS = {
       "covered": false,
       "blurb": "Why DNNs need special hardware: data flows, accelerators and the energy of a multiply-accumulate."
      }
-    ]
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "title": "Digital basics, numbers and adders",
+      "date": "2026-10-22",
+      "published": "2026-10-22",
+      "icon": "✏️",
+      "covered": true,
+      "blurb": "First Thursday session of the German group. Sheet 1 with solutions is in OPAL (English version from 21 Oct, German from 22 Oct) but not read yet; the page holds a practice set on lectures 1–2: Karnaugh maps, two's complement and overflow, adder delays, fixed point, IEEE 754 and a small state machine."
+     },
+     {
+      "n": 2,
+      "title": null,
+      "date": "2026-11-05",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lectures 3–4 (multipliers, division, ALU and floating point); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 3,
+      "title": null,
+      "date": "2026-11-19",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lectures 5–6 (CMOS technology and logic); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 4,
+      "title": null,
+      "date": "2026-12-03",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lectures 7–8 (timing, power and energy); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 5,
+      "title": null,
+      "date": "2026-12-17",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lectures 9–10 (mixed-signal circuits); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 6,
+      "title": null,
+      "date": "2027-01-07",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lecture 11 (programmable logic); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 7,
+      "title": null,
+      "date": "2027-01-21",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lectures 12–13 (memory and I/O circuits); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     },
+     {
+      "n": 8,
+      "title": null,
+      "date": "2027-02-04",
+      "published": null,
+      "icon": "✏️",
+      "covered": false,
+      "blurb": "Expected to cover lecture 14 (hardware for deep neural networks); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+     }
+    ],
+    "exerciseNote": "Your group is the Thursday one (German, every other week, odd calendar weeks). The chair posts every sheet with solutions in OPAL in English and German around the session, plus last year's complete collection and a mock exam; the CMS group meets weekly on Wednesdays."
    }
   },
   "CMS-TRK-CV": {

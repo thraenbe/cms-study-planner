@@ -243,3 +243,77 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .ex p, .dcd .why p { margin: 0 0 0.4rem; }
 .dcd .ex p:last-child, .dcd .why p:last-child { margin-bottom: 0; }
 .dcd .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+
+/* Lecture-3 extras: wider bit grids, the bit-product matrix, step tables */
+.dcd .agrid.six { grid-template-columns: minmax(84px, auto) repeat(6, 38px); }
+.dcd .agrid.mgrid { grid-template-columns: minmax(64px, auto) repeat(8, minmax(30px, 48px)); gap: 4px 3px; }
+.dcd .mgrid .cell { font-size: 12px; height: 30px; }
+.dcd .mgrid .h { font-size: 10px; }
+.dcd .cell.blank { background: transparent; }
+.dcd .cell s { text-decoration: overline; text-decoration-thickness: 2px; }
+.dcd .t0 { color: var(--ink-3); }
+.dcd table.tt.steps td { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.85rem; text-align: left; white-space: nowrap; }
+.dcd table.tt.steps td b { color: var(--vz-s1); }
+.dcd .lab svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .lab svg .f1 { fill: var(--vz-s1); } .dcd .lab svg .f2 { fill: var(--vz-s2); } .dcd .lab svg .f3 { fill: var(--vz-s3); } .dcd .lab svg .f4 { fill: var(--vz-s4); }
+.dcd .lab svg .note { fill: var(--ink-2); font-size: 11px; } .dcd .lab svg .cat { fill: var(--ink); font-weight: 600; }
+.dcd .lab svg .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.dcd .viz .line.k3 { stroke: var(--vz-s3); }
+@media (max-width: 600px) {
+  .dcd .agrid.six { grid-template-columns: minmax(64px, auto) repeat(6, 32px); gap: 5px 3px; }
+  .dcd .agrid.mgrid { grid-template-columns: minmax(48px, auto) repeat(8, 1fr); }
+  .dcd .mgrid .cell { font-size: 10px; height: 26px; }
+}
+
+/* Board: lecture and exercise sections, exercise cards (same pattern as the HPC board) */
+.dcd .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.dcd .board-h h2 { margin: 0; font-size: 1.15rem; }
+.dcd .board-h .muted { font-size: 0.85rem; color: var(--ink-2); }
+.dcd .board-note { font-size: 0.85rem; color: var(--ink-2); margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.dcd .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.dcd .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.dcd .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.dcd .game-card.exe { border-top: 4px solid var(--c-trk); }
+.dcd .game-card.lec { border-top: 4px solid var(--c-core); }
+
+/* Exercise pages: tasks, answers, the Karnaugh map, the number line */
+.dcd .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.dcd .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.dcd .task-h h2 { margin: 0; font-size: 1.25rem; }
+.dcd .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.dcd .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.dcd .pts.open { color: var(--ink-3); border-style: dashed; }
+.dcd .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.dcd .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.dcd .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.dcd .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.dcd details.sol { margin: 0.4rem 0 0.6rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.dcd details.sol summary { cursor: pointer; padding: 9px 14px; font-weight: 600; color: var(--c-trk); }
+.dcd details.sol[open] summary { border-bottom: 1px solid var(--line); }
+.dcd details.sol .sol-body { padding: 10px 14px 4px; }
+.dcd .status-box { border-left: 4px solid var(--warn); }
+.dcd .kmap { display: grid; grid-template-columns: 44px repeat(4, 46px); gap: 4px; justify-content: start; margin: 0 0 10px; }
+.dcd .kmap .h { font: 600 11px ui-monospace, monospace; color: var(--ink-3); display: grid; place-items: center; }
+.dcd .kmap .h.row { justify-items: end; padding-right: 6px; }
+.dcd .kmap button.cell { height: 40px; font-size: 16px; position: relative; }
+.dcd .kmap button.cell small { position: absolute; left: 4px; top: 2px; font-size: 9px; color: var(--ink-3); font-weight: 500; }
+.dcd .kmap .cell.hl { outline: 3px solid var(--c); outline-offset: -3px; background: color-mix(in srgb, var(--c) 22%, var(--surface)); }
+.dcd .terms { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.dcd .term { font: 600 14px ui-monospace, "IBM Plex Mono", monospace; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: default; border-left: 4px solid var(--c); }
+.dcd .term:hover, .dcd .term:focus { background: color-mix(in srgb, var(--c) 16%, var(--surface)); outline: none; }
+.dcd .t5 { --c: var(--vz-s5); } .dcd .t6 { --c: var(--vz-s6); }
+.dcd .viz .f5 { fill: var(--vz-s5); } .dcd .viz .f6 { fill: var(--vz-s6); }
+.dcd .viz .bar.s3 { fill: var(--vz-s3); }
+.dcd .fsm .st { fill: var(--surface); stroke: var(--vz-s1); stroke-width: 2; }
+.dcd .fsm .st.reset { stroke: var(--vz-s2); }
+.dcd .fsm .tr { fill: none; stroke: var(--ink-3); stroke-width: 1.5; marker-end: url(#arr); }
+.dcd .fsm .tr.en { stroke: var(--vz-s1); }
+.dcd .fsm .arrow { fill: var(--ink-3); }
+.dcd .fsm .sl { fill: var(--ink); font-size: 13px; font-weight: 700; }
+.dcd .fsm .tl { fill: var(--ink-2); font-size: 11px; }
+@media (max-width: 600px) { .dcd .kmap { grid-template-columns: 40px repeat(4, 1fr); } .dcd .task-h { grid-template-columns: auto 1fr; } .dcd .task-h .pts { grid-column: 2; justify-self: start; } }
+.dcd .mgrid .cell { position: relative; }
+.dcd .mgrid .cell small { position: absolute; top: 1px; left: 3px; font-size: 8px; line-height: 1; color: var(--ink-3); font-weight: 500; }
+.dcd .mgrid .cell.one small { color: var(--ink-2); }
+.dcd .viz .axl { fill: var(--ink-3); font-size: 11px; }
+.dcd .fsm svg { max-width: 400px; margin: 0 auto; }
