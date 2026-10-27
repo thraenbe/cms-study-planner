@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Advanced Problem Solving and Search · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="advanced-problem-solving/apss.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="advanced-problem-solving/apss.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="apss">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, state } = APSS;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => x.n === Number(q));
+const page = document.getElementById("page");
+const back = `<a class="back" href="advanced-problem-solving.html">← All lectures</a>`;
+const isNarrow = () => matchMedia("(max-width: 600px)").matches;
+
+function head(l) {
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who)}${l.planned ? " · planned topic, date assumed" : ""}</p>`;
+}
+
+// ---------------- Shared chart and explorer helpers (as on the other course boards) ----------------
+// Colour roles: categorical slots 1-4 from the palette above, gray for reference marks and unvisited nodes.
+// Text stays in ink; colour sits on marks, swatches, underlines and tinted cells.
+const key = (s, kind = "") => `<span class="key ${kind}" style="--c:${s === "g" ? "var(--vz-gray)" : `var(--vz-s${s})`}"></span>`;
+const leg = items => `<div class="legend">${items.map(([s, t, k]) => `<span class="li">${s ? key(s, k) : ""}<span class="lt">${t}</span></span>`).join("")}</div>`;
+const flag = (k, t) => `<span class="flag ${k}">${k === "ok" ? "✓" : "⚠"} ${t}</span>`;
+const hbar = (x0, x1, y0, h) => { const r = Math.min(4, (x1 - x0) / 2, h / 2); return `M${x0},${y0} H${x1 - r} Q${x1},${y0} ${x1},${y0 + r} V${y0 + h - r} Q${x1},${y0 + h} ${x1 - r},${y0 + h} H${x0} Z`; };
+const vbar = (x0, w, y0, y1) => { const r = Math.min(4, w / 2, Math.max(0, (y1 - y0) / 2)); return `M${x0},${y1} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + w - r} Q${x0 + w},${y0} ${x0 + w},${y0 + r} V${y1} Z`; };
+const num = (v, d = 2) => v.toLocaleString("en-GB", { maximumFractionDigits: d });
+const sci = v => { if (v < 1e6) return num(v, 0); const e = Math.floor(Math.log10(v)); return `${num(v / 10 ** e, 2)} × 10<tspan dy="-5" font-size="9">${e}</tspan>`; };
+const sciH = v => { if (v < 1e6) return num(v, 0); const e = Math.floor(Math.log10(v)); return `${num(v / 10 ** e, 2)} × 10<sup>${e}</sup>`; };
+const col = s => `var(--vz-${s.slot ? "s" + s.slot : "gray"})`;
+const CHARTS = {}, LINES = {};
+const place = (tip, wrap, x, y) => { tip.classList.add("show"); const half = tip.offsetWidth / 2; tip.style.left = Math.min(Math.max(x, half), wrap.clientWidth - half) + "px"; tip.style.top = y + "px"; };
+const chart = (name, legend = "") => `<figure class="viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div>`;
+const lab = (name, title) => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div><div class="lab-body"></div></div>`;
+const stepBar = (n, label) => `<div class="steps"><button class="preset" data-s="reset">↺ Reset</button><button class="preset" data-s="prev">← Back</button><button class="preset" data-s="next">Step →</button><button class="preset" data-s="end">⇥ Run to end</button><span class="scount">step <output>0</output> of ${n}${label ? ` · ${label}` : ""}</span></div>`;
+// Wires reset/back/step/end buttons to a state {i, n} and a render() callback.
+function wireSteps(body, st, render) {
+  body.querySelectorAll("[data-s]").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.s; st.i = k === "reset" ? 0 : k === "prev" ? Math.max(0, st.i - 1) : k === "next" ? Math.min(st.n, st.i + 1) : st.n; render(); }));
+}
+
+// Line charts on a linear x axis; y linear or log10. Series are functions of x; direct labels at the right end,
+// a crosshair snaps to whole x and lists every series in the tooltip.
+function lineGeo(cfg, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = narrow ? 40 : 48, R = narrow ? 14 : cfg.labelW || 96, T = 24, B = 30;
+  const PW = W - L - R, PH = H - T - B, [x0, x1] = cfg.x, [y0, y1] = cfg.y, ty = v => cfg.log ? Math.log10(v) : v;
+  return { W, H, L, R, T, B, PW, PH, x: v => L + (v - x0) / (x1 - x0) * PW, y: v => T + PH - (ty(v) - ty(y0)) / (ty(y1) - ty(y0)) * PH,
+    inv: px => x0 + Math.min(1, Math.max(0, (px - L) / PW)) * (x1 - x0) };
+}
+function lineSVG(name, narrow) {
+  const cfg = LINES[name], g = lineGeo(cfg, narrow), { W, H, L, R, T, PW, PH, x, y } = g;
+  const xt = (narrow && cfg.xTicksN || cfg.xTicks).map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("");
+  const yt = cfg.yTicks.map(v => `<line class="${v === cfg.y[0] ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${cfg.fmtTick ? cfg.fmtTick(v) : v}</text>`).join("");
+  const n = 200, sx = Array.from({ length: n + 1 }, (_, k) => cfg.x[0] + (cfg.x[1] - cfg.x[0]) * k / n);
+  const d = f => "M" + sx.map(v => `${x(v).toFixed(1)},${Math.max(T - 2, y(Math.min(f(v), cfg.y[1] * 10))).toFixed(1)}`).join(" L");
+  const lines = cfg.series.map(s => `<path class="line${s.dash ? " dash" : ""}" style="stroke:${col(s)}" d="${d(s.f)}"/>`).join("");
+  const lbl = s => { const at = s.labelAt || cfg.x[1], X = x(at), Y = y(Math.min(s.f(at), cfg.y[1])) + (s.dy || 0);
+    return at === cfg.x[1] ? `<text class="lbl" x="${X + 6}" y="${Y + 4}">${s.short || s.name}</text>` : `<text class="lbl" x="${X - 6}" y="${Y}" text-anchor="end">${s.short || s.name}</text>`; };
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">
+    <defs><clipPath id="clip-${name}"><rect x="${L}" y="${T - 3}" width="${PW + 3}" height="${PH + 3}"/></clipPath></defs>
+    ${yt}${xt}<text class="note" x="${L - 36}" y="12">${cfg.yTitle}</text><text class="note" x="${W - R}" y="${H - 10}" text-anchor="end">${cfg.xTitle || ""}</text>
+    <g clip-path="url(#clip-${name})">${lines}</g>${cfg.extra ? cfg.extra(g, narrow) : ""}${narrow ? "" : cfg.series.map(lbl).join("")}
+    <g class="xh-layer" style="display:none"><line class="xh" y1="${T}" y2="${T + PH}"/>${cfg.series.map(s => `<circle class="dot" style="fill:${col(s)}" r="4.5"/>`).join("")}</g>
+    <rect class="hit plot" x="${L}" y="${T}" width="${PW}" height="${PH}" tabindex="0" aria-label="${esc(cfg.hitLabel)}"/></svg>`;
+}
+const line = (name, cfg) => { LINES[name] = cfg; CHARTS[name] = narrow => lineSVG(name, narrow); };
+function wireLines() {
+  document.querySelectorAll("[data-chart]").forEach(el => {
+    const cfg = LINES[el.dataset.chart]; if (!cfg) return;
+    const g = lineGeo(cfg, el.dataset.narrow === "true"), svg = el.querySelector("svg"), wrap = el.parentElement, tip = wrap.querySelector(".tip");
+    const layer = svg.querySelector(".xh-layer"), [ln, ...dots] = layer.children, hit = svg.querySelector(".plot");
+    const at = raw => {
+      const v = Math.min(cfg.x[1], Math.max(cfg.x[0], Math.round(raw))), X = g.x(v), ys = cfg.series.map(s => s.f(v));
+      layer.style.display = ""; ln.setAttribute("x1", X); ln.setAttribute("x2", X); hit.dataset.v = v;
+      dots.forEach((dt, i) => { dt.setAttribute("cx", X); dt.setAttribute("cy", g.y(Math.min(ys[i], cfg.y[1]))); dt.style.display = ys[i] > cfg.y[1] || ys[i] < cfg.y[0] ? "none" : ""; });
+      const order = ys.map((_, i) => i).sort((a, b) => ys[b] - ys[a]);
+      tip.innerHTML = `<b>${cfg.tipHead(v)}</b>${order.map(i => `<span class="trow"><i style="--c:${col(cfg.series[i])}"></i><strong>${cfg.fmtY(ys[i])}</strong> ${cfg.series[i].name}</span>`).join("")}`;
+      const s = svg.getBoundingClientRect(), w = wrap.getBoundingClientRect(), vis = dots.filter(dt => dt.style.display !== "none");
+      const top = vis.length ? Math.min(...vis.map(dt => dt.getBoundingClientRect().top)) : s.top + g.T / g.H * s.height;
+      place(tip, wrap, s.left - w.left + X / g.W * s.width, top - w.top);
+    };
+    const off = () => { layer.style.display = "none"; tip.classList.remove("show"); };
+    hit.addEventListener("pointermove", e => { const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse()); at(g.inv(p.x)); });
+    hit.addEventListener("pointerleave", off); hit.addEventListener("blur", off); hit.addEventListener("focus", () => at(cfg.focusAt || cfg.x[0]));
+    hit.addEventListener("keydown", e => { const v = +hit.dataset.v; const nv = { ArrowRight: v + 1, ArrowLeft: v - 1 }[e.key]; if (nv === undefined) return; e.preventDefault(); at(Math.min(cfg.x[1], Math.max(cfg.x[0], nv))); });
+  });
+}
+// Grouped vertical bars: cats on x, one bar per series, optional log y. Each group is a hover target.
+function vbars(name, cfg) {
+  CHARTS[name] = narrow => {
+    const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = narrow ? 44 : 56, R = 12, T = 18, B = 34, PW = W - L - R, PH = H - T - B;
+    const [y0, y1] = cfg.y, ty = v => cfg.log ? Math.log10(v) : v, y = v => T + PH - (ty(Math.max(v, y0)) - ty(y0)) / (ty(y1) - ty(y0)) * PH;
+    const n = cfg.cats.length, gw = PW / n, k = cfg.series.length, bw = Math.min(28, (gw * 0.7) / k), pad = (gw - bw * k) / 2;
+    const yt = cfg.yTicks.map(v => `<line class="${v === y0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${cfg.fmtTick ? cfg.fmtTick(v) : v}</text>`).join("");
+    const groups = cfg.cats.map((cat, i) => {
+      const x0 = L + i * gw, vals = cfg.series.map(s => s.vals[i]);
+      const bars = cfg.series.map((s, j) => `<path class="bar" style="fill:${col(s)}" d="${vbar(x0 + pad + j * bw + 1, bw - 2, y(vals[j]), T + PH)}"/>`).join("");
+      const tip = `<b>${cfg.tipHead(cat, i)}</b>${cfg.series.map((s, j) => `<span class="trow"><i style="--c:${col(s)}"></i><strong>${cfg.fmtY(vals[j])}</strong> ${s.name}</span>`).join("")}`;
+      return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit anchor" x="${x0}" y="${T}" width="${gw}" height="${PH}"/>${bars}<text class="tick" x="${x0 + gw / 2}" y="${H - 12}" text-anchor="middle">${cat}</text></g>`; }).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">${yt}<text class="note" x="${L - 44}" y="11">${cfg.yTitle}</text>${groups}</svg>`;
+  };
+}
+// Charts by name: <div data-chart="name"> is filled with CHARTS[name](narrow) and redrawn when the width class changes.
+function mountCharts() {
+  document.querySelectorAll("[data-chart]").forEach(el => {
+    el.dataset.narrow = isNarrow(); el.innerHTML = CHARTS[el.dataset.chart](isNarrow());
+    const wrap = el.parentElement, tip = wrap.querySelector(".tip"), svg = el.querySelector("svg");
+    const show = g => { const a = (g.querySelector(".anchor") || g.querySelector(".dot") || g.querySelector(".bar") || g).getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      tip.innerHTML = g.dataset.tip; g.classList.add("on"); svg.classList.add("hovering"); place(tip, wrap, a.left + a.width / 2 - w.left, a.top - w.top); };
+    const hide = g => { g.classList.remove("on"); svg.classList.remove("hovering"); tip.classList.remove("show"); };
+    el.querySelectorAll(".pt[data-tip]").forEach(g => { g.addEventListener("pointerenter", () => show(g)); g.addEventListener("focus", () => show(g));
+      g.addEventListener("pointerleave", () => hide(g)); g.addEventListener("blur", () => hide(g)); });
+  });
+  wireLines();
+}
+// A node in a search drawing: circle + letter, state class decides the colour (legend + ring, never colour alone).
+const nodeSVG = (x, y, label, cls = "", r = 13, extra = "") => `<g class="node ${cls}" transform="translate(${x},${y})">${extra}<circle r="${r}"/><text y="4">${label}</text></g>`;
+// Complete binary tree of `depth` levels (0..depth) with letters A, B, C … laid out in a W×H box.
+function binTree(depth, W, H, top = 22) {
+  const nodes = [], edges = [], N = 2 ** (depth + 1) - 1, rowH = (H - top - 20) / depth;
+  for (let i = 0; i < N; i++) {
+    const lv = Math.floor(Math.log2(i + 1)), pos = i + 1 - 2 ** lv, cnt = 2 ** lv;
+    nodes.push({ id: i, label: String.fromCharCode(65 + i), depth: lv, x: W * (pos + 0.5) / cnt, y: top + lv * rowH, parent: i ? Math.floor((i - 1) / 2) : null, kids: 2 * i + 1 < N ? [2 * i + 1, 2 * i + 2] : [] });
+    if (i) edges.push([Math.floor((i - 1) / 2), i]);
+  }
+  return { nodes, edges };
+}
+
+// ---------------- Lecture 1: introduction ----------------
+// The "three sons" puzzle: the eight ways to factor 36 into three ages, filtered by each clue.
+const SONS = [[36, 1, 1], [18, 2, 1], [12, 3, 1], [9, 4, 1], [9, 2, 2], [6, 6, 1], [6, 3, 2], [4, 3, 3]];
+const SONS_STEPS = [
+  { t: "Clue 1 · “the product of their ages is 36”", d: "Eight triples of whole numbers multiply to 36. The search space is already finite and tiny, yet B cannot answer: the clue leaves eight candidates." },
+  { t: "Clue 2 · “their sum is the number of windows”", d: "B can see the building and count the windows, so B knows the sum. Seven of the sums are unique: had the sum been any of those, B would have answered at once. B still needs a hint, so the sum must be the one that appears twice: 13." },
+  { t: "Clue 3 · “my oldest son has blue eyes”", d: "The clue sounds useless, but “my oldest son” means there is exactly one oldest. 6, 6, 1 has two oldest sons; 9, 2, 2 has one. Answer: 9, 2 and 2. The information was in what the listener could not do, not in the numbers." },
+];
+function sonsOut(i) {
+  const sums = SONS.map(s => s[0] + s[1] + s[2]), dup = sums.filter((v, k) => sums.indexOf(v) !== k);
+  const rows = SONS.map((s, k) => {
+    const sum = sums[k], alive = i < 1 || (i >= 1 && dup.includes(sum) && (i < 2 || s[0] !== s[1]));
+    const tag = i === 1 ? (dup.includes(sum) ? "tie" : "unique → B would have known") : i === 2 ? (dup.includes(sum) ? (s[0] !== s[1] ? "one oldest ✓" : "two oldest") : "") : "";
+    return `<tr class="${alive ? "alive" : "dead"}${i === 2 && alive ? " win" : ""}"><td class="n">${s.join(", ")}</td><td class="n">${i >= 1 ? sum : ""}</td><td>${tag}</td></tr>`; }).join("");
+  return `<div class="tt-wrap"><table class="tt sons"><thead><tr><th>ages</th><th>sum</th><th>status</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="lab-note" style="margin:8px 0 0"><b>${SONS_STEPS[Math.max(0, i - 1)].t}</b><br>${i === 0 ? "Press Step to apply the first clue." : SONS_STEPS[i - 1].d}</p>`;
+}
+function initSons(body) {
+  const st = { i: 0, n: 3 };
+  body.innerHTML = `${stepBar(3, "one clue per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => { out.innerHTML = sonsOut(st.i); cnt.value = st.i; };
+  wireSteps(body, st, render); render();
+}
+// Search-space sizes: SAT with n variables vs symmetric TSP with n cities, on a log axis.
+const fact = n => { let r = 1; for (let k = 2; k <= n; k++) r *= k; return r; };
+line("space", {
+  x: [2, 20], y: [1, 1e18], log: true, yTicks: [1, 1e3, 1e6, 1e9, 1e12, 1e15, 1e18], fmtTick: v => v === 1 ? "1" : `10${String(Math.log10(v)).split("").map(ch => "⁰¹²³⁴⁵⁶⁷⁸⁹"[ch]).join("")}`,
+  xTicks: [2, 5, 7, 10, 15, 20], xTicksN: [2, 7, 12, 20], yTitle: "candidate solutions", xTitle: "n variables or cities",
+  series: [{ slot: 1, name: "SAT, n variables: 2ⁿ", short: "SAT 2ⁿ", f: n => 2 ** n }, { slot: 2, name: "TSP, n cities: (n−1)!/2", short: "TSP (n−1)!/2", f: n => fact(n - 1) / 2 }],
+  tipHead: n => `n = ${n}`, fmtY: v => sciH(v), focusAt: 7, labelW: 110, labelAt: 20,
+  extra: g => `<line class="ann dash" x1="${g.x(7)}" x2="${g.x(7)}" y1="${g.y(1e18)}" y2="${g.y(128)}"/><text class="vl2" x="${g.x(7) + 5}" y="${g.y(1e13)}">n = 7: TSP overtakes SAT</text>`,
+  hitLabel: "Read the search-space sizes: arrow keys change n", aria: "Line chart on a logarithmic axis: 2 to the n for SAT and (n minus 1) factorial over 2 for the TSP, n from 2 to 20. The TSP curve crosses above SAT at n = 7 and reaches 10 to the 17 at n = 20.",
+});
+// The handshake puzzle: five couples, nine different answers 0…8, pairing the extremes step by step.
+const HS_NAMES = ["Mr Smith", "Mrs Smith", "A", "A′", "B", "B′", "C", "C′", "D", "D′"];
+function hsState(i) {
+  // After step k (1..4): the person with 8−(k−1) handshakes is identified with their spouse (who has k−1).
+  const edges = [], count = Array(10).fill(0), info = [];
+  for (let k = 1; k <= i; k++) {
+    const hi = 2 * k, lo = 2 * k + 1; // couple k: hi shook hands with everyone still unassigned except lo
+    for (let p = 0; p < 10; p++) if (p !== hi && p !== lo && !info.find(c => c.hi === p || c.lo === p)) { edges.push([hi, p]); count[hi]++; count[p]++; }
+    info.push({ hi, lo });
+  }
+  return { edges, count, info };
+}
+function hsOut(i, narrow) {
+  const W = narrow ? 320 : 420, H = narrow ? 300 : 330, cx = W / 2, cy = H / 2 + 6, R = narrow ? 112 : 128;
+  const pos = HS_NAMES.map((_, k) => { const a = -Math.PI / 2 + k * 2 * Math.PI / 10; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+  const { edges, count, info } = hsState(i);
+  const couples = [0, 1, 2, 3, 4].map(k => `<line class="spouse" x1="${pos[2 * k][0]}" y1="${pos[2 * k][1]}" x2="${pos[2 * k + 1][0]}" y2="${pos[2 * k + 1][1]}"/>`).join("");
+  const es = edges.map(([a, b]) => `<line class="edge hs" x1="${pos[a][0]}" y1="${pos[a][1]}" x2="${pos[b][0]}" y2="${pos[b][1]}"/>`).join("");
+  const solved = p => info.find(c => c.hi === p || c.lo === p);
+  const ns = HS_NAMES.map((nm, p) => { const c = solved(p), cls = c ? (c.hi === p ? "expanded" : "frontier") : i === 4 && p < 2 ? "goal" : "";
+    const lbl = c || i === 4 ? count[p] : "?"; const a = -Math.PI / 2 + p * 2 * Math.PI / 10, lx = cx + (R + 26) * Math.cos(a), ly = cy + (R + 26) * Math.sin(a);
+    return `${nodeSVG(pos[p][0], pos[p][1], lbl, cls, 14)}<text class="tick" x="${lx}" y="${ly + 4}" text-anchor="middle">${nm}</text>`; }).join("");
+  const notes = ["Ten people, five couples (spouses joined by the thin line). Mr Smith asked the other nine and got nine different answers. Nobody shakes their own or their spouse's hand, so an answer is at most 8: the answers are exactly 0, 1, 2, …, 8.",
+    "Whoever answered 8 shook hands with everyone except their spouse. So everyone else has at least 1, and the only person who can have answered 0 is that spouse: the couple A, A′ answered 8 and 0.",
+    "Remove couple A. Whoever answered 7 shook hands with all remaining people except their spouse (one of the seven was A). Everyone else now has at least 2, so the person with 1 is their spouse: couple B answered 7 and 1.",
+    "Same argument once more: the person with 6 is married to the person with 2 (couple C).",
+    "And 5 goes with 3 (couple D). The only answer left is 4, and the only person left who answered is Mrs Smith: she shook 4 hands. Mr Smith also has 4 but he asked, he did not answer."];
+  return `<div class="hs-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ten people on a circle; handshake edges are added couple by couple">${couples}${es}${ns}</svg>
+    <div><p class="lab-note">${notes[i]}</p><table class="tt hs"><thead><tr><th>couple</th><th>answers</th></tr></thead><tbody>${info.map((c, k) => `<tr><td>${HS_NAMES[c.hi][0]}, ${HS_NAMES[c.hi][0]}′</td><td class="n">${count[c.hi]} and ${count[c.lo]}</td></tr>`).join("")}${i === 4 ? `<tr class="win"><td>Mrs Smith</td><td class="n">4</td></tr>` : ""}</tbody></table></div></div>`;
+}
+function initHs(body) {
+  const st = { i: 0, n: 4 };
+  body.innerHTML = `${leg([[1, "answered the high number"], [2, "their spouse, the low number"], [3, "the Smiths"], ["g", "not yet placed"]])}${stepBar(4, "one couple per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => { out.innerHTML = hsOut(st.i, isNarrow()); cnt.value = st.i; };
+  wireSteps(body, st, render); render(); body.dataset.rerender = "hs";
+}
+// Course map: the eight topic blocks of the agenda on the twelve lectures.
+const BLOCKS = [["Introduction", [1]], ["Uninformed vs informed search", [2]], ["Local search, hill climbing, annealing", [3]], ["Tabu search", [4]], ["Evolutionary algorithms", [5]], ["Answer set programming", [6, 7, 8]], ["Constraint satisfaction", [9]], ["Tree and hypertree decompositions", [10, 11]]];
+function courseMap() {
+  const cells = c.lectures.map(x => { const s = state(x); const b = BLOCKS.findIndex(bk => bk[1].includes(x.n));
+    return `<a class="cm ${s}" href="advanced-problem-solving/lecture.html?n=${x.n}" title="${esc(x.title)}"><b>${x.n}</b><small>${U.fmtDate(x.date)}</small>${b >= 0 && BLOCKS[b][1][0] === x.n ? `<i>${b + 1}</i>` : ""}</a>`; }).join("");
+  return `<div class="cmap">${cells}</div><ol class="cm-blocks">${BLOCKS.map(b => `<li>${b[0]}</li>`).join("")}</ol>`;
+}
+
+function lecture1() {
+  const tests = 1000 * 15e9 * 365.25 * 86400, frac = tests / 2 ** 100;
+  return `${head(l)}
+    <p class="lead">The first lecture is half organisation and half a warning. The organisation: 12 lectures, 10 tutorials, slides in OPAL, every question in the forum. The warning: the problems of this course are hard for reasons that stay the same whatever algorithm you use, and the lecture spends its time on those reasons, with two puzzles that are solved by thinking about the search rather than by searching.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">12 + 10</div><div class="l">lectures and tutorials; one tutorial group per week</div></div>
+      <div class="tile"><div class="v">8</div><div class="l">topic blocks, from traditional search to hypertree decompositions</div></div>
+      <div class="tile"><div class="v">90 min</div><div class="l">written exam, in person; no sample solutions are handed out</div></div>
+      <div class="tile"><div class="v">forum</div><div class="l">the only channel for questions; answering others' questions is encouraged</div></div>
+    </div>
+
+    <h2>How the course runs</h2>
+    <p>Lectures are on Tuesdays in the second double period in the Görges-Bau; the schedule is on the ICCL course page and everything else is in OPAL. There are four tutorial groups and you register in OPAL for the one you attend (yours is group 2 on Friday afternoons). The recommended rhythm: solve the sheet at home as far as you get, then the tutorial discusses problems, questions and solutions. Two sentences from the slides are worth remembering before the first sheet: sample solutions are not shared, and copying solutions from the internet or an AI will not help at the exam. The exam tests whether you can run the algorithms by hand and argue about them, which is exactly what the sheets train.</p>
+    <p class="muted">Context, not on the slides: the course was called “Problem Solving and Search in Artificial Intelligence” until last year; the content is identical, so only one of the two can be credited. Machine learning and neural networks are explicitly out of scope.</p>
+
+    <h2>The whole semester on one strip</h2>
+    <p>The agenda names eight blocks. Mapped onto the twelve lecture Tuesdays they look like this (lectures from 3 on follow last year's order and are not announced yet):</p>
+    ${courseMap()}
+
+    <h2>Puzzle 1: the ages of the three sons</h2>
+    <p>Two men meet in the street. One says all three of his sons have their birthday today and gives three clues: the product of their ages is 36, their sum equals the number of windows in the building opposite, and his oldest son has blue eyes. After the third clue the other man knows the ages. Step through the clues: each one shrinks the candidate set, and the second clue only works because of what the listener could <em>not</em> conclude from it.</p>
+    ${lab("sons", "apply the three clues to the eight candidate triples")}
+    <div class="why"><div class="kicker">What was difficult here</div><p>The slides ask “what was difficult on this problem?” and answer with four habits: decide where to begin, make a plan for generating a solution, always use all of the available data (including the fact that B needed another hint), and connect the goal to what is given. The puzzle is small enough to enumerate, so the difficulty is not the search space. It is noticing that “B still needs a hint” is data.</p></div>
+
+    <h2>Why some problems are hard</h2>
+    <p>The lecture gives five reasons, and the rest of the course is organised around the first four:</p>
+    <ol>
+      <li><b>The search space is too large</b> for exhaustive search (lectures 2 to 5 are about searching it anyway).</li>
+      <li><b>The problem is too complicated</b> and simplified models are useless (modelling, below).</li>
+      <li><b>The evaluation function is noisy or changes over time</b>, so you need a series of solutions, not one.</li>
+      <li><b>There are so many constraints</b> that finding one feasible answer is hard, never mind an optimal one (lectures 6 to 11: ASP, CSP, decompositions).</li>
+      <li>The person solving the problem is inadequately prepared.</li>
+    </ol>
+
+    <h3>How fast the search space grows</h3>
+    <p>Two running examples recur all semester. <b>SAT</b>: find a truth assignment for 100 Boolean variables that makes a CNF formula true. Every binary string of length 100 is a candidate, so there are 2<sup>100</sup> ≈ 10<sup>30</sup> of them. <b>TSP</b>: visit n cities exactly once and return home on the shortest tour. A tour is a permutation of the cities, each tour can be written 2n ways (n starting points, two directions), so the symmetric TSP has n!/(2n) = (n−1)!/2 distinct tours. The factorial wins: for n ≤ 6 SAT has more candidates (64 vs 60), from n = 7 on the TSP does (360 vs 128).</p>
+    ${chart("space", leg([[1, "SAT with n variables: 2ⁿ"], [2, "symmetric TSP with n cities: (n−1)!/2"]]))}
+      <figcaption>Candidate solutions for n variables or cities, on a logarithmic axis. Hover or focus the plot and use the arrow keys to read exact values.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>n</th><th>SAT 2ⁿ</th><th>TSP (n−1)!/2</th></tr>${[4, 5, 6, 7, 8, 10, 12, 15, 20].map(n => `<tr><td class="n">${n}</td><td class="n">${sciH(2 ** n)}</td><td class="n">${sciH(fact(n - 1) / 2)}</td></tr>`).join("")}</table></details>
+    <div class="tiles">
+      <div class="tile"><div class="v">10<sup>30</sup></div><div class="l">candidates for SAT with 100 variables; about as many as bacterial cells on Earth (5 × 10<sup>30</sup>)</div></div>
+      <div class="tile"><div class="v">${(frac * 100).toExponential(1).replace(/e-(\d+)/, " × 10<sup>−$1</sup>")} %</div><div class="l">of them checked by a machine testing 1,000 strings per second since the Big Bang (the slides say “fewer than 1 %”)</div></div>
+      <div class="tile"><div class="v">3 × 10<sup>62</sup></div><div class="l">tours of a 50-city TSP; more than there are litres of water on the planet</div></div>
+      <div class="tile"><div class="v">n additions</div><div class="l">to evaluate one TSP tour from the distance table, so evaluation is cheap even when search is not</div></div>
+    </div>
+    <p>The two problems differ in a second way that matters more than their size. A TSP tour has a natural quality: its length, computed with n additions from the distance table, and a shorter tour is a better tour. SAT only says true or false. If F(x) is false, how far from a solution is x? Finding an evaluation function that gives more than “right or wrong”, so that candidates closer to a solution score better, is the first design decision of every search method in this course.</p>
+
+    <h3>Models</h3>
+    <p>We never solve the problem, we solve a model of it, and every model simplifies the world. That leaves two routes, and the lecture takes a side:</p>
+    <ul class="cmp two">
+      <li><b>Approximate model, precise solution</b><span class="v"><span class="sw v"></span>Problem → Model<sub>a</sub> → Solution<sub>p</sub>(Model<sub>a</sub>). Simplify until an exact algorithm applies; the exact answer may be an answer to the wrong question.</span></li>
+      <li><b>Precise model, approximate solution</b><span class="v"><span class="sw t"></span>Problem → Model<sub>p</sub> → Solution<sub>a</sub>(Model<sub>p</sub>). Keep the problem honest and accept a heuristic answer. The slides' verdict: this one is better.</span></li>
+    </ul>
+    <p class="muted">Context, not on the slides: this preference is the thesis of the Michalewicz &amp; Fogel textbook the first lectures follow, and it is why the course spends more time on local search, annealing, tabu and evolutionary methods (approximate solvers for precise models) than on exact algorithms.</p>
+
+    <h3>Change over time</h3>
+    <p>Problems change before you model them, while you solve them and after you execute the solution. The TSP example: travel time between two cities depends on traffic lights, slow trucks, a flat tyre, the weather. A solution that was optimal for the model may be useless for the road, which is the case for approach 2 again: a method that can produce a new good solution quickly beats one that produces the perfect solution slowly.</p>
+
+    <h3>Constraints</h3>
+    <p>Almost every practical problem has constraints, of two kinds. <b>Hard constraints</b> decide feasibility: a solution that violates one is no solution. <b>Soft constraints</b> decide quality among feasible solutions; each has to be quantified so that two candidates can be compared. The slides' example is a semester timetable:</p>
+    <div class="cons">
+      <div class="con hard"><div class="kicker">Hard · defines feasible</div><ul><li>every class gets a room with enough seats and the right facilities</li><li>a student's classes never overlap</li><li>a professor's classes never overlap</li></ul></div>
+      <div class="con soft"><div class="kicker">Soft · ranks the feasible</div><ul><li>twice-a-week courses on Mon/Wed or Tue/Thu, three times a week on Mon/Wed/Fri</li><li>no back-to-back final exams for a student</li><li>among fitting rooms, the one closest to the class size</li></ul></div>
+    </div>
+    <p>Constraints shrink the search space, which sounds helpful, but they make its geometry awkward: an operator that turns one feasible timetable into a better feasible one is hard to write, and a tiny change often breaks a hard constraint. Much of lectures 6 to 9 (ASP, CSP) is about handling constraints declaratively instead of by hand-written operators.</p>
+    <figure class="viz"><svg viewBox="0 0 600 170" role="img" aria-label="Nested regions: all candidate timetables, inside them the feasible ones, inside them the best by soft constraints">
+      <rect x="10" y="10" width="580" height="150" rx="14" class="reg all"/><text class="cat" x="24" y="34">all candidate timetables (the search space)</text>
+      <path d="M150,40 C260,20 420,30 520,60 C570,80 540,140 440,150 C330,160 200,150 150,120 C120,100 110,55 150,40 Z" class="reg feas"/><text class="cat" x="230" y="70">feasible: all hard constraints hold</text>
+      <ellipse cx="400" cy="112" rx="70" ry="26" class="reg best"/><text class="cat" x="400" y="116" text-anchor="middle">best by soft constraints</text>
+    </svg><figcaption>Hard constraints cut the space down to the feasible region; soft constraints, once quantified, rank what is left. The regions are schematic.</figcaption></figure>
+
+    <h2>Puzzle 2: the handshake party</h2>
+    <p>Mr and Mrs Smith invite four other couples. Some people shake hands; nobody shakes their own spouse's hand or the same hand twice. Mr Smith then asks everyone how many hands they shook and gets nine different answers. How many hands did Mrs Smith shake? The slides leave it open (“solve the problem!”); the solution below is context, not from the slides, but it is the standard argument and a good warm-up for the exam style of reasoning.</p>
+    ${lab("hs", "pair the extremes until only the Smiths are left")}
+    <div class="ex"><div class="kicker">Why this is a search problem in disguise</div><p>Enumerating handshake graphs on ten people is hopeless by hand, but one observation (an answer of 8 forces an answer of 0 in the same couple) collapses the search to four forced steps. That is the pattern of the whole course: a good constraint or heuristic does not speed up the enumeration, it replaces it.</p></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Four reasons problems are hard:</b> huge search spaces, models that must simplify, evaluations that are noisy or change over time, and constraints that make feasibility itself hard.</li>
+      <li><b>Know the two sizes:</b> SAT with n variables has 2ⁿ candidates, the symmetric TSP with n cities has (n−1)!/2 tours; TSP is bigger from n = 7 on.</li>
+      <li><b>Evaluation functions</b> matter as much as search spaces: TSP has a natural one, SAT needs one to be invented.</li>
+      <li><b>Prefer a precise model with an approximate solution</b> to an approximate model with a precise solution.</li>
+      <li><b>Hard constraints define feasibility, soft constraints define quality</b>, and soft constraints must be quantified before two solutions can be compared.</li>
+    </ul>
+    <h2>Exam relevance</h2>
+    <p class="muted">Context, not on the slides: introduction material tends to appear as short definition and reasoning questions (hard vs soft constraints, why exhaustive search fails, the size of a search space for a given encoding) rather than as computations. Be able to derive (n−1)!/2 and 2ⁿ from the representation, and to argue a puzzle like the handshakes in a few lines.</p>
+    <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=2">lecture 2</a>, uninformed vs informed search and dynamic programming. Slides: OPAL → Lectures → Lesson 1 (intro).</p>`;
+}
+
+// ---------------- Lecture 2: uninformed vs informed search, dynamic programming ----------------
+// Backtracking on the SAT tree: a partial assignment is dead once a selected clause has every literal false.
+const CLAUSES = [["x₁ ∨ x₂", [[1, true], [2, true]]], ["¬x₁ ∨ x₃", [[1, false], [3, true]]], ["¬x₂ ∨ ¬x₃", [[2, false], [3, false]]], ["x₁ ∨ ¬x₃", [[1, true], [3, false]]]];
+function satOut(sel, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, tr = binTree(3, W, H, 26);
+  const assign = id => { const a = {}; let k = id; while (k > 0) { const p = Math.floor((k - 1) / 2), d = Math.floor(Math.log2(p + 1)) + 1; a[d] = k === 2 * p + 2; k = p; } return a; };
+  const dead = a => sel.some(ci => CLAUSES[ci][1].every(([v, want]) => v in a && a[v] !== want));
+  const status = tr.nodes.map(n => { const a = assign(n.id); let k = n.id, inherited = false; while (k > 0) { k = Math.floor((k - 1) / 2); if (dead(assign(k))) inherited = true; } return dead(a) ? "cut" : inherited ? "pruned" : "live"; });
+  const edges = tr.edges.map(([p, ch]) => { const a = tr.nodes[p], b = tr.nodes[ch]; return `<line class="edge ${status[ch] === "live" ? "" : "faded"}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/><text class="tick" x="${(a.x + b.x) / 2 + (ch % 2 ? -8 : 8)}" y="${(a.y + b.y) / 2 + 3}" text-anchor="${ch % 2 ? "end" : "start"}">x${"₁₂₃"[b.depth - 1]}=${ch % 2 ? "f" : "t"}</text>`; }).join("");
+  const nodes = tr.nodes.map(n => { const s = status[n.id], a = assign(n.id), lbl = n.depth === 3 ? Object.values(a).map(v => v ? "t" : "f").join("") : n.id === 0 ? "φ" : "";
+    return nodeSVG(n.x, n.y, n.depth === 3 ? "" : lbl, s === "cut" ? "cut" : s === "pruned" ? "pruned" : n.depth === 3 ? "leaf" : "", n.depth === 3 ? 6 : 12) + (n.depth === 3 ? `<text class="tick ${s === "live" ? "" : "faded"}" x="${n.x}" y="${n.y + 18}" text-anchor="middle">${lbl}</text>` : ""); }).join("");
+  const live = status.filter((s, i) => tr.nodes[i].depth === 3 && s === "live").length, cuts = status.filter(s => s === "cut").length;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Binary tree over x1, x2, x3; subtrees under a falsified clause are cut">${edges}${nodes}</svg>
+    <dl class="ro"><dt>leaves still to visit</dt><dd>${live} of 8</dd><dt>backtracks</dt><dd>${cuts} node${cuts === 1 ? "" : "s"} where a clause is already false</dd></dl>`;
+}
+function initSat(body) {
+  const sel = new Set([0]);
+  body.innerHTML = `<p class="lab-note">Tick the clauses of φ. A node is a partial assignment (x₁ on the first level, then x₂, then x₃); once every literal of a ticked clause is false there, the whole subtree below is skipped.</p>
+    <div class="ctl">${CLAUSES.map((cl, i) => `<label><input type="checkbox" data-c="${i}" ${sel.has(i) ? "checked" : ""}> (${cl[0]})</label>`).join("")}</div>
+    ${leg([[1, "cut: clause falsified here"], ["g", "skipped below a cut"]])}<div class="out"></div>`;
+  const out = body.querySelector(".out"), render = () => { out.innerHTML = satOut([...sel], isNarrow()); };
+  body.querySelectorAll("[data-c]").forEach(cb => cb.addEventListener("change", () => { cb.checked ? sel.add(+cb.dataset.c) : sel.delete(+cb.dataset.c); render(); }));
+  render(); body.dataset.rerender = "sat";
+}
+// Uninformed strategies on a 15-node binary tree: every snapshot lists expanded nodes, the frontier and the node just taken out.
+function searchSteps(strategy, goal, limit) {
+  const tr = binTree(3, 1, 1), steps = [];
+  const run = (L, label) => {
+    const frontier = [0], expanded = []; let found = false;
+    steps.push({ expanded: [], frontier: [...frontier], cur: null, note: `${label}start: the root A is the whole frontier.` });
+    while (frontier.length) {
+      const n = strategy === "bfs" ? frontier.shift() : frontier.shift();
+      const node = tr.nodes[n];
+      if (n === goal) { steps.push({ expanded: [...expanded], frontier: [...frontier], cur: n, goal: true, note: `${label}${node.label} is taken from the frontier and passes the goal test. Solution at depth ${node.depth}, ${expanded.length + 1} nodes examined.` }); found = true; break; }
+      expanded.push(n);
+      const atLimit = L !== undefined && node.depth >= L, kids = atLimit ? [] : node.kids;
+      if (strategy === "bfs") frontier.push(...kids); else frontier.unshift(...kids);
+      const why = atLimit ? `${node.label} is at the depth limit ${L}, so it is not expanded.` : kids.length ? `${node.label} is expanded; ${kids.map(k => tr.nodes[k].label).join(" and ")} ${strategy === "bfs" ? "join the back of the queue" : "go on top of the stack"}.` : `${node.label} is a leaf: nothing to add.`;
+      steps.push({ expanded: [...expanded], frontier: [...frontier], cur: n, note: `${label}${why}` });
+    }
+    if (!found) steps.push({ expanded: [...expanded], frontier: [], cur: null, note: `${label}frontier empty: ${L !== undefined ? "cutoff, no solution within the limit." : "failure."}` });
+    return found;
+  };
+  if (strategy === "ids") { for (let L = 0; L <= 3; L++) if (run(L, `limit ${L} · `)) break; }
+  else run(strategy === "dls" ? limit : undefined, "");
+  return steps;
+}
+function treeOut(s, strategy, goal, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 210 : 230, tr = binTree(3, W, H, 24);
+  const cls = id => id === goal && s.goal ? "goal" : s.expanded.includes(id) ? "expanded" : s.frontier.includes(id) ? "frontier" : "";
+  const edges = tr.edges.map(([p, ch]) => `<line class="edge" x1="${tr.nodes[p].x}" y1="${tr.nodes[p].y}" x2="${tr.nodes[ch].x}" y2="${tr.nodes[ch].y}"/>`).join("");
+  const nodes = tr.nodes.map(n => nodeSVG(n.x, n.y, n.label, `${cls(n.id)} ${n.id === s.cur ? "cur" : ""} ${n.id === goal ? "target" : ""}`, 12, n.id === goal ? `<circle class="halo" r="17"/>` : "")).join("");
+  const order = s.expanded.map(i => tr.nodes[i].label).join(" ") || "–";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Binary tree A to O with expanded and frontier nodes marked">${edges}${nodes}</svg>
+    <div class="qrow"><span class="ql">${strategy === "bfs" ? "queue (front first)" : "stack (top first)"}</span><span class="qstrip">${s.frontier.length ? s.frontier.map(i => `<span class="q">${tr.nodes[i].label}</span>`).join("") : "<span class='muted'>empty</span>"}</span></div>
+    <div class="qrow"><span class="ql">expanded so far</span><span class="qstrip exp">${order}</span></div>
+    <p class="lab-note" style="margin:8px 0 0">${s.note}</p>`;
+}
+function initTree(body) {
+  const st = { i: 0, n: 0, strategy: "bfs", goal: 12, limit: 2 }; let steps = [];
+  const letters = Array.from({ length: 15 }, (_, i) => String.fromCharCode(65 + i));
+  body.innerHTML = `<div class="ctl"><span class="presets">${[["bfs", "Breadth-first"], ["dfs", "Depth-first"], ["dls", "Depth-limited"], ["ids", "Iterative deepening"]].map(([k, t]) => `<button class="preset" data-st="${k}" aria-pressed="${k === st.strategy}">${t}</button>`).join("")}</span>
+    <label>goal <select data-goal>${letters.map((L, i) => `<option value="${i}" ${i === st.goal ? "selected" : ""}>${L}</option>`).join("")}</select></label>
+    <label data-lim>limit L <select data-limit>${[0, 1, 2, 3].map(v => `<option ${v === st.limit ? "selected" : ""}>${v}</option>`).join("")}</select></label></div>
+    ${leg([[1, "expanded"], [2, "in the frontier"], [3, "goal reached"], ["g", "not generated yet"]])}<div class="sb"></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), sb = body.querySelector(".sb");
+  const build = () => { steps = searchSteps(st.strategy, st.goal, st.limit); st.n = steps.length - 1; st.i = 0; sb.innerHTML = stepBar(st.n, st.strategy === "ids" ? "limits 0, 1, 2, 3 in turn" : ""); wireSteps(body, st, render); body.querySelector("[data-lim]").style.display = st.strategy === "dls" ? "" : "none"; render(); };
+  const render = () => { out.innerHTML = treeOut(steps[st.i], st.strategy, st.goal, isNarrow()); body.querySelector(".scount output").value = st.i; };
+  body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => { st.strategy = b.dataset.st; body.querySelectorAll("[data-st]").forEach(x => x.setAttribute("aria-pressed", x === b)); build(); }));
+  body.querySelector("[data-goal]").addEventListener("change", e => { st.goal = +e.target.value; build(); });
+  body.querySelector("[data-limit]").addEventListener("change", e => { st.limit = +e.target.value; build(); });
+  build(); body.dataset.rerender = "tree";
+}
+// Nodes generated per level, b = 10, d = 5, solution at the far right leaf: IDS vs BFS (slide 20).
+vbars("ids", {
+  cats: ["level 1", "level 2", "level 3", "level 4", "level 5"], y: [1, 1e6], log: true, yTicks: [1, 10, 100, 1e3, 1e4, 1e5, 1e6], fmtTick: v => v >= 1e3 ? `${v / 1e3}k` : v, yTitle: "nodes generated",
+  series: [{ slot: 1, name: "breadth-first", vals: [10, 100, 1000, 10000, 100000] }, { slot: 2, name: "iterative deepening", vals: [50, 400, 3000, 20000, 100000] }],
+  tipHead: (cat, i) => `${cat}: ${i + 1 === 5 ? "generated once" : `IDS generates it ${6 - (i + 1)} times`}`, fmtY: v => num(v, 0),
+  aria: "Grouped bars on a logarithmic axis: nodes generated per level by breadth-first and iterative deepening search for branching factor 10 and depth 5. The deepest level dominates both totals.",
+});
+// Romania (step costs in km and straight-line distances to Bucharest, Russell & Norvig); coordinates from the textbook figure.
+const RO = {
+  Arad: [91, 492, 366], Bucharest: [400, 327, 0], Craiova: [253, 288, 160], Drobeta: [165, 299, 242], Eforie: [562, 293, 161], Fagaras: [305, 449, 176], Giurgiu: [375, 270, 77],
+  Hirsova: [534, 350, 151], Iasi: [473, 506, 226], Lugoj: [165, 379, 244], Mehadia: [168, 339, 241], Neamt: [406, 537, 234], Oradea: [131, 571, 380], Pitesti: [320, 368, 100],
+  "Rimnicu Vilcea": [233, 410, 193], Sibiu: [207, 457, 253], Timisoara: [94, 410, 329], Urziceni: [456, 350, 80], Vaslui: [509, 444, 199], Zerind: [108, 531, 374] };
+const ROADS = [["Arad", "Zerind", 75], ["Arad", "Sibiu", 140], ["Arad", "Timisoara", 118], ["Zerind", "Oradea", 71], ["Oradea", "Sibiu", 151], ["Timisoara", "Lugoj", 111], ["Lugoj", "Mehadia", 70], ["Mehadia", "Drobeta", 75], ["Drobeta", "Craiova", 120], ["Craiova", "Rimnicu Vilcea", 146], ["Craiova", "Pitesti", 138], ["Rimnicu Vilcea", "Sibiu", 80], ["Rimnicu Vilcea", "Pitesti", 97], ["Sibiu", "Fagaras", 99], ["Fagaras", "Bucharest", 211], ["Pitesti", "Bucharest", 101], ["Bucharest", "Giurgiu", 90], ["Bucharest", "Urziceni", 85], ["Urziceni", "Hirsova", 98], ["Hirsova", "Eforie", 86], ["Urziceni", "Vaslui", 142], ["Vaslui", "Iasi", 92], ["Iasi", "Neamt", 87]];
+const NB = {}; ROADS.forEach(([a, b, d]) => { (NB[a] = NB[a] || []).push([b, d]); (NB[b] = NB[b] || []).push([a, d]); });
+const roXY = c => [92 + (RO[c][0] - 91) * 1.05, 14 + (571 - RO[c][1]) * 1.05];
+const H_SLD = c => RO[c][2];
+// Best-first tree search as on the slides: no repeated-state check, goal test when a node is taken from the frontier.
+function bestFirst(mode) {
+  const f = n => mode === "greedy" ? n.h : n.g + n.h;
+  let id = 0; const mk = (city, g, path) => ({ id: id++, city, g, h: H_SLD(city), path });
+  const frontier = [mk("Arad", 0, ["Arad"])], steps = [], expanded = [];
+  steps.push({ frontier: frontier.map(n => ({ ...n, f: f(n) })), expanded: [], cur: null, note: "Start in Arad. The frontier holds one node." });
+  while (frontier.length) {
+    frontier.sort((a, b) => f(a) - f(b) || a.id - b.id);
+    const n = frontier.shift();
+    if (n.city === "Bucharest") { steps.push({ frontier: frontier.map(x => ({ ...x, f: f(x) })), expanded: [...expanded], cur: n, goal: true, note: `Bucharest has the lowest f and is taken from the frontier: goal. Path ${n.path.join(" → ")}, ${n.g} km.` }); break; }
+    expanded.push(n);
+    const kids = NB[n.city].map(([c, d]) => mk(c, n.g + d, [...n.path, c]));
+    frontier.push(...kids);
+    steps.push({ frontier: frontier.map(x => ({ ...x, f: f(x) })).sort((a, b) => a.f - b.f || a.id - b.id), expanded: [...expanded], cur: n, note: `${n.city} has the lowest ${mode === "greedy" ? "h" : "f"} (${f(n)}) and is expanded: ${kids.map(k => `${k.city} ${mode === "greedy" ? k.h : `${k.g + k.h} = ${k.g} + ${k.h}`}`).join(", ")}.` });
+    if (steps.length > 40) break;
+  }
+  return steps;
+}
+const roAbbr = c => ({ "Rimnicu Vilcea": "Rimnicu" })[c] || c;
+function mapSVG(classOf, extraNodes = "", pathEdges = [], labelOf = c => roAbbr(c), narrow = false) {
+  const W = 640, H = 348;
+  const onPath = (a, b) => pathEdges.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  const edges = ROADS.map(([a, b, d]) => { const [x1, y1] = roXY(a), [x2, y2] = roXY(b); return `<line class="edge ${onPath(a, b) ? "path" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>${narrow ? "" : `<text class="dist" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 3}" text-anchor="middle">${d}</text>`}`; }).join("");
+  const nodes = Object.keys(RO).map(cty => { const [x, y] = roXY(cty), left = ["Oradea", "Zerind", "Arad", "Timisoara", "Lugoj", "Mehadia", "Drobeta"].includes(cty);
+    return `<g class="node city ${classOf(cty)}" transform="translate(${x},${y})"><text class="cn" x="${left ? -12 : 12}" y="${cty === "Giurgiu" || cty === "Craiova" || cty === "Eforie" ? 15 : 4}" style="text-anchor:${left ? "end" : "start"}">${labelOf(cty)}</text><circle r="${narrow ? 7 : 8}"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="map" role="img" aria-label="Map of Romania from the textbook with road distances">${edges}${nodes}${extraNodes}</svg>`;
+}
+function roOut(s, mode, narrow) {
+  const inFront = cty => s.frontier.some(n => n.city === cty), wasExp = cty => s.expanded.some(n => n.city === cty);
+  const classOf = cty => (s.goal && cty === "Bucharest") ? "goal" : wasExp(cty) ? "expanded" : inFront(cty) ? "frontier" : "";
+  const path = s.cur ? s.cur.path.map((c, i, a) => [a[i - 1], c]).slice(1) : [];
+  const front = s.frontier.map(n => `<tr class="${n.city === "Bucharest" ? "win" : ""}"><td>${n.city}</td><td class="n">${mode === "greedy" ? n.h : `${n.f} = ${n.g} + ${n.h}`}</td><td class="muted small">${n.path.map(roAbbr).join(" → ")}</td></tr>`).join("");
+  return `${mapSVG(classOf, "", path, c => roAbbr(c), narrow)}
+    <p class="lab-note" style="margin:6px 0 8px">${s.note}</p>
+    <div class="tt-wrap"><table class="tt front"><thead><tr><th>frontier, best first</th><th>${mode === "greedy" ? "h" : "f = g + h"}</th><th>path</th></tr></thead><tbody>${front || "<tr><td colspan='3'>empty</td></tr>"}</tbody></table></div>`;
+}
+function initRo(body) {
+  const st = { i: 0, n: 0, mode: "astar" }; let steps = [];
+  body.innerHTML = `<div class="ctl"><span class="presets"><button class="preset" data-mode="greedy" aria-pressed="false">Greedy: f = h</button><button class="preset" data-mode="astar" aria-pressed="true">A*: f = g + h</button></span></div>
+    ${leg([[1, "expanded"], [2, "in the frontier"], [3, "goal taken from the frontier"], ["g", "untouched"]])}<div class="sb"></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), sb = body.querySelector(".sb");
+  const build = () => { steps = bestFirst(st.mode); st.n = steps.length - 1; st.i = 0; sb.innerHTML = stepBar(st.n, "one expansion per step"); wireSteps(body, st, render); render(); };
+  const render = () => { out.innerHTML = roOut(steps[st.i], st.mode, isNarrow()); body.querySelector(".scount output").value = st.i; };
+  body.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { st.mode = b.dataset.mode; body.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", x === b)); build(); }));
+  build(); body.dataset.rerender = "ro";
+}
+// f-contours: g* by Dijkstra from Arad, f* = g* + h; cities with f* ≤ C* = 418 are the ones A* expands.
+const GSTAR = (() => { const d = { Arad: 0 }, done = new Set(); while (true) { const open = Object.keys(d).filter(c => !done.has(c)); if (!open.length) break; const u = open.sort((a, b) => d[a] - d[b])[0]; done.add(u); NB[u].forEach(([v, w]) => { if (d[v] === undefined || d[u] + w < d[v]) d[v] = d[u] + w; }); } return d; })();
+CHARTS.contours = narrow => {
+  const fs = c => GSTAR[c] + H_SLD(c), bin = c => { const f = fs(c); return f <= 400 ? "q1" : f <= 420 ? "q2" : f <= 450 ? "q3" : "q4"; };
+  const extra = Object.keys(RO).map(cty => { const [x, y] = roXY(cty); return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${cty}</b>g* = ${GSTAR[cty]} km from Arad, h = ${H_SLD(cty)}<br>f* = ${fs(cty)}${fs(cty) <= 418 ? " · expanded by A*" : ""}`)}"><circle class="hit anchor" cx="${x}" cy="${y}" r="14"/>${fs(cty) <= 418 ? `<circle class="ring" cx="${x}" cy="${y}" r="11"/>` : ""}</g>`; }).join("");
+  return mapSVG(bin, extra, [], c => narrow ? roAbbr(c) : `${roAbbr(c)} ${fs(c)}`, narrow);
+};
+// Fibonacci: how often the naive recursion calls each F(k) when computing F(10); memoisation calls each once.
+const fibCalls = (n, cnt) => { cnt[n] = (cnt[n] || 0) + 1; if (n > 1) { fibCalls(n - 1, cnt); fibCalls(n - 2, cnt); } };
+const FC = {}; fibCalls(10, FC);
+const totalCalls = n => { let a = 1, b = 1; for (let k = 2; k <= n; k++) [a, b] = [b, a + b + 1]; return n < 2 ? 1 : b; };
+vbars("fib", {
+  cats: Array.from({ length: 10 }, (_, i) => `F(${i + 1})`), y: [0, 60], yTicks: [0, 20, 40, 60], yTitle: "calls",
+  series: [{ slot: 1, name: "naive recursion", vals: Array.from({ length: 10 }, (_, i) => FC[i + 1]) }, { slot: 3, name: "with memoisation", vals: Array(10).fill(1) }],
+  tipHead: cat => `${cat} while computing F(10)`, fmtY: v => `${v}×`,
+  aria: "Grouped bars: number of calls of each F(k) while computing F(10). Naive recursion calls F(1) 34 times and F(2) 55 times; memoisation calls each subproblem once.",
+});
+// Coin change: dp[a] = min over coins c ≤ a of dp[a − c] + 1; greedy takes the largest coin that fits.
+function coinOut(coins, n) {
+  const dp = [0], pick = [null]; for (let a = 1; a <= n; a++) { dp[a] = Infinity; pick[a] = null; coins.forEach(cn => { if (cn <= a && dp[a - cn] + 1 < dp[a]) { dp[a] = dp[a - cn] + 1; pick[a] = cn; } }); }
+  const recon = []; for (let a = n; a > 0 && pick[a]; a -= pick[a]) recon.push(pick[a]);
+  const greedy = []; { let r = n; const sorted = [...coins].sort((a, b) => b - a); for (const cn of sorted) while (r >= cn) { greedy.push(cn); r -= cn; } if (r) greedy.length = 0, greedy.fail = true; }
+  const cells = dp.map((v, a) => `<div class="dpc ${a === n ? "last" : ""} ${v === Infinity ? "inf" : ""}" title="dp[${a}]"><small>${a}</small><b>${v === Infinity ? "–" : v}</b><i>${pick[a] ? `+${pick[a]}` : a === 0 ? "base" : ""}</i></div>`).join("");
+  const verdict = dp[n] === Infinity ? flag("bad", "amount cannot be made") : greedy.fail ? flag("ok", `DP finds ${dp[n]} coins, greedy gets stuck`) : greedy.length === dp[n] ? flag("ok", "greedy happens to be optimal here") : flag("bad", `greedy uses ${greedy.length} coins, DP ${dp[n]}`);
+  return `<div class="dprow">${cells}</div>
+    <dl class="ro"><dt>fill order</dt><dd>left to right: dp[a] looks back at dp[a − c] for every coin c ≤ a and keeps the smallest, plus one coin</dd>
+    <dt>optimal</dt><dd>${dp[n] === Infinity ? "impossible with these coins" : `${dp[n]} coin${dp[n] === 1 ? "" : "s"}: ${recon.join(" + ")} = ${n}`}</dd>
+    <dt>greedy</dt><dd>${greedy.fail ? "cannot finish: largest-coin-first leaves a remainder it cannot pay" : `${greedy.length} coins: ${greedy.join(" + ")}`} ${verdict}</dd>
+    <dt>cost</dt><dd>${n + 1} states × ${coins.length} coins = ${(n + 1) * coins.length} table look-ups, O(n · |C|) time, O(n) space</dd></dl>`;
+}
+function initCoins(body) {
+  const st = { coins: [1, 3, 4], n: 6 };
+  body.innerHTML = `<div class="ctl"><label>coins C <input type="text" data-coins value="1, 3, 4"></label><label>amount n <input type="range" data-n min="1" max="20" value="6"> <output>6</output></label>
+    <span class="presets"><button class="preset" data-p="1,3,4|6">{1, 3, 4}, n = 6</button><button class="preset" data-p="1,2,5|11">{1, 2, 5}, n = 11</button><button class="preset" data-p="3,5|7">{3, 5}, n = 7</button></span></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), inp = body.querySelector("[data-coins]"), rng = body.querySelector("[data-n]"), o = body.querySelector("output");
+  const render = () => { out.innerHTML = coinOut(st.coins, st.n); o.value = st.n; };
+  inp.addEventListener("input", () => { const cs = [...new Set(inp.value.split(/[^0-9]+/).filter(Boolean).map(Number).filter(v => v > 0))].sort((a, b) => a - b); if (cs.length) { st.coins = cs; render(); } });
+  rng.addEventListener("input", () => { st.n = +rng.value; render(); });
+  body.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { const [cs, n] = b.dataset.p.split("|"); inp.value = cs.split(",").join(", "); rng.value = n; st.coins = cs.split(",").map(Number); st.n = +n; render(); }));
+  render();
+}
+const PROPS = [
+  ["Breadth-first", ["ok", "yes, if b is finite"], ["ok", "yes, for unit step costs"], "O(b<sup>d+1</sup>)", "O(b<sup>d+1</sup>): every node stays in memory"],
+  ["Depth-first", ["bad", "no: infinite depth, loops"], ["bad", "no"], "O(b<sup>m</sup>): terrible if m ≫ d", "O(b·m): linear"],
+  ["Depth-limited L", ["bad", "no, if L < d"], ["bad", "no"], "O(b<sup>L</sup>)", "O(b·L)"],
+  ["Iterative deepening", ["ok", "yes"], ["ok", "yes, for unit step costs"], "O(b<sup>d</sup>)", "O(b·d)"],
+  ["Greedy best-first", ["bad", "no: can loop (Iasi ⇄ Neamt)"], ["bad", "no"], "O(b<sup>m</sup>), much better with a good h", "O(b<sup>m</sup>): keeps all nodes"],
+  ["A*", ["ok", "yes, unless infinitely many nodes have f ≤ f(G)"], ["ok", "yes, with an admissible h"], "exponential in relative error of h × solution length", "keeps all nodes in memory"],
+];
+
+function lecture2() {
+  const gstarRows = Object.keys(RO).map(cty => [cty, GSTAR[cty], H_SLD(cty), GSTAR[cty] + H_SLD(cty)]).sort((a, b) => a[3] - b[3]);
+  return `${head(l)}
+    <p class="lead">Lecture 2 covers the classic search algorithms in one sitting: how to enumerate a search space and prune it by backtracking, the four uninformed strategies with their complete/optimal/time/space profile, the two informed ones (greedy best-first and A*) on the Romania map, and dynamic programming as the third member of the best-first family. Three explorers below let you run each algorithm step by step, which is exactly what the tutorial and the exam ask for.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">b, d, m</div><div class="l">branching factor, depth of the cheapest solution, maximum depth of the space</div></div>
+      <div class="tile"><div class="v">f = g + h</div><div class="l">A*: cost so far plus an estimate that never overestimates</div></div>
+      <div class="tile"><div class="v">O(b·d)</div><div class="l">memory of iterative deepening, against O(b<sup>d+1</sup>) for breadth-first</div></div>
+      <div class="tile"><div class="v">once</div><div class="l">how often dynamic programming solves each subproblem</div></div>
+    </div>
+
+    <h2>Complete and partial solutions</h2>
+    <p>Classic search algorithms split into two families by what they evaluate. Interrupt one of the first kind and you still have an answer; interrupt one of the second kind and you may have nothing.</p>
+    <ul class="cmp two">
+      <li><b>Complete solutions</b><span class="v"><span class="sw t"></span>Every decision variable is set: a binary string of length n for SAT, a permutation of the cities for the TSP. Two solutions are compared with the evaluation function and the better one replaces the current one. Exhaustive search, local search, hill climbing, simulated annealing, tabu search and evolutionary algorithms all work this way (lectures 3 to 5).</span></li>
+      <li><b>Partial solutions</b><span class="v"><span class="sw v"></span>Either an incomplete solution to the original problem (all SAT strings whose first two bits are 1; all tours containing 7–11–2–16) or a complete solution to a reduced problem (the shortest route through k of the n cities, as a building block). You then need a way to organise the sub-spaces and a second evaluation function for partial solutions. Tree search, A* and dynamic programming live here (this lecture, plus CSP in lecture 9).</span></li>
+    </ul>
+
+    <h2>Exhaustive search and backtracking</h2>
+    <p>Exhaustive (enumerative) search checks every point of the space until the best global solution has been found. It is simple, works only on small instances, and the order of enumeration does not matter because everything gets evaluated. The one question is how to generate every candidate exactly once, and the answer depends on the representation. For SAT: all binary strings of length n correspond one-to-one to the integers 0 … 2ⁿ−1, so count and convert.</p>
+    <div class="tt-wrap"><table class="tt enum"><tbody>${[0, 1, 2, 3].map(r => `<tr>${[0, 4, 8, 12].map(cb => { const v = cb + r; return `<td class="mono">${v.toString(2).padStart(4, "0")}</td><td class="n muted">${v}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
+    <p>The same strings organise into a binary tree: split on x₁, then on x₂, and so on. That tree is where <b>backtracking</b> pays off. If φ contains the clause (x₁ ∨ x₂), every assignment with x₁ = f and x₂ = f falsifies it, so the whole subtree below that node is a dead end and the search backs up without visiting its leaves. Branch and bound and A* are refinements of this idea: an exhaustive search with a reason to skip subtrees.</p>
+    ${lab("sat", "prune the SAT tree with the clauses of φ")}
+
+    <h2>How to judge a search strategy</h2>
+    <p>A strategy is defined by the order in which it expands nodes, and every strategy in this lecture is scored on the same four questions: is it <b>complete</b> (finds a solution whenever one exists), is it <b>optimal</b> (finds a least-cost one), and what are its <b>time</b> (nodes generated) and <b>space</b> (nodes held in memory at once) complexities, written in terms of the branching factor b, the depth d of the cheapest solution and the maximum depth m of the state space, which may be infinite. Keep these four lines in your head for every algorithm; the exam asks for them.</p>
+
+    <h2>Uninformed search</h2>
+    <p>Uninformed strategies use nothing but the problem definition: they cannot tell a promising node from a hopeless one, only a shallow one from a deep one. The four in the lecture differ only in which frontier node they take next.</p>
+    <ul>
+      <li><b>Breadth-first:</b> expand the shallowest unexpanded node. The frontier is a FIFO queue: new nodes go to the back, old ones are expanded first.</li>
+      <li><b>Depth-first:</b> expand the deepest unexpanded node. The frontier is a LIFO stack: the most recently generated node is expanded next.</li>
+      <li><b>Depth-limited:</b> depth-first with a limit L; nodes at depth L are not expanded. Solves the infinite-path problem, but a bad L means a cutoff (no solution within the limit) rather than a solution, and how to pick L is unclear.</li>
+      <li><b>Iterative deepening:</b> run depth-limited search with L = 0, 1, 2, … until a solution appears.</li>
+    </ul>
+    ${lab("tree", "run the four strategies on the same tree")}
+    <p class="muted">Conventions in the explorer: the goal test happens when a node is taken from the frontier (as in the slides' “expand”), children are generated left to right, and depth-first pushes them so that the left child is taken first. Pick a deep goal such as M or O to see depth-first beat breadth-first, and a shallow one such as C to see the opposite.</p>
+    <h3>The four profiles</h3>
+    <div class="tt-wrap"><table class="tt props"><thead><tr><th></th><th>complete</th><th>optimal</th><th>time</th><th>space</th></tr></thead><tbody>${PROPS.map(r => `<tr><td class="rl">${r[0]}</td><td class="stt ${r[1][0]}">${r[1][0] === "ok" ? "✓" : "✗"} ${r[1][1]}</td><td class="stt ${r[2][0]}">${r[2][0] === "ok" ? "✓" : "✗"} ${r[2][1]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("")}</tbody></table></div>
+    <p>Space is the problem for breadth-first: it keeps every generated node, and a machine generating nodes at 100 MB/s fills 8,640 GB in a day (the slides' number). Depth-first needs only the current path plus the siblings along it, O(b·m), but is neither complete nor optimal. Iterative deepening gets the best of both: linear memory, completeness, optimality for unit step costs, and a time bound of O(b<sup>d</sup>) because re-generating the shallow levels is cheap compared with the deepest one.</p>
+    ${chart("ids", leg([[1, "breadth-first, each level once"], [2, "iterative deepening, level k generated d + 1 − k times"]]))}
+      <figcaption>Nodes generated per level in the worst case for b = 10, d = 5 (solution at the far right leaf). Totals: breadth-first 111,100, iterative deepening 123,450, 11 % more. Hover a level for both counts.</figcaption>
+    </figure>
+    <div class="ex"><div class="kicker">Worked example · the slide's count, and the general ratio</div>
+      <p>Iterative deepening with limit L generates the levels 0 … L, so level k is generated once for each L ≥ k, that is (d + 1 − k) times: 5·10 + 4·100 + 3·1,000 + 2·10,000 + 1·100,000 = 123,450 against 10 + 100 + 1,000 + 10,000 + 100,000 = 111,100 for breadth-first. Context, not on the slides: for large d the ratio tends to b/(b − 1), so the overhead is about 11 % for b = 10 and 100 % for a binary tree, still a constant factor. The slides' conclusion: IDS is the preferred uninformed method when the space is large and the solution depth is unknown; a hybrid runs breadth-first until memory is nearly full and then iterative deepening from every frontier node.</p></div>
+
+    <h2>Informed search</h2>
+    <p>Informed (heuristic) strategies add an evaluation function per node, an estimate of how desirable it is, and expand the most desirable unexpanded node: <b>best-first search</b>. The lecture names three special cases, greedy search, A* and dynamic programming, and runs the first two on the textbook map of Romania, driving from Arad to Bucharest with road lengths as step costs and the straight-line distance to Bucharest as heuristic.</p>
+    <h3>Greedy best-first search</h3>
+    <p>Greedy search uses h(n) alone, the estimated cost from n to the closest goal, here h<sub>SLD</sub>(n), the straight-line distance to Bucharest. It expands whatever looks closest to the goal. From Arad it goes Sibiu (253), then Fagaras (176), then Bucharest (0): three expansions, a path of 450 km. Fast, but not optimal (the Rimnicu Vilcea route is 418 km) and not complete: with Iasi as start and Fagaras as goal it bounces Iasi → Neamt → Iasi → Neamt forever unless repeated states are checked. Time and space are O(b<sup>m</sup>) in the worst case, with a good heuristic dramatically less.</p>
+    <h3>A* search</h3>
+    <p>A* avoids expanding paths that are already expensive by adding the cost so far: f(n) = g(n) + h(n), the estimated total cost of the cheapest path through n. The one condition is that h is <b>admissible</b>: h(n) ≤ h*(n), the true cost from n to the goal, and h(n) ≥ 0 so that h(G) = 0 at every goal. Straight-line distance never overestimates a road distance, so it qualifies. Theorem of the lecture: A* with an admissible heuristic is optimal.</p>
+    ${lab("ro", "greedy and A* from Arad to Bucharest, one expansion per step")}
+    <p class="muted">The explorer reproduces the slides' trees exactly, including the tree-search quirk that Sibiu regenerates Arad with f = 646: the slides check no repeated states. Two values on the slide's distance table differ from the trees drawn next to it (Fagaras 178 vs 176, Pitesti 98 vs 100); the trees and this page use the textbook values 176 and 100. The frontier table is sorted best first, so the top row is the next expansion.</p>
+    <div class="ex"><div class="kicker">Worked example · A* on the slides, step by step</div>
+      <ol>
+        <li>Arad: f = 0 + 366 = 366. Expand: Sibiu 393 = 140 + 253, Timisoara 447 = 118 + 329, Zerind 449 = 75 + 374.</li>
+        <li>Sibiu (393): Arad 646, Fagaras 415 = 239 + 176, Oradea 671, Rimnicu Vilcea 413 = 220 + 193.</li>
+        <li>Rimnicu Vilcea (413): Craiova 526, Pitesti 417 = 317 + 100, Sibiu 553.</li>
+        <li>Fagaras (415): Sibiu 591, Bucharest 450 = 450 + 0. Bucharest is in the frontier but not the cheapest node, so A* keeps going.</li>
+        <li>Pitesti (417): Bucharest 418 = 418 + 0, Craiova 615, Rimnicu Vilcea 607.</li>
+        <li>Bucharest (418) is now the cheapest frontier node and passes the goal test: Arad → Sibiu → Rimnicu Vilcea → Pitesti → Bucharest, 418 km. The 450 km Bucharest node is still in the frontier and never expanded.</li>
+      </ol>
+      <p>Step 4 is the one to remember: a goal appearing in the frontier is not a solution yet. A* only stops when the goal is <em>taken out</em> of the frontier, because a cheaper path to it may still be waiting.</p></div>
+    <h3>Why A* is optimal</h3>
+    <p>The standard proof on the slides: suppose a suboptimal goal G₂ sits in the frontier and let n be an unexpanded node on a cheapest path to an optimal goal G. Then f(G₂) = g(G₂) because h(G₂) = 0; g(G₂) &gt; g(G) because G₂ is suboptimal; and g(G) ≥ f(n) because h is admissible (f(n) can at most reach the true cost through n, which is g(G)). So f(G₂) &gt; f(n) and A* expands n before it would ever expand G₂. The more useful version: A* expands nodes in order of increasing f, adding “f-contours” the way breadth-first adds layers. With C* the optimal cost, A* expands every node with f &lt; C*, some with f = C*, and none with f &gt; C*. It is complete unless infinitely many nodes have f ≤ f(G), its time is exponential in the relative error of h times the solution length, and it keeps all nodes in memory.</p>
+    ${chart("contours", `<div class="legend"><span class="li"><span class="key" style="--c:color-mix(in srgb, var(--vz-s1) 30%, var(--surface-2))"></span><span class="lt">f* ≤ 400</span></span><span class="li"><span class="key" style="--c:color-mix(in srgb, var(--vz-s1) 55%, var(--surface-2))"></span><span class="lt">≤ 420</span></span><span class="li"><span class="key" style="--c:color-mix(in srgb, var(--vz-s1) 80%, var(--surface-2))"></span><span class="lt">≤ 450</span></span><span class="li"><span class="key" style="--c:var(--vz-s1)"></span><span class="lt">&gt; 450</span></span><span class="li"><span class="key ring"></span><span class="lt">expanded by A* (f* ≤ C* = 418)</span></span></div>`)}
+      <figcaption>Each city coloured by f* = g*(city) + h(city), with g* the true shortest distance from Arad: the contours of the slide, computed. Darker is more expensive. Hover a city for its numbers. The six ringed cities are exactly the ones A* expands.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>city</th><th>g* from Arad</th><th>h</th><th>f*</th></tr>${gstarRows.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join("")}</table></details>
+    <p class="muted">Context, not on the slides: the textbook also asks for h to be <em>consistent</em> (h(n) ≤ c(n, n′) + h(n′)) when A* is run as a graph search with an explored set; with tree search, as here, admissibility alone suffices. Expect a tutorial problem that asks whether a given heuristic is admissible: check h(n) ≤ h*(n) for every node, and remember h = 0 is always admissible but useless (it turns A* into uniform-cost search).</p>
+
+    <h2>Dynamic programming</h2>
+    <p>The third best-first special case gets the second half of the lecture. The starting point is the problem with naive recursion: definitions like Fibonacci, F<sub>n</sub> = F<sub>n−1</sub> + F<sub>n−2</sub> with F₁ = F₂ = 1, are easy to write and exponential to run, because the recursion tree recomputes the same subproblems over and over. F(3) is computed twice inside F(5), F(2) three times, and the tree has O(φⁿ) nodes with φ ≈ 1.618.</p>
+    ${chart("fib", leg([[1, "naive recursion"], [3, "with memoisation"]]))}
+      <figcaption>How often each F(k) is called while computing F(10). The naive counts are themselves Fibonacci numbers; memoisation flattens them to one call each.</figcaption>
+    </figure>
+    <div class="tiles">
+      <div class="tile"><div class="v">${num(totalCalls(30), 0)}</div><div class="l">calls to compute F(30) naively</div></div>
+      <div class="tile"><div class="v">31</div><div class="l">calls with memoisation, one per subproblem</div></div>
+      <div class="tile"><div class="v">O(1)</div><div class="l">extra space of the bottom-up version: two variables rolling forward</div></div>
+    </div>
+    <p><b>Definition.</b> Dynamic programming (Bellman, 1950s, from optimal control; now everywhere from graph algorithms to bioinformatics, with Dijkstra's shortest-path algorithm as the prominent example) solves optimisation and counting problems by decomposing them into simpler subproblems, solving each subproblem exactly once, and storing the results so nothing is recomputed. The slides place it between greedy algorithms (O(n log n), fast but not always correct) and brute force (O(cⁿ), correct but hopeless): exact and efficient when it applies.</p>
+    <h3>When it applies: two conditions, both required</h3>
+    <ul class="cmp two">
+      <li><b>Optimal substructure</b><span class="v"><span class="sw t"></span>OPT(x) = f(OPT(x₁), …, OPT(x<sub>k</sub>)) for strictly smaller instances x<sub>i</sub>. Verify by cut-and-paste: take an optimal solution, replace the sub-solution it uses for x<sub>i</sub> by the true optimum for x<sub>i</sub>; if the result stays feasible and no worse, the property holds. Holds for shortest paths in a DAG (any subpath of a shortest path is shortest) and for 0/1 knapsack (item n is in or out, the rest is an optimal choice for the remaining capacity). Fails for the longest simple path: the sub-solution u → v → w blocks w, so subpaths of longest simple paths are not longest simple paths; the problem is NP-complete.</span></li>
+      <li><b>Overlapping subproblems</b><span class="v"><span class="sw v"></span>A naive recursion visits the same subproblem instance more than once. Rule of thumb from the slides: draw the recursion DAG; shared nodes (reachable from several parents) mean overlap. Fibonacci overlaps massively. Merge sort does not: each half appears exactly once, so memoisation would add overhead without benefit and DP does not apply, even though the substructure is optimal.</span></li>
+    </ul>
+    <h3>Two ways to implement it</h3>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>memoisation (top-down)</th><th>tabulation (bottom-up)</th></tr></thead><tbody>
+      <tr><td class="rl">how</td><td>keep the recursive definition; before solving a subproblem look it up in a table, after solving it store it</td><td>fill the table from the smallest subproblems upward in an explicit order</td></tr>
+      <tr><td class="rl">subproblems solved</td><td>only the reachable ones</td><td>all in the defined space</td></tr>
+      <tr><td class="rl">stack</td><td>O(depth)</td><td>O(1) extra</td></tr>
+      <tr><td class="rl">space optimisation</td><td>harder</td><td>straightforward (rolling array, as in the O(1) Fibonacci)</td></tr>
+      <tr><td class="rl">prefer when</td><td>the state space is sparse</td><td>the state space is dense and the order is known</td></tr>
+    </tbody></table></div>
+    <p>The asymptotic complexity is the same either way, because both visit each subproblem once: <span class="formula">T<sub>DP</sub> = number of distinct subproblems × work per subproblem</span>, the size of the state space times the cost of one recurrence step. That formula is the fastest way to answer “what is the complexity of your DP?” on a sheet.</p>
+    <h3>Worked example: coin change, bottom-up</h3>
+    <p>Minimum number of coins from a set C to pay exactly n. Subproblem: dp[a] = fewest coins for amount a; recurrence dp[a] = 1 + min<sub>c ∈ C, c ≤ a</sub> dp[a − c], base dp[0] = 0, impossible amounts stay at ∞. Optimal substructure by cut-and-paste (remove the last coin, the rest must be optimal for a − c); overlapping subproblems because dp[a − c] is needed by every larger amount. The default instance is the classic case where greedy fails:</p>
+    ${lab("coins", "fill the dp table and compare with greedy")}
+    <p class="muted">The tutorial sheet's instance uses other coins; typing them in shows the table, but do the trace by hand first, since that is what the exam asks for. The second sheet problem of this kind (the bridge crossing) wants you to define the state yourself: which people are on each side, and where the torch is.</p>
+    <h3>The applicability checklist</h3>
+    <ol>
+      <li>Optimal substructure? Argue by cut-and-paste.</li>
+      <li>Overlapping subproblems? Draw the recursion DAG and look for shared nodes.</li>
+      <li>A finite, manageable state space? Count the distinct subproblems; that number times the work per step is your running time.</li>
+      <li>Well-defined base cases?</li>
+    </ol>
+    <p>The summary slide is honest about the cost: dynamic programming is complete and optimal, but time and space consuming, and the hard part is choosing the subproblems.</p>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Two families:</b> algorithms on complete solutions (interruptible) and on partial solutions (tree search, A*, DP), which need an organisation of the sub-spaces and an evaluation for partial solutions.</li>
+      <li><b>Four questions per strategy:</b> complete, optimal, time, space, in terms of b, d, m. Breadth-first is complete and optimal for unit costs but needs O(b<sup>d+1</sup>) memory; depth-first needs O(b·m) memory but is neither; iterative deepening is complete, optimal for unit costs, O(b·d) memory and O(b<sup>d</sup>) time.</li>
+      <li><b>Greedy uses h, A* uses g + h.</b> With an admissible h (never overestimates, zero at goals) A* is optimal; it expands all nodes with f &lt; C* and stops only when a goal is taken out of the frontier.</li>
+      <li><b>Dynamic programming</b> needs optimal substructure and overlapping subproblems; solve each subproblem once, top-down with a memo or bottom-up with a table; running time = distinct subproblems × work per subproblem.</li>
+    </ul>
+    <h2>Tutorial 1 and exam relevance</h2>
+    <p>Sheet 1 (OPAL, in your group on <b>Fri 30 Oct</b>) is built from this lecture: an A* run in a maze (choose a heuristic, say which cells are explored, give the path and argue it is optimal), a coin-change dynamic programme (recurrence, full table, complexity, comparison with greedy) and the bridge-crossing puzzle as a DP (define the state space first). See <a href="advanced-problem-solving/exercise.html?n=1">tutorial 1</a>.</p>
+    <p class="muted">Context, not on the slides: the exam-style questions this lecture generates are hand traces (expansion order and frontier for BFS/DFS/IDS/greedy/A* on a small graph), the four-line profile of a strategy, an admissibility check for a given heuristic, and a DP where you must state subproblem, recurrence, base case and complexity. The explorers above are practice for the traces.</p>
+    <p class="muted">Next: Local search, stochastic hill climbing and simulated annealing (<a href="advanced-problem-solving/lecture.html?n=3">lecture 3</a>). Slides: OPAL → Lectures → Lesson 2 (trad search); the three extra PDFs there are scanned textbook chapters (Russell &amp; Norvig 3.4 and 3.5, Michalewicz &amp; Fogel 4.3 on dynamic programming and the stagecoach problem) for reading, not slides.</p>`;
+}
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">${l.planned ? `Planned topic in last year's order; the date is the next free Tuesday, not announced: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.` : `This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.`}<br>Topic from the course overview: ${esc(l.blurb)}<br>The write-up appears here once the slides are in OPAL and the lecture has taken place.</p>
+    </div>`;
+}
+const WRITEUPS = { 1: lecture1, 2: lecture2 };
+const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · Advanced Problem Solving and Search`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => {
+  if (isNarrow() === narrowNow) return;
+  narrowNow = isNarrow(); mountCharts();
+  // Explorers that draw SVG at a width-dependent size redraw their current step.
+  document.querySelectorAll(".lab-body[data-rerender]").forEach(b => { const btn = b.querySelector('[data-s="next"]'); if (btn) { const o = b.querySelector(".scount output"); const i = +o.value; b.querySelector('[data-s="reset"]').click(); for (let k = 0; k < i; k++) btn.click(); } else b.querySelector("[data-c]")?.dispatchEvent(new Event("change")); });
+});
+</script>
+</body>
+</html>

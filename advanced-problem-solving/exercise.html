@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Advanced Problem Solving and Search · Tutorial</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="advanced-problem-solving/apss.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="advanced-problem-solving/apss.js"></script>
+<style>
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="apss">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, state } = APSS;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => x.n === Number(q));
+const page = document.getElementById("page");
+const back = `<a class="back" href="advanced-problem-solving.html">← All lectures</a>`;
+const head = e => `${back}<div class="big-icon">${e.icon}</div><h1>Tutorial ${e.n} – ${esc(e.title)}</h1><p class="meta">${fmt(e.date)} · ${exe.start}–${exe.end} · ${esc(exe.room)} · your group 2, Dr. Timothy S. Lyon${e.planned ? " · planned topic, date assumed" : ""}</p>`;
+function placeholder() {
+  const d = daysUntil(e.date);
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.sheet ? "Sheet online, session still to come" : "Material not yet covered"}</h2>
+      <p class="muted">${e.planned ? `Planned tutorial; the topic follows the lecture of that week and the date is assumed weekly: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.` : `This tutorial is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.`}<br>${esc(e.blurb)}<br>${e.sheet ? `The sheet is in OPAL (Tutorials → Tutorial ${e.n}) since ${U.fmtDate(e.sheet)}: work through it before the session. The write-up with worked solutions appears here after the tutorial.` : "The write-up appears here once the sheet is in OPAL and the session has taken place."}</p>
+    </div>`;
+}
+const WRITEUPS = {};
+if (!e) {
+  page.innerHTML = `${back}<h1>Tutorial not found</h1><p>There is no tutorial ${esc(q)}.</p>`;
+} else {
+  document.title = `Tutorial ${e.n} – ${e.title} · Advanced Problem Solving and Search`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Advanced Problem Solving and Search · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="advanced-problem-solving/apss.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="advanced-problem-solving/apss.js"></script>
+</head>
+<body class="apss">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, lec, exe, slot, today } = APSS;
+const rows = c.schedule.rows;
+const held = rows.filter(r => r[2] !== "off");
+const nx = held.find(r => r[0] >= today);
+const next = held.filter(r => r[0] === nx?.[0]);
+const nextHTML = nx ? (() => { const d = daysUntil(nx[0]); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`} · ${fmt(nx[0])}</p>
+    ${next.map(r => `<p style="font-size:1.15rem;font-weight:700;margin:.35rem 0 0">${esc(r[1])}</p><p style="margin:0">${slot(r[2])} · ${esc(r[2] === "exe" ? "Dr. Timothy S. Lyon (group 2)" : lec.who)}</p>`).join("")}</div>`; })()
+  : `<div class="box"><p style="margin:0">All sessions are over.</p></div>`;
+const tr = rows.map(([d, topic, k]) => `<tr class="${k === "off" ? "off" : ""} ${d < today ? "past" : ""} ${d === nx?.[0] ? "next" : ""} ${/\(planned\)/.test(topic) ? "planned" : ""}"><td class="d">${U.fmtDate(d)}</td><td class="k"><span class="sw ${k}" title="${k === "exe" ? "Tutorial" : k === "lec" ? "Lecture" : "No session"}"></span></td><td>${esc(topic)}</td></tr>`).join("");
+const nLec = rows.filter(r => r[2] === "lec").length, nExe = rows.filter(r => r[2] === "exe").length;
+document.getElementById("page").innerHTML = `
+  <a class="back" href="advanced-problem-solving.html">← All lectures</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}); the same course as the former “Problem Solving and Search in Artificial Intelligence”, so only one of the two counts.</p>
+  ${APSS.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  <p>From the module description and the ICCL course page. The module ends with a 90-minute written exam and nothing else counts towards the grade. There is no remote exam. Exam registration in Selma (or with your examination office) is separate from the OPAL course; the registration period has not been announced. The exam period of the winter semester is 8 Feb – 6 Mar 2027, the date itself is not published yet.</p>
+  <div class="grades">${c.grading.map(g => `<div class="grade mine"><b>${esc(g.variant)}</b>${esc(g.how)}<div class="s">Selma: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <h2>Your tutorial group</h2>
+  <div class="box">
+    <p style="margin:0 0 .4rem"><b>OPAL:</b> member of the course group APSS WS26/27, which unlocks slides, sheets and the forum.</p>
+    <p style="margin:0 0 .4rem"><b>Tutorial:</b> you are registered in <b>group 2, Fridays 13:00–14:30 (4th DS)</b> in APB/E006/U, run by Dr. Timothy S. Lyon. It starts on <b>Fri 30 Oct</b>. Changes and cancellations are announced only to the members of the registered group, so stay registered in the group you attend. The other groups are Thursday 13:00 (APB/E007/U), Monday 13:00 and Monday 16:40 (both APB/E001/U).</p>
+    <p style="margin:0"><b>Selma:</b> exam registration still open-ended; shown red above until it is done.</p>
+  </div>
+  <p class="muted">${esc(c.roomNote)}</p>
+  <h2>How the tutorials work</h2>
+  <ul>
+    <li>The introduction slides announce 12 lectures and 10 tutorials. Each tutorial has an exercise sheet in OPAL (Tutorials → Tutorial n), uploaded before the session. Solve it at home as far as you can; the session discusses problems, questions and solutions.</li>
+    <li>The first sheet, on problem formulation and traditional search, has been in OPAL since 22 Oct and matches <a href="advanced-problem-solving/lecture.html?n=2">lecture 2</a>. See <a href="advanced-problem-solving/exercise.html?n=1">tutorial 1</a>.</li>
+    <li>Sample solutions are not handed out, and the introduction slides warn that copying solutions from the internet or an AI will not help at the exam: the sheets train the hand traces the exam asks for.</li>
+    <li>Share solutions and ask questions in the OPAL forum; every question about the course goes there, not by e-mail, and answering fellow students' questions is encouraged.</li>
+    <li>Prerequisites named by the course: basic theoretical computer science and logic, and good English, since everything is taught in English.</li>
+  </ul>
+  <h2>Schedule · ${nLec} lectures, ${nExe} tutorials</h2>
+  <div class="legend"><span><span class="sw lec"></span>Lecture · Tue ${lec.start}–${lec.end} · ${esc(lec.room)} · from 20 Oct</span><span><span class="sw exe"></span>Your tutorial · Fri ${exe.start}–${exe.end} · ${esc(exe.room)} · from 30 Oct</span><span><span class="sw off"></span>No session</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr}</tbody></table></div>
+  <p class="muted">Source: ${esc(c.schedule.src)}. ${esc(c.planNote)} Rows marked “planned” are not announced yet. The other tutorial groups are not shown because you are not in them.</p>
+  <h2>Material &amp; links</h2>
+  <div class="links">
+    <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course: slides, tutorial sheets, forum, group registration ↗</a>
+    <a href="${c.coursePage}" target="_blank" rel="noopener">ICCL course page: calendar, reading list, organisation ↗</a>
+    <a href="${exe.roomUrl}" target="_blank" rel="noopener">APB/E006/U in the campus navigator ↗</a>
+  </div>
+  <p>${esc(c.materialsNote)}</p>
+  <h2>Reading</h2>
+  <ul class="reading">${c.reading.map(r => `<li><b>${esc(r.t)}</b> · ${esc(r.a)}, ${r.y}. <span class="muted">${esc(r.v)}</span></li>`).join("")}</ul>
+  <p class="muted">The ICCL page lists further papers on treewidth (Bodlaender & Koster 2010), metaheuristics with tree decompositions (Hammerl, Musliu & Schafhauser 2015), heuristic hypertree decomposition (Dermaku et al. 2008) and the stable-model paper by Gelfond & Lifschitz (1991); they belong to the January lectures.</p>
+  <h2>Contact</h2>
+  <p>${esc(c.contact)}.</p>
+  <p class="foot muted">Dates, rooms and organisational facts from OPAL and the ICCL course page as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>
