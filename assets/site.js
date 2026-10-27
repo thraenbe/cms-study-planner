@@ -90,8 +90,14 @@ window.CMSUtil = {
       const card = box.closest(".game-card, .card, [data-card]") || box.parentElement;
       const apply = () => { card.classList.toggle("is-done", cb.checked); box.classList.toggle("on", cb.checked); };
       apply();
-      // A click inside an <a> card must not navigate: toggle by hand instead of the native toggle.
-      box.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); cb.checked = !cb.checked; CMSUtil.setDone(id, cb.checked); apply(); });
+      // A click inside an <a> card must not navigate, so the click is cancelled. A cancelled click on the
+      // input itself restores its old checked state after the handlers ran, so the new state is set
+      // from storage on the next tick instead of toggling the input directly.
+      box.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        const on = !CMSUtil.isDone(id); CMSUtil.setDone(id, on);
+        setTimeout(() => { cb.checked = on; apply(); }, 0);
+      });
       cb.addEventListener("change", () => { CMSUtil.setDone(id, cb.checked); apply(); }); // keyboard (space)
       cb.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); cb.checked = !cb.checked; CMSUtil.setDone(id, cb.checked); apply(); } });
     });
