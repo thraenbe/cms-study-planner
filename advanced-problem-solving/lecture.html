@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Advanced Problem Solving and Search · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="advanced-problem-solving/apss.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="advanced-problem-solving/apss.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="apss">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, state } = APSS;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => x.n === Number(q));
+const page = document.getElementById("page");
+const back = `<a class="back" href="advanced-problem-solving.html">← All lectures</a>`;
+const isNarrow = () => matchMedia("(max-width: 600px)").matches;
+
+function head(l) {
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who)}${l.planned ? " · planned topic, date assumed" : ""}</p>`;
+}
+
+// ---------------- Shared chart and explorer helpers (as on the other course boards) ----------------
+const key = (s, kind = "") => `<span class="key ${kind}" style="--c:${s === "g" ? "var(--vz-gray)" : `var(--vz-s${s})`}"></span>`;
+const leg = items => `<div class="legend">${items.map(([s, t, k]) => `<span class="li">${s ? key(s, k) : ""}<span class="lt">${t}</span></span>`).join("")}</div>`;
+const flag = (k, t) => `<span class="flag ${k}">${k === "ok" ? "✓" : "⚠"} ${t}</span>`;
+const hbar = (x0, x1, y0, h) => { const r = Math.min(4, (x1 - x0) / 2, h / 2); return `M${x0},${y0} H${x1 - r} Q${x1},${y0} ${x1},${y0 + r} V${y0 + h - r} Q${x1},${y0 + h} ${x1 - r},${y0 + h} H${x0} Z`; };
+const vbar = (x0, w, y0, y1) => { const r = Math.min(4, w / 2, (y1 - y0) / 2); return `M${x0},${y1} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + w - r} Q${x0 + w},${y0} ${x0 + w},${y0 + r} V${y1} Z`; };
+const num = (v, d = 2) => v.toLocaleString("en-GB", { maximumFractionDigits: d });
+const CHARTS = {};
+const place = (tip, wrap, x, y) => { tip.classList.add("show"); const half = tip.offsetWidth / 2; tip.style.left = Math.min(Math.max(x, half), wrap.clientWidth - half) + "px"; tip.style.top = y + "px"; };
+const chart = (name, legend = "") => `<figure class="viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div>`;
+const lab = (name, title) => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div><div class="lab-body"></div></div>`;
+// Charts by name: <div data-chart="name"> is filled with CHARTS[name](narrow) and redrawn when the width class changes.
+function mountCharts() {
+  document.querySelectorAll("[data-chart]").forEach(el => {
+    el.dataset.narrow = isNarrow(); el.innerHTML = CHARTS[el.dataset.chart](isNarrow());
+    const wrap = el.parentElement, tip = wrap.querySelector(".tip"), svg = el.querySelector("svg");
+    const show = g => { const a = (g.querySelector(".anchor") || g.querySelector(".dot") || g.querySelector(".bar") || g).getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      tip.innerHTML = g.dataset.tip; g.classList.add("on"); svg.classList.add("hovering"); place(tip, wrap, a.left + a.width / 2 - w.left, a.top - w.top); };
+    const hide = g => { g.classList.remove("on"); svg.classList.remove("hovering"); tip.classList.remove("show"); };
+    el.querySelectorAll(".pt[data-tip]").forEach(g => { g.addEventListener("pointerenter", () => show(g)); g.addEventListener("focus", () => show(g));
+      g.addEventListener("pointerleave", () => hide(g)); g.addEventListener("blur", () => hide(g)); });
+  });
+}
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">${l.planned ? `Planned topic in last year's order; the date is the next free Tuesday, not announced: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.` : `This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.`}<br>Topic from the course overview: ${esc(l.blurb)}<br>The write-up appears here once the slides are in OPAL and the lecture has taken place.</p>
+    </div>`;
+}
+const WRITEUPS = {};
+const LABS = {};
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · Advanced Problem Solving and Search`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

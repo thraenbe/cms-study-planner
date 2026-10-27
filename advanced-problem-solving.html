@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Advanced Problem Solving and Search · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="advanced-problem-solving/apss.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="advanced-problem-solving/apss.js"></script>
+</head>
+<body class="apss">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Main page: header, status bar (OPAL course, tutorial group, Selma), then one card per lecture, one per tutorial,
+// and the Orga card (SML-games grid). Planned sessions (last year's order, dates assumed) are dimmed.
+const { m, c, esc, U, CODE, fmt, state } = APSS;
+const card = (l, kind) => { const s = state(l);
+  return `<a class="game-card ${s}" href="advanced-problem-solving/${kind}.html?n=${l.n}">
+    <div class="game-icon">${l.icon}</div>
+    <h2>${kind === "lecture" ? "Lecture" : "Tutorial"} ${l.n} – ${esc(l.title)}</h2>
+    <p class="when">${fmt(l.date)}${s === "planned" ? " · planned, date assumed" : s === "held" && !l.covered ? " · held, write-up pending" : s === "held" ? " · covered" : ` · in ${APSS.daysUntil(l.date)} days`}</p>
+    <p>${esc(l.blurb)}</p>
+  </a>`; };
+const orga = `<a class="game-card" href="advanced-problem-solving/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>Next session, your tutorial group, exam and Selma, the full schedule with rooms, how the tutorials work, reading list and contacts.</p>
+  </a>`;
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
+  <header class="hero">
+    <h1>🧭 ${esc(m.name)}</h1>
+    <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Dr. Sarah Alice Gaggl · International Center for Computational Logic · TU Dresden</p>
+  </header>
+  ${APSS.topbar()}
+  <h2 class="sec">Lectures <small>Tuesdays 09:20, GÖR/0226/H</small></h2>
+  <main class="game-cards">${c.lectures.map(l => card(l, "lecture")).join("")}${orga}</main>
+  <h2 class="sec">Tutorials <small>your group 2, Fridays 13:00, APB/E006/U</small></h2>
+  <section class="game-cards">${c.exercises.map(e => card(e, "exercise")).join("")}</section>
+  <p class="foot muted">${esc(c.planNote)}</p>`;
+</script>
+</body>
+</html>

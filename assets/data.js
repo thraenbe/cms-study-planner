@@ -1687,7 +1687,474 @@ window.CMS = {
     "web": "https://iccl.inf.tu-dresden.de/web/Advanced_Problem_Solving_and_Search_(WS2026)",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/56319377408"
    },
-   "note": "First lecture on 20 October 2026. You're in tutorial group 2 (Fridays, DS4); changes are only announced to registered group members. Slides and exercise sheets are uploaded in OPAL per session."
+   "note": "First lecture on 20 October 2026. You're in tutorial group 2 (Fridays, DS4); changes are only announced to registered group members. Slides and exercise sheets are uploaded in OPAL per session.",
+   "status": {
+    "opal": true,
+    "group": "Friday 13:00 group (TG02)",
+    "selma": false
+   },
+   "course": {
+    "page": "advanced-problem-solving.html",
+    "rooms": {
+     "lecture": "GÖR/0226/H (Tue 09:20–10:50, 2nd DS)",
+     "exercise": "APB/E006/U (Fri 13:00–14:30, 4th DS, your tutorial group 2)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-20",
+      "label": "First lecture (Introduction)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-27",
+      "label": "Lecture 2: Informed vs uninformed search",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-30",
+      "label": "First tutorial of your Friday group (Traditional search)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-12-20",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-01-19",
+      "label": "Q&A session (planned, as last year)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-TRK-APSS (CMS, Applied AI track elective)",
+      "how": "Written exam, 90 min; the module grade is the exam grade. No remote exam. Dates and modalities follow during the semester.",
+      "selma": "registration period not announced yet"
+     }
+    ],
+    "selmaNote": "registration period not announced yet",
+    "opalNote": "course group APSS WS26/27",
+    "groupNote": "no tutorial group yet",
+    "format": "2 SWS lecture + 2 SWS tutorial, 5 LP. Taught entirely in English. The slides of each lecture and the exercise sheet of each tutorial are uploaded in OPAL per session; you attend one tutorial group per week and discuss the sheet there. The forum is for questions and for sharing solutions.",
+    "contact": "Dr. Sarah Alice Gaggl (lecturer, Computational Logic group at ICCL) runs the lecture; Dr. habil. Hannes Straß and Dr. Timothy S. Lyon run tutorial groups, Tim Lyon yours. Questions go to the OPAL forum, or by mail if the forum cannot answer them",
+    "coursePage": "https://iccl.inf.tu-dresden.de/web/Advanced_Problem_Solving_and_Search_(WS2026)",
+    "materialsNote": "Slides (one PDF per lecture, plus extra decks on uninformed search, informed search and dynamic programming for lecture 2) and tutorial sheets are in OPAL only; the ICCL page has the calendar and the reading list. The lecture pages here are summaries in our own words.",
+    "roomNote": "The lecture is in GÖR/0226/H (Görges-Bau). Your tutorial group 2 meets in APB/E006/U, a seminar room on the ground floor of the Andreas-Pfitzmann-Bau; the other groups use E007 and E001 in the same building.",
+    "reading": [
+     {
+      "t": "Artificial Intelligence: A Modern Approach",
+      "a": "Stuart Russell & Peter Norvig",
+      "y": 2010,
+      "v": "Pearson, 3rd ed. · chapters 3–4 cover lectures 2–3"
+     },
+     {
+      "t": "How to Solve It: Modern Heuristics",
+      "a": "Zbigniew Michalewicz & David B. Fogel",
+      "y": 2004,
+      "v": "Springer, 2nd ed. · local search, tabu search, evolutionary algorithms"
+     },
+     {
+      "t": "Answer Set Solving in Practice",
+      "a": "Martin Gebser, Roland Kaminski, Benjamin Kaufmann & Torsten Schaub",
+      "y": 2012,
+      "v": "Morgan & Claypool · the ASP block"
+     },
+     {
+      "t": "Introduction to Evolutionary Computing",
+      "a": "A. E. Eiben & J. E. Smith",
+      "y": 2003,
+      "v": "Springer"
+     },
+     {
+      "t": "Hypertree decompositions and tractable queries",
+      "a": "Georg Gottlob, Nicola Leone & Francesco Scarcello",
+      "y": 2002,
+      "v": "J. Computer and System Sciences 64(3) · decompositions block"
+     }
+    ],
+    "planNote": "Lectures 3–12 are planned topics in last year's order (ICCL calendar WS2025), on the next free Tuesdays; OPAL announces the real plan per session. Last year had two lecture-free Tuesdays in November, so dates may shift.",
+    "lectures": [
+     {
+      "n": 1,
+      "title": "Introduction",
+      "date": "2026-10-20",
+      "icon": "🧭",
+      "covered": true,
+      "planned": false,
+      "blurb": "What makes a problem hard, how the course is organised, and the vocabulary of the whole semester: states, actions, goals, search spaces and the eight topic blocks from search to decompositions."
+     },
+     {
+      "n": 2,
+      "title": "Informed vs uninformed search",
+      "date": "2026-10-27",
+      "icon": "🔍",
+      "covered": true,
+      "planned": false,
+      "blurb": "Problem formulation as a state space, then the classic tree-search family: breadth-first, uniform-cost, depth-first and iterative deepening, and the heuristic searches greedy best-first and A* with admissible heuristics; dynamic programming as the exhaustive alternative."
+     },
+     {
+      "n": 3,
+      "title": "Local search",
+      "date": "2026-11-03",
+      "icon": "🏔️",
+      "covered": false,
+      "planned": true,
+      "blurb": "Hill climbing and its traps, stochastic hill climbing, simulated annealing: searching in the space of complete solutions instead of paths."
+     },
+     {
+      "n": 4,
+      "title": "Tabu search",
+      "date": "2026-11-10",
+      "icon": "🚫",
+      "covered": false,
+      "planned": true,
+      "blurb": "Escaping local optima with memory: tabu lists, aspiration criteria, intensification and diversification."
+     },
+     {
+      "n": 5,
+      "title": "Evolutionary algorithms",
+      "date": "2026-11-17",
+      "icon": "🧬",
+      "covered": false,
+      "planned": true,
+      "blurb": "Populations, fitness, selection, crossover and mutation; genetic algorithms and evolution strategies."
+     },
+     {
+      "n": 6,
+      "title": "Answer set programming I",
+      "date": "2026-11-24",
+      "icon": "📐",
+      "covered": false,
+      "planned": true,
+      "blurb": "Logic programs under the stable-model semantics: declarative problem solving with generate-and-test rules."
+     },
+     {
+      "n": 7,
+      "title": "Answer set programming II",
+      "date": "2026-12-01",
+      "icon": "📐",
+      "covered": false,
+      "planned": true,
+      "blurb": "Modelling in ASP: choice rules, constraints, aggregates, optimisation statements and the grounding-and-solving workflow."
+     },
+     {
+      "n": 8,
+      "title": "Answer set programming III",
+      "date": "2026-12-08",
+      "icon": "📐",
+      "covered": false,
+      "planned": true,
+      "blurb": "How ASP solvers work, and the theory behind them: minimal models, reducts, unfounded sets."
+     },
+     {
+      "n": 9,
+      "title": "Constraint satisfaction problems",
+      "date": "2026-12-15",
+      "icon": "🧩",
+      "covered": false,
+      "planned": true,
+      "blurb": "Variables, domains and constraints; backtracking with constraint propagation, arc consistency and variable-ordering heuristics."
+     },
+     {
+      "n": 10,
+      "title": "Structural decompositions I",
+      "date": "2027-01-05",
+      "icon": "🌳",
+      "covered": false,
+      "planned": true,
+      "blurb": "Why the graph structure of a problem decides its hardness: treewidth and tree decompositions."
+     },
+     {
+      "n": 11,
+      "title": "Structural decompositions II",
+      "date": "2027-01-12",
+      "icon": "🕸️",
+      "covered": false,
+      "planned": true,
+      "blurb": "Hypertree decompositions, tractable query classes and heuristics for finding good decompositions."
+     },
+     {
+      "n": 12,
+      "title": "Questions and exam preparation",
+      "date": "2027-01-19",
+      "icon": "❓",
+      "covered": false,
+      "planned": true,
+      "blurb": "Last year the course closed with a Q&A session; expect the same at the end of this course."
+     }
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "title": "Traditional search",
+      "date": "2026-10-30",
+      "icon": "📝",
+      "covered": false,
+      "planned": false,
+      "sheet": "2026-10-22",
+      "blurb": "Exercise sheet 1 is in OPAL since 22 Oct: problem formulation and the uninformed and informed search algorithms of lecture 2. Your Friday group discusses it in APB/E006/U."
+     },
+     {
+      "n": 2,
+      "title": "Local search",
+      "date": "2026-11-06",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on local search follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 3,
+      "title": "Tabu search",
+      "date": "2026-11-13",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on tabu search follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 4,
+      "title": "Evolutionary algorithms",
+      "date": "2026-11-20",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on evolutionary algorithms follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 5,
+      "title": "Answer set programming I",
+      "date": "2026-11-27",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on Answer set programming I follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 6,
+      "title": "Answer set programming II",
+      "date": "2026-12-04",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on Answer set programming II follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 7,
+      "title": "Answer set programming III",
+      "date": "2026-12-11",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on Answer set programming III follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 8,
+      "title": "Constraint satisfaction problems",
+      "date": "2026-12-18",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on constraint satisfaction problems follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 9,
+      "title": "Structural decompositions I",
+      "date": "2027-01-08",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on structural decompositions i follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 10,
+      "title": "Structural decompositions II",
+      "date": "2027-01-15",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on structural decompositions ii follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 11,
+      "title": "Exam preparation",
+      "date": "2027-01-22",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "Planned: the sheet on exam preparation follows the lecture of that week. Sheet and date are announced in OPAL."
+     },
+     {
+      "n": 12,
+      "title": "Tutorial (not announced)",
+      "date": "2027-01-29",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "A Friday slot inside the lecture period that OPAL has not filled yet."
+     },
+     {
+      "n": 13,
+      "title": "Tutorial (not announced)",
+      "date": "2027-02-05",
+      "icon": "📝",
+      "covered": false,
+      "planned": true,
+      "blurb": "A Friday slot inside the lecture period that OPAL has not filled yet."
+     }
+    ],
+    "schedule": {
+     "src": "lecture dates and the first tutorial from the ICCL course calendar (WS2026) and OPAL; later topics in last year's order (ICCL calendar WS2025); tutorial Fridays assumed weekly",
+     "rows": [
+      [
+       "2026-10-20",
+       "Lecture 1: Introduction",
+       "lec"
+      ],
+      [
+       "2026-10-27",
+       "Lecture 2: Informed vs uninformed search",
+       "lec"
+      ],
+      [
+       "2026-10-30",
+       "Tutorial 1 (Friday group): Traditional search",
+       "exe"
+      ],
+      [
+       "2026-11-03",
+       "Lecture 3: Local search (planned)",
+       "lec"
+      ],
+      [
+       "2026-11-06",
+       "Tutorial 2 (Friday group): Local search (planned)",
+       "exe"
+      ],
+      [
+       "2026-11-10",
+       "Lecture 4: Tabu search (planned)",
+       "lec"
+      ],
+      [
+       "2026-11-13",
+       "Tutorial 3 (Friday group): Tabu search (planned)",
+       "exe"
+      ],
+      [
+       "2026-11-17",
+       "Lecture 5: Evolutionary algorithms (planned)",
+       "lec"
+      ],
+      [
+       "2026-11-20",
+       "Tutorial 4 (Friday group): Evolutionary algorithms (planned)",
+       "exe"
+      ],
+      [
+       "2026-11-24",
+       "Lecture 6: Answer set programming I (planned)",
+       "lec"
+      ],
+      [
+       "2026-11-27",
+       "Tutorial 5 (Friday group): Answer set programming I (planned)",
+       "exe"
+      ],
+      [
+       "2026-12-01",
+       "Lecture 7: Answer set programming II (planned)",
+       "lec"
+      ],
+      [
+       "2026-12-04",
+       "Tutorial 6 (Friday group): Answer set programming II (planned)",
+       "exe"
+      ],
+      [
+       "2026-12-08",
+       "Lecture 8: Answer set programming III (planned)",
+       "lec"
+      ],
+      [
+       "2026-12-11",
+       "Tutorial 7 (Friday group): Answer set programming III (planned)",
+       "exe"
+      ],
+      [
+       "2026-12-15",
+       "Lecture 9: Constraint satisfaction problems (planned)",
+       "lec"
+      ],
+      [
+       "2026-12-18",
+       "Tutorial 8 (Friday group): Constraint satisfaction problems (planned)",
+       "exe"
+      ],
+      [
+       "2026-12-22",
+       "Christmas break until 3 Jan: no lecture on 22 and 29 Dec, no tutorial on 25 Dec and 1 Jan",
+       "off"
+      ],
+      [
+       "2027-01-05",
+       "Lecture 10: Structural decompositions I (planned)",
+       "lec"
+      ],
+      [
+       "2027-01-08",
+       "Tutorial 9 (Friday group): Structural decompositions I (planned)",
+       "exe"
+      ],
+      [
+       "2027-01-12",
+       "Lecture 11: Structural decompositions II (planned)",
+       "lec"
+      ],
+      [
+       "2027-01-15",
+       "Tutorial 10 (Friday group): Structural decompositions II (planned)",
+       "exe"
+      ],
+      [
+       "2027-01-19",
+       "Lecture 12: Questions and exam preparation (planned)",
+       "lec"
+      ],
+      [
+       "2027-01-22",
+       "Tutorial 11 (Friday group): Exam preparation (planned)",
+       "exe"
+      ],
+      [
+       "2027-01-26",
+       "Reserve Tuesday: nothing announced (last year the lectures ended with the Q&A)",
+       "off"
+      ],
+      [
+       "2027-01-29",
+       "Tutorial 12 (Friday group): Tutorial (not announced) (planned)",
+       "exe"
+      ],
+      [
+       "2027-02-02",
+       "Reserve Tuesday: nothing announced",
+       "off"
+      ],
+      [
+       "2027-02-05",
+       "Tutorial 13 (Friday group): Tutorial (not announced) (planned)",
+       "exe"
+      ]
+     ]
+    }
+   }
   },
   "CMS-TRK-CAI": {
    "code": "CMS-TRK-CAI",
