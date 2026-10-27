@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>__NAME__ · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="__SLUG__/__NSLC__.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="__SLUG__/__NSLC__.js"></script>
+</head>
+<body class="__NSLC__">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+// Orga page: status and key dates, the module description, the next session, exam and grading, the schedule
+// expanded from the dashboard's session rules (CMSUtil.occurrences), material links and contacts.
+const { m, c, esc, U, CODE, fmt, daysUntil, mine, lec, exe, EX, today } = __NS__;
+const rows = mine.flatMap(s => U.occurrences(s)).map(o => ({ date: o.date, kind: o.kind === "Lecture" ? "lec" : "exe", topic: o.label || (o.kind === "Lecture" ? "Lecture" : EX), room: o.room, start: o.start, end: o.end, who: o.who }));
+rows.sort((a, b) => a.date.localeCompare(b.date) || (a.start || "").localeCompare(b.start || ""));
+// A lecture/exercise card dated on that day lends the row its title.
+const titleOn = (d, kind) => (kind === "lec" ? c.lectures || [] : c.exercises || []).find(x => x.date === d);
+const nx = rows.find(r => r.date >= today);
+const nextHTML = nx ? (() => { const d = daysUntil(nx.date), t = titleOn(nx.date, nx.kind); return `<div class="box"><p class="muted" style="margin:0">Next session · ${d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`} · ${fmt(nx.date)}</p>
+    <p style="font-size:1.15rem;font-weight:700;margin:.35rem 0 0">${t ? `${nx.kind === "lec" ? "Lecture" : EX} ${t.n} – ${esc(t.title)}` : esc(nx.topic)}</p><p style="margin:0">${nx.start}–${nx.end} · ${esc(nx.room)}${nx.who ? ` · ${esc(nx.who)}` : ""}</p></div>`; })()
+  : `<div class="box"><p style="margin:0">No session dates known yet.</p></div>`;
+const tr = rows.map(r => { const t = titleOn(r.date, r.kind);
+  return `<tr class="${r.date < today ? "past" : ""} ${r.date === nx?.date ? "next" : ""}"><td class="d">${U.fmtDate(r.date)}</td><td class="k"><span class="sw ${r.kind}" title="${r.kind === "exe" ? EX : "Lecture"}"></span></td><td>${t ? `${r.kind === "lec" ? "Lecture" : EX} ${t.n}: ${esc(t.title)}` : esc(r.topic)} <span class="muted">· ${r.start}–${r.end} · ${esc(r.room)}</span></td></tr>`; }).join("");
+const links = [
+  m.links?.opal ? `<a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course ↗</a>` : "",
+  c.coursePage || m.links?.web ? `<a href="${c.coursePage || m.links.web}" target="_blank" rel="noopener">Course page of the chair ↗</a>` : "",
+].filter(Boolean).join("");
+document.getElementById("page").innerHTML = `
+  <a class="back" href="__SLUG__.html">← All lectures and exercises</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp ? `${m.lp} LP, ` : ""}${esc(CMS.semester)}).</p>
+  ${__NS__.topbar({ dates: true })}
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
+  <h2>Next session</h2>
+  ${nextHTML}
+  <h2>Exam &amp; grading</h2>
+  ${c.format ? `<p>${esc(c.format)}</p>` : ""}
+  ${(c.grading || []).length ? `<div class="grades">${c.grading.map(g => `<div class="grade mine"><b>${esc(g.variant)}</b>${esc(g.how)}${g.selma ? `<div class="s">Selma: ${esc(g.selma)}</div>` : ""}</div>`).join("")}</div>` : "<p class=\"muted\">Grading not recorded yet.</p>"}
+  ${c.exerciseNote ? `<h2>How the ${EX.toLowerCase()}s work</h2><p>${esc(c.exerciseNote)}</p>` : ""}
+  <h2>Schedule · ${rows.filter(r => r.kind === "lec").length} lectures, ${rows.filter(r => r.kind === "exe").length} ${EX.toLowerCase()}s</h2>
+  <div class="legend">${lec ? `<span><span class="sw lec"></span>Lecture · ${U.DAYS_SHORT[lec.day]} ${lec.start}–${lec.end} · ${esc(lec.room)}</span>` : ""}${exe ? `<span><span class="sw exe"></span>${EX} · ${U.DAYS_SHORT[exe.day]} ${exe.start}–${exe.end} · ${esc(exe.room)}</span>` : ""}</div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan"><tbody>${tr || "<tr><td>No sessions known yet.</td></tr>"}</tbody></table></div>
+  <p class="muted">Dates expanded from the session rules in assets/data.js (the same rules as the dashboard calendar); holidays and the Christmas break are skipped. Check OPAL for changes.</p>
+  <h2>Material &amp; links</h2>
+  <div class="links">${links || "<span class=\"muted\">No links recorded yet.</span>"}</div>
+  ${c.materialsNote ? `<p>${esc(c.materialsNote)}</p>` : ""}
+  ${(c.reading || []).length ? `<h2>Reading</h2><ul class="reading">${c.reading.map(r => `<li><b>${esc(r.t || r.title || r)}</b>${r.note ? ` – ${esc(r.note)}` : ""}</li>`).join("")}</ul>` : ""}
+  <h2>Contact</h2>
+  <p>${esc(c.contact || "Not recorded yet.")}</p>
+  <p class="foot muted">Dates, rooms and organisational facts from OPAL and the course page as of ${CMS.updated}; check OPAL announcements for changes.</p>`;
+</script>
+</body>
+</html>

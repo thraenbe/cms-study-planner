@@ -1,0 +1,280 @@
+/* __NAME__ pages: the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.__NSLC__ { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.__NSLC__ .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.__NSLC__ .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.__NSLC__ .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.__NSLC__ header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.__NSLC__ .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.__NSLC__ .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.__NSLC__ .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.__NSLC__ .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.__NSLC__ .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.__NSLC__ .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.__NSLC__ .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.__NSLC__ .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.__NSLC__ .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.__NSLC__ .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.__NSLC__ .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.__NSLC__ .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.__NSLC__ .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.__NSLC__ .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.__NSLC__ .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.__NSLC__ .kd.past { opacity: .55; }
+.__NSLC__ .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.__NSLC__ .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.__NSLC__ .detail { max-width: 760px; margin: 0 auto; }
+.__NSLC__ .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.__NSLC__ .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.__NSLC__ .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.__NSLC__ .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.__NSLC__ .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.__NSLC__ .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.__NSLC__ .detail p { margin: 0 0 0.7rem; }
+.__NSLC__ .detail p.lead { font-size: 1.08rem; }
+.__NSLC__ .detail ul, .__NSLC__ .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.__NSLC__ .detail li { margin: 0.2rem 0; }
+.__NSLC__ .detail .muted { color: var(--ink-2); }
+.__NSLC__ .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.__NSLC__ .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.__NSLC__ .detail .placeholder .big-icon { font-size: 3.2rem; }
+.__NSLC__ .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Figures */
+.__NSLC__ .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.__NSLC__ .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.__NSLC__ .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.__NSLC__ .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.__NSLC__ .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.__NSLC__ .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.__NSLC__ .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.__NSLC__ .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.__NSLC__ .viz .bar.s1 { fill: var(--vz-s1); }
+.__NSLC__ .viz .bar.gray { fill: var(--vz-gray); }
+.__NSLC__ .viz .hit { fill: transparent; }
+.__NSLC__ .viz .row:hover .bar, .__NSLC__ .viz .row:focus .bar { filter: brightness(1.12); }
+.__NSLC__ .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.__NSLC__ .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.__NSLC__ .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.__NSLC__ .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.__NSLC__ .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.__NSLC__ .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.__NSLC__ .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.__NSLC__ .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.__NSLC__ .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.__NSLC__ .cmp .v { display: flex; align-items: center; gap: 6px; }
+.__NSLC__ .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.__NSLC__ .cmp .sw.t { background: var(--vz-s1); }
+.__NSLC__ .cmp .sw.v { background: var(--vz-gray); }
+.__NSLC__ details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.__NSLC__ details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.__NSLC__ details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.__NSLC__ details.tbl td, .__NSLC__ details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.__NSLC__ details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.__NSLC__ .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.__NSLC__ .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.__NSLC__ .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.__NSLC__ .grade b { display: block; }
+.__NSLC__ .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.__NSLC__ table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.__NSLC__ .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.__NSLC__ .plan tr:last-child td { border-bottom: 0; }
+.__NSLC__ .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.__NSLC__ .plan td.k { width: 22px; }
+.__NSLC__ .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.__NSLC__ .plan .sw.lec { background: var(--c-core); }
+.__NSLC__ .plan .sw.exe { background: var(--c-trk); }
+.__NSLC__ .plan tr.past td { color: var(--ink-3); }
+.__NSLC__ .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.__NSLC__ .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.__NSLC__ .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.__NSLC__ .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.__NSLC__ .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.__NSLC__ ul.reading { font-size: 0.92rem; }
+.__NSLC__ ul.reading b { font-weight: 500; }
+.__NSLC__ .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .__NSLC__ .hero h1 { font-size: 1.55rem; }
+  .__NSLC__ .cmp { grid-template-columns: 1fr; }
+  .__NSLC__ .plan td.d { width: 70px; }
+}
+
+/* Chart marks: lines, dots, tooltips; truth tables and formulas */
+.__NSLC__ .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.__NSLC__ .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.__NSLC__ .viz .pt:hover .dot, .__NSLC__ .viz .pt:focus .dot { r: 6; }
+.__NSLC__ .viz .pt:focus { outline: none; }
+.__NSLC__ .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.__NSLC__ .viz .note { fill: var(--ink-2); font-size: 11px; }
+.__NSLC__ .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.__NSLC__ .viz .tip.show { opacity: 1; }
+.__NSLC__ .viz .tip b { display: block; }
+.__NSLC__ .viz .chart-wrap { position: relative; }
+.__NSLC__ table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.__NSLC__ table.tt th, .__NSLC__ table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.__NSLC__ table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.__NSLC__ table.tt td.one { font-weight: 700; }
+.__NSLC__ .tt-wrap { overflow-x: auto; }
+.__NSLC__ .tt-wrap table.tt { margin-top: 0; }
+.__NSLC__ .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.__NSLC__ .cmp { grid-template-columns: 1fr; }
+.__NSLC__ .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.__NSLC__ .cmp li b { align-self: center; }
+@media (max-width: 760px) { .__NSLC__ .cmp li { grid-template-columns: 1fr; } }
+.__NSLC__ .plan .sw.off, .__NSLC__ .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.__NSLC__ .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.__NSLC__ .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.__NSLC__ .legend .sw.lec { background: var(--c-core); }
+.__NSLC__ .legend .sw.exe { background: var(--c-trk); }
+.__NSLC__ .cmp .v { display: block; }
+.__NSLC__ .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.__NSLC__ .viz .f1 { fill: var(--vz-s1); }
+.__NSLC__ .viz .f2 { fill: var(--vz-s2); }
+.__NSLC__ .viz .f3 { fill: var(--vz-s3); }
+.__NSLC__ .viz .f4 { fill: var(--vz-s4); }
+.__NSLC__ .viz .bar.s2 { fill: var(--vz-s2); }
+.__NSLC__ .viz .line.k2 { stroke: var(--vz-s2); }
+.__NSLC__ .viz .dot.gray { fill: var(--vz-gray); }
+.__NSLC__ .viz .nohit { pointer-events: none; }
+.__NSLC__ .viz .ann, .__NSLC__ .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.__NSLC__ .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.__NSLC__ .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.__NSLC__ .viz .code.on .link, .__NSLC__ .viz .code.on .vl { opacity: 1; }
+.__NSLC__ .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.__NSLC__ .viz .code.on .dot { r: 5.5; }
+.__NSLC__ .viz .pt.on .bar { filter: brightness(1.12); }
+.__NSLC__ .viz .plot:focus { outline: none; }
+.__NSLC__ .viz .legend { margin: 0 2px 8px; }
+.__NSLC__ .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.__NSLC__ .legend .lt { display: inline; }
+.__NSLC__ .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.__NSLC__ .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.__NSLC__ table.tt th .key { margin-right: 5px; }
+.__NSLC__ .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.__NSLC__ .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.__NSLC__ .t1 { --c: var(--vz-s1); } .__NSLC__ .t2 { --c: var(--vz-s2); } .__NSLC__ .t3 { --c: var(--vz-s3); } .__NSLC__ .t4 { --c: var(--vz-s4); }
+.__NSLC__ table.tt td.t1, .__NSLC__ table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.__NSLC__ .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.__NSLC__ .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.__NSLC__ .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.__NSLC__ .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.__NSLC__ .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.__NSLC__ .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.__NSLC__ .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.__NSLC__ .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.__NSLC__ .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.__NSLC__ .preset:hover { border-color: var(--ink-3); }
+.__NSLC__ .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.__NSLC__ .lab button:focus-visible, .__NSLC__ .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.__NSLC__ .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.__NSLC__ .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.__NSLC__ .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.__NSLC__ .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.__NSLC__ .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.__NSLC__ .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.__NSLC__ .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.__NSLC__ .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.__NSLC__ .cell.one { color: var(--ink); font-weight: 700; }
+.__NSLC__ .cell.t1, .__NSLC__ .cell.t2, .__NSLC__ .cell.t3, .__NSLC__ .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.__NSLC__ button.cell { cursor: pointer; }
+.__NSLC__ button.cell:hover { filter: brightness(1.06); }
+.__NSLC__ .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.__NSLC__ .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.__NSLC__ .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.__NSLC__ .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.__NSLC__ .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.__NSLC__ .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.__NSLC__ .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.__NSLC__ .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.__NSLC__ .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.__NSLC__ .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.__NSLC__ .fxc { display: grid; gap: 3px; justify-items: center; }
+.__NSLC__ .fxc .cell { width: 34px; }
+.__NSLC__ .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.__NSLC__ .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.__NSLC__ .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.__NSLC__ .fgw { display: grid; gap: 3px; }
+.__NSLC__ .fgw small { font-size: 11px; color: var(--ink-3); }
+.__NSLC__ .fg { display: inline-flex; gap: 2px; }
+.__NSLC__ .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .__NSLC__ .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .__NSLC__ .fg { gap: 1px; }
+  .__NSLC__ .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .__NSLC__ .agrid .rl { font-size: 12px; }
+  .__NSLC__ .fxc .cell { width: 30px; }
+  .__NSLC__ .ro { grid-template-columns: 1fr; gap: 2px; }
+  .__NSLC__ .ro dd { margin-bottom: 6px; }
+}
+.__NSLC__ .ex, .__NSLC__ .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.__NSLC__ .ex { --c: var(--focus); }
+.__NSLC__ .why { --c: var(--c-team); }
+.__NSLC__ .ex p, .__NSLC__ .why p { margin: 0 0 0.4rem; }
+.__NSLC__ .ex p:last-child, .__NSLC__ .why p:last-child { margin-bottom: 0; }
+.__NSLC__ .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.__NSLC__ .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.__NSLC__ .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.__NSLC__ .task-h h2 { margin: 0; font-size: 1.25rem; }
+.__NSLC__ .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.__NSLC__ .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.__NSLC__ .pts.open { color: var(--ink-3); border-style: dashed; }
+.__NSLC__ .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.__NSLC__ .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.__NSLC__ .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.__NSLC__ .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.__NSLC__ .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.__NSLC__ .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.__NSLC__ .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.__NSLC__ .board-h h2 { margin: 0; font-size: 1.15rem; }
+.__NSLC__ .board-h .muted { font-size: 0.85rem; }
+.__NSLC__ .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.__NSLC__ .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.__NSLC__ .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.__NSLC__ .game-card.exe { border-top: 4px solid var(--c-trk); }
+.__NSLC__ .game-card.lec { border-top: 4px solid var(--c-core); }
+.__NSLC__ .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+.__NSLC__ .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.__NSLC__ .q { background: color-mix(in srgb, var(--warn) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1rem; }
+.__NSLC__ .q ul { margin: 0; }
+.__NSLC__ .ctx { display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--c-team); font-weight: 700; margin-left: 6px; }
+.__NSLC__ .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.__NSLC__ .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.__NSLC__ .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.__NSLC__ .viz .bar.s2 { fill: var(--vz-s2); } .__NSLC__ .viz .bar.s3 { fill: var(--vz-s3); } .__NSLC__ .viz .bar.s4 { fill: var(--vz-s4); }
+.__NSLC__ .viz .pt.on .bar, .__NSLC__ .viz .pt:focus .bar { filter: brightness(1.12); }
+.__NSLC__ .viz .ring { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.__NSLC__ .viz .band { fill: var(--ink-3); opacity: .08; }

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>__NAME__ · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>__ICON__</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="__SLUG__/__NSLC__.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="__SLUG__/__NSLC__.js"></script>
+<script src="__SLUG__/__NSLC__-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="__NSLC__">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today } = __NS__;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = __NS__Viz;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="__SLUG__.html">← All lectures and exercises</a>`;
+// Write-up building blocks: a context box (what a lecturer says aloud, not on the slides), a worked example,
+// a question box, a table view for a chart (accessibility), and the lecture header.
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const qbox = (t, items) => `<div class="q"><div class="kicker">${t}</div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+function head(l) {
+  const meta = `${l.date ? fmt(l.date) : "no fixed date"}${lec ? ` · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who || "")}` : ""}`;
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${meta}</p>`;
+}
+
+// ---------------- Write-ups: one function per lecture, registered in WRITEUPS below ----------------
+// Pattern (see .claude/skills/study-dashboard/references/page-pattern.md):
+//   CHARTS.name = narrow => `<svg viewBox="0 0 ${narrow ? 340 : 600} …" role="img" aria-label="…">…</svg>`;
+//   function lecture1() { return `${head(l)}<p class="lead">…</p><h2>…</h2>${chart("name", leg([[1, "series"]]))}<figcaption>…</figcaption></figure>${why("Context, not on the slides: …", "<p>…</p>")}${ex("Worked example: …", "<p>…</p>")}<h2>Take-home</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}${lec ? `, ${lec.start}–${lec.end}, ${esc(lec.room)}` : ""}.<br>Planned topic: ${esc(l.blurb)}<br>The summary appears here once the lecture has taken place and its slides are available.</p>
+    </div>`;
+}
+const WRITEUPS = {};
+const LABS = {};
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>
