@@ -126,3 +126,300 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
   .tsp .cmp { grid-template-columns: 1fr; }
   .tsp .plan td.d { width: 70px; }
 }
+
+/* ---- Shared chart, legend, explorer and callout styles (same as the HPC / DCD pages) ---- */
+/* Chart marks: lines, dots, tooltips; truth tables and formulas */
+.tsp .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.tsp .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.tsp .viz .pt:hover .dot, .tsp .viz .pt:focus .dot { r: 6; }
+.tsp .viz .pt:focus { outline: none; }
+.tsp .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.tsp .viz .note { fill: var(--ink-2); font-size: 11px; }
+.tsp .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.tsp .viz .tip.show { opacity: 1; }
+.tsp .viz .tip b { display: block; }
+.tsp .viz .chart-wrap { position: relative; }
+.tsp table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.tsp table.tt th, .tsp table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.tsp table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.tsp table.tt td.one { font-weight: 700; }
+.tsp .tt-wrap { overflow-x: auto; }
+.tsp .tt-wrap table.tt { margin-top: 0; }
+.tsp .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.tsp .cmp { grid-template-columns: 1fr; }
+.tsp .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.tsp .cmp li b { align-self: center; }
+@media (max-width: 760px) { .tsp .cmp li { grid-template-columns: 1fr; } }
+.tsp .plan .sw.off, .tsp .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.tsp .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.tsp .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.tsp .legend .sw.lec { background: var(--c-core); }
+.tsp .legend .sw.exe { background: var(--c-trk); }
+.tsp .cmp .v { display: block; }
+.tsp .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.tsp .viz .f1 { fill: var(--vz-s1); }
+.tsp .viz .f2 { fill: var(--vz-s2); }
+.tsp .viz .f3 { fill: var(--vz-s3); }
+.tsp .viz .f4 { fill: var(--vz-s4); }
+.tsp .viz .bar.s2 { fill: var(--vz-s2); }
+.tsp .viz .line.k2 { stroke: var(--vz-s2); }
+.tsp .viz .dot.gray { fill: var(--vz-gray); }
+.tsp .viz .nohit { pointer-events: none; }
+.tsp .viz .ann, .tsp .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.tsp .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.tsp .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.tsp .viz .code.on .link, .tsp .viz .code.on .vl { opacity: 1; }
+.tsp .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.tsp .viz .code.on .dot { r: 5.5; }
+.tsp .viz .pt.on .bar { filter: brightness(1.12); }
+.tsp .viz .plot:focus { outline: none; }
+.tsp .viz .legend { margin: 0 2px 8px; }
+.tsp .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.tsp .legend .lt { display: inline; }
+.tsp .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.tsp .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.tsp table.tt th .key { margin-right: 5px; }
+.tsp .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.tsp .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.tsp .t1 { --c: var(--vz-s1); } .tsp .t2 { --c: var(--vz-s2); } .tsp .t3 { --c: var(--vz-s3); } .tsp .t4 { --c: var(--vz-s4); }
+.tsp table.tt td.t1, .tsp table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.tsp .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.tsp .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.tsp .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.tsp .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.tsp .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.tsp .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.tsp .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.tsp .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.tsp .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.tsp .preset:hover { border-color: var(--ink-3); }
+.tsp .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.tsp .lab button:focus-visible, .tsp .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tsp .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.tsp .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.tsp .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.tsp .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.tsp .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.tsp .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.tsp .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.tsp .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.tsp .cell.one { color: var(--ink); font-weight: 700; }
+.tsp .cell.t1, .tsp .cell.t2, .tsp .cell.t3, .tsp .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.tsp button.cell { cursor: pointer; }
+.tsp button.cell:hover { filter: brightness(1.06); }
+.tsp .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.tsp .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.tsp .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.tsp .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.tsp .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.tsp .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.tsp .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.tsp .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.tsp .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.tsp .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.tsp .fxc { display: grid; gap: 3px; justify-items: center; }
+.tsp .fxc .cell { width: 34px; }
+.tsp .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.tsp .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.tsp .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.tsp .fgw { display: grid; gap: 3px; }
+.tsp .fgw small { font-size: 11px; color: var(--ink-3); }
+.tsp .fg { display: inline-flex; gap: 2px; }
+.tsp .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .tsp .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .tsp .fg { gap: 1px; }
+  .tsp .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .tsp .agrid .rl { font-size: 12px; }
+  .tsp .fxc .cell { width: 30px; }
+  .tsp .ro { grid-template-columns: 1fr; gap: 2px; }
+  .tsp .ro dd { margin-bottom: 6px; }
+}
+.tsp .ex, .tsp .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.tsp .ex { --c: var(--focus); }
+.tsp .why { --c: var(--c-team); }
+.tsp .ex p, .tsp .why p { margin: 0 0 0.4rem; }
+.tsp .ex p:last-child, .tsp .why p:last-child { margin-bottom: 0; }
+.tsp .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+   the PCAM grid, the race-condition lab, Amdahl/Gustafson bars, levels of parallelism, Flynn's grid, SIMD lanes */
+.tsp .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.tsp .viz .line.dash { stroke-dasharray: 5 4; stroke-width: 1.5; }
+.tsp .viz .bar.track { fill: var(--vz-gray); opacity: .35; }
+.tsp .key.track { opacity: .45; }
+.tsp .viz .ann.dash { stroke-dasharray: 3 3; }
+.tsp .viz .dot.ring { stroke: var(--surface-2); stroke-width: 2; }
+.tsp .viz .band { fill: var(--ink-3); opacity: .08; }
+.tsp .viz .vl2 { fill: var(--ink); font-size: 11.5px; font-weight: 500; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.tsp .viz .pt.on .bar.s1 { filter: brightness(1.12); }
+.tsp .ln-k { display: inline-block; width: 16px; height: 0; border-top: 1px solid var(--ink-3); }
+.tsp .ln-k.thick { border-top: 3px solid var(--ink); }
+.tsp .ctl input[type="checkbox"], .tsp .ctl input[type="radio"] { accent-color: var(--focus); }
+.tsp .ctl input:disabled { opacity: .45; }
+.tsp .preset:disabled { opacity: .45; cursor: not-allowed; }
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.tsp .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.tsp .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.tsp .task-h h2 { margin: 0; font-size: 1.25rem; }
+.tsp .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.tsp .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.tsp .pts.open { color: var(--ink-3); border-style: dashed; }
+.tsp .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.tsp .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.tsp .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tsp .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.tsp .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.tsp .gantt .pc.out { background: transparent; box-shadow: none; color: var(--ink-3); font-size: 14px; }
+.tsp .phases { margin: 0 0 8px; }
+.tsp .phases .agtrack { display: flex; gap: 2px; height: 22px; background: var(--surface); border-radius: 6px; overflow: hidden; }
+.tsp .seg { display: grid; place-items: center; min-width: 3px; font: 600 11px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); background: color-mix(in srgb, var(--c) 35%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.tsp .seg.s1 { --c: var(--vz-s1); } .tsp .seg.s2 { --c: var(--vz-s2); } .tsp .seg.s3 { --c: var(--vz-s3); }
+.tsp .viz .edge { fill: var(--surface); stroke: var(--line); }
+.tsp .viz .sdot { fill: var(--ink); stroke: var(--surface-2); stroke-width: 1.5; }
+.tsp .viz .sdot.c { fill: var(--surface-2); stroke: var(--ink); stroke-width: 2; }
+.tsp .viz .sl { stroke: var(--ink); stroke-width: 1.5; }
+.tsp .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.tsp .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.tsp .board-h h2 { margin: 0; font-size: 1.15rem; }
+.tsp .board-h .muted { font-size: 0.85rem; }
+.tsp .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.tsp .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.tsp .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.tsp .game-card.exe { border-top: 4px solid var(--c-trk); }
+.tsp .game-card.lec { border-top: 4px solid var(--c-core); }
+.tsp .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+
+/* ---- Touch Sensing specifics ---- */
+.tsp .game-card.home { border-top: 4px solid var(--warn); }
+.tsp .game-card .when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.tsp .ctx { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); border: 1px dashed var(--line); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+.tsp .why { --c: var(--c-team); }
+.tsp .why .kicker::after { content: " · context, not on the slides"; font-weight: 500; letter-spacing: 0; text-transform: none; }
+
+/* Skin cross-section explorer: a layered SVG, one button per receptor, a fact panel next to it */
+.tsp .skin-wrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(220px, 1fr); gap: 14px; align-items: start; }
+.tsp svg.skin { width: 100%; height: auto; display: block; }
+.tsp .skin .epi { fill: color-mix(in srgb, var(--vz-s4) 22%, var(--surface)); }
+.tsp .skin .derm { fill: color-mix(in srgb, var(--vz-s2) 14%, var(--surface)); }
+.tsp .skin .sub { fill: color-mix(in srgb, var(--vz-s2) 6%, var(--surface)); }
+.tsp .skin .ridge { fill: none; stroke: color-mix(in srgb, var(--vz-s4) 55%, var(--ink-3)); stroke-width: 1; }
+.tsp .skin .ll { fill: var(--ink-3); font-size: 10px; }
+.tsp .skin .rc { cursor: pointer; }
+.tsp .skin .rc .body { fill: var(--vz-gray); stroke: var(--surface); stroke-width: 1.5; opacity: .65; transition: opacity .12s; }
+.tsp .skin .rc .nerve { fill: none; stroke: var(--vz-gray); stroke-width: 1.5; opacity: .65; }
+.tsp .skin .rc.on .body, .tsp .skin .rc:hover .body { opacity: 1; fill: var(--c); }
+.tsp .skin .rc.on .nerve, .tsp .skin .rc:hover .nerve { opacity: 1; stroke: var(--c); }
+.tsp .skin .rc .nm { fill: var(--ink); font-size: 10.5px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.tsp .skin .rc:focus { outline: none; }
+.tsp .skin .rc:focus-visible .body { stroke: var(--focus); stroke-width: 2.5; }
+.tsp .rfacts { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; min-height: 180px; }
+.tsp .rfacts h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.tsp .rfacts .ro { margin-top: 4px; }
+.tsp .rfacts .ro dd { margin-bottom: 4px; }
+.tsp .rfacts .fb { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 16%, var(--surface)); box-shadow: inset 0 -2px var(--c); margin: 0 4px 4px 0; }
+@media (max-width: 700px) { .tsp .skin-wrap { grid-template-columns: 1fr; } }
+
+/* Receptor property grid: four receptors × three binary properties, coloured per receptor */
+.tsp .rgrid { display: grid; grid-template-columns: minmax(110px, auto) repeat(3, 1fr); gap: 5px; margin: 0.4rem 0 1rem; font-size: 0.88rem; }
+.tsp .rgrid .h { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; align-self: end; }
+.tsp .rgrid .rl { font-weight: 600; align-self: center; }
+.tsp .rgrid .rl .key { margin-right: 6px; vertical-align: 0; }
+.tsp .rgrid .c { padding: 6px 8px; border-radius: 6px; background: var(--surface); text-align: center; }
+.tsp .rgrid .c.hi { background: color-mix(in srgb, var(--c) 18%, var(--surface)); box-shadow: inset 0 -3px var(--c); font-weight: 600; }
+@media (max-width: 600px) { .tsp .rgrid { grid-template-columns: minmax(80px, auto) repeat(3, 1fr); font-size: 0.8rem; } .tsp .rgrid .c { padding: 5px 4px; } }
+
+/* Technology matrix: rows = transduction technologies, columns = criteria; ✓ / ✗ / ~ cells tinted by verdict */
+.tsp .tm-wrap { overflow-x: auto; margin: 0.4rem 0 0.8rem; }
+.tsp table.tm { border-collapse: separate; border-spacing: 3px; font-size: 0.86rem; min-width: 560px; width: 100%; }
+.tsp .tm th { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; text-align: center; padding: 2px 4px; }
+.tsp .tm th.r { text-align: left; }
+.tsp .tm td { padding: 6px 8px; border-radius: 6px; background: var(--surface); text-align: center; }
+.tsp .tm td.r { text-align: left; font-weight: 600; white-space: nowrap; }
+.tsp .tm td.r small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11px; white-space: normal; }
+.tsp .tm td.ok { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); font-weight: 700; }
+.tsp .tm td.bad { background: color-mix(in srgb, var(--bad) 13%, var(--surface)); color: var(--bad); font-weight: 700; }
+.tsp .tm td.mid { color: var(--ink-2); }
+.tsp .tm tr.on td { outline: 2px solid var(--focus); }
+.tsp .tm-note { font-size: 0.85rem; color: var(--ink-2); margin: 0 0 0.8rem; }
+
+/* Sensor-signal lab: an indentation profile and what each transduction principle reports */
+.tsp .sig-row { display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; margin: 4px 0; }
+.tsp .sig-row .rl { font-size: 12.5px; font-weight: 600; }
+.tsp .sig-row .rl small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11px; }
+.tsp .sig-row svg { width: 100%; height: 44px; display: block; }
+.tsp .sig-row .tr { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; }
+.tsp .sig-row .base { stroke: var(--vz-axis); stroke-width: 1; }
+.tsp .sig-row .mark { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* Practice pages: task cards, timers, word clouds, the Aristotle illusion */
+.tsp .q { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c-trk); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1rem; }
+.tsp .q .kicker { color: var(--c-trk); }
+.tsp .q ul { margin-bottom: 0; }
+.tsp .steps { display: grid; gap: 6px; margin: 0.4rem 0 0.8rem; }
+.tsp .step { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; font-size: 0.95rem; }
+.tsp .step .n { font: 700 13px ui-monospace, "IBM Plex Mono", monospace; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); color: var(--c-trk); }
+.tsp .words { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.3rem 0 0.8rem; }
+.tsp .words span { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.tsp .words span.hi { background: color-mix(in srgb, var(--c) 16%, var(--surface)); border-color: color-mix(in srgb, var(--c) 40%, var(--line)); }
+.tsp .hands { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0.4rem 0 0.8rem; }
+.tsp .hand { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; }
+.tsp .hand b { display: block; font-size: 1rem; margin-bottom: 4px; }
+.tsp .hand svg { width: 100%; max-width: 240px; height: auto; display: block; margin: 4px auto 6px; }
+@media (max-width: 600px) { .tsp .hands { grid-template-columns: 1fr; } }
+.tsp .timeline { position: relative; display: grid; gap: 4px; margin: 0.4rem 0 1rem; }
+.tsp .tl-row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; font-size: 0.88rem; }
+.tsp .tl-row .rl { color: var(--ink-2); }
+.tsp .tl-track { position: relative; height: 22px; background: var(--surface); border-radius: 6px; }
+.tsp .tl-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; background: color-mix(in srgb, var(--c) 30%, var(--surface)); box-shadow: inset 0 -3px var(--c); display: grid; place-items: center; font: 600 11px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); white-space: nowrap; overflow: hidden; }
+.tsp .tl-today { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--focus); }
+.tsp .tl-axis { display: grid; grid-template-columns: 120px 1fr; gap: 10px; }
+.tsp .tl-axis .ax { position: relative; height: 16px; font-size: 10.5px; color: var(--ink-3); }
+.tsp .tl-axis .ax span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+@media (max-width: 600px) { .tsp .tl-row, .tsp .tl-axis { grid-template-columns: 76px 1fr; } }
+.tsp .code { font: 13px/1.5 ui-monospace, "IBM Plex Mono", monospace; background: var(--surface-2); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 0.3rem 0 0.9rem; white-space: pre; }
+.tsp .code .cm { color: var(--ink-3); }
+.tsp .code .kw { color: var(--vz-s1); }
+.tsp .code .nb { color: var(--vz-s2); }
+.tsp .net { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin: 0.4rem 0 0.4rem; }
+.tsp .net .ly { flex: 1 1 96px; max-width: 170px; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; border-top: 3px solid var(--c); font-size: 0.82rem; line-height: 1.3; }
+.tsp .net .ly b { display: block; font-size: 0.95rem; }
+.tsp .net .ly .sh { font: 600 12px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink-2); display: block; margin-top: 2px; }
+.tsp .net .ly .pr { color: var(--ink-3); font-size: 11px; }
+.tsp .mat { display: inline-grid; gap: 3px; font: 13px ui-monospace, "IBM Plex Mono", monospace; margin: 4px 10px 8px 0; vertical-align: middle; }
+.tsp .mat .cell { height: 26px; min-width: 34px; padding: 0 6px; }
+.tsp .mat .cell.t1, .tsp .mat .cell.t2, .tsp .mat .cell.t3 { color: var(--ink); }
+.tsp .matrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0.3rem 0 0.6rem; }
+.tsp .matrow .op { font-size: 1.2rem; color: var(--ink-3); padding: 0 4px; }
+.tsp .matrow .cap { font-size: 11px; color: var(--ink-3); text-align: center; }
+.tsp .mwrap { display: grid; gap: 2px; justify-items: center; }
+.tsp .check { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: start; margin: 4px 0; font-size: 0.93rem; }
+.tsp .check .bx { width: 18px; height: 18px; border: 2px solid var(--ink-3); border-radius: 5px; margin-top: 2px; }
+.tsp .proto { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0.4rem 0 1rem; }
+.tsp .pr-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; border-top: 3px solid var(--c); }
+.tsp .pr-card b { display: block; font-size: 1rem; }
+.tsp .pr-card .wh { display: grid; grid-template-columns: 52px 1fr; gap: 6px; margin-top: 6px; }
+.tsp .pr-card .wh dt { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); padding-top: 2px; }
+.tsp .pr-card .wh dd { margin: 0; }
+@media (min-width: 700px) { .tsp .proto { grid-template-columns: 1fr 1fr; } }
+
+/* Progress bars and level strips (same as the HPC pages) */
+.tsp .ag { display: grid; gap: 6px; }
+.tsp .agrow { display: grid; grid-template-columns: 96px 1fr 60px; gap: 8px; align-items: center; font-size: .9rem; }
+.tsp .agl { color: var(--ink-2); }
+.tsp .agtrack { background: var(--surface); border-radius: 4px; height: 16px; }
+.tsp .agbar { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--c); }
+.tsp .agv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.tsp .levels { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin: .5rem 0 .5rem; }
+.tsp .lv { flex: 1 1 130px; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; border-top: 3px solid var(--focus); }
+.tsp .lv .n { font-size: 1.5rem; font-weight: 700; line-height: 1.1; }
+.tsp .lv .t { font-weight: 600; font-size: .9rem; }
+.tsp .lv .d { font-size: .8rem; color: var(--ink-2); margin-top: 4px; line-height: 1.35; }
+.tsp .levels .x { align-self: center; font-size: 1.2rem; color: var(--ink-3); }
+@media (max-width: 600px) { .tsp .levels .x { display: none; } .tsp .lv { flex-basis: 40%; } .tsp .agrow { grid-template-columns: 76px 1fr 52px; } }
+.tsp .viz.bare { background: none; border: 0; padding: 0; margin: 0; }
+.tsp .lab .viz.bare svg { font-family: system-ui, sans-serif; }
+.tsp .tl-lab { position: absolute; top: 3px; font: 600 11px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink-2); white-space: nowrap; line-height: 16px; }
+.tsp .detail p code, .tsp .detail li code { overflow-wrap: anywhere; }

@@ -9,7 +9,10 @@ window.TSP = (function () {
   // Room of the session on a date (date rules in data.js), else the lecture room.
   const roomOn = date => CMS.sessions.filter(s => s.code === CODE).flatMap(s => U.occurrences(s)).find(o => o.date === date)?.room
     || CMS.sessions.find(s => s.code === CODE && s.day === 1).room;
-  const kindOf = topic => /^Exercise/.test(topic) ? "exe" : "lec";
+  const kindOf = topic => /Exercise/.test(topic) ? "exe" : "lec";
+  // Exercises: practices (in-class) and home exercises; n is a string key ("0", "x", "h1").
+  const exLabel = e => e.kind === "home" ? e.title : (e.n === "x" ? "Extra exercise" : `Exercise ${e.n}`) + (e.kind === "home" ? "" : " – " + e.title);
+  const exShort = e => e.kind === "home" ? `Home Exercise ${e.n.slice(1)}` : e.n === "x" ? "Extra exercise" : `Exercise ${e.n}`;
 
   // Status buttons; the key-dates strip only where asked for (the Orga page).
   function topbar(opts = {}) {
@@ -26,5 +29,5 @@ window.TSP = (function () {
       ${opts.dates ? `<div class="dates" aria-label="Key dates">${dates}</div>` : ""}
     </section>`;
   }
-  return { U, esc, CODE, m, c, st, today, fmt, daysUntil, roomOn, kindOf, topbar };
+  return { U, esc, CODE, m, c, st, today, fmt, daysUntil, roomOn, kindOf, exLabel, exShort, topbar };
 })();

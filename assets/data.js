@@ -2655,9 +2655,9 @@ window.CMS = {
     "web": "https://lasr.org/teaching",
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/45408092160"
    },
-   "note": "OPAL calendar: Mondays 9:20–10:50 in BEY/0245/H (lectures) and Tuesdays 9:20–10:50 in APB-E040 (exercises; 13 Oct in BEY/0137/U), 12 Oct – 19 Jan. Questions via teaching@lasr.org.",
+   "note": "OPAL calendar: lectures Mondays 9:20–10:50 in BEY/0245/H, exercises Tuesdays 9:20–10:50 in APB-E040 (exceptions: Lecture 2 on Tue 13 Oct in BEY/0137/U, Exercise 2 on Mon 26 Oct in BEY/0245/H), 12 Oct – 19 Jan. Questions via teaching@lasr.org.",
    "schedule": {
-    "src": "OPAL (course structure page, 2026-10-12, rechecked 2026-10-15: Lecture 3 moved to 19 Oct, Exercise 1 to 20 Oct, Exercise 2 to Mon 26 Oct in BEY/0245/H; exercise topics from the practice list, assuming Exercise n = Practice n−1)",
+    "src": "OPAL course structure page, rechecked 2026-10-27 (calendar changed on 20 Oct: Exercise 0 + 1 on 20 Oct, Exercise 2 on Mon 26 Oct, Extra Exercise on 27 Oct, then Exercise n on the Tuesday after Lecture n+1). Exercise topics follow the practice list; Exercise n = Practice n is confirmed up to Exercise 2, later ones are assumed",
     "rows": [
      [
       "2026-10-12",
@@ -2673,15 +2673,15 @@ window.CMS = {
      ],
      [
       "2026-10-20",
-      "Exercise 1: PyTorch and Deep Learning"
+      "Exercise 0 + 1: Intro · The importance of Touch in Humans and Robots"
      ],
      [
       "2026-10-26",
-      "Exercise 2: The importance of Touch in Humans and Robots"
+      "Exercise 2: Brief Introduction to the Physiology of Touch"
      ],
      [
       "2026-10-27",
-      "Exercise 3: Brief Introduction to the Physiology of Touch"
+      "Extra Exercise: PyTorch and Deep Learning"
      ],
      [
       "2026-11-02",
@@ -2689,7 +2689,7 @@ window.CMS = {
      ],
      [
       "2026-11-03",
-      "Exercise 4: Vision-based Tactile Sensors 1"
+      "Exercise 3: Vision-based Tactile Sensors 1"
      ],
      [
       "2026-11-09",
@@ -2697,7 +2697,7 @@ window.CMS = {
      ],
      [
       "2026-11-10",
-      "Exercise 5: Vision-based Tactile Sensors 2"
+      "Exercise 4: Vision-based Tactile Sensors 2"
      ],
      [
       "2026-11-16",
@@ -2705,7 +2705,7 @@ window.CMS = {
      ],
      [
       "2026-11-17",
-      "Exercise 6: Vision-based Tactile Sensors 3"
+      "Exercise 5: Vision-based Tactile Sensors 3"
      ],
      [
       "2026-11-23",
@@ -2713,7 +2713,7 @@ window.CMS = {
      ],
      [
       "2026-11-24",
-      "Exercise 7: Simulating Touch"
+      "Exercise 6: Simulating Touch"
      ],
      [
       "2026-11-30",
@@ -2721,7 +2721,7 @@ window.CMS = {
      ],
      [
       "2026-12-01",
-      "Exercise 8: Perception with Touch"
+      "Exercise 7: Perception with Touch"
      ],
      [
       "2026-12-07",
@@ -2729,7 +2729,7 @@ window.CMS = {
      ],
      [
       "2026-12-08",
-      "Exercise 9: ML for Touch 1"
+      "Exercise 8: ML for Touch 1"
      ],
      [
       "2026-12-14",
@@ -2737,7 +2737,7 @@ window.CMS = {
      ],
      [
       "2026-12-15",
-      "Exercise 10: ML for Touch 2"
+      "Exercise 9: ML for Touch 2"
      ],
      [
       "2027-01-04",
@@ -2745,7 +2745,7 @@ window.CMS = {
      ],
      [
       "2027-01-05",
-      "Exercise 11: ML for Touch 3"
+      "Exercise 10: ML for Touch 3"
      ],
      [
       "2027-01-11",
@@ -2753,7 +2753,7 @@ window.CMS = {
      ],
      [
       "2027-01-12",
-      "Exercise 12: Depth Estimation"
+      "Exercise 11: Depth Estimation"
      ],
      [
       "2027-01-18",
@@ -2761,7 +2761,7 @@ window.CMS = {
      ],
      [
       "2027-01-19",
-      "Exercise 13 (topic not listed yet)"
+      "Exercise 12 (topic not listed yet)"
      ]
     ]
    },
@@ -2772,8 +2772,8 @@ window.CMS = {
    "course": {
     "page": "touch-sensing.html",
     "rooms": {
-     "lecture": "BEY/0245/H (Mon)",
-     "exercise": "APB-E040 (Tue; 13 Oct in BEY/0137/U)"
+     "lecture": "BEY/0245/H (Mon; Lecture 2 on Tue 13 Oct in BEY/0137/U)",
+     "exercise": "APB-E040 (Tue; Exercise 2 on Mon 26 Oct in BEY/0245/H)"
     },
     "keyDates": [
      {
@@ -2783,8 +2783,13 @@ window.CMS = {
      },
      {
       "date": "2026-10-20",
-      "label": "First exercise (PyTorch)",
+      "label": "First exercise (Practice 0 + 1)",
       "kind": "exercise"
+     },
+     {
+      "date": "2026-10-26",
+      "label": "Home Exercise 1 released (Benchmarking Digital Touch)",
+      "kind": "deadline"
      },
      {
       "date": "2026-10-31",
@@ -2792,8 +2797,28 @@ window.CMS = {
       "kind": "deadline"
      },
      {
+      "date": "2026-11-13",
+      "label": "Home Exercise 1 due (OPAL upload until 14 Nov 00:15)",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-12-01",
+      "label": "Home Exercise 2 released",
+      "kind": "deadline"
+     },
+     {
       "date": "2026-12-14",
       "label": "Selma exam registration opens",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-12-18",
+      "label": "Home Exercise 2 due",
+      "kind": "deadline"
+     },
+     {
+      "date": "2027-01-11",
+      "label": "Home Exercise 3 released",
       "kind": "deadline"
      },
      {
@@ -2812,6 +2837,11 @@ window.CMS = {
       "kind": "deadline"
      },
      {
+      "date": "2027-01-29",
+      "label": "Home Exercise 3 due",
+      "kind": "deadline"
+     },
+     {
       "date": "2027-03-31",
       "label": "Selma registration closes (written exam, CMS-AAI-TSP)",
       "kind": "deadline"
@@ -2819,23 +2849,23 @@ window.CMS = {
     ],
     "grading": [
      {
-      "variant": "CMS-AAI-TSP",
+      "variant": "CMS-AAI-TSP (old regulation)",
       "how": "100 % written exam (90 min)",
       "selma": "14 Dec 2026 – 31 Mar 2027"
      },
      {
       "variant": "CMS-TRK-TSP (new study regulation)",
-      "how": "Portfolio",
+      "how": "Portfolio with a points-based grade: home exercises 20 points + oral exam 80 points, the final grade from the combined points (Practice 0)",
       "selma": "14 Dec 2026 – 25 Jan 2027"
      },
      {
-      "variant": "CMS old regulation (not AAI)",
+      "variant": "CMS old regulation (other tracks, not AAI)",
       "how": "80 % oral exam + 20 % home exercises",
       "selma": "14 Dec 2026 – 25 Jan 2027"
      }
     ],
     "homeExercises": 3,
-    "format": "12 lectures and 12 practices, all in English; prior knowledge of Python/PyTorch and Machine Learning 1 strongly recommended.",
+    "format": "12 lectures and 12 practices, all in English; prior knowledge of Python/PyTorch and Machine Learning 1 strongly recommended. Generative AI is allowed in the exercises, but its mistakes count as your mistakes. Bring a Linux laptop to the practices if you can.",
     "contact": "teaching@lasr.org (or the OPAL e-mail form; no direct personal e-mails)",
     "feedback": "https://forms.gle/stWPRCG7vm5j5Cpf7",
     "reading": [
@@ -2896,14 +2926,16 @@ window.CMS = {
       "title": "Brief Introduction to the Physiology of Touch",
       "date": "2026-10-13",
       "icon": "🧠",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "blurb": "How human touch works at the functional level: the five receptor families of the skin, the four mechanoreceptors sorted by depth, encapsulation and adaptation speed, the finger's resolution, and how little we know about the processing.",
+      "covered": true
      },
      {
       "n": 3,
       "title": "Touch Sensing Hardware",
       "date": "2026-10-19",
       "icon": "🔧",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "blurb": "How today's non-vision tactile sensors work: six evaluation criteria, the main transduction technologies (capacitive, resistive, piezoelectric, magnetic, optical) with their trade-offs, iSkin and BioTac as examples, and why force-torque sensors are not tactile sensors.",
+      "covered": true
      },
      {
       "n": 4,
@@ -2974,6 +3006,167 @@ window.CMS = {
       "date": "2027-01-18",
       "icon": "🎓",
       "blurb": "Recap of the course and preparation for the exam."
+     }
+    ],
+    "homeExerciseWindows": [
+     [
+      "2026-10-26",
+      "2026-11-13"
+     ],
+     [
+      "2026-12-01",
+      "2026-12-18"
+     ],
+     [
+      "2027-01-11",
+      "2027-01-29"
+     ]
+    ],
+    "colab": "https://colab.research.google.com/drive/1INJ8xYssAMQtjSgp9HnmTGZ1epadwCGO?usp=sharing",
+    "exercises": [
+     {
+      "n": "0",
+      "kind": "practice",
+      "title": "Intro to the practices",
+      "date": "2026-10-20",
+      "icon": "🧭",
+      "covered": true,
+      "blurb": "What the practice sessions are for, the three grading variants with their points, Selma registration windows, the topics of the practices, the three home-exercise windows and the rule on generative AI."
+     },
+     {
+      "n": "1",
+      "kind": "practice",
+      "title": "The importance of Touch in Humans and Robots",
+      "date": "2026-10-20",
+      "icon": "🫙",
+      "covered": true,
+      "blurb": "Recap of Lecture 1, then two group questions: what touch is useful for in everyday tasks, and the jar-and-string experiment with hands versus tweezers."
+     },
+     {
+      "n": "2",
+      "kind": "practice",
+      "title": "Brief Introduction to the Physiology of Touch",
+      "date": "2026-10-26",
+      "icon": "🪶",
+      "covered": true,
+      "blurb": "Recap of the receptors, then feel objects with closed eyes: which properties you sense, active versus passive touch, the Aristotle illusion, and the hand-out of Home Exercise 1."
+     },
+     {
+      "n": "x",
+      "kind": "practice",
+      "title": "PyTorch and Deep Learning",
+      "date": "2026-10-27",
+      "icon": "🔥",
+      "covered": true,
+      "blurb": "Colab warm-up for the ML parts of the course: tensor tasks and broadcasting, a LeNet-5 on MNIST, transfer learning with ResNet-18 on rock-paper-scissors, data augmentation and a validation split."
+     },
+     {
+      "n": "h1",
+      "kind": "home",
+      "title": "Home Exercise 1: Benchmarking Digital Touch",
+      "date": "2026-10-26",
+      "due": "2026-11-13",
+      "icon": "📏",
+      "covered": true,
+      "blurb": "Write a 2–4 page technical document that defines experiments and protocols for benchmarking tactile sensors, as if for a NIST standard. Released 26 Oct, due 13 Nov."
+     },
+     {
+      "n": "3",
+      "kind": "practice",
+      "title": "Vision-based Tactile Sensors 1",
+      "date": "2026-11-03",
+      "icon": "📷",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "4",
+      "kind": "practice",
+      "title": "Vision-based Tactile Sensors 2",
+      "date": "2026-11-10",
+      "icon": "🔍",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "5",
+      "kind": "practice",
+      "title": "Vision-based Tactile Sensors 3",
+      "date": "2026-11-17",
+      "icon": "🧿",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "6",
+      "kind": "practice",
+      "title": "Simulating Touch",
+      "date": "2026-11-24",
+      "icon": "🧪",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "7",
+      "kind": "practice",
+      "title": "Perception with Touch",
+      "date": "2026-12-01",
+      "icon": "👁️",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "h2",
+      "kind": "home",
+      "title": "Home Exercise 2",
+      "date": "2026-12-01",
+      "due": "2026-12-18",
+      "icon": "📝",
+      "blurb": "Not released yet. Window 1 – 18 Dec (Practice 0)."
+     },
+     {
+      "n": "8",
+      "kind": "practice",
+      "title": "ML for Touch 1",
+      "date": "2026-12-08",
+      "icon": "📈",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "9",
+      "kind": "practice",
+      "title": "ML for Touch 2",
+      "date": "2026-12-15",
+      "icon": "📊",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "10",
+      "kind": "practice",
+      "title": "ML for Touch 3",
+      "date": "2027-01-05",
+      "icon": "🧮",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "h3",
+      "kind": "home",
+      "title": "Home Exercise 3",
+      "date": "2027-01-11",
+      "due": "2027-01-29",
+      "icon": "📝",
+      "blurb": "Not released yet. Window 11 – 29 Jan (Practice 0)."
+     },
+     {
+      "n": "11",
+      "kind": "practice",
+      "title": "Depth Estimation",
+      "date": "2027-01-12",
+      "icon": "🗺️",
+      "blurb": "Not held yet."
+     },
+     {
+      "n": "12",
+      "kind": "practice",
+      "title": "Exercise 12 (topic not listed yet)",
+      "date": "2027-01-19",
+      "icon": "🎯",
+      "blurb": "Not held yet."
      }
     ]
    }

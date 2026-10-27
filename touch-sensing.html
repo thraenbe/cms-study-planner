@@ -15,16 +15,27 @@
 <header class="sitebar" data-page="course"></header>
 <div class="wrap" id="page"></div>
 <script>
-// Main page: header, status bar (OPAL/Selma), then one card per lecture plus the Orga card (SML-games grid).
-const { m, c, esc, U, CODE } = TSP;
-const cards = c.lectures.map(l => `<a class="game-card" href="touch-sensing/lecture.html?n=${l.n}">
+// Main page: header, status bar (OPAL/Selma), one card per lecture, one per practice / home exercise, plus the Orga card (SML-games grid).
+const { m, c, esc, U, CODE, fmt, today, exShort } = TSP;
+const when = (d, extra) => `<p class="when">${fmt(d)}${extra ? ` · ${extra}` : ""}</p>`;
+const lectures = c.lectures.map(l => `<a class="game-card lec ${l.covered ? "" : "soon"}" href="touch-sensing/lecture.html?n=${l.n}">
     <div class="game-icon">${l.icon}</div>
     <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
+    ${when(l.date, l.date > today ? "upcoming" : l.covered ? "write-up" : "slides pending")}
     <p>${esc(l.blurb)}</p>
-  </a>`).join("") + `<a class="game-card" href="touch-sensing/orga.html">
+    ${U.doneBox(`${CODE}:lecture:${l.n}`)}
+  </a>`).join("");
+const exercises = c.exercises.map(e => `<a class="game-card ${e.kind === "home" ? "home" : "exe"} ${e.covered ? "" : "soon"}" href="touch-sensing/exercise.html?n=${e.n}">
+    <div class="game-icon">${e.icon}</div>
+    <h2>${e.kind === "home" ? esc(e.title) : `${exShort(e)} – ${esc(e.title)}`}</h2>
+    ${e.kind === "home" ? when(e.date, `due ${fmt(e.due)}`) : when(e.date, e.date > today ? "upcoming" : e.covered ? "write-up" : "slides pending")}
+    <p>${esc(e.blurb)}</p>
+    ${U.doneBox(`${CODE}:exercise:${e.n}`)}
+  </a>`).join("");
+const orga = `<a class="game-card" href="touch-sensing/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
-    <p>Next session, exam variants and Selma dates, the full schedule, material, reading list and contacts.</p>
+    <p>Next session, exam variants and Selma dates, the full schedule, home-exercise windows, material, reading list and contacts.</p>
   </a>`;
 document.getElementById("page").innerHTML = `
   <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
@@ -33,7 +44,13 @@ document.getElementById("page").innerHTML = `
     <p class="subtitle">${CODE} · ${esc(CMS.semester)} · Prof. Roberto Calandra &amp; Robin Koch · TU Dresden</p>
   </header>
   ${TSP.topbar()}
-  <main class="game-cards">${cards}</main>`;
+  <main>
+    <div class="board-h"><h2>Lectures</h2><span class="muted">Mondays 9:20 · ${esc(c.rooms.lecture.split(" (")[0])} · ${c.lectures.filter(l => l.covered).length} of ${c.lectures.length} written up</span></div>
+    <div class="game-cards">${lectures}${orga}</div>
+    <div class="board-h"><h2>Practices &amp; home exercises</h2><span class="muted">Tuesdays 9:20 · ${esc(c.rooms.exercise.split(" (")[0])} · ${c.exercises.filter(e => e.covered).length} of ${c.exercises.length} held or released</span></div>
+    <div class="game-cards">${exercises}</div>
+  </main>`;
+U.wireDone();
 </script>
 </body>
 </html>
