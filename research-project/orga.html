@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · Orga</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+</head>
+<body class="rp">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, fmtLong, daysUntil, today, cite, paperUrl } = RP;
+const KC = { milestone: "var(--rp-accent)", deadline: "var(--warn)", meeting: "var(--c-core)", paper: "var(--c-sem)" };
+const tl = c.keyDates.map(k => `<li class="${k.date < today ? "past" : ""}" style="--c:${KC[k.kind]}"><span class="d">${fmt(k.date)}</span><span class="dot"></span><span><b>${esc(k.label)}</b><small>${k.kind}</small></span></li>`).join("");
+const next = c.keyDates.find(k => k.date >= today);
+const nextHTML = next ? `<div class="box"><p class="muted" style="margin:0">Next · in ${daysUntil(next.date)} days · ${fmt(next.date)}</p><p style="font-size:1.15rem;font-weight:700;margin:.35rem 0 0">${esc(next.label)}</p></div>`
+  : `<div class="box"><p style="margin:0 0 .3rem"><b>No dated milestone ahead.</b></p><p style="margin:0" class="muted">The public project page lists the application phase only; interim and final deadlines come from the supervisor. Add them here (data.js, modules["CMS-PRO"].course.keyDates) as soon as they are agreed.</p></div>`;
+const ctx = [["Local", "the description of the function to write"], ["Structural", "file, class and package structure"], ["Dependency", "APIs, libraries, imports"], ["Semantic", "requirements and intent"]];
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <div class="big-icon">🗂️</div><h1>Orga</h1>
+  <p class="meta">Everything organisational about ${esc(m.name)} (${CODE}, ${m.lp} LP, ${esc(CMS.semester)}): the project brief, team, timeline, how the group works, and grading.</p>
+  ${RP.topbar({ dates: true })}
+  <h2>Your project</h2>
+  <div class="box">
+    <p style="margin:0 0 .4rem"><b>${esc(c.project)}</b> · ${esc(c.group)}</p>
+    <p style="margin:0 0 .4rem"><b>Supervisor:</b> ${esc(c.supervisor)}. <b>Team:</b> four students, allocated on ${fmtLong("2026-10-19")} (the topic was advertised for two, the final allocation names four).</p>
+    <p style="margin:0"><b>Deliverable:</b> ${esc(c.deliverable)}</p>
+  </div>
+  <p>${esc(c.goal)}</p>
+  <h3>The four context types of the brief</h3>
+  <div class="ctx-map">${ctx.map(([a, b]) => `<div><b>${a} context</b>${b}</div>`).join("")}</div>
+  <h3>Research questions</h3>
+  <ol>${c.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ol>
+  <p class="muted">Prerequisites named in the brief: ${esc(c.prereq)}</p>
+  <h2>Next</h2>
+  ${nextHTML}
+  <h2>Timeline so far</h2>
+  <ul class="timeline">${tl}</ul>
+  <p class="muted">Dates from the group's public project page and the allocation e-mail. The page gives no interim, report or presentation dates; those are agreed with the supervisor.</p>
+  <h2>How the group works</h2>
+  <p>${esc(c.format)}</p>
+  <ul>
+    <li><b>What you can expect:</b> a clear scope with milestones and concrete next steps, regular feedback rounds, an emphasis on reproducibility, and visibility for strong results (talks, demos, announcements).</li>
+    <li><b>What is expected of you:</b> read papers and turn ideas into experiments, keep the repository clean and runs reproducible, evaluate rigorously against baselines (with ablations or an error analysis where they make sense), and flag problems and realistic timelines early.</li>
+    <li><b>Before registration:</b> a short exposé with motivation and research questions, related work, the planned approach, the planned evaluation and a schedule.</li>
+    <li><b>Writing:</b> paper-style writing starts early; students are co-authors of the resulting publication, with roles clarified at the start.</li>
+  </ul>
+  <h2>Exam &amp; grading</h2>
+  <p>From the module description: the module is examined by a project assignment of 240 hours, there is no written exam. The grade is the grade of the assignment. The deliverable of this topic is the case-study paper. Module registration in Selma is separate; the period is not announced yet.</p>
+  <div class="grades">${c.grading.map(g => `<div class="box" style="margin:.4rem 0 .8rem"><b>${esc(g.variant)}</b><br>${esc(g.how)}<div class="muted" style="font-size:.9rem">Selma: ${esc(g.selma)}</div></div>`).join("")}</div>
+  <h2>Reading list</h2>
+  <ul class="refs">${c.papers.map(p => `<li><a href="${paperUrl(p)}">${esc(cite(p))}</a>${p.date ? ` — shared ${fmt(p.date)}` : ""}</li>`).join("")}</ul>
+  <h2>Module description</h2>
+  ${U.moduleInfoHTML(CODE)}
+  <h2>Material &amp; links</h2>
+  <div class="links">
+    <a href="${c.coursePage}" target="_blank" rel="noopener">Student research projects WS 2026/27: topics, process, application ↗</a>
+    <a href="${c.howWeWork}" target="_blank" rel="noopener">How the group works with students ↗</a>
+  </div>
+  <h2>Contact</h2>
+  <p>${esc(c.contact)}.</p>
+  <p class="foot muted">Project facts from the group's public pages and the allocation e-mail as of ${CMS.updated}; meeting dates and deadlines are agreed with the supervisor and go into the key dates above.</p>`;
+</script>
+</body>
+</html>

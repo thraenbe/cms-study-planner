@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · Paper: LLM-assisted code generation and reuse</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<script src="research-project/paper-software-reuse-variability.js"></script>
+<style>
+/* Chart colours: dataviz reference palette, validated on the site's chart surface (#efede7 light, #2a2a27 dark).
+   Slots 1–3 categorical (generation, reuse, integration tests); --vz-r1…r5 one blue ramp for 20…100 % (sequential). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7;
+  --vz-r1: #6da7ec; --vz-r2: #3987e5; --vz-r3: #256abf; --vz-r4: #184f95; --vz-r5: #0d366b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835;
+  --vz-r1: #1c5cab; --vz-r2: #2a78d6; --vz-r3: #5598e7; --vz-r4: #86b6ef; --vz-r5: #b7d3f6; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835;
+  --vz-r1: #1c5cab; --vz-r2: #2a78d6; --vz-r3: #5598e7; --vz-r4: #86b6ef; --vz-r5: #b7d3f6; }
+</style>
+</head>
+<body class="rp">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { m, c, esc, U, CODE, fmt, cite } = RP;
+const { chart, leg, key, tbl, mountCharts, watch } = RPViz;
+const { CTX, CTX_LONG, TASKS, COMPILE_TOTAL, gridTable, ctxTable, testsTable, GRID } = PAPER;
+const p = c.papers.find(x => x.slug === "software-reuse-variability");
+const sec = (n, t) => `<h2 id="s${n}"><span class="sec">§ ${n}</span>${t}</h2>`;
+// A paragraph with a margin note: what the paper does not say (our reading of it, context, what it means for the project).
+const note = (html, tag, mn) => `<div class="note">${html}<aside class="mn"><span class="tag">${tag}</span>${mn}</aside></div>`;
+const rampLegend = `<div class="legend"><span class="li"><span class="ramp"><i style="background:var(--surface);border:1px solid var(--line)"></i><i style="background:var(--vz-r1)"></i><i style="background:var(--vz-r2)"></i><i style="background:var(--vz-r3)"></i><i style="background:var(--vz-r4)"></i><i style="background:var(--vz-r5)"></i></span><span class="lt">0 → 100 %</span></span><span class="li">${key(1)}<span class="lt">generation rows</span></span><span class="li">${key(2)}<span class="lt">reuse rows</span></span><span class="li"><span class="key ring"></span><span class="lt">no run compiled: no test result</span></span></div>`;
+const toggles = `<div class="toggles" role="group" aria-label="What the grid shows"><button class="tg" type="button" data-mode="compile" aria-pressed="true">Compiled (Table 2)</button><button class="tg" type="button" data-mode="tests" aria-pressed="false">Tests passed if compiled (Table 3)</button></div>`;
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Paper 1 · shared by the supervisor on ${fmt(p.date)} · ${p.year}</p>
+    <h1>${esc(p.title)}</h1>
+    <p class="authors">${p.authors.map(a => esc(a)).join(", ")}</p>
+    <p class="venue">University of Haifa · Sapir Academic College · Shamoon College of Engineering · TU Dresden. ${esc(p.venue)}; Marina Litvak is your supervisor.</p>
+    <div class="kw">${["LLM-assisted development", "code generation", "software reuse", "contextual information", "empirical study"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <div class="abstract"><span class="h">In one paragraph.</span>An LLM can only reason over the context it is given, and a real codebase never fits, so somebody has to choose what to send. The paper asks which <em>kind</em> of context helps, and whether the answer differs between writing a feature from scratch (generation) and adapting the same feature from a sibling program (reuse). Three features are implemented inside existing Java games from the apo-games product line, under all eight combinations of structural, behavioural and functional context, five single-shot runs each, 240 runs in total. The headline is sobering: only 40 % of the runs compile once wired into the target game, while the ones that compile pass 72 % of their tests. Generation and reuse end up close (43 % vs 36 % compiled; 74 % vs 71 % tests), the task matters more than the strategy, and context is a double-edged sword: lean context helps generation, rich combined context helps reuse.</div>
+
+  ${sec(0, "The whole study in one grid")}
+  <p class="lead">Every number the paper reports lives in two tables with the same shape: strategy × task down the side, context combination across the top. This is both of them, redrawn. Hover or tab through a cell for the runs behind it.</p>
+  ${chart("grid", rampLegend, toggles, `Rows: the three tasks for each strategy, then the strategy's total and the overall row. Columns: the eight context combinations (S = structural, B = behavioural, F = functional) and the row total. Five runs per cell, so a compilation rate moves in steps of 20 %; the test rate is a mean over the cell's compiled runs only. Darker (light mode) or lighter (dark mode) means higher.`)}
+  ${gridTable()}
+  <div class="hero-fig"><div class="n">40 %</div><div class="t"><b>of 240 single-shot runs compiled</b> after being integrated into the target game. In 8 of the 48 conditions not a single run compiled. The code that did compile passed <b>72 %</b> of its unit and integration tests on average. The paper's one-line reading: in a single shot, wiring code into an existing system is harder than getting its logic right.</div></div>
+
+  ${sec(1, "Why this paper exists")}
+  ${note(`<p>Two observations motivate the study. First, assistants are mostly used to <em>generate</em> new code, although software engineering has spent decades learning to <em>reuse</em> existing assets (product lines, components, microservices); AI workflows give little support for retrieving, adapting and integrating something that already exists. Second, whatever the strategy, an LLM only sees the slice of the system it is given. Today that slice is chosen by machinery (retrieval pipelines, agent context files such as AGENTS.md, agentic frameworks) that treats context as undifferentiated text and optimises its amount and similarity, not its <em>type</em>. Whether structural, behavioural or functional information helps, and whether it helps generation and reuse equally, had not been measured.</p>`, "project link", `This is exactly the gap your brief names: which context types matter, whether more context can overload the model, and whether retrieval improves reuse. The paper is the supervisor's own first cut at those questions.`)}
+  <h3>Where it sits in the literature</h3>
+  <p>The related-work section walks a progression: context in the prompt, then retrieval-augmented generation that fetches project artefacts at inference time, then agentic systems that combine retrieval, tools and orchestration, with context files as explicit, developer-written constraints. Each step treats context as a fixed design choice of the system rather than a variable to experiment with.</p>
+  <ol class="steps">
+    <li><div><b>Prompt-based context</b>Whatever the developer pastes in. Benchmarks such as HumanEval test self-contained functions, with no integration burden at all.</div></li>
+    <li><div><b>Retrieval-augmented generation</b>Relevant files or snippets are fetched for each request. Recent work shows context- and API-aware retrieval beating plain similarity search, so the kind of context already matters.</div></li>
+    <li><div><b>Agentic architectures and context files</b>Retrieval, tool use and orchestration together; AGENTS.md-style files encode architectural constraints and conventions, but inconsistently and with unmeasured effect.</div></li>
+  </ol>
+  ${note(`<p>The paper also quotes a benchmark figure to set expectations: on HumanEval, the share of generated functions that pass all hidden tests ranges from about two thirds down to under a third, and that is for standalone functions with no system to fit into.</p>
+  ${chart("humaneval", "", "", `HumanEval pass@1 for three assistants as cited in the paper (their reference 27); one series, so no legend. The study's own setting is harder: the code must compile inside an existing game.`)}`, "context", `Not on the paper's agenda but useful to know: these three numbers come from a 2023 evaluation and the assistants have moved on since. Treat them as an order of magnitude, not a ranking to cite.`)}
+  <h3>Software transplantation</h3>
+  <p>A neighbouring line of work the paper points to: moving a feature from a donor program into a host that lacks it, including across the products of a cloned family, using program slicing and search to decide what to extract and where to implant it. The paper's reuse condition is a lightweight, LLM-driven version of the same idea.</p>
+
+  ${sec(2, "How the study is built")}
+  <h3>Variables</h3>
+  <div class="vs">
+    <div style="--c:var(--vz-s1)"><b>Independent variables</b><ul><li><div><b>Context type:</b> structural (modules, classes, interfaces, dependencies), behavioural (control flow, interactions, call sequences, state constraints), functional (responsibilities, features, externally visible behaviour); supplied in every subset.</div></li><li><div><b>Development strategy:</b> generation (new implementation from task and context) or reuse (retrieve, adapt and integrate a related system's artefacts).</div></li></ul></div>
+    <div style="--c:var(--vz-s2)"><b>Dependent variables</b><ul><li><div><b>Syntactic validity:</b> the target system compiles after integration (yes/no per run).</div></li><li><div><b>Semantic correctness:</b> share of the task's predefined tests that pass, measured only for runs that compiled.</div></li></ul></div>
+  </div>
+  ${note(`<p>The design is a full factorial: every task is run with every strategy under every context combination, five times each.</p>
+  ${chart("design")}`, "context", `Five runs per condition is small, and the paper says so: it reports percentages descriptively and computes no significance tests or effect sizes. Read 20-point differences inside one cell as one run.`)}
+  <h3>Dataset: apo-games</h3>
+  <p>A curated collection of open-source Java games originally published as a variability challenge for product-line engineering. The games share a technology stack and architectural style, come from the same domain and overlap in functionality, yet keep system-specific behaviour and internals. That is what makes both strategies plausible: shared features give reuse something to retrieve, system-specific behaviour makes adaptation non-trivial. A game typically has core logic (game loop, state, scoring), domain entities (players, obstacles, levels), shared utility and framework-like classes, and event handling and rendering that interact at runtime.</p>
+  <h3>Three tasks, three features that cut across games</h3>
+  <p>Each task implants a cross-game feature into a target game, with a sibling game as the source for reuse: <b>Options</b> (persistent language and sound settings applied at runtime), <b>Highscore</b> (a persistent ranked leaderboard fed by the game's scoring) and <b>Achievements</b> (milestone tracking driven by in-game events). Each comes with unit tests (default state, thresholds, isolation across sessions) and integration tests (the feature is reachable from the running game, reads live game objects, is triggered by the game loop).</p>
+  <div class="two">
+    ${chart("taskCompile", leg([[1, "generation"], [2, "reuse"]]))}
+    ${chart("taskTests", leg([[1, "unit tests"], [3, "integration tests"]]))}
+  </div>
+  <figcaption class="muted" style="font-size:.85rem;margin:-.6rem 2px 1rem">Left: share of the 40 runs per task and strategy that compiled (Table 2 row totals). Right: size of each task's test suite (Table 1); the Achievements suite is the largest and, the paper notes, heavy on negative and idempotence cases.</figcaption>
+  ${tbl("Table view: the three tasks (Table 1 and Table 2 row totals)", ["Task", "Source → target", "Unit tests", "Integration tests", "Compiled, generation", "Compiled, reuse"], TASKS.map(t => { const i = PAPER.TASK_INFO[t]; return { cells: [t, `${i.from} → ${i.to}`, i.unit, i.integ, `${PAPER.COMPILE_ROW.Generation[t]} %`, `${PAPER.COMPILE_ROW.Reuse[t]} %`] }; }))}
+  <h3>The prompt and the run</h3>
+  ${note(`<p>Both strategies use one template with five parts: a role (a Java developer on the target game), the feature specification, task and instructions, a pointer to the typed context files of the condition, and the public members the feature must expose so the tests can reach it. Every prompt also carries the source of the target game's most relevant classes. Reuse differs only in the task part: it attaches the source game's implementation of the feature and asks the model to reuse, extend and configure it before writing anything new.</p>
+  ${chart("pipeline")}`, "context", `“Single shot” is the key constraint: no retries, no compiler feedback, no agent loop. Most of today's tools would at least re-run the compiler. The authors chose it to isolate the effect of context; it also explains the low compile rates.`)}
+  <h3>Where the context comes from</h3>
+  <p>The three context types are not hand-written: a static-analysis pipeline built on regular expressions parses each game, records per class its parent, fields, assets and methods and per method its outgoing calls, field-assignment hints and documented intent, propagates parent fields into child modules, and splits the result into three JSON files. For reuse, a slicing step first narrows the source game to the classes of the feature being moved, by matching the feature name against module names and role tags and pulling in parents and dependencies transitively.</p>
+  ${chart("extract", "", "", `The static-analysis pipeline of the paper, redrawn. Inheritance is resolved before the split, so a child module carries its parent's fields.`)}
+  ${note(`<p>The model is Gemini 3.1 Flash Lite, chosen for cost. Each of the 48 conditions is executed five times; the output is reintegrated into the target game and compiled and tested automatically, with no manual fixes or iterative prompting.</p>`, "pitfall", `Regex-based extraction is noisy and the paper lists it as a threat to validity, with AST-based extraction as the obvious next step. For your pipeline that argues for tree-sitter or a language server from day one.`)}
+
+  ${sec(3, "What came out")}
+  <h3>Syntactic correctness: integration is the bottleneck</h3>
+  ${chart("waffle", "", "", `All 240 runs, one square each, in the order of the paper's tables; 52 of 120 generation runs and 43 of 120 reuse runs compiled (43 % vs 36 %). Hover a panel for the counts.`)}
+  <p>The strategies differ modestly, the tasks a lot: Options compiles most often (54 % overall), Highscore next (38 %), Achievements least (28 %). The paper's reading is that this tracks how much integration a feature needs. A feature that must hook into game state, lifecycle events and runtime data is harder to wire in than a self-contained one.</p>
+  <h3>Context works differently for the two strategies</h3>
+  ${chart("ctx", leg([[1, "generation"], [2, "reuse"]]), "", `Compilation rate per context combination, 15 runs each (Table 2 strategy totals). The dotted marks in the first row are the two no-context baselines, 40 % and 27 %.`)}
+  ${ctxTable()}
+  ${note(`<p>For <b>generation</b>, structural context alone is best (67 %), functional alone next (60 %); behavioural context hurts, alone (27 %) and even more combined with structural (13 %), both below the no-context baseline of 40 %. For <b>reuse</b>, the baseline is low (27 %) and nearly every configuration improves on it, the richest one most (S+F+B: 53 %); only F+B (20 %) falls below.</p>`, "our reading", `The behavioural file lists calls, logic hints and numeric literals of the existing code. One plausible mechanism, not claimed by the paper: for generation it competes with the code the model is writing and invites wrong wiring; for reuse it describes exactly what the retrieved artefact has to be aligned with.`)}
+  <p>The same numbers as the design sees them: the eight combinations form a lattice from no context to all three. Each node is split, generation on the left, reuse on the right.</p>
+  ${chart("lattice", rampLegend)}
+  <h3>Semantic correctness: high, but on thin ice</h3>
+  <p>Among runs that compiled, 72 % of tests pass on average: 74 % for generation, 71 % for reuse. By task, Highscore leads (84 % and 80 %), Options follows (76 % both), Achievements trails (62 % and 57 %) under both strategies. The context effect is modest and, again, strategy-dependent: for generation most configurations beat the baseline of 71 %, S+B (88 %) and S+F (82 %) most, while the richest context is the weakest (55 %); for reuse behavioural (83 %) and functional (80 %) are the strongest single types and everything beats the baseline of 61 %.</p>
+  ${chart("tests", leg([[1, "generation"], [2, "reuse"]]) + `<div class="legend"><span class="li"><span class="lt">dot size = number of compiled runs behind the mean (2 to 10 of 15)</span></span></div>`, "", `Mean test pass rate per context (Table 3 strategy totals), axis from 40 %. Only the baselines and the two extremes are labelled; the rest is in the tooltip and the table.`)}
+  ${testsTable()}
+  <div class="callout warn"><h3>Worked example: how much is 88 % worth?</h3>
+    <p>Generation with structural + behavioural context has the best test rate of the whole study, 88 %. Read it against Table 2: in that column only 13 % of 15 generation runs compiled, that is <b>two runs</b> (0 of 5 for Achievements, 0 of 5 for Options, 2 of 5 for Highscore). The 88 % is the mean of those two Highscore runs. The paper flags this itself: several means rest on one or two runs and are indicative at best. The dot plot above makes the evidence visible as size, which is why its smallest dot carries its largest number.</p></div>
+  <div class="callout"><h3>Worked example: reading one cell end to end</h3>
+    <p>Take generation, Options, S+B. Table 2 says 0 %: none of the five runs compiled inside ApoBot, so there is nothing to test and Table 3 shows “–”. Now Options under reuse with S+F: 100 %, all five runs compiled, and those five passed 78 % of the task's 10 tests on average, so roughly 8 of 10 per run. Column totals are not averages of the three task percentages but of the runs: generation with S alone compiled 3 + 4 + 3 = 10 of 15 runs, 67 %.</p></div>
+
+  ${sec(4, "What the authors make of it")}
+  <p>Both strategies are viable and broadly comparable; the task is a stronger predictor of the outcome than the strategy. The gap between the two measures is the key observation: in a single shot, producing correct logic is less of a problem than wiring it into the target system. Context supports the alignment of a retrieved artefact in reuse but can compete with the code that already exists in generation; behavioural context in particular degrades generation's compilation sharply and the richest context does not help its semantics. The consistently weak Achievements results under reuse (23 % compiled, 57 % tests) hint that some adaptation barriers are not a context problem at all but a question of which artefact to retrieve and how well it matches.</p>
+  <h3>Threats to validity, as the paper lists them</h3>
+  <ul>
+    <li><div><b>Single-shot prompting</b> isolates the context effect but does not reflect how assistants are used.</div></li>
+    <li><div><b>Regex-based extraction</b> may introduce noise; AST-based extraction is the next step.</div></li>
+    <li><div><b>Five runs per condition</b>: descriptive percentages only, no significance tests or effect sizes.</div></li>
+    <li><div><b>Correctness only</b>: maintainability, security and architectural quality are out of scope, and small test suites may miss behaviour.</div></li>
+    <li><div><b>One dataset, one language, three tasks</b> limit generalisation; in exchange the setup is controlled.</div></li>
+  </ul>
+
+  ${sec(5, "Where they want to go next")}
+  <ol>
+    <li>Replicate with more LLMs, datasets and tasks.</li>
+    <li>Check the quality of the automatically extracted context; human-curated or validated context as an upper bound.</li>
+    <li>Analyse qualitatively what breaks at compile time: unresolved references, contract violations, misplaced wiring. Can typed context fix them, or does it take repair loops?</li>
+    <li>Broaden the quality dimensions beyond correctness.</li>
+    <li>Move from single-shot to iterative or agentic workflows and study how context interacts with the process over time.</li>
+  </ol>
+
+  ${sec(6, "What this means for your project")}
+  <p class="lead">The paper is a template for the case study you are asked to write, and its loose ends are candidate contributions.</p>
+  <h3>The brief's four context types against the paper's three</h3>
+  <div class="ctx-map">
+    <div><b>Local context</b>the function description. The paper's feature specification and required public members play this role inside the prompt; it is never varied.</div>
+    <div><b>Structural context</b>file, class, package. Maps directly onto the paper's structural type (module, parent, fields, assets), the type that helped generation most.</div>
+    <div><b>Dependency context</b>APIs, libraries, imports. Partly the paper's behavioural type (outgoing calls), partly structural (dependencies). Worth separating: the paper's worst generation results came from the behavioural file.</div>
+    <div><b>Semantic context</b>requirements and intent. The paper's functional type (role tags, documented intent); second-best for generation, strong for reuse.</div>
+  </div>
+  <h3>Worth borrowing</h3>
+  <ul>
+    <li><div><b>The factorial design</b> with every context subset, and the two-level measurement: compiles after integration, then tests passed. Report run counts next to every mean.</div></li>
+    <li><div><b>The prompt template</b>: role, feature, task and instructions, context pointer, required public members. Keep everything but the context fixed across conditions.</div></li>
+    <li><div><b>Typed context as separate files</b>, so a condition is just a choice of files; and a reuse condition that attaches a retrieved artefact.</div></li>
+    <li><div><b>The apo-games benchmark</b> if the project stays in Java: the tasks, tests and extraction pipeline exist, and the group can compare against this paper directly.</div></li>
+  </ul>
+  <h3>Where your project can go beyond it</h3>
+  <ul>
+    <li><div><b>Retrieval instead of hand-picked context</b>: the brief's RQ 3. The paper supplies the whole typed context of a condition; a RAG pipeline selects by relevance, and the open question is whether selection by type beats selection by similarity.</div></li>
+    <li><div><b>Overload as a measured variable</b>: the brief's RQ 2. The paper already sees it (S+B at 13 %); vary the amount within a type, not just the types.</div></li>
+    <li><div><b>Tree-sitter or language-server extraction</b> instead of regex, and more than one model, more than five runs.</div></li>
+    <li><div><b>Compile-error taxonomy</b>: the paper's own future-work item 3; cheap to do with the runs you will have anyway.</div></li>
+    <li><div><b>Single shot versus one repair loop</b>: a second axis that most tools already have.</div></li>
+  </ul>
+  <h3>Questions to take to the supervisor</h3>
+  <ul class="qa">
+    <li><b>Is this paper the baseline we extend?</b><small>Same dataset, tasks and extraction pipeline, or a new codebase (Python?) with the design transferred.</small></li>
+    <li><b>Which of the five future-work directions is ours?</b><small>Retrieval and overload match the brief; the error taxonomy is low-hanging.</small></li>
+    <li><b>Can we get the experimental material?</b><small>The paper links a full package (prompts, context files, tests). It would save weeks.</small></li>
+    <li><b>Which models and how many runs?</b><small>Cost decided on Flash Lite and five runs; what budget does the group have, and does it include a stronger model?</small></li>
+    <li><b>How is “usability” in the brief to be measured?</b><small>The paper measures correctness only; usability needs a definition before the design is fixed.</small></li>
+  </ul>
+
+  <h2 id="ref"><span class="sec">ref</span>Citation</h2>
+  <p class="refs">${esc(cite(p))}. Manuscript in Springer LNCS format, 10 pages, 28 references; the venue is not stated in the file you received. Numbers on this page are the paper's Tables 1–3; margin notes marked <em>context</em>, <em>our reading</em>, <em>pitfall</em> or <em>project link</em> are ours, not the authors'.</p>
+  <p class="foot muted">Write-up of the paper in our own words; the PDF itself is not published here. Last checked against the paper on ${fmt("2026-10-27")}.</p>`;
+
+mountCharts(); watch();
+// Grid toggle: compile rate or test pass rate.
+document.querySelectorAll(".tg[data-mode]").forEach(b => b.addEventListener("click", () => {
+  GRID.mode = b.dataset.mode;
+  document.querySelectorAll(".tg[data-mode]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  RPViz.mount(document.querySelector('[data-chart="grid"]'));
+}));
+</script>
+</body>
+</html>
