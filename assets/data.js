@@ -200,7 +200,7 @@ window.CMS = {
    },
    "note": "Late start: lecture Wednesdays, 2nd DS (09:20–10:50) from 21 Oct, moved to HÜL/S186/H because of the number of participants. You are in the Wednesday exercise group, 1st DS (07:30–09:00), in the same room, from 28 Oct. Exercise sheets are OPAL online exercises, usually published a week ahead; solve them before your exercise. Slides, exercises and exam modalities are announced in OPAL.",
    "schedule": {
-    "src": "lecture dates and topics from the OPAL course page (WiSe 2026/27); exercise start dates from the OPAL news of 9 Oct; your group from the OPAL registration page (22 Oct); exercise topics follow the online exercises in OPAL",
+    "src": "lecture dates and topics from the OPAL course page (WiSe 2026/27); exercise start dates from the OPAL news of 9 Oct; your group from the OPAL registration page (22 Oct); exercise numbers follow OPAL, which numbers the online exercises by course week (the first one is Exercise 02)",
     "rows": [
      [
       "2026-10-14",
@@ -214,7 +214,7 @@ window.CMS = {
      ],
      [
       "2026-10-28",
-      "Exercise 1 (Wednesday group, 07:30)",
+      "Exercise 02: Basics of Parallelism and Amdahl's Law (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -224,7 +224,7 @@ window.CMS = {
      ],
      [
       "2026-11-04",
-      "Exercise 2 (Wednesday group, 07:30)",
+      "Exercise 03 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -234,7 +234,7 @@ window.CMS = {
      ],
      [
       "2026-11-11",
-      "Exercise 3 (Wednesday group, 07:30)",
+      "Exercise 04 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -249,7 +249,7 @@ window.CMS = {
      ],
      [
       "2026-11-25",
-      "Exercise 4 (Wednesday group, 07:30)",
+      "Exercise 05 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -259,7 +259,7 @@ window.CMS = {
      ],
      [
       "2026-12-02",
-      "Exercise 5 (Wednesday group, 07:30)",
+      "Exercise 06 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -269,7 +269,7 @@ window.CMS = {
      ],
      [
       "2026-12-09",
-      "Exercise 6 (Wednesday group, 07:30)",
+      "Exercise 07 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -279,7 +279,7 @@ window.CMS = {
      ],
      [
       "2026-12-16",
-      "Exercise 7 (Wednesday group, 07:30)",
+      "Exercise 08 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -294,7 +294,7 @@ window.CMS = {
      ],
      [
       "2027-01-06",
-      "Exercise 8 (Wednesday group, 07:30)",
+      "Exercise 09 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -304,7 +304,7 @@ window.CMS = {
      ],
      [
       "2027-01-13",
-      "Exercise 9 (Wednesday group, 07:30)",
+      "Exercise 10 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -314,7 +314,7 @@ window.CMS = {
      ],
      [
       "2027-01-20",
-      "Exercise 10 (Wednesday group, 07:30)",
+      "Exercise 11 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -324,7 +324,7 @@ window.CMS = {
      ],
      [
       "2027-01-27",
-      "Exercise 11 (Wednesday group, 07:30)",
+      "Exercise 12 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -334,7 +334,7 @@ window.CMS = {
      ],
      [
       "2027-02-03",
-      "Exercise 12 (Wednesday group, 07:30)",
+      "Exercise 13 (Wednesday group, 07:30)",
       "exe"
      ],
      [
@@ -358,7 +358,8 @@ window.CMS = {
     "types": {
      "overview": "ℹ️ overview",
      "software": "📜 software",
-     "hardware": "💻 hardware"
+     "hardware": "💻 hardware",
+     "exercise": "📐 exercise"
     },
     "keyDates": [
      {
@@ -539,6 +540,141 @@ window.CMS = {
       "type": "overview",
       "covered": false,
       "blurb": "Wrap-up of the course, outlook and questions before the exam."
+     }
+    ],
+    "exerciseNote": "OPAL numbers the online exercises by course week: the first one, published on 22 Oct, is Exercise 02 and is discussed in the week of lecture 2. Each later exercise is expected about a week before its session; the cards below are placeholders until then.",
+    "exercises": [
+     {
+      "n": 2,
+      "title": "Basics of Parallelism and Amdahl's Law",
+      "date": "2026-10-28",
+      "published": "2026-10-22",
+      "icon": "📐",
+      "covered": true,
+      "lecture": 1,
+      "points": 36,
+      "blurb": "Speedup and efficiency of a parallel sum with tree reduction, Amdahl's law for four parallel fractions, the largest PE count that keeps 90 % efficiency, a loop nest on 100 to 10,000 PEs, fitting the parallel fraction to measured runtimes, a synchronization-overhead model, and PCAM on a 2D heat solver with a double-buffer and a mean-temperature speedup."
+     },
+     {
+      "n": 3,
+      "title": null,
+      "date": "2026-11-04",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 2,
+      "points": null,
+      "blurb": "Expected to follow lecture 2 (Batch Systems); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 4,
+      "title": null,
+      "date": "2026-11-11",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 3,
+      "points": null,
+      "blurb": "Expected to follow lecture 3 (Shared Memory: Parallelism within a Processor and on a Compute Node); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 5,
+      "title": null,
+      "date": "2026-11-25",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 4,
+      "points": null,
+      "blurb": "Expected to follow lecture 4 (Shared Memory Programming 1: Threads); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 6,
+      "title": null,
+      "date": "2026-12-02",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 5,
+      "points": null,
+      "blurb": "Expected to follow lecture 5 (Shared Memory Programming 2: SIMD & Dependencies); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 7,
+      "title": null,
+      "date": "2026-12-09",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 6,
+      "points": null,
+      "blurb": "Expected to follow lecture 6 (Distributed Memory: Networks); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 8,
+      "title": null,
+      "date": "2026-12-16",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 7,
+      "points": null,
+      "blurb": "Expected to follow lecture 7 (Distributed Memory Programming: MPI); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 9,
+      "title": null,
+      "date": "2027-01-06",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 8,
+      "points": null,
+      "blurb": "Expected to follow lecture 8 (Distributed Memory Programming: PGAS and Data Layout); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 10,
+      "title": null,
+      "date": "2027-01-13",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 9,
+      "points": null,
+      "blurb": "Expected to follow lecture 9 (Accelerators); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 11,
+      "title": null,
+      "date": "2027-01-20",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 10,
+      "points": null,
+      "blurb": "Expected to follow lecture 10 (Accelerator Programming: CUDA, OpenACC, and OpenMP); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 12,
+      "title": null,
+      "date": "2027-01-27",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 11,
+      "points": null,
+      "blurb": "Expected to follow lecture 11 (Performance Analysis); the online exercise usually appears in OPAL about a week before the session."
+     },
+     {
+      "n": 13,
+      "title": null,
+      "date": "2027-02-03",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 12,
+      "points": null,
+      "blurb": "Expected to follow lecture 12 (Load Balance, Power, and Energy); the online exercise usually appears in OPAL about a week before the session."
      }
     ]
    }

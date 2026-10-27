@@ -332,3 +332,36 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
   .hpc .flynn .fh { display: none; }
   .hpc .agrow { grid-template-columns: 76px 1fr 52px; }
 }
+
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.hpc .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.hpc .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.hpc .task-h h2 { margin: 0; font-size: 1.25rem; }
+.hpc .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.hpc .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.hpc .pts.open { color: var(--ink-3); border-style: dashed; }
+.hpc .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.hpc .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.hpc .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.hpc .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.hpc .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.hpc .gantt .pc.out { background: transparent; box-shadow: none; color: var(--ink-3); font-size: 14px; }
+.hpc .phases { margin: 0 0 8px; }
+.hpc .phases .agtrack { display: flex; gap: 2px; height: 22px; background: var(--surface); border-radius: 6px; overflow: hidden; }
+.hpc .seg { display: grid; place-items: center; min-width: 3px; font: 600 11px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); background: color-mix(in srgb, var(--c) 35%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.hpc .seg.s1 { --c: var(--vz-s1); } .hpc .seg.s2 { --c: var(--vz-s2); } .hpc .seg.s3 { --c: var(--vz-s3); }
+.hpc .viz .edge { fill: var(--surface); stroke: var(--line); }
+.hpc .viz .sdot { fill: var(--ink); stroke: var(--surface-2); stroke-width: 1.5; }
+.hpc .viz .sdot.c { fill: var(--surface-2); stroke: var(--ink); stroke-width: 2; }
+.hpc .viz .sl { stroke: var(--ink); stroke-width: 1.5; }
+.hpc .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.hpc .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.hpc .board-h h2 { margin: 0; font-size: 1.15rem; }
+.hpc .board-h .muted { font-size: 0.85rem; }
+.hpc .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.hpc .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.hpc .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.hpc .game-card.exe { border-top: 4px solid var(--c-trk); }
+.hpc .game-card.lec { border-top: 4px solid var(--c-core); }
+.hpc .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
