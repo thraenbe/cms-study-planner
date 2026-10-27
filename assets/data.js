@@ -1778,7 +1778,7 @@ window.CMS = {
       "v": "J. Computer and System Sciences 64(3) · decompositions block"
      }
     ],
-    "planNote": "Lectures 3–12 are planned topics in last year's order (ICCL calendar WS2025), on the next free Tuesdays; OPAL announces the real plan per session. Last year had two lecture-free Tuesdays in November, so dates may shift.",
+    "planNote": "Lectures 3–12 are planned topics in last year's order (ICCL calendar WS2025) on the next free Tuesdays, and tutorials 2–10 on the Friday after their lecture; OPAL announces the real plan per session. Last year had two lecture-free Tuesdays in November, so dates may shift. The introduction slides announce 12 lectures and 10 tutorials.",
     "lectures": [
      {
       "n": 1,
@@ -1787,7 +1787,7 @@ window.CMS = {
       "icon": "🧭",
       "covered": true,
       "planned": false,
-      "blurb": "What makes a problem hard, how the course is organised, and the vocabulary of the whole semester: states, actions, goals, search spaces and the eight topic blocks from search to decompositions."
+      "blurb": "How the course runs (12 lectures, 10 tutorials, forum first), why problems are hard: search spaces that explode (SAT, TSP), models that are only approximations, problems that change over time, hard and soft constraints, plus two puzzles to solve by reasoning."
      },
      {
       "n": 2,
@@ -1796,7 +1796,7 @@ window.CMS = {
       "icon": "🔍",
       "covered": true,
       "planned": false,
-      "blurb": "Problem formulation as a state space, then the classic tree-search family: breadth-first, uniform-cost, depth-first and iterative deepening, and the heuristic searches greedy best-first and A* with admissible heuristics; dynamic programming as the exhaustive alternative."
+      "blurb": "Complete vs partial solutions, exhaustive search and backtracking, the uninformed strategies breadth-first, depth-first, depth-limited and iterative deepening, then greedy best-first and A* with admissible heuristics on the Romania map, and dynamic programming from Fibonacci to the applicability checklist."
      },
      {
       "n": 3,
@@ -1898,7 +1898,7 @@ window.CMS = {
       "covered": false,
       "planned": false,
       "sheet": "2026-10-22",
-      "blurb": "Exercise sheet 1 is in OPAL since 22 Oct: problem formulation and the uninformed and informed search algorithms of lecture 2. Your Friday group discusses it in APB/E006/U."
+      "blurb": "Sheet 1 is in OPAL since 22 Oct: A* in a maze, a coin-change dynamic programme and the bridge-crossing puzzle, all from lecture 2. Your Friday group discusses it in APB/E006/U."
      },
      {
       "n": 2,
@@ -1907,7 +1907,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on local search follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on local search follows lecture 3 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 3,
@@ -1916,7 +1916,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on tabu search follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on tabu search follows lecture 4 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 4,
@@ -1925,7 +1925,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on evolutionary algorithms follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on evolutionary algorithms follows lecture 5 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 5,
@@ -1934,7 +1934,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on Answer set programming I follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on Answer set programming I follows lecture 6 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 6,
@@ -1943,7 +1943,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on Answer set programming II follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on Answer set programming II follows lecture 7 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 7,
@@ -1952,7 +1952,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on Answer set programming III follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on Answer set programming III follows lecture 8 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 8,
@@ -1961,7 +1961,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on constraint satisfaction problems follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on constraint satisfaction problems follows lecture 9 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 9,
@@ -1970,7 +1970,7 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on structural decompositions i follows the lecture of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on structural decompositions i follows lecture 10 of that week. Sheet and date are announced in OPAL."
      },
      {
       "n": 10,
@@ -1979,38 +1979,11 @@ window.CMS = {
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on structural decompositions ii follows the lecture of that week. Sheet and date are announced in OPAL."
-     },
-     {
-      "n": 11,
-      "title": "Exam preparation",
-      "date": "2027-01-22",
-      "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on exam preparation follows the lecture of that week. Sheet and date are announced in OPAL."
-     },
-     {
-      "n": 12,
-      "title": "Tutorial (not announced)",
-      "date": "2027-01-29",
-      "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "A Friday slot inside the lecture period that OPAL has not filled yet."
-     },
-     {
-      "n": 13,
-      "title": "Tutorial (not announced)",
-      "date": "2027-02-05",
-      "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "A Friday slot inside the lecture period that OPAL has not filled yet."
+      "blurb": "Planned: the sheet on structural decompositions ii follows lecture 11 of that week. Sheet and date are announced in OPAL."
      }
     ],
     "schedule": {
-     "src": "lecture dates and the first tutorial from the ICCL course calendar (WS2026) and OPAL; later topics in last year's order (ICCL calendar WS2025); tutorial Fridays assumed weekly",
+     "src": "lecture dates and the first tutorial from the ICCL course calendar (WS2026), OPAL and the introduction slides (12 lectures, 10 tutorials); later topics in last year's order (ICCL calendar WS2025); each tutorial assumed on the Friday after its lecture",
      "rows": [
       [
        "2026-10-20",
@@ -2129,28 +2102,18 @@ window.CMS = {
       ],
       [
        "2027-01-22",
-       "Tutorial 11 (Friday group): Exam preparation (planned)",
-       "exe"
-      ],
-      [
-       "2027-01-26",
-       "Reserve Tuesday: nothing announced (last year the lectures ended with the Q&A)",
+       "No further tutorials expected: lecture 1 announced 10 tutorials in total",
        "off"
       ],
       [
-       "2027-01-29",
-       "Tutorial 12 (Friday group): Tutorial (not announced) (planned)",
-       "exe"
+       "2027-01-26",
+       "Reserve Tuesday: nothing announced (lecture 1 announced 12 lectures)",
+       "off"
       ],
       [
        "2027-02-02",
        "Reserve Tuesday: nothing announced",
        "off"
-      ],
-      [
-       "2027-02-05",
-       "Tutorial 13 (Friday group): Tutorial (not announced) (planned)",
-       "exe"
       ]
      ]
     }
