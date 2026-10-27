@@ -24,6 +24,7 @@ const lectures = c.lectures.map(l => `<a class="game-card lec" href="high-perfor
     <h2>${l.n ? `Lecture ${l.n} – ` : ""}${esc(l.title)}</h2>
     <p class="when">${when(l)}</p>
     <p>${esc(l.blurb)}</p>
+    ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("") + `<a class="game-card" href="high-performance-computing/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
@@ -35,6 +36,7 @@ const exercises = c.exercises.map(x => `<a class="game-card exe ${x.covered ? ""
     <h2>Exercise ${nn(x.n)}${x.title ? ` – ${esc(x.title)}` : ""}</h2>
     <p class="when">${fmt(x.date)} · ${exe.start} · ${TYPES.exercise}${x.published ? ` · in OPAL since ${fmt(x.published)}` : " · not published yet"}</p>
     <p>${esc(x.blurb)}</p>
+    ${U.doneBox(`${CODE}:exercise:${x.n}`)}
   </a>`).join("");
 const nDone = c.exercises.filter(x => x.covered).length;
 document.getElementById("page").innerHTML = `
@@ -51,6 +53,7 @@ document.getElementById("page").innerHTML = `
     <p class="muted board-note">${esc(c.exerciseNote)}</p>
     <div class="game-cards">${exercises}</div>
   </main>`;
+U.wireDone();
 </script>
 </body>
 </html>

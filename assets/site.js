@@ -71,6 +71,31 @@ window.CMSUtil = {
       </div>
     </section>`;
   },
+  // "Done" checkbox for board cards (lectures, exercises, meetings, papers). State lives in this
+  // browser (localStorage "cms-done": { "<CODE>:<kind>:<n>": true }); the card gets class "is-done".
+  // Usage: put `${CMSUtil.doneBox("CMS-COR-HPC:lecture:1")}` inside the card markup (also inside an
+  // <a class="game-card">), then call CMSUtil.wireDone() once the cards are in the DOM.
+  done() { try { return JSON.parse(localStorage.getItem("cms-done") || "{}"); } catch (e) { return {}; } },
+  isDone(id) { return !!this.done()[id]; },
+  setDone(id, on) {
+    const all = this.done(); if (on) all[id] = true; else delete all[id];
+    try { localStorage.setItem("cms-done", JSON.stringify(all)); } catch (e) {}
+  },
+  doneBox(id, label = "done") {
+    return `<label class="done-box" data-done="${this.esc(id)}"><input type="checkbox"${this.isDone(id) ? " checked" : ""}><span>${this.esc(label)}</span></label>`;
+  },
+  wireDone(root = document) {
+    root.querySelectorAll(".done-box").forEach(box => {
+      const id = box.dataset.done, cb = box.querySelector("input");
+      const card = box.closest(".game-card, .card, [data-card]") || box.parentElement;
+      const apply = () => { card.classList.toggle("is-done", cb.checked); box.classList.toggle("on", cb.checked); };
+      apply();
+      // A click inside an <a> card must not navigate: toggle by hand instead of the native toggle.
+      box.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); cb.checked = !cb.checked; CMSUtil.setDone(id, cb.checked); apply(); });
+      cb.addEventListener("change", () => { CMSUtil.setDone(id, cb.checked); apply(); }); // keyboard (space)
+      cb.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); cb.checked = !cb.checked; CMSUtil.setDone(id, cb.checked); apply(); } });
+    });
+  },
   // "enrolled", "register" (still to register) or null
   status: code => CMS.enrolled.includes(code) ? "enrolled" : (CMS.toRegister || []).includes(code) ? "register" : null,
   // Priority items (data.js) with their state: done once one option is enrolled.

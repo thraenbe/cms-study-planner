@@ -21,6 +21,7 @@ const cards = c.lectures.map(l => `<a class="game-card" href="computer-vision/le
     <div class="game-icon">${l.icon}</div>
     <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
     <p>${esc(l.blurb)}</p>
+    ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("") + `<a class="game-card" href="computer-vision/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
@@ -34,6 +35,7 @@ document.getElementById("page").innerHTML = `
   </header>
   ${CV.topbar()}
   <main class="game-cards">${cards}</main>`;
+U.wireDone();
 </script>
 </body>
 </html>

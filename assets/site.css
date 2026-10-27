@@ -97,6 +97,15 @@ a.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--in
 .modinfo .modlinks a { color: var(--ink-2); }
 @media (max-width: 520px) { .modinfo .facts { grid-template-columns: 1fr; gap: 2px; } .modinfo .facts dd { margin-bottom: 8px; } }
 
+
+/* "Done" checkbox on board cards (CMSUtil.doneBox / wireDone): the ticked card turns green. */
+.done-box { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 10px 4px 6px; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); cursor: pointer; user-select: none; }
+.done-box input { margin: 0; width: 15px; height: 15px; accent-color: var(--ok); cursor: pointer; }
+.done-box:hover { border-color: var(--ok); color: var(--ok); }
+.done-box.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+.game-card.is-done, .card.is-done, [data-card].is-done { background: color-mix(in srgb, var(--ok) 13%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
+.game-card.is-done h2::after, .card.is-done h2::after { content: " ✓"; color: var(--ok); }
+
 @media (max-width: 760px) {
   .wrap { padding: 0 16px 48px; }
   .sitebar-in { padding: 10px 16px; gap: 10px; }
