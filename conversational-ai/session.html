@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Conversational AI · Meeting</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="conversational-ai/cai.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="conversational-ai/cai.js"></script>
+</head>
+<body class="cai">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, CODE, fmt, daysUntil, sess, slot, today, KINDS, next, chart, lab, leg, key, flag, hbar, vbar, num, CHARTS, LABS, mountCharts, mountLabs } = CAI;
+const q = new URLSearchParams(location.search).get("n"), n = Number(q);
+const x = c.meetings.find(mm => mm.n === n);
+const page = document.getElementById("page");
+const back = `<a class="back" href="conversational-ai.html">← All meetings and papers</a>`;
+const ctx = (t = "context, not on the slides") => `<span class="ctx">${t}</span>`;
+const head = mm => `${back}<div class="big-icon">${mm.icon}</div><h1>Meeting ${mm.n} – ${esc(mm.title)}</h1>
+    <p class="meta">${fmt(mm.date)} · ${slot} · ${esc(sess.who)} for Prof. Jens Lehmann and Prof. Sahar Vahdati</p>`;
+
+// ---------------- Meeting 1: the kick-off ----------------
+// Colour roles (dataviz reference palette, validated on --surface-2 in both themes): slot 1 = kick-off / first era /
+// the single-series bars, slot 2 = intermediate presentations / second era, slot 3 = finals / third era, slot 4 = fourth
+// era; gray for "before AI" and quiet Thursdays. Text stays in ink; colour sits on marks, swatches and tinted cells.
+
+// The seminar's own timeline: the seventeen Thursdays from the kick-off to the last final-presentation slot.
+const THU = (() => { const out = []; for (let d = new Date("2026-10-15T12:00:00"); d <= new Date("2027-02-04T12:00:00"); d.setDate(d.getDate() + 7)) out.push(d.toISOString().slice(0, 10)); return out; })();
+const BREAK = CMS.term.periods.find(p => p.kind === "break");
+const MEET = Object.fromEntries(c.meetings.map(mm => [mm.date, mm]));
+const KSLOT = { kick: 1, mid: 2, final: 3 };
+CHARTS.thu = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 150 : 160, L = 14, R = 14, T = 30, PW = W - L - R, nT = THU.length, cy = T + 46;
+  const xx = i => L + (i + 0.5) / nT * PW, r = narrow ? 6 : 9;
+  const b0 = THU.findIndex(d => d >= BREAK.from), b1 = THU.findIndex(d => d > BREAK.to);
+  const phases = [["Topic phase", 0, 0], ["Read and prepare", 1, 6], ["Intermediate", 7, 8], ["Quiet", 9, 10], ["Final presentations", 12, 16]];
+  const ph = phases.map(([t, a, b]) => `<line class="ann" x1="${xx(a) - PW / nT / 2 + 3}" x2="${xx(b) + PW / nT / 2 - 3}" y1="${T - 8}" y2="${T - 8}"/><text class="note" x="${(xx(a) + xx(b)) / 2}" y="${T - 13}" text-anchor="middle">${narrow && t.length > 10 ? t.split(" ")[0] : t}</text>`).join("");
+  const band = `<rect class="band" x="${xx(b0) - PW / nT / 2}" y="${cy - 30}" width="${xx(b1) - xx(b0)}" height="60" rx="8"/><text class="note" x="${(xx(b0) + xx(b1)) / 2 - PW / nT / 2}" y="${cy + 46}" text-anchor="middle">${narrow ? "break" : "Christmas break"}</text>`;
+  const months = []; THU.forEach((d, i) => { const mo = d.slice(0, 7); if (!months.length || months[months.length - 1].mo !== mo) months.push({ mo, i, label: new Date(d + "T12:00:00").toLocaleDateString("en-GB", { month: "short" }) }); });
+  const mlab = months.map(mm => `<text class="tick" x="${xx(mm.i) - PW / nT / 2 + 2}" y="${H - 6}">${mm.label}</text>`).join("");
+  const dots = THU.map((d, i) => { const mm = MEET[d], isNext = d === next?.date;
+    const tip = mm ? `<b>Meeting ${mm.n} · ${fmt(d)}</b>${esc(mm.title)}<br><span class="muted">${slot}${isNext ? " · next" : d < today ? " · held" : ""}</span>` : `<b>${fmt(d)}</b>No seminar${BREAK.from <= d && d <= BREAK.to ? " (Christmas break)" : ": read the papers, prepare"}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><circle class="hit" cx="${xx(i)}" cy="${cy}" r="${narrow ? 10 : 16}"/>
+      ${mm ? `<circle class="dot anchor" cx="${xx(i)}" cy="${cy}" r="${r}" style="fill:var(--vz-s${KSLOT[mm.kind]})"/>` : `<circle class="ring anchor" cx="${xx(i)}" cy="${cy}" r="${r - 1.5}"/>`}
+      ${isNext ? `<circle cx="${xx(i)}" cy="${cy}" r="${r + 5}" fill="none" stroke="var(--ink)" stroke-width="1.5"/>` : ""}
+      ${mm && !narrow ? `<text class="val" x="${xx(i)}" y="${cy - 17}" text-anchor="middle">${mm.n}</text>` : ""}
+      ${!narrow ? `<text class="tick" x="${xx(i)}" y="${cy + 25}" text-anchor="middle">${d.slice(8)}</text>` : ""}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of the seventeen seminar Thursdays: kick-off on 15 October, six quiet Thursdays, intermediate presentations on 3 and 10 December, two quiet Thursdays around Christmas, final presentations on the five Thursdays from 7 January to 4 February">
+    ${ph}${band}<line class="axis" x1="${L}" x2="${W - R}" y1="${cy}" y2="${cy}"/>${dots}${mlab}</svg>`;
+};
+
+// Time budget of the final talk: 30-minute slot, 20–25 minutes talk, the rest for questions.
+LABS.budget = el => {
+  el.innerHTML = `<p class="lab-note">The slides fix the slot at 30 minutes including discussion, with the talk at 20–25 minutes, and warn that three talks per meeting leave no slack. Move the talk length and watch what is left for questions. The slide estimate is a rule of thumb added here ${ctx()}.</p>
+    <div class="ctl"><label>Talk length <input type="range" min="10" max="36" step="1" value="22" aria-label="Talk length in minutes"> <output>22 min</output></label></div>
+    <div class="budget" aria-hidden="true"></div>
+    ${leg([[1, "Talk"], [3, "Questions and discussion"], ["", "Over the slot", "over"]])}
+    <dl class="ro"></dl>`;
+  const inp = el.querySelector("input"), out = el.querySelector("output"), bar = el.querySelector(".budget"), ro = el.querySelector(".ro");
+  const draw = () => {
+    const t = +inp.value, qa = Math.max(0, 30 - t), over = Math.max(0, t - 30), tot = Math.max(30, t);
+    out.textContent = `${t} min`;
+    bar.innerHTML = `<div class="seg talk" style="flex:${t}">${t} min talk</div>${qa ? `<div class="seg qa" style="flex:${qa}">${qa} min Q&A</div>` : ""}${over ? `<div class="seg over" style="flex:${over}">+${over}</div>` : ""}`;
+    const verdict = t > 30 ? flag("bad", "cut off: the 30 minutes are strictly enforced") : t > 25 ? flag("warn", `only ${qa} min for questions, below the 5–10 the slides plan`) : t < 20 ? flag("warn", "shorter than the 20 minutes the slides ask for") : flag("ok", "inside the 20–25 minute window");
+    ro.innerHTML = `<dt>Verdict</dt><dd>${verdict}</dd><dt>Questions</dt><dd>${qa} min${qa ? "" : " (none left)"}</dd><dt>Slides</dt><dd>about ${Math.round(t / 1.5)}–${t} slides at 1–1.5 minutes each ${ctx("rule of thumb")}</dd><dt>Of the slot</dt><dd>${num(t / tot * 100, 0)} % talking, ${num(qa / tot * 100, 0)} % discussion</dd>`;
+  };
+  inp.addEventListener("input", draw); draw();
+};
+
+// The topic catalogue as five themes (counts only; the catalogue itself stays in OPAL). Square 1 is Bela's topic.
+const THEME_LINES = [["Building and", "training models"], ["Steering and", "grounding"], ["How models", "behave"], ["Acting in", "the world"], ["Beyond", "English text"]];
+const THEMES = [
+  ["Building and training models", 5, "architectures, scaling and emergence, instruction tuning and parameter-efficient fine-tuning, preference learning, reasoning post-training"],
+  ["Steering and grounding", 3, "prompting and automatic prompt optimisation, retrieval, knowledge graphs"],
+  ["How models behave", 4, "safety and responsible AI, commonsense reasoning, mathematical reasoning, multi-turn dialogue and personalisation"],
+  ["Acting in the world", 3, "tool use and function calling, agents and multi-agent systems, robotics"],
+  ["Beyond English text", 2, "multilingual and cross-cultural dialogue, multimodal agents"],
+];
+CHARTS.themes = narrow => {
+  const W = narrow ? 340 : 600, sq = narrow ? 14 : 20, gap = 3, gg = narrow ? 10 : 44, L = 12, T = 8, H = T + sq + 82;
+  let cx = L, k = 0; const out = [];
+  THEMES.forEach(([t, cnt, d], i) => {
+    const x0 = cx;
+    for (let j = 0; j < cnt; j++) { k++; const mine = k === 1;
+      out.push(`<g class="pt" tabindex="0" data-tip="${esc(`<b>${t}</b>${d}${mine ? "<br><span class=muted>your topic is the first of these</span>" : ""}`)}"><rect class="anchor ${mine ? "f1" : ""}" x="${cx}" y="${T + 30}" width="${sq}" height="${sq}" rx="4" style="${mine ? "" : "fill:color-mix(in srgb, var(--vz-s1) 28%, var(--surface-2))"}"/>${mine ? `<text class="val" x="${cx + sq / 2}" y="${T + 22}" text-anchor="middle">you</text>` : ""}</g>`);
+      cx += sq + gap; }
+    const x1 = cx - gap;
+    out.push(`<text class="note" x="${(x0 + x1) / 2}" y="${T + 30 + sq + 16}" text-anchor="middle">${cnt}</text>`);
+    if (!narrow) out.push(`<text class="tick" x="${(x0 + x1) / 2}" y="${T + 30 + sq + 32}" text-anchor="middle">${THEME_LINES[i].map((ln, k) => `<tspan x="${(x0 + x1) / 2}" dy="${k ? 13 : 0}">${ln}</tspan>`).join("")}</text>`);
+    cx += gg;
+  });
+  const total = cx - gg - L, scale = Math.min(1, (W - 2 * L) / total);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Seventeen seminar topics grouped into five themes: five on building and training models (your topic among them), three on steering and grounding, four on model behaviour, three on acting in the world, two beyond English text"><g transform="translate(${L + (W - 2 * L - total * scale) / 2 - L * scale},0) scale(${scale},1)">${out.join("")}</g></svg>`;
+};
+
+// The AI timeline of slide 17, drawn as an ordinal strip (equal spacing; two thousand years would not fit a linear axis).
+const ERAS = ["Before AI", "Symbolic AI", "Assistants", "Transformers and LLMs", "Agents and reasoning"];
+const SHORT = ["Antikythera", "Babbage", "Turing test", "Dartmouth", "ELIZA", "Deep Blue", "Siri", "Watson", "Transformer", "AlphaFold", "GPT-3", "ChatGPT", "LLM boom", "Agents", "Reasoning"];
+const EVENTS = [
+  ["2nd c. BC", "Antikythera mechanism", "a hand-crafted analog computer that predicted astronomical positions", 0],
+  ["1837", "Analytical Engine", "Babbage and Lovelace design the first programmable machine", 0],
+  ["1950", "Turing test", "Turing proposes a conversation as the test of machine intelligence", 0],
+  ["1956", "Dartmouth workshop", "the founding event of AI as a research field", 1],
+  ["1965", "ELIZA", "Weizenbaum's pattern-matching “psychotherapist”, the first chatbot", 1],
+  ["1997", "Deep Blue", "the first program to beat a reigning chess world champion", 1],
+  ["2011", "Siri, Google Now, Cortana", "smartphone assistants answer spoken questions", 2],
+  ["2014", "IBM Watson", "wins at Jeopardy (the match was in 2011; the slide places it at 2014)", 2],
+  ["2017", "Transformers", "“Attention is all you need”, the architecture behind every LLM", 3],
+  ["2018", "AlphaFold", "protein-structure prediction beyond human experts", 3],
+  ["2020", "GPT-3", "the birth of LLMs: 175 B parameters, few-shot prompting", 3],
+  ["2022", "ChatGPT, LaMDA", "chatbots and retrieval-augmented generation reach everyone", 3],
+  ["2024", "Rise of LLMs", "Sora, Claude 3.5, Llama 3, Gemini, OpenAI o1", 4],
+  ["2025", "Agentic AI", "agents and scientific breakthroughs, from fluid dynamics to a virtual biotech lab", 4],
+  ["2026", "Reasoning models", "DeepSeek, the AI Scientist: reasoning models and agentic systems", 4],
+];
+const ERA_FILL = ["fg", "f1", "f2", "f3", "f4"];
+CHARTS.ai = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 120 : 214, L = 16, R = 16, PW = W - L - R, nE = EVENTS.length, cy = narrow ? 60 : 104;
+  const xx = i => L + (i + 0.5) / nE * PW, r = narrow ? 5 : 7;
+  const eras = []; EVENTS.forEach((e, i) => { const last = eras[eras.length - 1]; if (!last || last.e !== e[3]) eras.push({ e: e[3], a: i, b: i }); else last.b = i; });
+  const bands = eras.map(({ e, a, b }, k) => `<rect class="${ERA_FILL[e]}" opacity=".10" x="${xx(a) - PW / nE / 2 + 1}" y="${cy - 28}" width="${xx(b) - xx(a) + PW / nE - 2}" height="56" rx="8"/>${narrow ? "" : `<text class="note" x="${(xx(a) + xx(b)) / 2}" y="${cy + 44}" text-anchor="middle">${ERAS[e]}</text>`}`).join("");
+  const pts = EVENTS.map(([y, t, d, e], i) => { const up = i % 2 === 0, outer = i % 4 >= 2 ? 0 : 13;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${y} · ${t}</b>${d}<br><span class=muted>${ERAS[e]}</span>`)}"><circle class="hit" cx="${xx(i)}" cy="${cy}" r="${narrow ? 10 : 16}"/>
+      <circle class="dot anchor ${ERA_FILL[e]}" cx="${xx(i)}" cy="${cy}" r="${r}" style="fill:var(--vz-${e ? "s" + e : "gray"})"/>
+      <text class="tick" x="${xx(i)}" y="${up ? cy - 36 : cy + 62 + (narrow ? -26 : 0)}" text-anchor="middle">${narrow && y.length > 4 ? "BC" : y}</text>
+      ${narrow ? "" : `<text class="lbl" x="${xx(i)}" y="${up ? cy - 50 - outer : cy + 76 + outer}" text-anchor="middle" font-size="10.5">${SHORT[i]}</text>`}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Fifteen milestones from the Antikythera mechanism to the reasoning models of 2026, in five eras: before AI, symbolic AI, assistants, transformers and LLMs, agents and reasoning"><line class="axis" x1="${L}" x2="${W - R}" y1="${cy}" y2="${cy}"/>${bands}${pts}</svg>`;
+};
+
+// What people use ChatGPT for (slide 27: the Information-is-Beautiful treemap of OpenAI's 2025 usage study), as seven
+// groups with their sub-categories in the tooltip. Shares in per cent of conversations.
+const USE = [
+  ["Practical guidance", [["Tutoring and teaching", 10.2], ["How-to advice", 8.5], ["Health, fitness, self-care", 5.7], ["Creative ideation", 3.9]]],
+  ["Writing", [["Editing and critiquing text", 10.6], ["Personal writing", 8.0], ["Translation", 4.5], ["Summaries", 3.6], ["Writing fiction", 1.4]]],
+  ["Seeking information", [["Specific information", 18.3], ["Purchasable products", 2.1], ["Cooking and recipes", 0.9]]],
+  ["Technical help", [["Coding", 4.2], ["Maths and data analysis", 3.4]]],
+  ["Multimedia", [["Generating or retrieving media", 4.2], ["Creating images", 1.1], ["Analysing an image", 0.6]]],
+  ["Other or unknown", [["Other or unknown", 4.5]]],
+  ["Self-expression", [["Greetings and chit-chat", 2.0], ["Relationships and reflection", 1.9], ["Games and role play", 0.4]]],
+].map(([g, items]) => ({ g, items, v: +items.reduce((s, it) => s + it[1], 0).toFixed(1) })).sort((a, b) => b.v - a.v);
+CHARTS.use = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 128 : 160, R = 44, T = 8, RH = narrow ? 26 : 30, BH = narrow ? 14 : 16, H = T + USE.length * RH + 28, PW = W - L - R;
+  const xx = v => L + v / 30 * PW;
+  const grid = [0, 10, 20, 30].map(v => `<line class="${v ? "grid" : "axis"}" x1="${xx(v)}" x2="${xx(v)}" y1="${T}" y2="${T + USE.length * RH}"/><text class="tick" x="${xx(v)}" y="${H - 8}" text-anchor="middle">${v} %</text>`).join("");
+  const rows = USE.map((u, i) => { const y = T + i * RH + (RH - BH) / 2;
+    const tip = `<b>${u.g} · ${num(u.v)} %</b>${u.items.map(it => `${it[0]}: ${num(it[1])} %`).join("<br>")}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${T + i * RH}" width="${W}" height="${RH}"/>
+      <text class="cat" x="${L - 8}" y="${y + BH - 3}" text-anchor="end" font-size="${narrow ? 11 : 13}">${u.g}</text>
+      <path class="bar s1 anchor" d="${vbar(0, 0, 0, 0) && hbar(xx(0), xx(u.v), y, BH)}"/>
+      ${i < 3 ? `<text class="val" x="${xx(u.v) + 6}" y="${y + BH - 3}">${num(u.v)} %</text>` : `<text class="vl" x="${xx(u.v) + 6}" y="${y + BH - 3}" style="opacity:0">${num(u.v)} %</text>`}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share of ChatGPT conversations by purpose: practical guidance 28 per cent, writing 28, seeking information 21, technical help 8, multimedia 6, other 5, self-expression 4">${grid}${rows}</svg>`;
+};
+
+// Work per sequence for the two mixing mechanisms of Bela's topic: attention compares every token with every other
+// token (n²), a state-space model updates one state per token (n). Relative to a 1 000-token sequence.
+const NS = [1e3, 4e3, 16e3, 64e3, 256e3, 1e6];
+const fmtN = v => v >= 1e6 ? num(v / 1e6, 1) + " M" : v >= 1e3 ? num(v / 1e3, 0) + " k" : String(v);
+const fmtRel = v => v >= 1e6 ? num(v / 1e6, 1) + " million ×" : v >= 1e3 ? num(v / 1e3, 0) + " thousand ×" : num(v, 0) + " ×";
+CHARTS.cost = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = narrow ? 46 : 56, R = narrow ? 16 : 110, T = 18, B = 36, PW = W - L - R, PH = H - T - B;
+  const xx = v => L + Math.log10(v / 1e3) / 3 * PW, yy = v => T + PH - Math.log10(v) / 6 * PH;
+  const yg = [1, 1e2, 1e4, 1e6].map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${yy(v)}" y2="${yy(v)}"/><text class="tick" x="${L - 8}" y="${yy(v) + 4}" text-anchor="end">${v === 1 ? "1 ×" : v === 1e6 ? "1 M ×" : `${v / 1e2 === 1 ? "100" : "10 k"} ×`}</text>`).join("");
+  const xg = NS.map(v => `<text class="tick" x="${xx(v)}" y="${H - 12}" text-anchor="middle">${fmtN(v)}</text>`).join("");
+  const series = [{ k: "", name: "attention: n² pairs", short: "attention, n²", f: nn => (nn / 1e3) ** 2 }, { k: "k3", name: "state space: n updates", short: "state space, n", f: nn => nn / 1e3 }];
+  const paths = series.map(s => `<path class="line ${s.k}" d="M${NS.map(v => `${xx(v).toFixed(1)},${yy(s.f(v)).toFixed(1)}`).join(" L")}"/>`).join("");
+  const lbl = narrow ? "" : series.map(s => `<text class="lbl" x="${xx(1e6) + 8}" y="${yy(s.f(1e6)) + 4}">${s.short}</text>`).join("");
+  const pts = NS.map(v => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${fmtN(v)} tokens of context</b>attention: ${fmtRel(series[0].f(v))} the work of 1 k tokens<br>state space: ${fmtRel(series[1].f(v))}<br><span class=muted>ratio ${num(v / 1e3, 0)} : 1</span>`)}">
+      <rect class="hit" x="${xx(v) - PW / 12}" y="${T}" width="${PW / 6}" height="${PH}"/>
+      <circle class="dot anchor" cx="${xx(v)}" cy="${yy(series[0].f(v))}" r="4.5"/><circle class="dot" cx="${xx(v)}" cy="${yy(series[1].f(v))}" r="4.5" style="fill:var(--vz-s3)"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Log-log chart of work per sequence against context length from one thousand to one million tokens: attention grows quadratically to a million times, a state-space model linearly to a thousand times"><text class="note" x="${L - 40}" y="12">work relative to a 1 k-token context, by context length in tokens</text>${yg}${xg}${paths}${lbl}${pts}</svg>`;
+};
+
+// Components of a conversational agent (slide 20), with the lecturer's remark that an LLM now often plays all of them.
+const PARTS = {
+  utt: ["Utterance", "what the user just said or typed", "The input of one turn: text, or speech turned into text first."],
+  ctx: ["Context", "earlier turns, user, situation", "Earlier turns, user profile, time and place, the open task. Without it every turn would start from zero."],
+  nlu: ["Understanding", "intent, entities, meaning", "Natural-language understanding: which intent, which entities (dates, places, products), what the words refer to. The slide labels this box NLP."],
+  dm: ["Dialogue management", "state and next action", "Keeps the dialogue state, decides what to do next: ask back, look something up, call a service, answer."],
+  nlg: ["Generation", "the words of the reply", "Natural-language generation: turns the chosen action and the retrieved facts into a fluent reply. The slide labels this box NLU; the usual name is NLG."],
+  ext: ["External data and services", "databases, APIs, graphs", "Where the facts and the actions live: a booking system, a search index, a knowledge graph, a calculator."],
+  res: ["Response", "spoken or written back", "What the user gets back; in a voice assistant it goes through text-to-speech."],
+  llm: ["One LLM", "understands, decides, generates", "Nowadays the three middle boxes are often one large language model prompted with the utterance and the context, with retrieval and tool calls for the external services."],
+};
+function archSVG(mode, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 330 : 250, s = narrow ? 340 / 600 : 1;
+  const box = (id, x0, y0, w, h, cls) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${PARTS[id][0]}</b>${PARTS[id][2]}`)}"><rect class="blk ${cls} anchor" x="${x0}" y="${y0}" width="${w}" height="${h}"/><text class="t" x="${x0 + w / 2}" y="${y0 + h / 2 - 2}">${PARTS[id][0]}</text><text class="s" x="${x0 + w / 2}" y="${y0 + h / 2 + 13}">${PARTS[id][1]}</text></g>`;
+  const arrow = (x1, y1, x2, y2, on = false) => `<path class="wire ${on ? "on" : ""}" d="M${x1},${y1} L${x2},${y2}" marker-end="url(#arr)"/>`;
+  const defs = `<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>`;
+  if (narrow) {
+    const core = mode === "llm" ? box("llm", 90, 110, 160, 110, "llm") : `${box("nlu", 90, 96, 160, 40, "core")}${box("dm", 90, 146, 160, 40, "core")}${box("nlg", 90, 196, 160, 40, "core")}`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Block diagram of a conversational agent">${defs}
+      ${box("utt", 10, 10, 150, 40, "in")}${box("ctx", 180, 10, 150, 40, "in")}${core}${box("ext", 6, 270, 164, 46, "ext")}${box("res", 180, 270, 150, 46, "in")}
+      ${arrow(85, 50, 150, 96)}${arrow(255, 50, 190, 96)}${arrow(90, 160, 85, 270)}${arrow(85, 270, 90, 170)}${arrow(250, 236, 255, 270)}<rect class="frame" x="80" y="88" width="180" height="158" rx="12"/></svg>`;
+  }
+  const core = mode === "llm" ? box("llm", 220, 72, 180, 112, "llm") : `${box("nlu", 220, 50, 180, 44, "core")}${box("dm", 220, 106, 180, 44, "core")}${box("nlg", 220, 162, 180, 44, "core")}`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Block diagram of a conversational agent: utterance and context go into understanding, dialogue management and generation, which talk to external data and services and produce the response">${defs}
+    ${box("utt", 20, 40, 150, 44, "in")}${box("ctx", 20, 100, 150, 44, "in")}${core}${box("ext", 428, 100, 168, 56, "ext")}${box("res", 20, 180, 150, 44, "in")}
+    ${arrow(170, 62, 220, 72)}${arrow(170, 122, 220, 100)}${arrow(400, 118, 428, 118)}${arrow(428, 138, 400, 138)}${arrow(220, 184, 170, 202, true)}
+    <rect class="frame" x="208" y="36" width="204" height="182" rx="14"/><text class="s" x="310" y="236">${mode === "llm" ? "today: often one model prompted with everything" : "the classic pipeline of a dialogue system"}</text></svg>`;
+}
+LABS.arch = el => {
+  let mode = "pipe";
+  const draw = () => { el.innerHTML = `<div class="presets toggle"><button class="preset" type="button" data-m="pipe" aria-pressed="${mode === "pipe"}">Separate modules</button><button class="preset" type="button" data-m="llm" aria-pressed="${mode === "llm"}">One LLM does it all</button></div>
+      <figure class="viz arch" style="margin:0"><div class="chart-wrap"><div>${archSVG(mode, CAI.isNarrow())}</div><div class="tip" role="tooltip"></div></div><figcaption>Hover or focus a box. The slide draws the same blocks; the names of the understanding and generation boxes are swapped there (NLP and NLU), the usual names are used here ${ctx()}.</figcaption></figure>`;
+    el.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { mode = b.dataset.m; draw(); }));
+    const wrap = el.querySelector(".chart-wrap"), tip = wrap.querySelector(".tip");
+    el.querySelectorAll(".pt").forEach(g => { const show = () => { const a = g.querySelector(".anchor").getBoundingClientRect(), w = wrap.getBoundingClientRect(); tip.innerHTML = g.dataset.tip; g.classList.add("on"); CAI.place(tip, wrap, a.left + a.width / 2 - w.left, a.top - w.top); };
+      const hide = () => { g.classList.remove("on"); tip.classList.remove("show"); };
+      g.addEventListener("pointerenter", show); g.addEventListener("focus", show); g.addEventListener("pointerleave", hide); g.addEventListener("blur", hide); }); };
+  draw(); addEventListener("resize", () => { if (el.dataset.n !== String(CAI.isNarrow())) { el.dataset.n = CAI.isNarrow(); draw(); } });
+};
+
+// A small knowledge graph: facts as (head, relation, tail) triples. Hover an edge to read its triple.
+const KG = {
+  nodes: { bob: ["Bob", 270, 135], alice: ["Alice", 100, 50], person: ["Person", 80, 220], born: ["14 July 1990", 250, 240, "lit"], ml: ["The Mona Lisa", 470, 135], leo: ["Leonardo da Vinci", 500, 30], vid: ["La Joconde à Washington", 490, 245] },
+  edges: [["bob", "is a friend of", "alice"], ["bob", "is a", "person"], ["bob", "is born on", "born"], ["bob", "is interested in", "ml"], ["ml", "was created by", "leo"], ["vid", "is about", "ml"]],
+};
+CHARTS.kg = narrow => {
+  const W = 600, H = 270, N = KG.nodes;
+  const rw = t => Math.max(60, t.length * 7.2 + 18);
+  const edges = KG.edges.map(([h, r, t]) => { const [ht, hx, hy] = N[h], [tt, tx, ty] = N[t]; const dx = tx - hx, dy = ty - hy, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+    const x1 = hx + ux * (rw(ht) / 2 + 6), y1 = hy + uy * 16, x2 = tx - ux * (rw(tt) / 2 + 6), y2 = ty - uy * 18, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>(${ht}, ${r}, ${tt})</b><span class=muted>head · relation · tail</span>`)}" data-triple="${esc(`${ht}|${r}|${tt}`)}"><path class="hitl" d="M${x1},${y1} L${x2},${y2}"/><path class="edge" d="M${x1},${y1} L${x2},${y2}"/><text class="el anchor" x="${mx}" y="${my - 5}">${r}</text></g>`; }).join("");
+  const nodes = Object.entries(N).map(([id, [t, cx, cy, lit]]) => `<rect class="node ${lit || ""}" x="${cx - rw(t) / 2}" y="${cy - 14}" width="${rw(t)}" height="28" rx="${lit ? 6 : 14}"/><text class="nl" x="${cx}" y="${cy + 4}">${t}</text>`).join("");
+  return `<svg class="kg" viewBox="0 0 ${W} ${H}" role="img" aria-label="A small knowledge graph around Bob: Bob is a friend of Alice, is a person, is born on 14 July 1990 and is interested in the Mona Lisa, which was created by Leonardo da Vinci and is the subject of the video La Joconde à Washington"><defs><marker id="kg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>${edges}${nodes}</svg>`;
+};
+function wireKG() {
+  const el = document.querySelector('[data-chart="kg"]'); if (!el) return; const out = document.getElementById("triple");
+  el.querySelectorAll(".pt").forEach(g => { const set = () => { const [h, r, t] = g.dataset.triple.split("|"); out.innerHTML = `<span>${esc(h)}</span><span class="rel">${esc(r)}</span><span>${esc(t)}</span>`; }; g.addEventListener("pointerenter", set); g.addEventListener("focus", set); });
+}
+
+// The three deployment patterns of slide 24.
+const person = (cx, cy, label) => `<circle class="p" cx="${cx}" cy="${cy - 14}" r="7"/><path class="p" d="M${cx - 10},${cy + 12} q10,-22 20,0 z"/><text x="${cx}" y="${cy + 28}">${label}</text>`;
+const bot = (cx, cy) => `<rect class="bot" x="${cx - 16}" y="${cy - 14}" width="32" height="24" rx="6"/><circle cx="${cx - 6}" cy="${cy - 3}" r="2.2" fill="var(--vz-s1)"/><circle cx="${cx + 6}" cy="${cy - 3}" r="2.2" fill="var(--vz-s1)"/><text x="${cx}" y="${cy + 28}">AI assistant</text>`;
+const CASES = [
+  ["Direct, with a human fallback", "The user talks to the assistant; a human agent takes over when the assistant escalates.", `<svg viewBox="0 0 200 132">${person(35, 40, "User")}${bot(165, 40)}<path class="w" d="M50,30 H145" marker-end="url(#ca)" marker-start="url(#ca)"/>${person(165, 95, "Human agent")}<path class="w dash" d="M35,52 V95 H140"/><text x="90" y="88">escalation</text></svg>`],
+  ["Whispering to the agent", "The user talks to a human; the assistant listens in and suggests answers to the agent.", `<svg viewBox="0 0 200 132">${person(35, 40, "User")}${person(165, 40, "Human agent")}<path class="w" d="M50,30 H145"/>${bot(100, 95)}<path class="w adv" d="M100,78 V48 H148" marker-end="url(#ca)"/><text x="82" y="66">advice</text></svg>`],
+  ["Agent asks on request", "The human agent stays in charge and asks the assistant when needed.", `<svg viewBox="0 0 200 132">${person(35, 40, "User")}${person(165, 40, "Human agent")}<path class="w" d="M50,30 H145"/>${bot(165, 95)}<path class="w adv" d="M165,52 V78" marker-end="url(#ca)" marker-start="url(#ca)"/><text x="128" y="84">on request</text></svg>`],
+];
+
+// Architecture families of Topic 1: a one-line idea, a tiny picture of where the work goes, and the key numbers.
+const FAMS = [
+  { k: "dense", s: 1, name: "Dense attention", one: "Every token looks at every other token, every layer, every parameter used for every token.",
+    pic: `<svg viewBox="0 0 120 60">${Array.from({ length: 6 }, (_, i) => Array.from({ length: 6 }, (_, j) => `<rect class="cell ${j <= i ? "on" : ""}" x="${4 + j * 11}" y="${2 + i * 9.5}" width="9" height="8" rx="2"/>`).join("")).join("")}<text x="92" y="22" font-size="9" fill="var(--ink-2)">n × n</text><text x="92" y="34" font-size="9" fill="var(--ink-2)">score</text><text x="92" y="46" font-size="9" fill="var(--ink-2)">matrix</text></svg>`,
+    facts: [["Cost", "grows with n² in the context length"], ["Papers", "Attention Is All You Need (2017), Gemma 3 (2025)"], ["Trick", "Gemma 3 mixes 5 local-window layers per global layer to cut the KV cache"]] },
+  { k: "moe", s: 2, name: "Mixture of experts", one: "The feed-forward block is split into many experts; a router sends each token to one or a few of them.",
+    pic: `<svg viewBox="0 0 120 60"><rect class="cell" x="4" y="22" width="22" height="16" rx="3"/><text x="15" y="33" font-size="8" text-anchor="middle" fill="var(--ink-2)">router</text>${[0, 1, 2, 3].map(i => `<rect class="cell ${i === 1 ? "hot" : ""}" x="50" y="${3 + i * 14}" width="34" height="11" rx="2"/><path class="st" d="M26,30 C38,30 38,${8.5 + i * 14} 50,${8.5 + i * 14}" opacity="${i === 1 ? 1 : .25}"/>`).join("")}<text x="90" y="22" font-size="9" fill="var(--ink-2)">1 of</text><text x="90" y="34" font-size="9" fill="var(--ink-2)">many</text></svg>`,
+    facts: [["Cost", "only the active experts per token; total parameters can be huge"], ["Papers", "Switch Transformers (2021), DeepSeek-V3 (2024), Qwen3 (2025)"], ["Numbers", "DeepSeek-V3: 671 B total, 37 B active per token"]] },
+  { k: "ssm", s: 3, name: "State-space model", one: "A recurrent state is updated once per token; Mamba makes the update depend on the input (selective).",
+    pic: `<svg viewBox="0 0 120 60">${[0, 1, 2, 3, 4, 5].map(i => `<rect class="cell on" x="${4 + i * 19}" y="24" width="14" height="12" rx="3"/>${i < 5 ? `<path class="st" d="M${18 + i * 19},30 H${23 + i * 19}"/>` : ""}<path class="st" d="M${11 + i * 19},10 V24" opacity=".5"/>`).join("")}<text x="60" y="52" font-size="9" text-anchor="middle" fill="var(--ink-2)">one state update per token</text></svg>`,
+    facts: [["Cost", "linear in n; constant memory while generating"], ["Papers", "Mamba (2023), Mamba-3 (ICLR 2026)"], ["Catch", "no direct look-back at individual tokens; recall of exact details is the open question"]] },
+];
+const MODELS = [
+  ["Attention Is All You Need", "dense", "65 M (base), 213 M (big)", "all", "—", "the Transformer: multi-head attention, no recurrence"],
+  ["Switch Transformers", "moe", "up to 1.6 T", "one expert per token", "—", "top-1 routing makes MoE simple and stable"],
+  ["Mamba", "ssm", "up to 2.8 B", "all (small)", "linear", "selective state spaces, hardware-aware scan"],
+  ["DeepSeek-V3", "moe", "671 B", "37 B", "128 k", "multi-head latent attention, multi-token prediction"],
+  ["Gemma 3", "dense", "1 B – 27 B", "all", "128 k", "local/global attention 5:1, vision input"],
+  ["Qwen3", "moe", "0.6 B – 235 B", "22 B in the largest MoE", "128 k", "dense and MoE sizes, thinking and non-thinking modes"],
+  ["Mamba-3", "ssm", "about 1.5 B in the paper", "all", "linear", "better discretisation, complex state, MIMO"],
+];
+
+function meeting1() {
+  const held = daysUntil(x.date);
+  return `${head(x)}
+    <p class="lead">The only meeting before December. It set the rules of the seminar (what a graded 30-minute talk must contain and how it is judged), gave a short tour of conversational AI, and opened the topic catalogue; topic selection in OPAL started the next morning. Slides: the 47-page kick-off deck in OPAL; what follows is a summary in my own words, with context the slides do not spell out marked as ${ctx()}.</p>
+
+    <h2>The shape of the semester</h2>
+    <p>Eight of the seventeen Thursdays are used. After the kick-off come six quiet weeks for reading, then two rounds of five-minute intermediate presentations in early December, a quiet fortnight over Christmas, and five Thursdays of final talks from 7 January; the final split depends on how many talks there are. The exact dates are in the OPAL course calendar.</p>
+    ${chart("thu", leg([[1, "Kick-off"], [2, "Intermediate presentations"], [3, "Final presentations"], ["", "No seminar", "ring"]]))}<figcaption>The seminar's Thursdays; hover or focus one. Ring: the next meeting. Shaded: the Christmas break (${U.fmtDate(BREAK.from)} – ${U.fmtDate(BREAK.to)}).</figcaption></figure>
+    <div class="tiles">
+      <div class="tile"><div class="v">8 of 17</div><div class="l">Thursdays with a meeting</div></div>
+      <div class="tile"><div class="v">6 weeks</div><div class="l">quiet reading time before the intermediate round</div></div>
+      <div class="tile"><div class="v">5 + 5 min</div><div class="l">intermediate pitch plus questions, ungraded</div></div>
+      <div class="tile"><div class="v">30 min</div><div class="l">final slot, 20–25 of them talking, graded</div></div>
+    </div>
+
+    <h2>What the seminar is, and what it is not</h2>
+    <ul class="cmp">
+      <li class="yes"><b>It is</b><ul><li>presenting and discussing recent research in conversational AI</li><li>learning what the frontier of NLP and AI research looks like</li><li>learning to read a paper in depth and present it</li><li>getting feedback from peers and researchers</li></ul></li>
+      <li class="no"><b>It is not</b><ul><li>a lecture on conversational AI, machine learning or NLP</li><li>a complete course covering every aspect of the field</li><li>a place to build or code an agent (for that, the slides point to Andrew Freed's book <i>Conversational AI</i>, online through SLUB)</li></ul></li>
+    </ul>
+    <div class="why"><div class="kicker">Why this matters for your talk ${ctx()}</div><p>Because there are no lectures, the audience's shared knowledge is exactly the kick-off: the evaluation criteria say the first session can be assumed as common knowledge and nothing else. Everything your topic needs beyond that (what attention is, what an expert is in a mixture-of-experts layer) has to be built up in the talk itself.</p></div>
+
+    <h2>What is required</h2>
+    <ul>
+      <li>One topic per student, selected in OPAL from 16 October, 10:00, first come first served, one person per topic, at most 15 topics assigned. You got <b>Topic ${c.topic.n}, ${esc(c.topic.title)}</b> (${esc(c.topicNote)}).</li>
+      <li>Each topic rests on one or more papers. The talk may focus on one paper or cover several of the same topic; the slides ask for a <b>conscious decision</b> between the two.</li>
+      <li>CMS students: a graded <b>30-minute presentation</b>, 20–25 minutes of it talking, the rest for questions. Computer-science students taking it as a research module get a 15-minute ungraded exam instead.</li>
+      <li>One <b>intermediate presentation</b> of about 5 minutes (10 with questions) in December: say what you want to cover and collect feedback.</li>
+      <li>Enrol in the OPAL course and register in Selma as well. The slides warn that voting for a topic and then dropping out takes the spot from someone else; check that the seminar fits your plan (it sits in “Application Area B” of the computer-science curricula; for CMS it is the Applied AI track elective).</li>
+    </ul>
+
+    <h2>What the talk must contain: What, Why, How</h2>
+    <p>The reference papers have to be understood in depth, and the talk has to answer three groups of questions. This is the skeleton the slides give; the sub-questions are theirs, paraphrased.</p>
+    <div class="www">
+      <div class="q w1"><h4>What</h4><ul><li>What is the research problem?</li><li>Which issues cause it?</li><li>Which gaps are still open?</li></ul></div>
+      <div class="q w2"><h4>Why</h4><ul><li>Why does solving it matter?</li><li>Why had the community not solved it before?</li></ul></div>
+      <div class="q w3"><h4>How</h4><ul><li>How do the paper or papers attack the problem?</li><li>Approach, evaluation and datasets (from the dos list)</li></ul></div>
+    </div>
+    <div class="ex"><div class="kicker">Worked example for Topic 1 ${ctx()}</div>
+      <p><b>What:</b> a conversational model must mix information across a long context and generate a reply token by token; dense attention does that with work that grows quadratically in the context length, and every parameter is used for every token. The open gaps: long contexts, memory while generating, and the cost of scaling parameters.</p>
+      <p><b>Why:</b> context windows went from 2 k to over 100 k tokens within a few years and models to hundreds of billions of parameters; the quadratic score matrix and the per-token cost became the bottleneck. Earlier recurrent models were cheap but hard to train in parallel and forgot; the Transformer won because it trains in parallel, so for years nobody needed an alternative.</p>
+      <p><b>How:</b> three answers from the reading list. Keep all parameters but route each token to a few experts (Switch Transformers, DeepSeek-V3, Qwen3). Replace attention by a selective recurrent state with linear cost (Mamba, Mamba-3). Or keep dense attention and cut its memory with local windows (Gemma 3). The closing reflection could weigh which of the three a conversational system actually needs.</p></div>
+
+    <h2>How the talk is judged</h2>
+    <p>Eight criteria from the slides, in their order. There are no published weights; read them as a checklist.</p>
+    <ol class="crit">
+      <li><span class="n">1</span><div><b>Self-contained</b><span class="s">only the kick-off counts as common knowledge of the group</span></div></li>
+      <li><span class="n">2</span><div><b>Structure</b><span class="s">clear and easy to follow</span></div></li>
+      <li><span class="n">3</span><div><b>Clarity and coherence</b><span class="s">spoken and written</span></div></li>
+      <li><span class="n">4</span><div><b>Facts, statistics, images</b><span class="s">used effectively, instead of long text</span></div></li>
+      <li><span class="n">5</span><div><b>Personal reflection</b><span class="s">the final part gives your own opinion on the paper or topic</span></div></li>
+      <li><span class="n">6</span><div><b>On time</b><span class="s">completion in the allotted time</span></div></li>
+      <li><span class="n">7</span><div><b>Depth in Q&amp;A</b><span class="s">how well you know the material when asked</span></div></li>
+      <li><span class="n">8</span><div><b>Participation</b><span class="s">activity in the other sessions and presentations</span></div></li>
+    </ol>
+    ${lab("budget", "the 30-minute slot")}
+    <h3>Dos and don'ts</h3>
+    <ul class="cmp">
+      <li class="yes"><b>Do</b><ul><li>number your slides</li><li>visualise instead of writing text blocks</li><li>concentrate on the main contributions and ideas</li><li>be critical: what are the downsides?</li><li>discuss approach, evaluation and the datasets used</li></ul></li>
+      <li class="no"><b>Don't</b><ul><li>too many slides, too much text, small text</li><li>talk too fast or in a monotone</li><li>get lost in details: trade depth against the time you have</li><li>run over: three slots per meeting means 30 minutes per person including discussion, strictly</li></ul></li>
+    </ul>
+
+    <h2>The topic catalogue</h2>
+    <p>The slides list 17 topics, each with two to four fundamental references and two to four papers from 2025 and 2026, one slide per topic. The catalogue itself stays in OPAL; grouped by theme it looks like this, and your topic is the first square.</p>
+    ${chart("themes")}<figcaption>17 topics in five themes; hover a theme for what it covers. The first topic, model architectures, is yours.</figcaption></figure>
+    <p>Every topic slide pairs older, fundamental papers with current ones, which is the hint for the “one paper or several” decision: a talk built on the fundamentals and finished with one current paper covers the What and Why from the classics and the How from the new work ${ctx()}.</p>
+
+    <h2>A first look at conversational AI</h2>
+    <p>The slides start from two definitions of AI (a machine showing human-like capabilities such as reasoning, learning, planning and creativity; computer systems doing tasks that normally need human intelligence) and define conversational AI simply as <b>enabling a machine to have natural conversations with humans</b>.</p>
+    <h3>From the Antikythera mechanism to reasoning models</h3>
+    ${chart("ai", leg([["g", "Before AI"], [1, "Symbolic AI"], [2, "Assistants"], [3, "Transformers and LLMs"], [4, "Agents and reasoning"]]))}<figcaption>The milestones of the slide's AI timeline, equally spaced (the span is two thousand years). The era grouping is mine ${ctx()}. Hover or focus a point.</figcaption></figure>
+    <details class="tbl"><summary>Table view of the timeline</summary><table><tr><th>Year</th><th>Milestone</th><th>Era</th></tr>${EVENTS.map(e => `<tr><td class="n">${e[0]}</td><td>${e[1]}: ${e[2]}</td><td>${ERAS[e[3]]}</td></tr>`).join("")}</table></details>
+    <h3>Four generations of conversational systems</h3>
+    <p>A Gartner-derived table on the slides compares the generations along three lines: what the system can do, where its knowledge comes from, and how complex a task it handles.</p>
+    <div class="eras" role="table" aria-label="Four generations of conversational AI">
+      <div></div><div class="h e1">Rule-based<small>before 2018</small></div><div class="h e2">Transformer<small>2018–2021</small></div><div class="h e3">LLM and RAG<small>2022–2024</small></div><div class="h e4">Agentic<small>2024–today</small></div>
+      <div class="r">Core ability</div><div class="c">pattern matching</div><div class="c">language generation</div><div class="c">knowledge augmentation</div><div class="c">goal orchestration</div>
+      <div class="r">Knowledge</div><div class="c">hard-coded, static</div><div class="c">general, from pre-training</div><div class="c">real-time and external</div><div class="c">persistent and contextual</div>
+      <div class="r">Complexity</div><div class="c">simple tasks, narrow domain</div><div class="c">complex queries, broad domain</div><div class="c">task execution</div><div class="c">multi-step planning</div>
+    </div>
+    <h3>Inside a conversational agent</h3>
+    <p>The simplified component picture of the slides: an utterance and its context go into understanding, dialogue management and generation, which draw on external databases and services, and out comes the response. The lecturer's remark on the slide is the important bit: nowadays these components are often one LLM.</p>
+    ${lab("arch", "the pipeline, then collapse it into one LLM")}
+    <h3>Knowledge graphs as a data source</h3>
+    <p>Data is connected, and the relationships are part of the data. A knowledge graph stores facts as <b>triples</b> (head, relation, tail): two entities, or an entity and a literal value, joined by a relation. The structure is what makes them useful for knowledge tasks, and for conversational systems they are the external, verifiable knowledge several seminar topics plug into an LLM.</p>
+    ${chart("kg")}<figcaption>A small knowledge graph; hover or focus an edge to read it as a triple. Dashed box: a literal value instead of an entity.</figcaption></figure>
+    <div class="triple" id="triple" aria-live="polite"><span>Bob</span><span class="rel">is interested in</span><span>The Mona Lisa</span></div>
+    <p class="muted" style="margin-top:.6rem">Both professors come from the knowledge-graph world (DBpedia on one side, graph reasoning on the other), which is why the catalogue has topics on retrieval and on LLM–knowledge-graph integration ${ctx()}.</p>
+    <h3>The LLM landscape</h3>
+    <p>One slide shows the Information-is-Beautiful chart of major language models since 2022, ranked by benchmark score and sized by parameters: a steep rise from GPT-3 to models at or above the human-expert line on MMLU within three years, with open-weight models (Llama, Qwen, DeepSeek, Mistral) catching up with the closed ones. Several of those models are on your reading list.</p>
+
+    <h2>Where conversational AI is used</h2>
+    <div class="cases">
+      <svg width="0" height="0" style="position:absolute"><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/></marker></defs></svg>
+      ${CASES.map(([t, d, svg]) => `<div class="case">${svg}<b>${t}</b>${d}</div>`).join("")}
+    </div>
+    <p>Application areas named on the slides: personal assistants on phones, the web and smart speakers; healthcare; education; customer service; help with tedious repeated tasks; social companions; software engineering. The assistants shown range from Google Assistant, Siri, Alexa and Cortana to ChatGPT, Claude, Gemini, Perplexity, Socratic, Otter.ai and Clinc.</p>
+    ${chart("use")}<figcaption>What people use ChatGPT for, share of conversations by purpose (OpenAI's 2025 usage study as charted by Information is Beautiful, shown on the slides). Hover a bar for the sub-categories.</figcaption></figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Purpose</th><th>Share</th><th>Sub-categories</th></tr>${USE.map(u => `<tr><td>${u.g}</td><td class="n">${num(u.v)} %</td><td>${u.items.map(it => `${it[0]} ${num(it[1])} %`).join(", ")}</td></tr>`).join("")}</table></details>
+    <div class="why"><div class="kicker">Reading the chart ${ctx()}</div><p>Three quarters of the use is guidance, writing and information seeking, not coding. For a seminar on conversational AI that is the motivation slide in disguise: the systems are used as conversation partners for everyday knowledge work, so the quality of understanding, grounding and dialogue matters more than raw benchmark scores.</p></div>
+
+    <h2>Your topic: ${esc(c.topic.title)}</h2>
+    <p>${esc(c.topic.summary)} The slide's figure is the Transformer block diagram from the 2017 paper: embeddings plus positional encoding, N stacked blocks of multi-head attention and feed-forward layers with residual connections and layer norm, a linear-plus-softmax head. The three families below are the three “designs” the topic names ${ctx()}.</p>
+    <div class="fams">${FAMS.map(f => `<div class="fam-card fam-${f.k}" style="--c:var(--vz-s${f.s})"><h4>${f.name}</h4><p class="one">${f.one}</p>${f.pic}<dl>${f.facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`).join("")}</div>
+    ${chart("cost", leg([[1, "Attention: n² token pairs", "ln"], [3, "State space: n state updates", "ln"]]))}<figcaption>Work per sequence against context length, both axes logarithmic, relative to a 1 000-token sequence. At a million tokens attention does a million times the work, a state-space model a thousand times. Mixture of experts is not on this chart: it changes the cost per token, not its growth with length ${ctx()}.</figcaption></figure>
+    <h3>The seven papers at a glance</h3>
+    <div class="tbl-wrap"><table class="mx"><tr><th>Paper</th><th>Family</th><th>Parameters</th><th>Active per token</th><th>Context</th><th>One-line idea</th></tr>
+      ${MODELS.map(([t, f, p, a, cx, idea]) => `<tr><td><span class="sw fam-${f}" style="--c:var(--vz-s${{ dense: 1, moe: 2, ssm: 3 }[f]})"></span> ${t}</td><td>${{ dense: "dense", moe: "MoE", ssm: "SSM" }[f]}</td><td>${p}</td><td>${a}</td><td>${cx}</td><td>${idea}</td></tr>`).join("")}</table></div>
+    <p class="muted">Figures from the papers themselves, rounded ${ctx("from the papers")}. The reading list with links is on the <a href="conversational-ai.html">board</a>.</p>
+    <div class="me"><div class="kicker">Decision to make</div><p>${esc(c.topic.decision)}</p></div>
+
+    <h2>Until the intermediate presentation</h2>
+    <p>Nothing happens in the seminar until 3 December, so the schedule below is my own ${ctx()}. The pitch is five minutes: the problem, which papers, which angle, and one question you want feedback on.</p>
+    <ul class="todo">
+      <li class="done"><span class="ck"></span><div>Enrolled in OPAL and topic chosen<small>${esc(c.opalNote)}; topic ${esc(c.topicNote)}</small></div></li>
+      <li class="open"><span class="ck"></span><div>Register for the module in Selma<small>${esc(c.selmaNote)}</small></div></li>
+      <li><span class="ck"></span><div>Read the three fundamental papers<small>Transformer, Switch Transformers, Mamba: by mid-November, tick them on the board</small></div></li>
+      <li><span class="ck"></span><div>Skim the four current papers and decide the angle<small>one paper in depth, or the three families compared: decide by 20 November</small></div></li>
+      <li><span class="ck"></span><div>Draft the five-minute pitch<small>one slide per What, Why, How plus the open question; practise it once against the clock</small></div></li>
+      <li><span class="ck"></span><div>Check the OPAL course calendar for your round<small>3 or 10 December, ${slot}</small></div></li>
+    </ul>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li>The seminar is one kick-off, one five-minute pitch and one graded 30-minute talk; everything else is your own reading.</li>
+      <li>The talk is judged on being self-contained, structured, visual, critical, reflective, on time and well defended in the Q&amp;A, plus showing up for the others.</li>
+      <li>Conversational AI today means LLM-based systems that understand, decide and generate in one model, grounded by retrieval, knowledge graphs and tools, and increasingly acting as agents.</li>
+      <li>Your topic is the inside of that model: dense attention, mixture of experts and state spaces, and the trade-off between cost, context length and quality.</li>
+    </ul>
+    <p class="muted">Materials: ${esc(c.slides)}. The kick-off was ${held < 0 ? `${-held} days ago` : "today"}. Next: <a href="conversational-ai/session.html?n=${next?.n || 2}">${next ? `Meeting ${next.n}, ${esc(next.title)}, ${fmt(next.date)}` : "none"}</a>.</p>`;
+}
+
+// Meetings that have not taken place yet: what is known about them.
+function placeholder() {
+  const d = daysUntil(x.date);
+  const what = x.kind === "mid" ? `<p>Every participant gives an intermediate presentation of about 5 minutes (10 with questions): what the talk will cover, which papers, which angle, and gets feedback from the lecturers and the group. Which of the two December Thursdays is yours is announced in OPAL. Ungraded, but the feedback shapes the final talk.</p>`
+    : `<p>Up to three graded final presentations, 30 minutes each including discussion (20–25 minutes talk), strictly enforced. The split of the talks over the five Thursdays follows the final number of talks and may still move; attending the other talks counts towards the participation criterion.</p>`;
+  return `${head(x)}
+    <div class="box placeholder">
+      <div class="big-icon">${x.icon}</div>
+      <h2 style="margin-top:.4rem">Not held yet</h2>
+      <p class="muted">This meeting is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but not written up yet"}: ${fmt(x.date)}, ${slot}.<br>${esc(x.blurb)}<br>The write-up appears here once it has taken place.</p>
+    </div>
+    <h2>What is known so far</h2>${what}
+    <p>The rules of the talk and the evaluation criteria are in the <a href="conversational-ai/session.html?n=1">kick-off write-up</a>; your topic and the reading list are on the <a href="conversational-ai.html">board</a>.</p>`;
+}
+const WRITEUPS = { 1: meeting1 };
+if (!x) {
+  page.innerHTML = `${back}<h1>Meeting not found</h1><p>There is no meeting ${esc(q)}.</p>`;
+} else {
+  document.title = `Meeting ${x.n} – ${x.title} · Conversational AI`;
+  page.innerHTML = (x.date <= today && WRITEUPS[x.n] ? WRITEUPS[x.n] : placeholder)();
+  mountCharts(); mountLabs(); wireKG();
+  addEventListener("resize", () => setTimeout(wireKG, 0));
+}
+</script>
+</body>
+</html>
