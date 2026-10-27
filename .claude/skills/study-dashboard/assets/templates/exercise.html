@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>__NAME__ · __EX__</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="__SLUG__/__NSLC__.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="__SLUG__/__NSLC__.js"></script>
+<script src="__SLUG__/__NSLC__-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="__NSLC__">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today, EX } = __NS__;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = __NS__Viz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="__SLUG__.html">← All lectures and exercises</a>`;
+const title = e => `${EX} ${e.n}${e.title ? ` – ${esc(e.title)}` : ""}`;
+function head(e) {
+  const meta = `${e.published ? `Sheet in OPAL since ${fmt(e.published)} · ` : ""}discussed ${fmt(e.date)}${exe ? ` · ${exe.start}–${exe.end} · ${esc(exe.room)} · ${esc(exe.who || "")}` : ""}${e.points ? ` · ${e.points} points` : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// A task of the sheet (its number and points on the left, the question restated in our own words, then the worked
+// answer), the answer tiles, and the context / worked-example boxes.
+const task = (id, pts, t, body) => `<section class="task" id="t${String(id).replace(/\W/g, "")}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2>${pts ? `<span class="pts">${pts} pt</span>` : `<span class="pts open">discussed in the session</span>`}</div>${body}</section>`;
+const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+
+// ---------------- Write-ups: one function per exercise, registered in WRITEUPS below ----------------
+// function exercise1() { return `${head(e)}<p class="lead">…</p>${task("1", 4, "…", `<p>…</p>${ans([["42", "answer"]])}`)}<h2>Before the session</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(e.date), prev = e.lecture != null ? c.lectures.find(x => x.n === e.lecture) : null;
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.published ? "Sheet online, write-up pending" : "Not published yet"}</h2>
+      <p class="muted">This session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}${exe ? `, ${exe.start}–${exe.end}, ${esc(exe.room)}` : ""}.<br>${esc(e.blurb)}${prev ? ` <a href="__SLUG__/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it draws on.` : ""}<br>The write-up appears here once the sheet is available.</p>
+    </div>`;
+}
+const WRITEUPS = {};
+const LABS = {};
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!e) {
+  page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

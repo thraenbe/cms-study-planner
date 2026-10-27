@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__NAME__ · CMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>__ICON__</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="__SLUG__/__NSLC__.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="__SLUG__/__NSLC__.js"></script>
+</head>
+<body class="__NSLC__">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap" id="page"></div>
+<script>
+// Board: header, status bar (OPAL, group, Selma), one card per lecture plus the Orga card, one card per exercise.
+// Every card carries a done box (CMSUtil.doneBox); future items are quiet placeholders ("soon").
+const { m, c, esc, U, CODE, fmt, lec, exe, today, EX } = __NS__;
+const state = x => x.covered ? "write-up" : x.date > today ? "upcoming" : "held, write-up pending";
+const lectures = (c.lectures || []).map(l => `<a class="game-card lec ${l.covered ? "" : "soon"}" href="__SLUG__/lecture.html?n=${l.n}">
+    <div class="game-icon">${l.icon}</div>
+    <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
+    <p class="when">${l.date ? fmt(l.date) : "no fixed date"}${lec ? ` · ${lec.start} · ${esc(lec.room)}` : ""} · ${state(l)}</p>
+    <p>${esc(l.blurb)}</p>
+    ${U.doneBox(`${CODE}:lecture:${l.n}`)}
+  </a>`).join("") + `<a class="game-card" href="__SLUG__/orga.html">
+    <div class="game-icon">🗂️</div>
+    <h2>Orga</h2>
+    <p>Next session, exam and Selma, the full schedule with rooms, how the exercises work, material and contacts.</p>
+  </a>`;
+const exercises = (c.exercises || []).map(x => `<a class="game-card exe ${x.covered ? "" : "soon"}" href="__SLUG__/exercise.html?n=${x.n}">
+    <div class="game-icon">${x.icon}</div>
+    <h2>${EX} ${x.n}${x.title ? ` – ${esc(x.title)}` : ""}</h2>
+    <p class="when">${fmt(x.date)}${exe ? ` · ${exe.start} · ${esc(exe.room)}` : ""}${x.published ? ` · sheet in OPAL since ${fmt(x.published)}` : ""} · ${state(x)}</p>
+    <p>${esc(x.blurb)}</p>
+    ${U.doneBox(`${CODE}:exercise:${x.n}`)}
+  </a>`).join("");
+const nLec = (c.lectures || []).filter(l => l.covered).length, nExe = (c.exercises || []).filter(x => x.covered).length;
+document.getElementById("page").innerHTML = `
+  <p class="crumbs"><a href="index.html">Dashboard</a> / ${esc(m.name)}</p>
+  <header class="hero">
+    <h1>__ICON__ ${esc(m.name)}</h1>
+    <p class="subtitle">${CODE} · ${esc(CMS.semester)} · __SUBTITLE__</p>
+  </header>
+  ${__NS__.topbar()}
+  <main>
+    <div class="board-h"><h2>Lectures</h2><span class="muted">${lec ? `${U.DAYS[lec.day]}s ${lec.start} · ${esc(lec.room)} · ` : ""}${nLec} of ${(c.lectures || []).length} written up</span></div>
+    <div class="game-cards">${lectures}</div>
+    ${(c.exercises || []).length ? `<div class="board-h"><h2>${EX}s</h2><span class="muted">${exe ? `${U.DAYS[exe.day]}s ${exe.start} · ${esc(exe.room)} · ` : ""}${nExe} of ${c.exercises.length} written up</span></div>
+    ${c.exerciseNote ? `<p class="muted board-note">${esc(c.exerciseNote)}</p>` : ""}
+    <div class="game-cards">${exercises}</div>` : ""}
+  </main>`;
+U.wireDone();
+</script>
+</body>
+</html>
