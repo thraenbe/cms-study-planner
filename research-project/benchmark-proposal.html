@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · WireBench proposal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔌</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<script src="research-project/benchmark-proposal.js"></script>
+<style>
+/* Chart colours: the dataviz reference palette as on the paper write-up, validated on the chart surfaces
+   (#efede7 light, #2a2a27 dark). Slot 1 blue = existing project code, slot 2 orange = code the model writes,
+   slot 3 aqua = the reference change. Light-mode contrast of slots 2–3 is below 3:1, so every mark is labelled
+   and every chart has a table view. Status colours (ok / warn / bad) only appear with a symbol. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+
+/* The hero: a wiring diagram on graph paper. */
+.wb .bench { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 10px; margin: 18px 0 8px;
+  background-image: linear-gradient(var(--vz-grid) 1px, transparent 1px), linear-gradient(90deg, var(--vz-grid) 1px, transparent 1px); background-size: 24px 24px; background-position: -1px -1px; }
+.wb .bench .ctrl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-bottom: 8px; }
+.wb .bench .ctrl .grp { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.wb .bench .ctrl .grp > span { margin-right: 4px; }
+.wb .tg { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.wb .tg[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.wb .viz svg { width: 100%; height: auto; display: block; margin: 0 auto; }
+.wb .viz .e-old { stroke: var(--vz-axis); stroke-width: 2; }
+.wb .viz .e-new { stroke: var(--vz-s2); stroke-width: 2; }
+.wb .viz .e-ref { stroke: var(--vz-s3); stroke-width: 2.5; }
+.wb .viz .e-missing { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 5 5; }
+.wb .viz .e-phantom { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 2 4; }
+.wb .viz .ah-old { fill: var(--vz-axis); } .wb .viz .ah-new { fill: var(--vz-s2); } .wb .viz .ah-ref { fill: var(--vz-s3); } .wb .viz .ah-bad { fill: var(--bad); }
+.wb .viz .halo { fill: color-mix(in srgb, var(--vz-s1) 10%, transparent); stroke: color-mix(in srgb, var(--vz-s1) 45%, transparent); stroke-width: 1; stroke-dasharray: 3 3; }
+.wb .viz .node .nb { stroke-width: 2; }
+.wb .viz .n-old .nb { fill: var(--surface); stroke: var(--vz-s1); }
+.wb .viz .n-new .nb { fill: color-mix(in srgb, var(--vz-s2) 14%, var(--surface)); stroke: var(--vz-s2); }
+.wb .viz .n-ghost .nb { fill: var(--surface); stroke: var(--bad); stroke-dasharray: 3 3; }
+.wb .viz .n-ghost .nl { fill: var(--bad); font-style: italic; }
+.wb .viz .site .nb { stroke-width: 3.5; }
+.wb .viz .node.dim { opacity: .38; }
+.wb .viz .nl { font: 600 12.5px "IBM Plex Mono", ui-monospace, monospace; fill: var(--ink); }
+.wb .viz .badge { stroke: var(--surface); stroke-width: 2; }
+.wb .viz .b-ok { fill: var(--ok); } .wb .viz .b-warn { fill: var(--warn); } .wb .viz .b-bad { fill: var(--bad); } .wb .viz .b-ref { fill: var(--vz-s3); }
+.wb .viz .badge-t { font: 700 11px "IBM Plex Sans", system-ui, sans-serif; fill: var(--surface); pointer-events: none; }
+.wb .viz .bdot.tests { fill: var(--vz-s1); stroke: var(--surface); stroke-width: 2; }
+.wb .viz .bdot.match { fill: var(--surface); stroke: var(--vz-s1); stroke-width: 2.5; }
+.wb .viz .bdot.paper { fill: var(--vz-s3); }
+.wb .viz .prop { fill: var(--vz-s2); stroke: var(--surface); stroke-width: 2; }
+.wb .viz .mile { fill: var(--ink); }
+.wb .viz .dl { font-size: 12px; fill: var(--ink-2); }
+.wb .viz .strong { font-weight: 700; fill: var(--ink); }
+.wb .scores { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0 6px; }
+.wb .scores .sc { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--ink-3); border-radius: 10px; padding: 8px 10px; }
+.wb .scores .sc.ok { border-left-color: var(--ok); } .wb .scores .sc.warn { border-left-color: var(--warn); } .wb .scores .sc.bad { border-left-color: var(--bad); }
+.wb .scores .v { font: 700 1.35rem/1.1 var(--rp-serif); }
+.wb .scores .l { font-size: 13px; font-weight: 600; }
+.wb .scores .d { font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+.wb .hero-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0 0; }
+.wb .hero-legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.wb .hero-legend b { display: inline-block; width: 16px; height: 16px; border-radius: 50%; color: var(--surface); font-size: 10px; line-height: 16px; text-align: center; margin-right: 4px; }
+
+.wb .cover table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.wb .cover th, .wb .cover td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: bottom; }
+.wb .cover thead th { font-size: 12px; font-weight: 600; color: var(--ink-2); line-height: 1.25; }
+.wb .cover tbody th { text-align: left; font-weight: 600; white-space: nowrap; }
+.wb .cover tbody th small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; white-space: normal; max-width: 30ch; }
+.wb .cover tr.prop { background: color-mix(in srgb, var(--vz-s2) 10%, var(--surface)); }
+.wb .cover .tw, .wb .tw.cover { overflow-x: auto; }
+.wb .cv { font-size: 19px; line-height: 1; } .wb .cv.y { color: var(--vz-s1); } .wb .cv.p { color: var(--vz-s1); } .wb .cv.n { color: var(--ink-3); }
+.wb .legend-line { font-size: 12.5px; color: var(--ink-3); }
+
+.wb .families { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 12px 0; }
+.wb .fam { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); }
+.wb .fam h4 { margin: 0 0 4px; font: 600 1.02rem/1.3 var(--rp-serif); }
+.wb .fam p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.wb .fam .gold { margin-top: 6px; font-size: 13px; color: var(--ink); }
+.wb .metrics { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--line); margin: 10px 0; }
+.wb .metrics > div { display: grid; grid-template-columns: 210px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.wb .metrics b { font-weight: 600; }
+.wb .metrics code { font: 12.5px "IBM Plex Mono", ui-monospace, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.wb .metrics span { font-size: 14.5px; color: var(--ink-2); }
+.wb .conds { overflow-x: auto; }
+.wb .conds table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.wb .conds th, .wb .conds td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.wb .conds th { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.wb .conds td:first-child { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; white-space: nowrap; }
+.wb .three { display: grid; gap: 12px; margin: 12px 0; }
+.wb .three article { border-left: 3px solid var(--vz-s1); padding: 4px 0 4px 14px; }
+.wb .three h4 { margin: 0; font: 600 1.05rem/1.3 var(--rp-serif); }
+.wb .three .by { font-size: 13px; color: var(--ink-3); margin: 2px 0 6px; }
+.wb .three p { margin: 0 0 6px; font-size: 15px; }
+@media (max-width: 700px) {
+  .wb .scores { grid-template-columns: repeat(2, 1fr); }
+  .wb .families { grid-template-columns: 1fr; }
+  .wb .metrics > div { grid-template-columns: 1fr; gap: 2px; }
+  .wb .bench { padding: 12px 10px 8px; }
+  .wb .bench [data-chart="hero"] { overflow-x: auto; }
+  .wb .bench [data-chart="hero"] svg { min-width: 560px; }
+}
+</style>
+</head>
+<body class="rp wb">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { m, c, esc, U, CODE, fmt } = RP;
+const { chart, mountCharts, watch } = RPViz;
+const { HERO, scorePanel, heroTable, landscapeTable, coverage, citesTable } = WB;
+const paper = c.papers.find(x => x.slug === "software-reuse-variability");
+const sec = (n, t, id) => `<h2 id="${id}"><span class="sec">§ ${n}</span>${t}</h2>`;
+const note = (html, tag, mn) => `<div class="note">${html}<aside class="mn"><span class="tag">${tag}</span>${mn}</aside></div>`;
+const ax = id => `<a href="https://arxiv.org/abs/${id}" target="_blank" rel="noopener">arXiv ${id}</a>`;
+const heroCtrl = `<div class="ctrl">
+  <div class="grp" role="group" aria-label="Which change to show"><span>Show</span>
+    <button class="tg" type="button" data-view="ref" aria-pressed="false">The reference change</button>
+    <button class="tg" type="button" data-view="model" aria-pressed="true">A model’s attempt</button></div>
+  <div class="grp" role="group" aria-label="Context radius around the edit site"><span>Graph context radius</span>
+    ${[0, 1, 2, 3].map(k => `<button class="tg" type="button" data-k="${k}" aria-pressed="${k === HERO.k}">k = ${k}</button>`).join("")}</div></div>`;
+const heroLegend = `<div class="hero-legend">
+  <span><i style="border-color:var(--vz-s1)"></i>existing project code</span><span><i style="border-color:var(--vz-s2)"></i>code the model wrote</span>
+  <span><i style="border-color:var(--vz-s3)"></i>reference change</span><span><i style="border-color:var(--bad);border-top-style:dashed"></i>missing or phantom</span>
+  <span><b style="background:var(--ok)">✓</b>edge matches</span><span><b style="background:var(--warn)">≈</b>duplicated helper</span><span><b style="background:var(--bad)">✗</b>missing</span><span><b style="background:var(--bad)">?</b>phantom call</span>
+  <span>dashed halo: in the prompt at this radius · thick border: the edit site</span></div>`;
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Proposal · drafted ${fmt("2026-10-29")} for ${esc(c.project)} with ${esc(c.supervisor)}</p>
+    <h1>WireBench: does the code end up wired into the project?</h1>
+    <p class="authors">A benchmark proposal that turns the supervisor’s context study into a reusable test, scored on the call graph</p>
+    <div class="kw">${["repository-level code generation", "context engineering", "software reuse", "call graphs", "benchmark design"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <div class="abstract"><span class="h">The idea in one paragraph.</span>The supervisor’s study found that only 40 % of LLM-written features compile once placed into an existing Java game, while the ones that compile pass 72 % of their tests. The weak point is integration, not logic. Yet a compile flag says nothing about <em>how</em> the integration failed. WireBench scores every attempt on the program’s call graph before and after the change: were the required call sites wired, were existing helpers reused instead of rewritten, did the model call functions that do not exist? Because a parser derives the graph, the same code always gives the same graph, so every score is exact and needs no LLM judge. The context the model sees is the controlled variable, from none through retrieved snippets and class skeletons to the call-graph neighbourhood of the edit site at growing radius.</div>
+
+  <section class="bench" aria-label="Interactive example: scoring one attempt on the call graph">
+    ${heroCtrl}
+    ${chart("hero")}
+    <div id="scores">${scorePanel()}</div>
+    ${heroLegend}
+  </section>
+  <p class="muted" style="font-size:13.5px">The example is the paper’s Highscore task in miniature, with invented but typical names. Raise the radius and the helper <code>SaveStore.write()</code> enters the prompt only at k = 3: the model that rewrote it had never seen it. That is the overload question in one picture, since every extra hop also adds unrelated code.</p>
+  ${heroTable()}
+
+  ${sec(1, "The paper in brief", "paper")}
+  <p class="lead">Reinhartz-Berger, Gal-Oz, Litvak and Morad (2026) ask which <em>type</em> of context helps an LLM add a feature to an existing system, and whether the answer differs between writing it from scratch and adapting it from a sibling program.</p>
+  <div class="tiles">
+    <div class="tile"><div class="v">240</div><div class="l">single-shot runs</div><div class="s">3 tasks × 2 strategies × 8 context mixes × 5 runs, Gemini 3.1 Flash Lite</div></div>
+    <div class="tile"><div class="v">40 %</div><div class="l">compile after integration</div><div class="s">in 8 of 48 conditions no run compiled at all</div></div>
+    <div class="tile"><div class="v">72 %</div><div class="l">of tests pass</div><div class="s">mean over runs that compiled</div></div>
+  </div>
+  <ul>
+    <li><b>Setup.</b> Three features (Options, Highscore, Achievements) are added to Java games of the apo-games product line. Generation writes the feature from a specification; reuse also receives the sibling game’s implementation and must adapt it.</li>
+    <li><b>Context types.</b> Structural (classes, fields, parents), behavioural (per-method calls and logic hints) and functional (role tags and documented intent), extracted with regular expressions into typed JSON and given in all eight combinations.</li>
+    <li><b>Integration is the bottleneck.</b> Code that compiles is mostly right; getting it to compile inside the target game is what fails.</li>
+    <li><b>Strategy matters less than the task.</b> Generation and reuse end close (43 % vs 36 % compiled, 74 % vs 71 % tests). Options, the most self-contained feature, compiles most often; Achievements, the most entangled one, least.</li>
+    <li><b>Context cuts both ways.</b> Lean structural context helps generation most (67 % compiled), while behavioural context drags it below the no-context baseline (27 %, and 13 % with structure). Reuse starts weak without context (27 %) and gains from the richest mix (53 %).</li>
+    <li><b>Limits the authors name.</b> Five runs per cell and no significance tests, regex extraction that adds noise, one model, one domain, single shot only. Their future work asks for AST-based context, an analysis of <em>what</em> breaks during integration, and agentic workflows.</li>
+  </ul>
+  <p><a href="research-project/paper-${paper.slug}.html">Read the full visual write-up of the paper</a>, with both result tables redrawn.</p>
+
+  ${sec(2, "Why a benchmark, and why CoGraph fits", "why")}
+  ${note(`<p>Each limitation in the paper’s outlook maps onto something a call graph provides. The paper asks for <b>AST-based extraction</b>; CoGraph’s analyzers already parse Python, TypeScript, Java and C++ with real parsers. The paper asks <b>what actually breaks</b> during integration; a graph diff names it edge by edge: an unresolved call, a missing hook, a duplicated helper. The paper asks for <b>agentic workflows</b>; CoGraph serves <code>callers</code>, <code>callees</code> and <code>find_symbol</code> to agents through its MCP server, so the same graph can be handed over as static context or as tools.</p>
+  <p>The project brief asks three questions: which context types matter, whether more context overloads the model, and whether retrieval improves reuse. A benchmark with exact integration metrics answers all three on more than three tasks, and the team can keep reusing it after the case study.</p>`, "honesty", `CoGraph is Bela’s own tool, so its graph must not decide alone what counts as correct. Edges are cross-checked against a second extractor (PyCG for Python, a symbol-solving Java parser for Java) and against the hidden tests, and disagreements are reported, not hidden.`)}
+
+  ${sec(3, "The benchmark design", "design")}
+  <h3>Four task families</h3>
+  <div class="families">
+    <div class="fam"><h4>A · Feature transplant</h4><p>The paper’s setting, widened: more features and more game pairs from apo-games, each solved by generation and by reuse.</p><p class="gold"><b>Gold:</b> the reference implementation’s graph diff plus unit and integration tests.</p></div>
+    <div class="fam"><h4>B · Signature propagation</h4><p>Real commits where a function’s signature changed and its callers changed with it. The callers are reverted; the model gets the new signature and must update every call site.</p><p class="gold"><b>Gold:</b> the callers in the graph before the change, so coverage is exact.</p></div>
+    <div class="fam"><h4>C · Reuse or reimplement</h4><p>Commits that add a function built on helpers the project already had. The function is masked; does the model call those helpers or write its own?</p><p class="gold"><b>Gold:</b> the reuse edges of the real commit; duplication is detected by clone similarity.</p></div>
+    <div class="fam"><h4>D · Wiring</h4><p>A finished feature whose hooks into the rest of the program have been cut, like the game loop that never calls the achievements tracker.</p><p class="gold"><b>Gold:</b> the removed edges, checked by integration tests.</p></div>
+  </div>
+  <p>Tasks come from Java (apo-games and product-line forks) and Python repositories with working test suites. Half of the B–D tasks come from commits made after the evaluated models’ training cutoff, to separate integration skill from memory.</p>
+
+  <h3>Eight context conditions</h3>
+  <p>Conditions C1–C5 get the same token budget, so a difference between them is a difference in <em>type</em>, not amount. A separate budget sweep on C4 tests the overload question directly.</p>
+  <div class="conds"><table><thead><tr><th>Id</th><th>What the prompt contains besides the task</th><th>Question it answers</th></tr></thead><tbody>
+    <tr><td>C0</td><td>Nothing but the edited file</td><td>Baseline, as in the paper</td></tr>
+    <tr><td>C1</td><td>Top-k snippets by BM25 or dense retrieval</td><td>Does similarity retrieval find what the change must touch?</td></tr>
+    <tr><td>C2</td><td>File, class and signature skeleton of the project</td><td>Is structure enough without call relations?</td></tr>
+    <tr><td>C3–C5</td><td>Call-graph neighbourhood of the edit site at k = 1, 2, 3, with source</td><td>How far out does useful context reach before it overloads?</td></tr>
+    <tr><td>C6</td><td>The paper’s typed S + B + F context, rebuilt from the AST</td><td>Does exact extraction change the paper’s results?</td></tr>
+    <tr><td>C7</td><td>No static context; graph and file tools through MCP, several turns</td><td>Do agents fetch the right context themselves?</td></tr>
+  </tbody></table></div>
+
+  <h3>What is measured</h3>
+  <div class="metrics">
+    <div><b>Build success</b><span>The project compiles (Java) or imports and type-checks (Python) after the change, as in the paper.</span></div>
+    <div><b>Test pass rate</b><span>Unit and integration tests, reported both conditional on building and over all runs.</span></div>
+    <div><b>Wiring recall and precision</b><span>Required edges of the reference diff present in the model’s diff; extra new edges count against precision. <code>|ΔE<sub>model</sub> ∩ ΔE<sub>ref</sub>| / |ΔE<sub>ref</sub>|</code></span></div>
+    <div><b>Call-site coverage</b><span>Family B: share of the old callers that were updated, read straight from the graph before the change.</span></div>
+    <div><b>Reuse recall and duplication</b><span>Reference edges into existing helpers that the model also uses, and new functions that clone an existing one.</span></div>
+    <div><b>Phantom-call rate</b><span>Calls whose target is neither in the project graph nor in a declared library: hallucinated APIs, the likely cause of many failed builds.</span></div>
+    <div><b>Collateral edits</b><span>Changed functions outside the reference change set, a measure of blast radius.</span></div>
+    <div><b>Context cost</b><span>Prompt tokens and, for C7, tool calls and turns per task.</span></div>
+  </div>
+  ${note(`<p>Every structural metric is a set comparison between two graphs, so it is computed, not judged. Static call graphs do miss calls made through reflection, callbacks or dynamic dispatch, which is why the tests stay in the scoring and why each structural metric is validated against the tests on a hand-checked sample.</p>`, "pitfall", `In Java a phantom call fails the build, so build success and phantom-call rate overlap. In Python the same call fails only at run time, which is exactly where the graph check catches what the build misses.`)}
+
+  <h3>Scale and plan</h3>
+  <p>Target size: about 100 tasks across the four families, 8 conditions × 3 models (two open models served locally and one API model, starting with the paper’s Gemini 3.1 Flash Lite for comparability) × 3 runs, which is about 7,200 runs. That is 30 times the paper’s 240 and enough for confidence intervals per condition.</p>
+  ${chart("plan", "", "", "Hover a bar for what the phase delivers. Weeks count project time; the team of four can split families B–D.")}
+
+  <h3>Research questions</h3>
+  <ol>
+    <li>Which context type gives the highest wiring recall and build success at a fixed token budget, and does the ranking differ between generation and reuse?</li>
+    <li>Where does call-graph context stop helping as the radius grows, and does the turning point depend on the task family?</li>
+    <li>Does retrieval or graph context raise reuse recall and lower duplication compared with generation from a specification?</li>
+    <li>Which share of failed builds is explained by phantom calls versus missing wiring, and do agents with graph tools reduce either?</li>
+  </ol>
+
+  ${sec(4, "Current benchmarks", "landscape")}
+  <p class="lead">Benchmarks moved from single functions to whole repositories and real issues. Only since 2026 do a few measure how a model <em>uses</em> context, and none scores the integration itself on the program’s structure.</p>
+  ${chart("landscape", `<div class="legend"><span class="li"><span class="key" style="--c:var(--vz-s1)"></span><span class="lt">scored by running tests</span></span><span class="li"><span class="key ring" style="border-color:var(--vz-s1)"></span><span class="lt">scored by matching a reference</span></span><span class="li"><span class="key" style="--c:var(--vz-s3)"></span><span class="lt">the supervisor’s paper</span></span><span class="li"><span class="key" style="--c:var(--vz-s2)"></span><span class="lt">this proposal</span></span></div>`, "", "Each dot is a benchmark, placed by its arXiv date. Hover or tab through a dot for size, venue and what it asks.")}
+  ${landscapeTable()}
+  <h3>The closest neighbours</h3>
+  <p>ReCUBE (Hong, Ascoli and Choi, 2026) is the nearest: it masks a whole file, scores the rebuild with usage-aware tests, and gives agents caller-centric graph tools. Even GPT-5 reaches only 37.57 % strict pass with the full repository as context. RepoExec (2024) already checks whether provided dependencies are invoked. WireBench adds what neither has: the context type as a controlled variable, generation against reuse, and integration scored edge by edge.</p>
+  ${coverage()}
+  <p class="muted" style="font-size:13.5px">Agent leaderboards such as SWE-bench Verified and SWE-Bench Pro change monthly, and third-party trackers disagree on the current top scores, so no leaderboard number is quoted here. Check the official boards when the related-work section is written.</p>
+
+  ${sec(5, "The three most influential papers in this area", "influential")}
+  <p class="lead">Chosen for how much they shaped the question of this project, with citation counts as a check: how code models are scored, what a realistic task is, and how repository context gets into the prompt.</p>
+  ${chart("cites", "", "", "Citation counts from Semantic Scholar, read on 29 Oct 2026. Blue: the three chosen. Gray: highly cited runners-up, shown for scale.")}
+  ${citesTable()}
+  <div class="three">
+    <article><h4>Evaluating Large Language Models Trained on Code</h4><p class="by">Chen et al., OpenAI, 2021 · ${ax("2107.03374")}</p>
+      <p>Introduced Codex, the HumanEval benchmark and the pass@k metric. It fixed the field’s default: code is scored by running hidden tests, not by comparing text. The paper under study inherits this, and its related work quotes HumanEval results as the standalone baseline.</p></article>
+    <article><h4>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</h4><p class="by">Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan, ICLR 2024 · ${ax("2310.06770")}</p>
+      <p>Moved evaluation from isolated functions into real repositories, where the change has to fit thousands of lines that already exist. It became the reference task for coding agents and spawned Verified, Pro and many variants. WireBench borrows its idea of mining tasks from real commits.</p></article>
+    <article><h4>RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation</h4><p class="by">Zhang, Chen, Zhang, Keung, Liu, Zan, Mao, Lou, Chen, EMNLP 2023 · ${ax("2303.12570")}</p>
+      <p>Made repository context a retrieval problem: retrieve similar code, generate, retrieve again with the draft. Most later context methods, including the graph-based ones, are measured against this loop, which makes it condition C1’s ancestor.</p></article>
+  </div>
+  ${note(`<p>Two papers are cited more than RepoCoder and were left out on purpose. <b>Lost in the Middle</b> (Liu et al., TACL 2024) shows that models use information at the start and end of a long context better than in the middle, which is the strongest general argument for the overload question, but it is not about code. <b>SWE-agent</b> (Yang et al., NeurIPS 2024) shaped how agents act in repositories, while this project is about what they are given to read.</p>`, "choice", `“Most influential” is a judgement. Citation counts favour older and broader papers, so the choice weighs relevance to this project’s question as well.`)}
+
+  ${sec(6, "References", "refs")}
+  <ol class="refs">
+    <li>Reinhartz-Berger, I., Gal-Oz, N., Litvak, M., Morad, A. (2026): LLM-assisted Code Generation and Reuse: An Exploratory Study on Contextual Information. Manuscript, LNCS format.</li>
+    <li>Chen, M. et al. (2021): Evaluating Large Language Models Trained on Code. ${ax("2107.03374")}</li>
+    <li>Jimenez, C. E. et al. (2024): SWE-bench: Can Language Models Resolve Real-World GitHub Issues? ICLR 2024. ${ax("2310.06770")}</li>
+    <li>Zhang, F. et al. (2023): RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation. EMNLP 2023. ${ax("2303.12570")}</li>
+    <li>Hong, J., Ascoli, B. G., Choi, J. D. (2026): ReCUBE: Evaluating Repository-Level Context Utilization in Code Generation. ${ax("2603.25770")}</li>
+    <li>Le Hai, N., Nguyen, D. M., Bui, N. D. Q. (2024): On the Impacts of Contexts on Repository-Level Code Generation (RepoExec). NAACL 2025. ${ax("2406.11927")}</li>
+    <li>FEA-Bench: A Benchmark for Evaluating Repository-Level Code Generation for Feature Implementation (2025). ACL 2025. ${ax("2503.06680")}</li>
+    <li>Wang, Z. et al. (2024): CodeRAG-Bench: Can Retrieval Augment Code Generation? NAACL 2025 Findings. ${ax("2406.14497")}</li>
+    <li>Deng, X., Da, J., Pan, E. et al. (2025): SWE-Bench Pro: Can AI Agents Solve Long-Horizon Software Engineering Tasks? ${ax("2509.16941")}</li>
+    <li>Zhu, J., Wu, J., Hu, M. (2026): SWE Context Bench: A Benchmark for Context Learning in Coding. ${ax("2602.08316")}</li>
+    <li>Liu, T., Xu, C., McAuley, J. (2023): RepoBench: Benchmarking Repository-Level Code Auto-Completion Systems. ICLR 2024. ${ax("2306.03091")}</li>
+    <li>Liu, N. F. et al. (2023): Lost in the Middle: How Language Models Use Long Contexts. TACL 2024. ${ax("2307.03172")}</li>
+    <li>Yang, J. et al. (2024): SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering. NeurIPS 2024. ${ax("2405.15793")}</li>
+    <li>Krüger, J. et al. (2018): Apo-Games: A Case Study for Reverse Engineering Variability from Cloned Java Variants. SPLC 2018.</li>
+    <li>Salis, V. et al. (2021): PyCG: Practical Call Graph Generation in Python. ICSE 2021. ${ax("2103.00587")}</li>
+  </ol>
+  <p class="foot">Titles, authors and dates of every arXiv entry were checked against the arXiv API on 29 Oct 2026; venues from Semantic Scholar. The WireBench name is a working title.</p>`;
+
+// Hero controls: view and radius redraw the graph and the score panel.
+const bench = document.querySelector(".bench");
+bench.addEventListener("click", e => {
+  const b = e.target.closest("button.tg"); if (!b) return;
+  if (b.dataset.view) HERO.view = b.dataset.view; else HERO.k = Number(b.dataset.k);
+  bench.querySelectorAll("button[data-view]").forEach(x => x.setAttribute("aria-pressed", x.dataset.view === HERO.view));
+  bench.querySelectorAll("button[data-k]").forEach(x => x.setAttribute("aria-pressed", Number(x.dataset.k) === HERO.k));
+  RPViz.mount(bench.querySelector('[data-chart="hero"]'));
+  document.getElementById("scores").innerHTML = scorePanel();
+});
+mountCharts(); watch();
+</script>
+</body>
+</html>

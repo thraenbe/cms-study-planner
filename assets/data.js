@@ -3662,6 +3662,18 @@ window.CMS = {
       "covered": true,
       "blurb": "240 single-shot runs of Gemini 3.1 Flash Lite on three Java game features, generated from scratch or reused from a sibling game, under eight combinations of structural, behavioural and functional context. Only 40 % compile; the ones that do pass 72 % of their tests. Lean context helps generation, rich context helps reuse."
      }
+    ],
+    "proposalNote": "Your own direction within the project: a proposal page per idea, with the design, the related benchmarks and the key papers. Drafts for the meetings with the supervisor, not agreed plans.",
+    "proposals": [
+     {
+      "n": 1,
+      "slug": "benchmark-proposal",
+      "title": "WireBench: does the code end up wired into the project?",
+      "date": "2026-10-29",
+      "icon": "🔌",
+      "covered": true,
+      "blurb": "A benchmark that grows the supervisor's study into a reusable test: four task families, eight context conditions from none to call-graph neighbourhoods and MCP tools, and integration scored exactly on the call graph (wiring, reuse, phantom calls). With the paper in brief, current benchmarks and the three most influential papers."
+     }
     ]
    }
   },

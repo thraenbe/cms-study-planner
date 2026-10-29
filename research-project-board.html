@@ -24,6 +24,13 @@ const papers = c.papers.map(p => `<a class="game-card paper ${p.covered ? "" : "
     <p>${esc(p.blurb)}</p>
     ${U.doneBox(`${CODE}:paper:${p.n}`, "read")}
   </a>`).join("");
+const proposals = (c.proposals || []).map(p => `<a class="game-card paper" href="research-project/${p.slug}.html">
+    <div class="game-icon">${p.icon}</div>
+    <h2>${esc(p.title)}</h2>
+    <p class="cite">Proposal · drafted ${fmt(p.date)}</p>
+    <p>${esc(p.blurb)}</p>
+    ${U.doneBox(`${CODE}:proposal:${p.n}`, "discussed")}
+  </a>`).join("");
 const orga = `<a class="game-card" href="research-project/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
@@ -40,6 +47,9 @@ document.getElementById("page").innerHTML = `
     <div class="board-h"><h2>Papers</h2><span class="muted">${c.papers.length} ${c.papers.length === 1 ? "paper" : "papers"} so far · tick “read” once you have worked through one</span></div>
     <p class="muted board-note">${esc(c.paperNote)}</p>
     <div class="game-cards">${papers}</div>
+    ${proposals ? `<div class="board-h"><h2>Proposals</h2><span class="muted">tick “discussed” once it went through a supervisor meeting</span></div>
+    <p class="muted board-note">${esc(c.proposalNote)}</p>
+    <div class="game-cards">${proposals}</div>` : ""}
     <div class="board-h"><h2>Project</h2><span class="muted">no timetabled sessions; meetings and milestones go into Orga</span></div>
     <div class="game-cards">${orga}</div>
   </main>`;
