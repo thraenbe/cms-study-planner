@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · Dataset comparison</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗂️</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<style>
+/* Chart colours: the same four dataviz slots as the benchmark survey, re-validated on the chart surfaces (#efede7
+   light, #2a2a27 dark) on 30 Oct 2026. Light-mode contrast of slots 2 and 3 is below 3:1, so charts carry direct
+   labels and a table view. Gray marks what a call-graph lookup cannot answer. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; }
+
+.ds .viz .ct { margin: 0 2px 8px; font: 600 1.02rem/1.3 var(--rp-serif); }
+.ds .viz .viz-sub { margin: -2px 2px 10px; color: var(--ink-2); font-size: .92rem; }
+.ds .viz .tip { white-space: normal; width: max-content; max-width: min(300px, 86vw); }
+.ds .viz .pt:focus-visible .anchor { outline: 2px solid var(--focus); }
+.ds .viz .mark { fill: var(--vz-s1); }
+.ds .viz .ring { fill: none; stroke: var(--vz-axis); stroke-width: 1.2; }
+.ds .viz .pt.on .ring, .ds .viz .pt:hover .ring { stroke: var(--ink); }
+.ds .viz .pt.on .mark, .ds .viz .pt:hover .mark { stroke: var(--ink); stroke-width: 1.5; }
+.ds .viz .colh { fill: var(--ink-2); font-size: 11.5px; font-weight: 600; }
+.ds .viz .st { fill: var(--ink-2); font-size: 11.5px; }
+.ds .viz .band { fill: var(--rp-accent-soft); }
+.ds .viz .thresh { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* The route is the page's one loud element: three stages on a line, then the fallback. */
+.ds .route { list-style: none; padding: 0; margin: 1.1rem 0 .4rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; max-width: none; position: relative; }
+.ds .route::before { content: ""; position: absolute; left: 13px; right: 13px; top: 13px; height: 3px; background: var(--rp-accent); }
+.ds .route li { margin: 0; padding: 0 16px 0 0; position: relative; }
+.ds .route .stop { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: var(--rp-accent); color: var(--surface); font-weight: 700; font-size: 14px; position: relative; }
+.ds .route .act { display: block; font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+.ds .route b { display: block; font-family: var(--rp-serif); font-size: 1.3rem; line-height: 1.2; font-weight: 600; margin: 1px 0 4px; }
+.ds .route .n { display: block; font-size: 14px; line-height: 1.38; }
+.ds .fallback { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; margin: 1rem 0 1.2rem; font-size: 15px; max-width: 70ch; }
+
+@media (max-width: 1360px) { .rp.ds .note .mn { position: static; width: auto; margin-top: .6rem; } }
+.ds .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ds .plain { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.ds .plain th, .ds .plain td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.ds .plain thead th { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.ds .plain td.n, .ds .plain th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.ds .legend-line { font-size: 12.5px; color: var(--ink-2); }
+.ds .prob { border-left: 3px solid var(--vz-s1); padding: 2px 0 2px 14px; margin: 0 0 1rem; }
+.ds .prob h3 { margin: 0 0 .25rem; font-family: var(--rp-serif); font-weight: 600; font-size: 1.1rem; }
+.ds .prob p:last-child { margin-bottom: 0; }
+.rp .paper h2 { scroll-margin-top: 1rem; }
+
+/* The matrix breaks out of the reading column: fourteen columns do not fit in 70ch. */
+.ds .wide { position: relative; left: 50%; transform: translateX(-50%); width: min(1240px, calc(100vw - 2rem)); margin: .8rem 0 1.2rem; }
+.ds .matrix { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: clip; }
+.ds .matrix table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 12px; line-height: 1.3; }
+.ds .matrix thead th { background: var(--surface-2); font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-align: left; padding: 7px 5px; vertical-align: bottom; }
+.ds .matrix thead tr.grp th { font-size: 12px; color: var(--ink); padding-bottom: 0; }
+.ds .matrix .hg { border-left: 2px solid var(--line); }
+.ds .matrix tbody th, .ds .matrix td { padding: 7px 5px; border-top: 1px solid var(--line); vertical-align: top; text-align: left; font-weight: 400; overflow-wrap: anywhere; }
+.ds .matrix tbody th { font-size: 13px; font-weight: 600; }
+.ds .matrix tbody th small { display: block; font-weight: 400; color: var(--ink-2); font-size: 11.5px; }
+.ds .matrix tr.sub th { background: var(--surface-2); font-size: 12.5px; }
+.ds .matrix tr.out { color: var(--ink-2); }
+.ds .matrix .cv { display: block; font-size: 18px; line-height: 1.15; font-family: system-ui, sans-serif; color: var(--vz-s1); }
+.ds .matrix .cv.p { color: var(--vz-s1); } .ds .matrix .cv.n { color: var(--bad); }
+.ds .matrix .cv.unk { color: var(--ink-3); }
+.ds .matrix tr.pick th { box-shadow: inset 3px 0 0 var(--rp-accent); }
+@media (min-width: 981px) {
+  .ds .matrix th:first-child { width: 13.5%; }
+  .ds .matrix th.rl { width: 11.5%; }
+}
+@media (max-width: 980px) {
+  /* Each dataset becomes a card with labelled fields. */
+  .ds .matrix { border: 0; background: none; overflow: visible; }
+  .ds .matrix table, .ds .matrix tbody, .ds .matrix tr, .ds .matrix tbody th, .ds .matrix td { display: block; width: auto; }
+  .ds .matrix thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .ds .matrix tr:not(.sub) { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+  .ds .matrix tr.sub { margin: 12px 0 6px; }
+  .ds .matrix tr.sub th { background: none; padding: 0; }
+  .ds .matrix tbody th { border: 0; padding: 2px 0 6px; }
+  .ds .matrix td { display: grid; grid-template-columns: 112px 18px minmax(0, 1fr); gap: 6px; align-items: baseline; border: 0; border-top: 1px solid var(--line); padding: 4px 0; font-size: 13px; }
+  .ds .matrix td::before { content: attr(data-l); color: var(--ink-3); font-size: 12px; }
+  .ds .matrix td.rl { grid-template-columns: 112px minmax(0, 1fr); }
+  .ds .matrix .cv { display: inline; }
+}
+@media (max-width: 700px) {
+  .ds .route { grid-template-columns: 1fr; gap: 16px; }
+  .ds .route::before { left: 13px; right: auto; top: 13px; bottom: 13px; width: 3px; height: auto; }
+  .ds .route li { display: grid; grid-template-columns: 29px 1fr; column-gap: 12px; padding: 0; }
+  .ds .route .act { margin-top: 5px; } .ds .route b, .ds .route .n { grid-column: 2; }
+  .ds .route .act { grid-column: 2; grid-row: 1; }
+  .ds .route .stop { grid-row: 1 / span 3; }
+}
+</style>
+</head>
+<body class="rp ds">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { c, esc } = RP;
+const { chart, tbl, leg, hbar, num, CHARTS, mountCharts, watch } = RPViz;
+const READ = "30 Oct 2026";
+const link = (t, u) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+const ax = id => `https://arxiv.org/abs/${id}`;
+const A = (t, id) => link(t, ax(id));
+const sec = (i, t, id) => `<h2 id="${id}"><span class="sec">§ ${i}</span>${t}</h2>`;
+const note = (html, tag, mn) => `<div class="note">${html}<aside class="mn"><span class="tag">${tag}</span>${mn}</aside></div>`;
+
+const HF = "https://huggingface.co/datasets/";
+const U = {
+  pkg: "https://github.com/ieiris/llm-context-generation-reuse", apo: "https://bitbucket.org/Jacob_Krueger/apogamessrc", kr: "https://jacobkrueger.github.io/assets/papers/Krueger2018ApoGames.pdf",
+  reb: HF + "nebius/SWE-rebench-V2", rebb: "https://github.com/SWE-rebench/SWE-rebench-V2", reba: "https://github.com/SWE-rebench/SWE-rebench-V2/blob/main/prompts/annotations/meta_info.j2", leak: "https://github.com/raimondasl/agentleak#case-3-swe-rebench-v2-vs-multilingual-swe-benchmarks",
+  pb: HF + "AmazonScience/SWE-PolyBench", pbv: HF + "AmazonScience/SWE-PolyBench_Verified", pbg: "https://github.com/amazon-science/SWE-PolyBench",
+  ms: HF + "ByteDance-Seed/Multi-SWE-bench", msg: "https://github.com/multi-swe-bench/multi-swe-bench", msrl: HF + "ByteDance-Seed/Multi-SWE-RL", mshub: "https://hub.docker.com/u/mswebench",
+  live: HF + "SWE-bench-Live/MultiLang", jb: "https://github.com/java-bench/JavaBench", fea: HF + "microsoft/FEA-Bench", fb: HF + "LiberCoders/FeatureBench", fbg: "https://github.com/LiberCoders/FeatureBench",
+  pro: HF + "ScaleAI/SWE-bench_Pro", re: HF + "Fsoft-AIC/RepoExec", cb: HF + "Contextbench/ContextBench", rc: "https://github.com/JiseungHong/ReCUBE", ep: "https://epoch.ai/data/benchmark-reviews-documentation/included-benchmarks", bump: "https://github.com/chains-project/bump",
+};
+
+// Host-level Maven check of the 44 SWE-PolyBench Java feature tasks, run on 30 Oct 2026 outside Docker. Filled from the build log.
+const BUILD = {
+  lead: "ApoGames gives a compile result in under a second. A SWE-PolyBench repository takes 15 to 46 seconds even when only the touched modules are built.",
+  title: "under a second on ApoGames, 15 to 46 seconds elsewhere",
+  cap: "Median seconds to compile after a change. ApoGames is plain javac on JDK 17. SWE-PolyBench is Maven on the host, touched modules only, no tests run.",
+  rows: [
+    { n: "ApoGames", t: "20 games with javac on JDK 8, 11 and 17; 16 compile unchanged, 3 need their own jar, 1 fails.", tasks: "20 games", base: "19", gold: "no patch", full: "0.8 s", round: 0.8 },
+    { n: "RocketMQ", t: "All 11 feature tasks built before and after the gold patch.", tasks: 11, base: "11", gold: "11", full: "53 s", round: 46 },
+    { n: "Guava", t: "The one feature task built.", tasks: 1, base: "1", gold: "1", full: "53 s", round: 45 },
+    { n: "Trino", t: "7 tasks failed at base, mostly because a build plugin rejected our partial clone. That is our setup, not the dataset.", tasks: 15, base: "8", gold: "9", full: "61 s", round: 26 },
+    { n: "Dubbo", t: "3 tasks failed in the protobuf plugin. We did not diagnose it.", tasks: 6, base: "3", gold: "3", full: "40 s", round: 19 },
+    { n: "Gson", t: "3 gold patches did not apply with plain git apply; we did not retry them.", tasks: 7, base: "7", gold: "4", full: "38 s", round: 16 },
+    { n: "Apollo", t: "All 4 feature tasks built.", tasks: 4, base: "4", gold: "4", full: "18 s", round: 15 },
+  ],
+  after: `<p>Of the 44 SWE-PolyBench Java feature tasks, 31 built both before and after the gold patch, 3 gold patches did not apply and 10 hit build failures. We stopped here when the sprint moved to ApoGames, so the 13 open tasks say little against the dataset. No compile error came from a gold patch itself. This run used host Maven, not the dataset’s Docker images, and ran no tests.</p>`,
+};
+
+// Security surfaces in the 20 Java games, from a pattern scan of all sources, jar sources included, then read by hand.
+const SURF = [
+  ["Open a file the player picks", 16, "Games with a JFileChooser, mostly for levels and replays."],
+  ["Score upload, no call found", 6, "ApoDefence, ApoImp, ApoMarc, ApoPongBeat, ApoRelax and ApoSnake. ApoDefence only has a commented-out call."],
+  ["Score upload, called", 4, "ApoIcarus, ApoNotSoSimple, ApoSimple and ApoSlitherLink reference ApoHighscore from game code. All use plain HTTP."],
+  ["Level upload code", 3, "ApoImp, ApoSimple and ApoSnake. It sends the level text and no name."],
+  ["Load code from a file or URL", 2, "ApoSoccer and TutorVolley define their own class loader for AI players. ApoSoccer does not compile."],
+  ["Own network sockets", 1, "ApoPongBeat has a small client and server with a login message but no password."],
+  ["Passwords, tokens, API keys", 0, "No match in any game."],
+];
+CHARTS.surf = narrow => {
+  const W = narrow ? 370 : 720, L = narrow ? 206 : 248, R = 30, B = 19, H = SURF.length * (B + 9) + 8;
+  const x = v => L + v * (W - L - R) / 20;
+  const rows = SURF.map(([n, v, t], i) => { const y = 4 + i * (B + 9), e = v ? x(v) : L;
+    return `<g class="pt" tabindex="0" data-tip="<b>${esc(n)}: ${v} of 20 games.</b> ${esc(t)}"><rect class="hit" x="0" y="${y - 4}" width="${W}" height="${B + 8}"/><text class="cat" x="${L - 8}" y="${y + B / 2 + 4}" text-anchor="end">${esc(n)}</text>${v ? `<path class="bar s1 anchor" d="${hbar(L, e, y, B)}"/>` : ""}<text class="val" x="${e + 6}" y="${y + B / 2 + 4}">${v}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Number of the 20 games per security surface: ${SURF.map(s => `${s[0]} ${s[1]}`).join(", ")}.">${rows}</svg>`;
+};
+const SPIKE = [
+  ["Player name stays off plain HTTP", "fails: sent in the POST body", "fails", "passes"],
+  ["A malformed server reply is handled", "fails: NumberFormatException escapes load()", "passes", "not meaningful"],
+  ["Control characters and markup in names are rejected", "fails: stored as received", "passes", "not meaningful"],
+];
+const spike = `<div class="tw"><table class="plain"><thead><tr><th>Check</th><th>Original ApoHighscore</th><th>Parsing fixed</th><th>HTTPS and parsing fixed</th></tr></thead><tbody>${SPIKE.map(r => `<tr>${r.map((x, i) => i ? `<td>${esc(x)}</td>` : `<th scope="row">${esc(x)}</th>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+const PLAN = [
+  ["Forged entries", "A name holding a line break or the file’s separator must not create a second score entry."],
+  ["Damaged save file", "A truncated or edited highscores.dat must not crash the game or the load."],
+  ["Size limits", "A very long name must be cut or refused."],
+  ["File access", "On a POSIX file system the save file must not be readable by other users."],
+  ["Path escape", "A name such as ../../x must not change where data is written."],
+];
+
+// Lead chart: feature tasks that span at least two Java files. Each bar counts tasks whose gold patch only edits
+// existing files, then tasks that add a Java file and edit an existing one (the shape of the apo-games tasks).
+const USE = [
+  { n: "SWE-rebench V2", edit: 160, nw: 87, t: "247 candidates in 89 repositories, by the dataset’s LLM labels. Our hand check of 40 puts real features near 180 (140 to 205).", tag: "247, about 180 after hand check" },
+  { n: "SWE-PolyBench", edit: 31, nw: 0, t: "31 of the 44 Feature tasks. None adds a Java file: the authors exclude PRs whose new files are tested.", tag: "31" },
+  { n: "Multi-SWE-bench", edit: 12, nw: 8, t: "Our own reading of all 128 issue titles found 30 feature tasks, 20 of them across two or more Java files.", tag: "20" },
+  { n: "SWE-bench-Live", edit: 7, nw: 3, t: "Keyword match on issue titles only, not read by hand. 160 Java tasks in total.", tag: "about 10" },
+  { n: "apo-games", edit: 0, nw: 3, t: "The paper’s three tasks. Each adds new classes and wires them into a game.", tag: "3" },
+];
+CHARTS.usable = narrow => {
+  const W = narrow ? 370 : 720, L = narrow ? 112 : 136, R = narrow ? 60 : 200, H0 = 28, B = narrow ? 19 : 23, H = H0 + USE.length * (B + 15) + 8;
+  const x = v => L + v * (W - L - R) / 250;
+  const gs = [0, 50, 100, 150, 200, 250].map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${H0 - 8}" y2="${H - 8}"/><text class="tick" x="${x(v)}" y="${H0 - 12}" text-anchor="middle">${v}</text>`).join("");
+  const rows = USE.map((d, i) => { const y = H0 + i * (B + 15), a = x(d.edit), b = x(d.edit + d.nw), g = d.edit && d.nw ? 1 : 0;
+    return `<g class="pt" tabindex="0" data-tip="<b>${esc(d.n)}</b>: ${esc(d.t)}"><rect class="hit" x="0" y="${y - 6}" width="${W}" height="${B + 12}"/><text class="cat" x="${L - 8}" y="${y + B / 2 + 4}" text-anchor="end">${esc(d.n)}</text>
+      ${d.edit ? `<path class="bar s1 anchor" d="${hbar(L, a - g, y, B)}"/>` : ""}${d.nw ? `<path class="bar s2${d.edit ? "" : " anchor"}" d="${hbar(a + g, Math.max(b, a + 3), y, B)}"/>` : ""}
+      <text class="val" x="${Math.max(b, a + 3) + 6}" y="${y + B / 2 + 4}">${esc(narrow ? d.tag.split(",")[0] : d.tag)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Feature tasks across two or more Java files: SWE-rebench V2 247, SWE-PolyBench 31, Multi-SWE-bench 20, SWE-bench-Live about 10, apo-games 3.">${gs}${rows}</svg>`;
+};
+
+// Stage 2: main compile error of each of the 145 failed runs, from Results/experiment_results.json.
+const ERR = [
+  ["Missing symbol", 56, 1, "A name the model assumed but the game does not have, for example TILE_SIZE on ApoMarioConstants."],
+  ["Constructor mismatch", 24, 1, "A superclass constructor called with the wrong arguments."],
+  ["Method signature", 18, 1, "Filed under “other” by the package; 17 are ApoBotButton.init called with the wrong arguments."],
+  ["Abstract method missing", 14, 1, "A subclass misses a method its parent requires."],
+  ["Access violation", 12, 1, "A private or protected member used from outside."],
+  ["Wrong type", 7, 1, "Incompatible types between generated and existing code."],
+  ["Syntax error", 8, 0, "Often from a response cut off at the token limit."],
+  ["Other", 5, 0, "Single cases such as a missing return statement."],
+  ["Duplicate definition", 1, 0, "One run."],
+];
+CHARTS.errors = narrow => {
+  const W = narrow ? 370 : 720, L = narrow ? 200 : 232, R = 34, B = 19, H = ERR.length * (B + 9) + 8;
+  const x = v => L + v * (W - L - R) / 60;
+  const rows = ERR.map(([n, v, s, t], i) => { const y = 4 + i * (B + 9);
+    return `<g class="pt" tabindex="0" data-tip="<b>${esc(n)}: ${v} runs.</b> ${esc(t)}"><rect class="hit" x="0" y="${y - 4}" width="${W}" height="${B + 8}"/><text class="cat" x="${L - 8}" y="${y + B / 2 + 4}" text-anchor="end">${esc(n)}</text><path class="bar ${s ? "s1" : "gray"} anchor" d="${hbar(L, Math.max(x(v), L + 3), y, B)}"/><text class="val" x="${Math.max(x(v), L + 3) + 6}" y="${y + B / 2 + 4}">${v}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Main compile error in 145 failed runs. 131 are symbol or signature errors a lookup can answer; 14 are not.">${rows}</svg>`;
+};
+
+// apo-games: which game has a class named after each feature, and whether it compiles. Found by file name, so an upper bound.
+const FEATS = ["Highscore", "Achievements", "Options", "Editor", "Replay"];
+const GAMES = [
+  ["ApoBot", "clean", [0,0,0,1,0]],
+  ["ApoCheating", "clean", [0,0,0,0,0]],
+  ["ApoCommando", "clean", [0,1,0,0,0]],
+  ["ApoDefence", "clean", [1,0,1,1,0]],
+  ["ApoIcarus", "clean", [1,1,1,0,0]],
+  ["ApoIcejump", "own jar", [0,0,0,0,0]],
+  ["ApoImp", "clean", [1,0,0,1,0]],
+  ["ApoMarc", "clean", [1,1,1,0,0]],
+  ["ApoMario", "own jar", [0,0,1,1,1]],
+  ["ApoNotSoSimple", "clean", [1,0,1,1,0]],
+  ["ApoPongBeat", "clean", [1,0,1,0,0]],
+  ["ApoRelax", "clean", [1,0,1,1,0]],
+  ["ApoSimple", "clean", [1,1,1,1,0]],
+  ["ApoSimpleSudoku", "clean", [0,0,1,0,0]],
+  ["ApoSkunkman", "own jar", [0,0,0,1,1]],
+  ["ApoSlitherLink", "clean", [1,0,0,1,0]],
+  ["ApoSnake", "clean", [1,0,0,1,0]],
+  ["ApoSoccer", "fails", [0,0,0,0,1]],
+  ["ApoStarz", "clean", [1,0,0,1,0]],
+  ["TutorVolley", "clean", [0,0,1,0,0]],
+].map(([g, s, k]) => ({ g, s, k: k.map(Boolean) }));
+const ROLE = { ApoIcarus: "source", ApoSimple: "source", ApoMario: "target", ApoBot: "target" };
+CHARTS.apo = narrow => {
+  const W = narrow ? 370 : 720, L = narrow ? 122 : 150, ST = narrow ? 56 : 84, RH = 23, T = 30, cw = (W - L - ST) / FEATS.length, H = T + GAMES.length * RH + 6;
+  const short = { Highscore: "Score", Achievements: "Achiev.", Options: "Options", Editor: "Editor", Replay: "Replay" };
+  const head = FEATS.map((f, i) => `<text class="colh" x="${L + ST + cw * (i + .5)}" y="${T - 12}" text-anchor="middle">${narrow ? short[f] : f}</text>`).join("") + `<text class="colh" x="${L}" y="${T - 12}">Compiles</text>`;
+  const rows = GAMES.map((d, i) => { const y = T + i * RH, cy = y + RH / 2, role = ROLE[d.g];
+    const cells = d.k.map((on, j) => `<g class="pt" tabindex="0" data-tip="<b>${esc(d.g)}</b>: ${on ? "has a class named after" : "no class named after"} ${FEATS[j]}"><rect class="hit" x="${L + ST + cw * j}" y="${y}" width="${cw}" height="${RH}"/><circle class="${on ? "mark" : "ring"} anchor" cx="${L + ST + cw * (j + .5)}" cy="${cy}" r="${on ? 6 : 4}"/></g>`).join("");
+    return `${role ? `<rect class="band" x="0" y="${y + 1}" width="${W}" height="${RH - 2}" rx="4"/>` : ""}<text class="cat" x="${L - 8}" y="${cy + 4}" text-anchor="end">${esc(d.g)}</text><text class="st" x="${L}" y="${cy + 4}">${esc(d.s)}</text>${cells}`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Twenty apo-games by compile status and by the five features named in their class files.">${head}${rows}</svg>`;
+};
+
+// Cost of one compile round, seconds. Filled from the build log, apo-games from the javac timing.
+CHARTS.compile = narrow => {
+  const R = BUILD.rows; if (!R.length) return "";
+  const W = narrow ? 370 : 720, L = narrow ? 112 : 136, Rr = 54, B = 19, H = 26 + R.length * (B + 10), mx = Math.max(...R.map(r => r.round));
+  const x = v => L + v * (W - L - Rr) / mx;
+  const rows = R.map((r, i) => { const y = 24 + i * (B + 10);
+    return `<g class="pt" tabindex="0" data-tip="<b>${esc(r.n)}</b>: ${esc(r.t)}"><rect class="hit" x="0" y="${y - 4}" width="${W}" height="${B + 8}"/><text class="cat" x="${L - 8}" y="${y + B / 2 + 4}" text-anchor="end">${esc(r.n)}</text><path class="bar s1 anchor" d="${hbar(L, Math.max(x(r.round), L + 3), y, B)}"/><text class="val" x="${Math.max(x(r.round), L + 3) + 6}" y="${y + B / 2 + 4}">${num(r.round, r.round < 10 ? 1 : 0)} s</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Median seconds for one compile round per repository.">${rows}</svg>`;
+};
+
+// Matrix. v: 2 yes, 1 partly, 0 no, -1 not checked; each cell carries its evidence in words.
+const COLS_H = ["Compile step", "Feature work", "Wired into a project", "Hidden tests"];
+const COLS_D = ["Generation vs reuse", "Hundreds of tasks", "Working harness", "CoGraph support", "Licence", "Audit results", "Docker and run cost", "Little training leakage"];
+const M = [
+  { sub: "Pass all four hard requirements" },
+  { pick: 1, n: "apo-games", s: `${link("Bitbucket", U.apo)}, ${link("package", U.pkg)}`, c: [[2, "javac, 19 of 20 games"], [2, "cross-game features"], [2, "into a game"], [2, "package tests"], [2, "sibling games"], [0, "3 tasks"], [1, "Gemini only, no Docker"], [2, "Java"], [1, "no licence file for the Java games"], [0, "none found"], [2, "no Docker, 1 s"], [1, "public since 2018"]], r: "Sprint data" },
+  { pick: 1, n: "SWE-rebench V2, Java", s: link("Hugging Face", U.reb), c: [[2, "mvn compile"], [1, "LLM label, 29 of 40 clear"], [1, "247 multi-file, 87 add a class"], [2, "test patch"], [0, "no sibling"], [2, "247 candidates"], [1, "eval script, Docker Hub images"], [2, "Java"], [1, "CC-BY, 23 repos unclear"], [1, "LLM flags, no human audit"], [1, "0.7 to 2.1 GB each"], [1, "training set, old issues"]], r: "Optional second dataset" },
+  { n: "SWE-PolyBench, Java", s: link("Hugging Face", U.pb), c: [[2, "Maven"], [2, "44 labelled"], [1, "31 multi-file, none adds a file"], [2, "test patch"], [0, "no sibling"], [0, "44 tasks"], [2, "harness, GHCR images"], [2, "Java"], [2, "MIT"], [0, "none found"], [1, "1.3 to 2.0 GB, Verified only"], [1, "tasks from 2016 to 2024"]], r: "Optional fallback" },
+  { n: "Multi-SWE-bench, Java", s: link("Hugging Face", U.ms), c: [[2, "Maven, Gradle"], [1, "30 of 128 by our reading"], [1, "20 multi-file"], [2, "test patch"], [0, "no sibling"], [0, "128 tasks"], [2, "harness, Docker Hub"], [2, "Java"], [1, "“other” on HF, code Apache"], [2, "42 of 200 major"], [2, "0.4 to 0.9 GB"], [1, "public since 2025"]], r: "Optional fallback" },
+  { n: "SWE-bench-Live, Java", s: link("Hugging Face", U.live), c: [[2, "Maven, Gradle"], [1, "about 20 by keyword"], [1, "about 10 multi-file"], [2, "test patch"], [0, "no sibling"], [0, "160 tasks"], [2, "harness"], [2, "Java"], [2, "MIT"], [1, "70 of 200 major, all languages"], [-1, "not checked"], [2, "Dec 2024 to Jul 2026"]], r: "Late check on fresh tasks" },
+  { n: "Multi-SWE-RL, Java", s: link("Hugging Face", U.msrl), c: [[2, "Maven, Gradle"], [1, "keyword only"], [1, "mostly one project"], [2, "test patch"], [0, "no sibling"], [1, "1,046, 845 from Checkstyle"], [2, "as Multi-SWE-bench"], [2, "Java"], [1, "“other” on HF"], [0, "none found"], [-1, "not checked"], [0, "built for training"]], r: "Skip: one repository dominates" },
+  { sub: "Fail at least one hard requirement" },
+  { out: 1, n: "JavaBench", s: link("GitHub", U.jb), c: [[2, "Maven"], [0, "fill in methods"], [0, "student skeletons"], [2, "suite"], [0, "no sibling"], [0, "4 projects"], [1, "last push Sep 2024"], [2, "Java"], [0, "none declared"], [0, "none found"], [2, "small"], [1, "2024"]], r: "No wiring task" },
+  { out: 1, n: "FEA-Bench", s: link("Hugging Face", U.fea), c: [[0, "Python"], [2, "1,401 tasks"], [2, "83 repos"], [2, "PR tests"], [0, "no sibling"], [2, "1,401"], [2, "harness"], [2, "Python"], [1, "“other”, LICENSE file empty"], [0, "none found"], [-1, "not checked"], [1, "2023 and later PRs"]], r: "No compiler" },
+  { out: 1, n: "FeatureBench", s: link("Hugging Face", U.fb), c: [[0, "Python"], [2, "200 tasks"], [2, "24 repos"], [2, "tests"], [0, "no sibling"], [2, "200"], [2, "active repo"], [2, "Python"], [2, "MIT"], [0, "none found"], [-1, "not checked"], [2, "new in 2026"]], r: "No compiler" },
+  { out: 1, n: "SWE-bench", s: A("arXiv", "2310.06770"), c: [[0, "Python"], [0, "issues"], [1, "12 repos"], [2, "tests"], [0, "no sibling"], [2, "2,294"], [2, "harness"], [2, "Python"], [2, "MIT"], [2, "Flawed (Verified)"], [1, "Docker"], [0, "heavy"]], r: "Python, bug fixes, leakage" },
+  { out: 1, n: "SWE-Bench Pro", s: link("Hugging Face", U.pro), c: [[1, "Go; no Java"], [1, "mixed"], [2, "11 repos"], [2, "tests"], [0, "no sibling"], [2, "642 in the current split"], [2, "harness"], [1, "Python, JS, TS; no Go"], [2, "MIT"], [2, "Flawed"], [1, "Docker"], [1, "reward hack known"]], r: "No Java, audited Flawed" },
+  { out: 1, n: "RepoExec", s: link("Hugging Face", U.re), c: [[0, "Python"], [0, "single functions"], [1, "dependency use"], [2, "tests"], [0, "no sibling"], [2, "355"], [1, "last push Jan 2026"], [2, "Python"], [2, "MIT"], [0, "none found"], [2, "small"], [1, "2024"]], r: "Function level" },
+  { out: 1, n: "ReCUBE", s: link("GitHub", U.rc), c: [[0, "Python"], [0, "rebuild one file"], [2, "usage tests"], [2, "tests"], [0, "no sibling"], [2, "366 files"], [2, "Docker"], [2, "Python"], [2, "MIT"], [0, "none found"], [-1, "not checked"], [2, "new in 2026"]], r: "No compiler" },
+  { out: 1, n: "ContextBench", s: link("Hugging Face", U.cb), c: [[1, "only 57 Java"], [0, "all 57 labelled bugfix"], [1, "19 multi-file"], [2, "tests"], [0, "no sibling"], [0, "57 Java"], [2, "harness"], [2, "Java"], [1, "Apache code, data unlabelled"], [1, "gold contexts"], [1, "as Multi-SWE-bench"], [1, "public since 2026"]], r: "Bug fixes; useful to score lookups" },
+];
+const SYM = { 2: ["y", "●", "yes"], 1: ["p", "◐", "partly"], 0: ["n", "○", "no"], "-1": ["unk", "?", "not checked"] };
+const matrix = () => `<div class="wide matrix"><table><thead>
+  <tr class="grp"><th></th><th class="hg" colspan="4">Hard requirements</th><th class="hg" colspan="8">Desirable</th><th class="hg"></th></tr>
+  <tr><th scope="col">Dataset</th>${COLS_H.map((h, i) => `<th scope="col" class="${i ? "" : "hg"}">${h}</th>`).join("")}${COLS_D.map((h, i) => `<th scope="col" class="${i ? "" : "hg"}">${h}</th>`).join("")}<th scope="col" class="hg rl">Role here</th></tr></thead><tbody>
+  ${M.map(r => r.sub ? `<tr class="sub"><th colspan="14" scope="colgroup">${r.sub}</th></tr>` : `<tr class="${r.out ? "out" : ""} ${r.pick ? "pick" : ""}"><th scope="row">${esc(r.n)}<small>${r.s}</small></th>${r.c.map(([v, t], i) => { const s = SYM[v]; return `<td data-l="${(COLS_H.concat(COLS_D))[i]}" class="${i === 0 || i === 4 ? "hg" : ""}"><span class="cv ${s[0]}" aria-label="${s[2]}" title="${s[2]}">${s[1]}</span>${esc(t)}</td>`; }).join("")}<td data-l="Role here" class="hg rl">${esc(r.r)}</td></tr>`).join("")}
+  </tbody></table></div>
+  <p class="legend-line">● yes, ◐ partly, ○ no, ? not checked. The ratings are our judgement from the counts below; the evidence words are checked. SWE-rebench V2, ContextBench and the “Java” rows are the Java part of a larger set. A CoGraph “Python” means the analyser supports the language, not that the row suits this project.</p>`;
+
+const FUN = [
+  ["SWE-rebench V2", "1,716 in 178 repos", "718 by LLM label; 423 clean (code A)", "318 at 2+ Java files; 314 at no more than 15 files and 600 added lines; 247 on Maven, in 89 repos", "87 of the 247", "212 of the 247 list the expected interface"],
+  ["SWE-PolyBench", "165 in 6 repos", "44 labelled Feature", "35 touch 2+ files, 31 touch 2+ Java files", "0", "no"],
+  ["SWE-PolyBench Verified", "69 in 6 repos", "14 labelled Feature", "11 touch 2+ files, 9 touch 2+ Java files", "0", "no"],
+  ["Multi-SWE-bench", "128 in 9 repos, 15 of them backports", "30 by our reading of the titles", "20 at 2+ Java files", "8 of the 20", "no, a newer hints field names new symbols"],
+  ["SWE-bench-Live", "160 in 64 repos", "about 20 by keyword", "about 10 at 2+ Java files", "3 of the 10", "no"],
+  ["ContextBench", "57 in 6 repos", "0: all labelled maintenance bugfix", "19 at 2+ Java files", "not counted", "gold context instead"],
+  ["apo-games", "3 tasks, 2 target games", "3", "3", "3", "yes, in the prompt"],
+];
+const funnel = `<div class="tw"><table class="plain"><thead><tr><th>Dataset</th><th>Java tasks</th><th>Feature work</th><th>Across files</th><th>Adds a Java file and edits another</th><th>Names the expected API</th></tr></thead><tbody>${FUN.map(r => `<tr>${r.map((x, i) => i ? `<td>${esc(x)}</td>` : `<th scope="row">${esc(x)}</th>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Comparison for ${esc(c.project)}, data read on ${READ}</p>
+    <h1>Can ApoGames carry the security sprint?</h1>
+    <p class="authors">Yes, if we write the security tests ourselves. The dataset comparison follows as background</p>
+    <div class="kw">${["ApoGames", "security tests", "Java builds", "second dataset optional"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <div class="abstract"><span class="h">The answer.</span>ApoGames supports the sprint, with one large condition: it has no security tests and no real secrets. The data at stake is player names and scores, so the security questions are about how names are stored, sent and parsed. The builds are not the problem: 19 of 20 games compile in about a second. The paper’s package adds 54 JUnit tests on three tasks, and none tests security. We showed on one game that hidden security checks work without touching the game or the network. Start with the Highscore task in ApoMario, where a new hidden suite can run through a constructor that takes the save path. A second dataset is optional, and none we checked offers ready security tests.</div>
+
+  ${sec(1, "What ApoGames offers a security sprint", "security")}
+  <p class="lead">Three questions decide this: is there data worth protecting, are there tests, and does it build?</p>
+  <h3>Sensitive data: small but real</h3>
+  ${chart("surf", "", `<h3 class="ct">Player names are the sensitive data; no game holds a password</h3><p class="viz-sub">Number of the 20 Java games with each security surface</p>`, `From a pattern scan, then reading the matches. “Called” means game code refers to the class; we did not run the games. Hover or tab to a bar for the game names.`)}
+  ${tbl("Table view: security surfaces in the 20 games", ["Surface", "Games", "Which"], SURF.map(([n, v, t]) => ({ cells: [n, v, t] })))}
+  <p>Four games that compile unchanged send a player-typed name to a score server: ApoIcarus, ApoNotSoSimple, ApoSimple and ApoSlitherLink. The ones we read post it unencrypted to an <code>http://</code> address. ApoDefence wraps its values in repeated Base64, which hides nothing, but nothing we found calls that code. The repository holds no account system, so a sprint on credentials would need a feature the games do not have.</p>
+  <h3>Tests: a good rig, but no security tests</h3>
+  <p>The ${link("package", U.pkg)} has 54 JUnit tests: 31 unit, 11 on real game objects and 12 through the live game loop. They cover Highscore and Achievements in ApoMario and Options in ApoBot. None asks a security question. The nearest are <code>emptyPersistRobust</code> and <code>unsupportedLanguageIsNeverActivated</code>. The games themselves have no JUnit tests at all. The rig helps in one specific way: the task prompts fix the public API, and <code>new ApoMarioHighscore(path)</code> lets a test choose the save file.</p>
+  ${note(`<p>All 240 published responses are available to try new tests on. By keyword, 224 write files and 226 read a system property such as the user’s home folder, while 8 use any of <code>trim</code>, <code>matches</code> or <code>replaceAll</code> and none uses a hash or a cipher. So the local save file is where the generated code touches player data. Keywords show where to look, not whether a response is safe.</p>`, "our count", `Counted over <code>Results/raw_responses</code>. A hit can be in a comment or unrelated code.`)}
+  <h3>Proof on one game</h3>
+  <p>We wrote three checks against ApoIcarus’s <code>ApoHighscore</code>, the class the paper uses as a reuse source. The game was not changed. Java’s standard proxy setting sent its traffic to a local stub, so nothing left the machine. All three failed on the original. Fixing the parsing turned two of them green, and switching to HTTPS turned the third green, so the checks tell the versions apart.</p>
+  ${spike}
+  <p class="legend-line">“Not meaningful” because our stub does not speak TLS, so no reply arrived. Real tests of the parsing need a local TLS stub or a test against plain HTTP. These were plain Java checks compiled with JDK 17, not JUnit, on one class of one game.</p>
+  <h3>What to build</h3>
+  <ol>
+    <li><b>Main task: Highscore into ApoMario.</b> It is in the paper, stores player names in a file and already has a test seam. Add a hidden suite on the five points below.</li>
+    <li><b>Check the suite first.</b> Run it on the compiled responses from the package before any new model run. A test that all or none of them pass tells us little.</li>
+    <li><b>Keep the functional tests.</b> Report compile, functional and security results side by side, so a secure answer that no longer works is visible.</li>
+    <li><b>Add network cases if time allows.</b> Use the proxy method on ApoIcarus and the three other uploaders. The reuse arm matters here, because copying the ApoIcarus class also copies its plain-HTTP upload.</li>
+  </ol>
+  <div class="tw"><table class="plain"><thead><tr><th>Proposed hidden test</th><th>Requirement</th></tr></thead><tbody>${PLAN.map(([a, b]) => `<tr><th scope="row">${esc(a)}</th><td>${esc(b)}</td></tr>`).join("")}</tbody></table></div>
+  <p class="legend-line">Proposed, not yet written or run. Whether a saved file format has a separator depends on each response, so tests must go through the public API.</p>
+  <h3>Is a second dataset needed?</h3>
+  <p>Not for the sprint. If one is wanted later, § 3 and § 4 still hold, but security narrows them sharply: SWE-PolyBench labels 1 of its 165 Java tasks as security, 5 of its 44 feature patches contain a security keyword, and 19 of the 318 multi-file SWE-rebench V2 candidates mention one in the issue text. These are keyword counts and not hand-checked. Their tests were written for function, so a security suite would still be ours to write. We did not survey benchmarks built for security.</p>
+
+  <h3 style="margin-top:2em">The earlier three-stage plan</h3>
+  <p>This was the recommendation before the sprint narrowed. It still applies if the project returns to generalising.</p>
+  <ol class="route" aria-label="Recommended dataset per stage">
+    <li><span class="stop">1</span><span class="act">Replicate with AST extraction</span><b>apo-games as it is</b><span class="n">The same 3 tasks, tests and model. Changing them would lose the comparison.</span></li>
+    <li><span class="stop">2</span><span class="act">One repair round, three arms</span><b>apo-games, widened</b><span class="n">Keep the 3 tasks, add new target games. Its ${link("published runs", U.pkg)} show what repair must fix: 120 usable failures.</span></li>
+    <li><span class="stop">3</span><span class="act">Generalise to a second dataset</span><b>SWE-rebench V2, Java</b><span class="n">The only Java pool with hundreds of feature tasks: 247 candidates, about 180 real by our hand check.</span></li>
+  </ol>
+  <p class="fallback"><b>Fallback for stage 3:</b> SWE-PolyBench Java (44 feature tasks) plus Multi-SWE-bench Java (30). That gives 74 tasks, 51 across several files, with better harnesses. It is enough for a careful small study, not for several hundred. <b>Stage 3 cannot compare generation with reuse</b> on any of these: no large dataset has sibling projects, so that question stays on apo-games.</p>
+
+  <p>Apo-games is enough for stage 1 and must be widened for stage 2. It compiles fast, needs no Docker, and has a full replication package, but it has 3 tasks in 2 target games, and the paper itself finds the task matters more than the strategy. No benchmark in the survey passes every requirement. SWE-PolyBench, the obvious choice, has only 165 Java tasks, of which 44 are features and 31 span several Java files, and not one adds a new Java file, because the authors filter such tasks out. SWE-rebench V2 was not on the shortlist, but its Java part has 1,716 tasks in 178 repositories. It is a training set with LLM-written labels and no human audit, so stage 3 must verify its own sample first.</p>
+
+  ${sec(2, "What each stage should do", "stages")}
+  <h3>Stage 1: keep apo-games unchanged</h3>
+  <p>Use ${link("the replication package", U.pkg)}: prompts, tests, the extraction script, all 240 raw responses. Replace only <code>Context_gen.py</code> with AST extraction. Our recount of its results matches the paper: 95 of 240 runs compiled. Do not add tasks here, or a change in compile rate can no longer be traced to the extractor.</p>
+  <p>Two things to fix first. 33 of the 240 responses hit the output limit, 25 of them in failed runs, so a share of the failures is truncation and not context. The package also needs the games from ${link("Bitbucket", U.apo)}, with ApoMario unpacked from its jar.</p>
+  <h3>Stage 2: same tasks, more target games</h3>
+  ${note(`<p>The evidence for the repair idea is already in the package (§ 5). Run the three arms on the same failed states, so each failure is its own control. Then add target games: the 3 features can go into up to 24 more game and feature pairs that compile today (§ 5). A handful is enough to show whether the effect survives a new codebase, and each needs its own tests, by hand.</p>`, "our reading", `Stage 2 is judged by whether repair works across tasks, so more tasks matter more than more runs. Five more runs of the same 3 tasks would not help.`)}
+  <h3>Stage 3: a frozen, hand-checked sample of SWE-rebench V2</h3>
+  <p>Take the 247 Maven candidates, cap each repository at 5 (211 remain), read each issue, and drop those that are bug reports. That should leave about 150. Run the gold patch in each image first and keep the tasks that pass. Freeze the list of 60 to 100 tasks before any model runs. Repeat the stage 2 arms with the same repair budget.</p>
+  <p>The dataset’s <code>interface</code> field lists the expected API for 212 of the 247, which matches the “required public members” in the paper’s prompt. That is what makes tasks with new classes testable, the case ${A("SWE-PolyBench excludes", "2504.08703")}.</p>
+
+  ${sec(3, "Comparison against the requirements", "matrix")}
+  <p class="lead">Six datasets pass all four hard requirements. The eight that fail do so mostly for lack of a compiler.</p>
+  ${matrix()}
+
+  ${sec(4, "Usable task counts", "counts")}
+  <p class="lead">“Java” on a benchmark’s cover shrinks fast once you ask for feature work across files.</p>
+  ${chart("usable", leg([[1, "edits existing files only"], [2, "adds a Java file and edits another"]]), `<h3 class="ct">Only one Java pool reaches the hundreds</h3><p class="viz-sub">Feature tasks whose gold patch spans two or more Java files</p>`, `SWE-rebench V2 also passes our size and Maven filters. Multi-SWE-bench is by our reading; SWE-bench-Live by keyword. Hover or tab to a bar for the basis.`)}
+  ${funnel}
+  ${note(`<p>For SWE-PolyBench we parsed the <code>patch</code> column of ${link("test.csv", U.pb)}: Java has 106 bug fixes, 44 features, 13 refactorings, 1 security and 1 testing task. Trino has 15 of the features, RocketMQ 11, Gson 7, Dubbo 6, Apollo 4, Guava 1. The ${link("Verified split", U.pbv)} keeps 14. Across all 165 Java tasks not one patch adds a Java file. The ${A("paper", "2504.08703")} explains why: PRs are excluded if a new file’s contents are tested, because correct code in an unexpected place would fail.</p>`, "why it matters", `Adding a class and wiring it in is what the apo-games tasks ask for. On SWE-PolyBench that shape is absent by design.`)}
+  <p>For SWE-rebench V2 we read the ${link("dataset’s", U.reb)} metadata. A feature is any task whose <code>pr_categories</code> contains a feature label, “clean” is the ${link("code A", U.reba)} of its LLM rubric, and Maven includes the wrapper. We then read 40 candidates by hand, at most 2 per repository: 29 are clear features, 4 borderline, 7 bug reports or chores. So the label is right for about 73 % (95 % interval 57 to 84 %), or 140 to 205 of the 247. This was one reader, without a second opinion.</p>
+
+  ${sec(5, "Is apo-games enough?", "apo")}
+  <p class="lead">For stage 1 yes. For stage 2 it supplies the failures, but not the variety.</p>
+  ${chart("apo", leg([[1, "class named after the feature"]]) , `<h3 class="ct">Plenty of room to widen: 20 games, and most lack most features</h3><p class="viz-sub">The four shaded rows are the paper’s games: ApoIcarus and ApoSimple as sources, ApoMario and ApoBot as targets</p>`, `Found by file name, so this is an upper bound; a game can have the feature under another name. “Own jar” compiles once the game’s own jar is on the class path. ApoSoccer needs the FreeTTS library.`)}
+  ${tbl("Table view: the 20 games", ["Game", "Compiles", ...FEATS], GAMES.map(g => ({ cells: [g.g, g.s, ...g.k.map(k => k ? "yes" : "")] })))}
+  <p>We compiled all 20 Java games with JDK 8, 11 and 17 and got the same result each time. 16 compile unchanged in about a second, ApoMario, ApoIcejump and ApoSkunkman compile with their own jar on the class path, and ApoSoccer does not. 7 of the 20 ship their source only inside a jar. Taking only games that compile unchanged and have no class of that name, there are 5 possible targets for Highscore, 12 for Achievements and 7 for Options: 24 pairs at most. None has tests yet.</p>
+  ${chart("errors", leg([[1, "a symbol or signature lookup could answer it"], ["g", "a lookup would not help"]]), `<h3 class="ct">131 of 145 failed runs stop on a question a call graph can answer</h3><p class="viz-sub">Main compile error of each failed run in the paper’s published results</p>`, `We moved 18 runs from the package’s “other” to “method signature” after reading their messages. Which errors a lookup could answer is our reading.`)}
+  ${tbl("Table view: main compile error of the 145 failed runs", ["Error", "Runs", "Lookup could answer"], ERR.map(([n, v, s]) => ({ cells: [n, v, s ? "yes" : "no"] })))}
+  ${note(`<p>This supports stage 2’s design: 91 % of failures are about names and signatures. After removing the 25 failed runs cut off by the output limit, 120 remain, 110 of them symbol or signature errors. 50 of the 120 have a single error and the median is 2, so one repair round is a fair test. 104 of the 145 failures sit only in the model’s own new files, 30 only in existing files it changed, and 11 in both.</p>`, "our analysis", `Counted from <code>Results/experiment_results.json</code>. Stage 1 will produce its own failures; these show the expected shape and size.`)}
+  <p><b>Sample size.</b> To detect a rise from 40 % to 60 % in repair success at the usual 5 % level with 80 % power takes about 97 failed states per arm if arms are independent, and a rise to 70 % takes about 42. With 120 failures across three arms you get 40 each. Giving every arm every failed state, as a paired test, closes most of that gap. This is our own calculation, and it ignores that runs of one task are alike, which is the reason to add target games.</p>
+  <p><b>Integration is weaker than the headline.</b> The package’s extra suites show that of 95 compiled runs, 28 pass every test through the live game loop, 42 fail some, and 24 fail to start. Of the 52 runs with a coupling test, 6 pass. Report these for stage 2 as well: a repair that compiles but is not wired in has not fixed the task.</p>
+
+  ${sec(6, "Does it build, and what does a round cost?", "build")}
+  <div id="build-sec"></div>
+
+  ${sec(7, "Risks of the recommendation", "risks")}
+  <div class="prob"><h3>Security tests are ours, so they can favour one arm</h3><p>ApoGames has no independent security ground truth. Write the suite before seeing new runs, check it on the published responses, and have a second person review it.</p></div>
+  <div class="prob"><h3>The stakes are modest</h3><p>A player name in a game is weak sensitive data, and the apps are small desktop games from an older Java era. Results may not carry over to systems holding credentials or customer data, so state that limit in the report.</p></div>
+  <div class="prob"><h3>SWE-rebench V2 is a training set</h3><p>Its ${A("paper", "2602.23866")} aims at RL training, without per-task human checks. Models may have seen it, and 153 of the 247 candidates date from before 2023; only 13 are from 2025. Exact overlap is not the main concern: by instance id, none of its Java tasks is in Multi-SWE-bench or SWE-PolyBench, and ${link("AgentLeak", U.leak)} finds 1.1 % overlap over all languages. Report task dates and keep a check for verbatim gold patches.</p></div>
+  <div class="prob"><h3>Its labels are LLM output</h3><p>The feature label is wrong about one time in four in our sample, and code A is the same LLM’s verdict. An ${A("automated audit", "2605.26079")} found major issues in 49 of 200 tasks of what we read as the first SWE-rebench set, 42 of 200 for Multi-SWE-bench and 70 of 200 for SWE-bench-Live. Plan on losing at least a fifth of any sample. None of these audits is Java-only, and V2 itself has none.</p></div>
+  <div class="prob"><h3>Stage 3 changes more than the dataset</h3><p>Moving from small games to real libraries changes size, build system and test style at once. A drop in repair success could come from any of them. The paper’s own context format also needs a full AST pipeline for every repository, which CoGraph has to handle at scale.</p></div>
+  <div class="prob"><h3>Docker is a real cost for a second dataset</h3><p>Neither Docker nor Maven was installed on this machine, and sampled images are 0.7 to 2.1 GB, so 60 to 100 tasks need roughly 45 to 200 GB before shared layers. Stage 3 needs a machine with that space, ideally from the university.</p></div>
+  <div class="prob"><h3>Apo-games has no licence file for the Java games</h3><p>The ${link("challenge paper", U.kr)} calls them open source, but the repository’s Java folder has no licence. Running them is fine for the study; ask Krüger before republishing modified games.</p></div>
+
+  ${sec(8, "Where sources disagree", "conflicts")}
+  <ul>
+    <li><b>SWE-PolyBench Verified size.</b> Its ${link("Hugging Face page", U.pbv)} says 394 instances in one line and lists 382 in another. The file has 382, as has ${link("AgentLeak", U.leak)}. The ${link("GitHub README", U.pbg)} says 72 Java and then two removed, which gives 70; the file has 69.</li>
+    <li><b>Multi-SWE-bench Java.</b> Table 1 of the ${A("paper", "2504.02605")} and the dataset say 128. Its Table 3 Java row adds up to 156.</li>
+    <li><b>SWE-Bench Pro size.</b> The survey gives 731 public tasks. The ${link("current default split", U.pro)} has 642, which is Scale’s V2.</li>
+    <li><b>Our survey page.</b> It records the apo-games paper as a manuscript without a venue. The ${link("package README", U.pkg)} says it appeared at VARIABILITY 2026.</li>
+    <li><b>What “SWE-bench-fork” is.</b> The audit lists 750 tasks under that name. We read it as the first SWE-rebench set, from the repository name in our survey, but the paper does not say so.</li>
+  </ul>
+
+  ${sec(9, "What we could not check", "unchecked")}
+  <ul id="unchecked">
+    <li><b>Security of the games at run time.</b> We read code and ran three checks on one class. We did not play the games, contact their servers or run a security scanner. The upload classes without a call may still be reached in ways our search missed.</li>
+    <li><b>Security of the generated code.</b> The 240 responses were only counted by keyword. The proposed hidden tests have not been run on them.</li>
+    <li><b>Server side.</b> The score server code is not in the repository, apart from small <code>cookies.php</code> files, so server security cannot be tested. Tests should stay offline.</li>
+    <li><b>Builds of SWE-rebench V2.</b> Not run. A host-level build of 40 sample repositories was blocked by a safety check on this machine, so no V2 task has been built by us. Its build status rests on the dataset’s own Docker images.</li>
+    <li><b>Docker runs.</b> No Docker here, so no benchmark’s image or harness was executed, and no gold patch was run against its tests.</li>
+    <li><b>Multi-SWE-bench builds.</b> Taken from the authors’ published verification logs. We looked at image sizes only.</li>
+    <li><b>Hidden-test quality on the Java subsets.</b> No audit we found splits by language.</li>
+    <li><b>RepoReuse.</b> ${A("This new benchmark", "2609.35357")} measures reuse directly, but it is Python, has 75 task chains, and its paper gives no data link that we could find.</li>
+    <li><b>Costs in money.</b> We give tokens only: the 240 runs used 28.0 million input and 8.6 million output tokens.</li>
+    <li><b>An untested idea.</b> Trino and Presto are hard forks, so SWE-PolyBench’s 15 Trino feature tasks might have sibling code to reuse. We did not check whether any does.</li>
+  </ul>
+
+  ${sec(10, "Other candidates and sources", "sources")}
+  <p>Also looked at and set aside: ${link("FeatBench", ax("2509.22237"))}, ${A("Doc2Feat-Bench", "2507.18130")} and ${A("RACE-Bench", "2603.26337")} are Python. ${A("ScarfBench", "2605.06754")} is Java with real sibling applications in Spring, Jakarta EE and Quarkus, but its 204 tasks are migrations. ${link("BUMP", U.bump)} has real Java compile failures from dependency updates, but no feature work. SWE-PolyBench’s 161 TypeScript feature tasks would give a <code>tsc</code> compile step, but 117 are from one project and it adds a language change on top.</p>
+  <h3>How the counts were made</h3>
+  <ul>
+    <li><b>Datasets</b>, downloaded on ${READ}: ${link("SWE-PolyBench", U.pb)}, ${link("Verified", U.pbv)}, ${link("Multi-SWE-bench", U.ms)} (9 Java files), ${link("Multi-SWE-RL", U.msrl)}, ${link("SWE-rebench V2", U.reb)}, ${link("SWE-bench-Live MultiLang", U.live)}, ${link("FEA-Bench", U.fea)}, ${link("FeatureBench", U.fb)}, ${link("ContextBench", U.cb)}, ${link("SWE-Bench Pro", U.pro)}, ${link("RepoExec", U.re)}.</li>
+    <li><b>Spread</b> means Java files in the gold patch, read from its <code>diff --git</code> lines, tests excluded by the dataset’s own split. A new file has <code>new file mode</code> or <code>/dev/null</code> in its diff.</li>
+    <li><b>Repositories and papers:</b> ${link("apo-games", U.apo)}, ${link("replication package", U.pkg)}, ${link("Krüger et al.", U.kr)}, ${link("JavaBench", U.jb)}, ${link("ReCUBE", U.rc)}, ${link("FeatureBench", U.fbg)}, ${link("rebench builder", U.rebb)}, ${A("SWE-rebench V2", "2602.23866")}, ${A("SWE-PolyBench", "2504.08703")}, ${A("Multi-SWE-bench", "2504.02605")}, ${A("audit of 168 benchmarks", "2605.26079")}, ${link("Epoch’s list", U.ep)}, which covers none of the benchmarks recommended here.</li>
+    <li><b>Image sizes</b> come from the Docker Hub and GHCR APIs: 12 sampled V2 tasks, 2 Multi-SWE-bench repositories, and 15 SWE-PolyBench tasks. The 9 from the Verified split had images; the 6 others returned 404.</li>
+    <li><b>Limits.</b> Counts can change with new dataset versions; all are from ${READ}. The ratings, feature readings and the lookup classification are ours.</li>
+  </ul>
+  <p class="foot muted">Nothing here comes from behind the OPAL login. The supervisor’s paper is cited through its public package.</p>`;
+
+function renderBuild() {
+  const el = document.getElementById("build-sec"); if (!BUILD.rows.length) return;
+  const R = BUILD.rows;
+  el.innerHTML = `<p class="lead">${BUILD.lead}</p>
+    ${chart("compile", "", `<h3 class="ct">One compile round: ${BUILD.title}</h3>`, BUILD.cap)}
+    ${tbl("Table view: build check per repository", ["Repository", "Tasks", "Built at base", "Built with gold patch", "Full build, median", "Round, median"], R.map(r => ({ cells: [r.n, r.tasks, r.base, r.gold, r.full, `${num(r.round, r.round < 10 ? 1 : 0)} s`] })))}
+    ${BUILD.after}`;
+}
+renderBuild();
+mountCharts(); watch();
+</script>
+</body>
+</html>
