@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · Three key papers</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<script src="research-project/papers-agentic-context.js"></script>
+<style>
+/* Chart colours: the dataviz reference palette as on the proposal page, validated on the chart surfaces. Colour names
+   the criterion everywhere on this page: slot 1 blue = citations, slot 2 orange = build-on, slot 3 aqua = practice.
+   Light-mode contrast of slots 2 and 3 is below 3:1, so every mark is labelled and every chart has a table view. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; --vz-ink: var(--ink-2); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+
+.ac .viz .strong { font-weight: 700; }
+.ac .viz .bar.ink, .ac .viz .fink { fill: var(--ink-2); }
+.ac .viz .bar.soft { fill: var(--vz-axis); }
+.ac .viz .ring1 { fill: var(--surface-2); stroke: var(--vz-s1); stroke-width: 2; }
+.ac .viz .ring2 { fill: var(--surface-2); stroke: var(--vz-s2); stroke-width: 2.5; }
+.ac .viz .chip { stroke-width: 1.5; }
+.ac .viz .chip.nav { fill: var(--surface); stroke: var(--vz-axis); }
+.ac .viz .chip.scaf { fill: var(--surface); stroke: var(--ink-2); }
+.ac .viz .tip { max-width: 280px; white-space: normal; }
+.ac .key.ringk { background: transparent; border: 2px solid var(--c); border-radius: 50%; }
+.ac .key.round { border-radius: 50%; }
+
+/* The answer strip: the three winners, in rank order. */
+.ac .podium { max-width: none; list-style: none; margin: 0 0 1.2rem; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ac .podium li { padding: 12px 14px 12px 0; margin: 0; }
+.ac .podium li + li { border-left: 1px solid var(--line); padding-left: 14px; }
+.ac .podium .r { font: 500 .8rem/1 ui-monospace, "IBM Plex Mono", monospace; color: var(--rp-accent); }
+.ac .podium a { display: block; font: 600 1.25rem/1.2 var(--rp-serif); color: var(--ink); margin: 4px 0 3px; }
+.ac .podium span.d { display: block; font-size: 14px; color: var(--ink-2); line-height: 1.35; }
+
+.ac .crit { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 12px 0 1rem; }
+.ac .crit > div { border-top: 3px solid var(--c); padding-top: 8px; }
+.ac .crit b { display: block; font: 600 1.05rem/1.3 var(--rp-serif); margin-bottom: 3px; }
+.ac .crit p { font-size: 14.5px; margin: 0; color: var(--ink-2); }
+
+.ac .lt { overflow-x: auto; margin: 10px 0; }
+.ac .lt table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.ac .lt th, .ac .lt td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.ac .lt thead th { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.ac .lt tbody th { font-weight: 600; }
+.ac .lt small { color: var(--ink-3); }
+.ac .lt td.chg { font-weight: 700; }
+.ac .lt td.chg::before { content: "≠ "; color: var(--rp-accent); }
+
+/* One paper: five questions as a labelled column, the same order each time. */
+.ac .pp { border-top: 3px solid var(--rp-accent); margin: 2.2rem 0 0; padding-top: 10px; }
+.ac .pp .rank { font: 500 .8rem/1.35 ui-monospace, "IBM Plex Mono", monospace; color: var(--rp-accent); margin: 0 0 6px; }
+.ac .pp h2 { margin: 0 0 2px; }
+.ac .pp .by { color: var(--ink-2); font-size: 14.5px; margin: 0 0 12px; }
+.ac .qs { margin: 0; }
+.ac .qs > div { display: grid; grid-template-columns: 150px 1fr; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ac .qs dt { font-weight: 600; font-size: 14.5px; }
+.ac .qs dd { margin: 0; min-width: 0; }
+.ac .qs dd p:last-child { margin-bottom: 0; }
+.ac .qs > div.cg { background: var(--rp-accent-soft); border-radius: 10px; border-top: 0; padding: 12px 14px; margin-top: 8px; }
+.ac .qs .viz { margin: 0.5rem 0; }
+.ac .qs details.tbl { margin: 0 0 .4rem; }
+@media (max-width: 700px) {
+  .ac .podium, .ac .crit { grid-template-columns: 1fr; }
+  .ac .podium li { padding: 10px 0; }
+  .ac .podium li + li { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; }
+  .ac .crit { gap: 12px; }
+  .ac .qs > div { grid-template-columns: 1fr; gap: 3px; }
+}
+</style>
+</head>
+<body class="rp ac">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { esc, c, fmt } = RP;
+const { chart, mountCharts, watch, mount } = RPViz;
+const AX = AC.ax;
+const link = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
+const arx = (id, text) => link(`https://arxiv.org/abs/${id}`, text);
+const sec = (n, t, id) => `<h2 id="${id}"><span class="sec">§ ${n}</span>${t}</h2>`;
+const note = (html, tag, mn) => `<div class="note">${html}<aside class="mn"><span class="tag">${tag}</span>${mn}</aside></div>`;
+const k = (s, cls = "") => `<span class="key ${cls}" style="--c:var(--vz-${s})"></span>`;
+const legend = items => `<div class="legend">${items.map(([key, t]) => `<span class="li">${key}<span class="lt">${t}</span></span>`).join("")}</div>`;
+const lensButtons = `<div class="toggles" role="group" aria-label="Scoring lens">${AC.LENSES.filter(l => l.main).map(l => `<button class="tg" type="button" data-lens="${l.id}" aria-pressed="${l.id === AC.STATE.lens}">${l.t}</button>`).join("")}</div>`;
+const scaffold = arx("2604.03515", "Rombaut 2026");
+const swebench = arx("2310.06770", "SWE-bench");
+const sweagent = arx("2405.15793", "SWE-agent");
+const react = arx("2210.03629", "ReAct");
+const oaiAudit = link("https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/", "OpenAI’s audit of February 2026");
+const oaiPro = link("https://openai.com/index/separating-signal-from-noise-coding-evaluations/", "July 2026 follow-up");
+const anth = link("https://www.anthropic.com/engineering/building-effective-agents", "Anthropic’s agent guide");
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Literature ranking, read on ${fmt("2026-10-30")} 2026 for ${esc(c.project)} with ${esc(c.supervisor)}</p>
+    <h1>Which three papers shaped coding agents and their context?</h1>
+    <p class="authors">Twenty candidates, three measures of influence, and what the winners mean for a project that gives agents a call graph</p>
+    <div class="kw">${["coding agents", "context engineering", "agent-computer interfaces", "benchmarks", "call graphs"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <ol class="podium">
+    <li><div class="r">1st · 13.2 of 15</div><a href="research-project/papers-agentic-context.html#swebench">SWE-bench</a><span class="d">Set the task every coding agent is measured on, and showed that more context can hurt.</span></li>
+    <li><div class="r">2nd · 12.0 of 15</div><a href="research-project/papers-agentic-context.html#sweagent">SWE-agent</a><span class="d">Showed that what an agent sees at each step changes how much it can solve.</span></li>
+    <li><div class="r">3rd · 11.1 of 15</div><a href="research-project/papers-agentic-context.html#react">ReAct</a><span class="d">Gave coding agents their loop, though the paper itself never touches code.</span></li>
+  </ol>
+
+  <div class="abstract"><span class="h">The short answer.</span>Influence here means three things, scored 0 to 5 each: citations, how many later systems build on the paper, and whether it changed practice. SWE-bench and SWE-agent lead clearly and stay in the top three under every lens that keeps build-on or practice in the score. ReAct’s third place is firm under equal weights but is the one contestable result: restrict the list to papers about code and OpenHands replaces it. No paper mainly about context, and no code-graph paper, reaches the top three. RepoGraph, the best-placed graph paper, ranks 16th. For this project that gap is the opening, and the winners already contain the warning: more context, poorly delivered, lowers results.</div>
+
+  ${chart("score", legend([[k("s1"), "Citations"], [k("s2"), "Build-on"], [k("s3"), "Practice"]]), lensButtons, "Each bar sums the criteria in play. Switch the lens to see what each measure alone would pick. Hover or tab through a bar for its parts.")}
+  ${AC.scoreTable()}
+
+  ${sec(1, "What counts as influential", "criteria")}
+  <p class="lead">Each measure has a fixed definition, so the result can be rerun, and each has a known bias that the others offset.</p>
+  <div class="crit">
+    <div style="--c:var(--vz-s1)"><b>Citations</b><p>Semantic Scholar count, log-scaled between the lowest and highest candidate. Log scale, because 13,000 is not 200 times the influence of 67. Bias: rewards old and general papers.</p></div>
+    <div style="--c:var(--vz-s2)"><b>Build-on</b><p>The share of recent papers whose reference list contains the candidate, averaged over an agent panel and a context panel. Bias: a citation can be a passing mention, and a method everyone uses can stop being cited.</p></div>
+    <div style="--c:var(--vz-s3)"><b>Practice</b><p>Three yes-or-no checks: is the design reused in other tools, does a lab or vendor use it publicly, is it still in use by name? Each yes scores 5/3. Bias: this is the one judgement call, so one lens drops it.</p></div>
+  </div>
+  <p>The two panels are all from 2025 and 2026, later than every candidate except LocAgent (March 2025), which they therefore slightly disfavour. The agent panel comes from Semantic Scholar’s most-cited results for neutral search terms, keeping papers on LLM agents or repository-level code and removing surveys. Few context papers are highly cited, so the context panel also takes papers I found through web search. Both filters were manual steps. Two papers with fewer than 20 listed references were dropped, because their citations could not be checked. That left 29 agent papers and 16 context papers, 41 in all, since four sit in both.</p>
+  ${chart("panels", legend([[k("s2", "round"), "Agent panel (29 papers)"], [k("s2", "ringk"), "Context panel (16 papers)"]]), "", "Top 12 by mean share. Read: 27 of 29 recent agent papers cite SWE-bench. Hover or tab through a row for the counts.")}
+  ${AC.panelsTable()}
+  ${AC.panelList()}
+  <p><b>Who could enter.</b> A candidate had to study agents acting on code, study context supplied for code, or be a general method that coding agents visibly use. That admits ReAct, Reflexion, Toolformer, PAL and Lost in the Middle. It leaves out Codex/HumanEval, which scores single functions with no agent and no repository context. Aider’s repo map is not a paper, so it could not be scored and is covered in §&nbsp;7.</p>
+
+  ${sec(2, "Why these three won", "why")}
+  <p>Citations alone would pick ReAct, Reflexion, Toolformer: three general agent papers. Build-on alone would pick SWE-bench, SWE-agent and OpenHands: code systems that later code papers must cite. Only the three winners pass all three practice checks, and SWE-bench and SWE-agent also lead on build-on.</p>
+  ${AC.lensTable()}
+  <p class="muted" style="font-size:13.5px">≠ marks a paper in the top three that is not one of the three winners. Scores are the sum under that lens, so single-criterion rows run to 5, and two-criterion rows to 10.</p>
+  ${note(`<p>The gap below the winners is wide under equal weights: ReAct 11.1, OpenHands 7.4. It nearly closes without the practice score: ReAct 6.1, OpenHands 5.8. So ReAct’s place rests on the practice evidence, and it is the weakest of the three on build-on, cited by only 6 of 29 agent papers.</p>
+  <p>I kept ReAct because the brief fixed the three measures in advance, and the practice evidence for it is the strongest on the page: a source-code study of 13 open agents found a sequential ReAct loop as the main control structure in 7 (${scaffold}). A loop that every tool uses can stop being cited. That is my reading, not something the panel measures.</p>`, "contestable", `For a list limited to code papers, read OpenHands as third: 70k GitHub stars and cited by 18 of 29 agent papers, but no lab or vendor use found.`)}
+  ${AC.practiceTable()}
+  <p>Lost in the Middle scores 0 on practice for a procedural reason. A LangChain document-reordering utility appears to cite it, but its documentation pages returned 404 when I tried to open them, so that claim is not counted. Scoring one check for it would raise it from 4.9 to 6.5 and change no top-three place.</p>
+
+  ${sec(3, "Where the citation sources disagree", "sources")}
+  <p class="lead">Semantic Scholar and Google Scholar roughly agree. OpenAlex does not, and I did not use it for scoring.</p>
+  ${chart("sources", legend([[k("s1", "round"), "Semantic Scholar"], [k("s1", "ringk"), "Google Scholar"], [k("gray", "round"), "OpenAlex (best record)"]]), "", "Log axis, all read on 30 Oct 2026. Hover or tab through a row for the three values. Google Scholar has no value for PAL, LocAgent and CodexGraph.")}
+  ${AC.sourcesTable()}
+  <ul>
+    <li><b>OpenAlex undercounts arXiv-first papers.</b> It shows 71 for SWE-bench on its arXiv record and found no matching record for SWE-agent, while Google Scholar shows 5,660 and 3,461. Its counts look plausible only where a journal or proceedings record exists, such as Lost in the Middle (1,592), and even there they run far below the other two.</li>
+    <li><b>Google Scholar is usually higher than Semantic Scholar,</b> by 40 % for ReAct and 22 % for SWE-bench. Agentless is the exception: 367 on Scholar against 564, probably because Scholar’s main record is the journal version. Scholar’s stray citation-only records are not added in.</li>
+    <li><b>Google Scholar stopped me.</b> It showed a robot check after 17 lookups, so PAL, LocAgent and CodexGraph have no Scholar value. The Google Scholar lens uses their Semantic Scholar counts instead.</li>
+    <li><b>Semantic Scholar has duplicates.</b> Its record for arXiv 2312.13010 shows 0 citations for AgentCoder, while a title match shows 484, which is the value used. The record for MetaGPT found by title also showed 0; the arXiv record shows 2,730.</li>
+    <li><b>Counts move daily.</b> The proposal page read SWE-bench as 4,627 on 29 Oct; this page reads 4,630 a day later.</li>
+  </ul>
+
+  <section class="pp" id="swebench">
+    <p class="rank">First · 13.2 of 15 · cited by 27 of 29 agent and 12 of 16 context papers</p>
+    <h2><span class="sec">§ 4</span>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</h2>
+    <p class="by">Jimenez, Yang, Wettig, Yao, Pei, Press, Narasimhan · ICLR 2024 · arXiv ${AX("2310.06770")} · 4,630 citations (Semantic Scholar), 5,660 (Google Scholar)</p>
+    <dl class="qs">
+      <div><dt>What it did</dt><dd><p>Built ${arx("2310.06770", "2,294 tasks")} from real GitHub issues and their pull requests in 12 Python repositories. A model sees the issue and the code before the fix, and its patch counts only if hidden tests pass. Repositories average 438k lines, so the authors had to pick what fits in the prompt: BM25 file retrieval, or for analysis an “oracle” that hands over the files the real fix edited.</p></dd></div>
+      <div><dt>What it showed</dt><dd><p>Models barely solved anything: Claude 2 resolved 1.96 % with BM25 and 4.8 % with the oracle files. More context did not help. Raising the limit from 13k to 50k tokens lifted retrieval recall but lowered resolved issues, and collapsing the oracle files to the lines that mattered raised results (Claude 2 from 4.8 % to 5.9 %, GPT-4 from 1.3 % to 3.4 %).</p>
+        ${chart("context", "", "", "Same three context limits, two measures, each on its own axis. Data: Tables 2 and 3 of the paper.")}${AC.contextTable()}</dd></div>
+      <div><dt>What later work took</dt><dd><p>The task format itself. OpenAI curated 500 of 1,699 reviewed problems into SWE-bench Verified in 2024, and ${oaiAudit} calls it a standard metric of frontier model releases. Later benchmarks such as ${arx("2504.08703", "SWE-PolyBench")}, ${arx("2505.20411", "SWE-rebench")} and ${arx("2509.16941", "SWE-Bench Pro")} keep its shape. Of the 13 agents in ${scaffold}, 7 are built for evaluation on it.</p></dd></div>
+      <div><dt>Its limits</dt><dd><p>Python only, and the hidden tests come from the original pull request. ${oaiAudit} reviewed 138 hard Verified problems and judged 59.4 % flawed, for example a test that imports a function name the task never mentions. It also found that frontier models could recite gold patches, so the set is contaminated. OpenAI then recommended SWE-Bench Pro, and in its ${oaiPro} estimated about 30 % of Pro’s tasks are broken and retracted that advice. The original 2,294-task numbers are also easy to misquote: ${sweagent} gives 3.8 % as the previous best, against 1.96 % in this paper’s abstract. The paper’s own tables report several settings, and I could not match 3.8 % to one with certainty.</p></dd></div>
+      <div class="cg"><dt>For a call-graph project</dt><dd><p>Three direct lessons. Judge graph context on the finished task, because higher recall did not mean more solved issues here. Use an oracle condition, since it marks the ceiling for any context method. And take the audit seriously: a score that compares a model’s new call edges with the reference edges can reject a correct alternative design, the same flaw as a test that imports one specific name. Graph metrics such as wiring recall need checking against behaviour, and tasks should postdate model training.</p></dd></div>
+    </dl>
+  </section>
+
+  <section class="pp" id="sweagent">
+    <p class="rank">Second · 12.0 of 15 · cited by 21 of 29 agent and 12 of 16 context papers</p>
+    <h2><span class="sec">§ 5</span>SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</h2>
+    <p class="by">Yang, Jimenez, Wettig, Lieret, Yao, Narasimhan, Press · NeurIPS 2024 · arXiv ${AX("2405.15793")} · 2,324 citations (Semantic Scholar), 3,461 (Google Scholar)</p>
+    <dl class="qs">
+      <div><dt>What it did</dt><dd><p>Treated the LLM as a user with its own needs and designed an agent-computer interface (ACI) for it: a file viewer showing 100 lines at a time, search commands that return a summary instead of paging through hits, an edit command guarded by a linter, and a history processor that keeps only recent observations in full.</p></dd></div>
+      <div><dt>What it showed</dt><dd><p>It ${arx("2405.15793", "solved 12.47 %")} of the full SWE-bench test set with GPT-4 Turbo and 18.0 % of the 300-task Lite split, a 64 % relative gain over the same agent with a plain shell. Compared with retrieval on Lite it cost 8 to 13 times more and solved 6.7 times as many. The ablations are context results: both showing too little and showing too much hurt.</p>
+        ${chart("ablate", legend([[k("ink"), "Changes what the agent reads"], [k("axis"), "Changes how it edits"]]), "", "% of SWE-bench Lite resolved when one part of the interface changes. Three points is nine tasks of 300, so small gaps are not firm. Data: Table 3 of the paper.")}${AC.ablateTable()}</dd></div>
+      <div><dt>What later work took</dt><dd><p>The idea that the interface is a design variable, and the name for it. ${anth} tells builders to craft the ACI with care and says its team spent more time on tools than on the overall prompt, without naming this paper. ${arx("2508.21433", "The Complexity Trap")} measures that observations make up about 84 % of an average SWE-agent turn and that masking old ones halves cost while matching the unmasked agent’s success. ${arx("2410.14684", "RepoGraph")} plugged a code graph into it, raising resolved tasks from 18.33 % to 20.33 %.</p></dd></div>
+      <div><dt>Its limits</dt><dd><p>The interface was tuned on a few hand-picked examples and the ablations ran on one configuration, so the numbers show direction, not size, and they date quickly as models improve. Its lead was also short: ${arx("2404.05427", "AutoCodeRover")} reports 19 % on the same Lite split at much lower cost. And it trusts the model to search: it gives grep-like tools and no understanding of code structure.</p></dd></div>
+      <div class="cg"><dt>For a call-graph project</dt><dd><p>A graph is an interface, so it should be tested as one. <code>callers</code> and <code>callees</code> results need the same discipline as search here: bounded, summarised, and clear about what was left out. The paper’s own design also suggests the experiment: fix the graph, then change only its delivery (dumped in the prompt, a tool, a summary), one part at a time. That is what condition C7 of the proposal needs to compare with C3–C5.</p></dd></div>
+    </dl>
+  </section>
+
+  <section class="pp" id="react">
+    <p class="rank">Third · 11.1 of 15 · cited by 6 of 29 agent and 4 of 16 context papers</p>
+    <h2><span class="sec">§ 6</span>ReAct: Synergizing Reasoning and Acting in Language Models</h2>
+    <p class="by">Yao, Zhao, Yu, Du, Shafran, Narasimhan, Cao · ICLR 2023 · arXiv ${AX("2210.03629")} · 13,243 citations (Semantic Scholar), 18,505 (Google Scholar)</p>
+    <dl class="qs">
+      <div><dt>What it did</dt><dd><p>Had a model alternate written reasoning with actions, then read each action’s result before going on: thought, action, observation, repeat. It was prompted with a few examples and tested on question answering, fact checking, a text game and web shopping. None of these is a coding task.</p></dd></div>
+      <div><dt>What it showed</dt><dd><p>In ALFWorld and WebShop it ${arx("2210.03629", "beat imitation and reinforcement learning")} by 34 and 10 points of success rate. On question answering, grounding in real observations gave 6 % false positives against 14 % for chain-of-thought, and hallucination caused none of its failures against 56 %. Its failures have their own pattern: 47 % were reasoning errors, including repeating the same steps, and 23 % came from a search that returned nothing useful.</p></dd></div>
+      <div><dt>What later work took</dt><dd><p>The loop. ${scaffold} finds it as the main control structure in 7 of 13 open coding agents, including SWE-agent, OpenHands, Codex CLI, Gemini CLI and Cline, and inside the phases of others. LangGraph ships ${link("https://pypi.org/project/langgraph-prebuilt/", "a prebuilt ReAct-style agent")}. LangChain’s ${link("https://docs.langchain.com/oss/python/langchain/agents", "current agent page")} describes the same model-tools loop without the name, which fits how little the recent panels cite it.</p></dd></div>
+      <div><dt>Its limits</dt><dd><p>No code, a simple Wikipedia API, and small hand-written prompts. A loop paper says nothing about the harness around it: tool registration, compaction and state are, as ${scaffold} stresses, where real agents differ. The evidence that it shaped coding agents comes from later sources, not from the paper.</p></dd></div>
+      <div class="cg"><dt>For a call-graph project</dt><dd><p>In this loop context is not one prompt: it arrives one observation at a time, and a poor observation derails the next thought. So measure a graph tool per step: does it cut useless searches, repeated actions and turns? It also sets the competition. A graph tool lives inside the same loop as grep, and has to earn its place by being cheaper or more accurate for the agent that can already call grep.</p></dd></div>
+    </dl>
+  </section>
+
+  ${sec(7, "What the ranking misses", "gap")}
+  <p class="lead">The method rewards age and reach, so it cannot see the newest context work. That work matters most for this project.</p>
+  ${chart("agents", "", "", "How 13 open coding agents find code, from the source-level study by Rombaut (2026), Table 8. Some agents combine strategies; each sits here under its main paradigm.")}
+  ${AC.agentsTable()}
+  <p>Most open agents search with grep and trust the model. Only Prometheus uses a knowledge graph, and only Aider ranks code by graph structure (${scaffold}). ${link("https://aider.chat/2023/10/22/repomap.html", "Aider’s repo map")} uses tree-sitter and PageRank to fit the most-used symbols into a token budget. It is the only graph-based relevance ranking among the 13 agents, and it is a blog post, so a paper ranking cannot score it.</p>
+  <h3>Read these next for the call-graph question</h3>
+  <ul>
+    <li><b>${arx("2410.14684", "RepoGraph")} (ICLR 2025).</b> The direct test of radius. Inside Agentless, one hop helped, while two hops flattened into the prompt fell below having no graph at all.</li>
+  </ul>
+  ${chart("hops", "", "", "% of SWE-bench Lite resolved by Agentless with RepoGraph (GPT-4o). The axis starts at 25 %, so read the positions, not the lengths. Hover or tab for tokens and nodes. Data: Tables 2 and 4 of the paper.")}
+  ${AC.hopsTable()}
+  <ul>
+    <li><b>${arx("2603.25770", "ReCUBE")} (2026).</b> Caller-centric graph tools beat every baseline, by up to 7.56 points of strict pass, yet GPT-5 reached only 37.57 % with the full repository in context. This is the closest evidence that callers are the useful edge.</li>
+    <li><b>${arx("2503.09089", "LocAgent")} (ACL 2025).</b> A heterogeneous graph of contain, import, inherit and invoke edges, used for finding the code to change: up to 92.7 % file-level accuracy.</li>
+    <li><b>${arx("2602.11988", "Evaluating AGENTS.md")} (2026).</b> Context files did not generally raise task success and added over 20 % to inference cost. A warning for any static context, graph summaries included.</li>
+  </ul>
+  ${note(`<p>Put together: the winners say context delivery changes results, RepoGraph says radius can backfire, and ReCUBE says callers help. I found no study that compares call-graph delivery modes on one task set at equal token budgets, which is the gap the project can fill.</p>`, "reading", `This is my synthesis of the sources above. A full literature search could still find such a study.`)}
+
+  ${sec(8, "How this differs from the proposal page", "diff")}
+  <p>The <a href="research-project/benchmark-proposal.html#influential">proposal page</a> named Codex/HumanEval, SWE-bench and RepoCoder as key papers, for a different question: what shaped benchmarks for this project. Here the only overlap is SWE-bench. Codex/HumanEval is out of scope for this question, and RepoCoder ranks 11th at 3.0, cited by 5 of 16 context papers but only 1 of 29 agent papers. SWE-agent, a runner-up there, is second here, and Lost in the Middle ranks 9th. Both lists stand, because they answer different questions.</p>
+
+  ${sec(9, "Sources", "refs")}
+  <p class="muted" style="font-size:14px">Everything below was opened on 30 Oct 2026. Candidate and panel titles, authors and dates were checked against the arXiv API. Semantic Scholar and OpenAlex counts came from their APIs, Google Scholar from its result pages. Longlist papers not listed here were scored from those records only, not read in full.</p>
+  <ol class="refs">
+    <li>Jimenez, C. E. et al. (2024): SWE-bench: Can Language Models Resolve Real-World GitHub Issues? ICLR 2024. Full text opened; the sections cited here were read. ${arx("2310.06770", "arXiv 2310.06770")}</li>
+    <li>Yang, J. et al. (2024): SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering. NeurIPS 2024. Full text opened; the sections cited here were read. ${arx("2405.15793", "arXiv 2405.15793")}</li>
+    <li>Yao, S. et al. (2023): ReAct: Synergizing Reasoning and Acting in Language Models. ICLR 2023. Full text opened; the sections cited here were read. ${arx("2210.03629", "arXiv 2210.03629")}</li>
+    <li>Rombaut, B. (2026): Inside the Scaffold: A Source-Code Taxonomy of Coding Agent Architectures. Full text opened; the sections cited here were read. ${arx("2604.03515", "arXiv 2604.03515")}</li>
+    <li>Ouyang, S. et al. (2025): RepoGraph: Enhancing AI Software Engineering with Repository-level Code Graph. ICLR 2025. Full text opened; the sections cited here were read. ${arx("2410.14684", "arXiv 2410.14684")}</li>
+    <li>Hong, J., Ascoli, B. G., Choi, J. D. (2026): ReCUBE: Evaluating Repository-Level Context Utilization in Code Generation. ${arx("2603.25770", "arXiv 2603.25770")}</li>
+    <li>Chen, Z. et al. (2025): LocAgent: Graph-Guided LLM Agents for Code Localization. ACL 2025. ${arx("2503.09089", "arXiv 2503.09089")}</li>
+    <li>Gloaguen, T. et al. (2026): Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents? ${arx("2602.11988", "arXiv 2602.11988")}</li>
+    <li>Lindenbauer, T. et al. (2025): The Complexity Trap: Simple Observation Masking Is as Efficient as LLM Summarization for Agent Context. ${arx("2508.21433", "arXiv 2508.21433")}</li>
+    <li>Zhang, Y. et al. (2024): AutoCodeRover: Autonomous Program Improvement. Abstract read. ${arx("2404.05427", "arXiv 2404.05427")}</li>
+    <li>OpenAI (23 Feb 2026): ${link("https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/", "Why SWE-bench Verified no longer measures frontier coding capabilities")}.</li>
+    <li>OpenAI (8 Jul 2026): ${link("https://openai.com/index/separating-signal-from-noise-coding-evaluations/", "Separating signal from noise in coding evaluations")}.</li>
+    <li>Anthropic (19 Dec 2024): ${link("https://www.anthropic.com/engineering/building-effective-agents", "Building effective agents")}.</li>
+    <li>Aider (22 Oct 2023): ${link("https://aider.chat/2023/10/22/repomap.html", "Building a better repository map with tree-sitter")}.</li>
+    <li>LangChain: ${link("https://pypi.org/project/langgraph-prebuilt/", "langgraph-prebuilt on PyPI")}; ${link("https://docs.langchain.com/oss/python/langchain/agents", "Agents documentation")}.</li>
+    <li>MetaGPT repository: ${link("https://github.com/FoundationAgents/MetaGPT", "github.com/FoundationAgents/MetaGPT")} (71.1k stars). OpenHands, SWE-agent and DARS-Agent star counts are from Rombaut (2026), Table 1.</li>
+  </ol>
+  <p class="foot">Citation counts: Semantic Scholar Graph API, Google Scholar and OpenAlex, 30 Oct 2026. Panels and scores are reproducible from the numbers in the table views.</p>`;
+
+// The lens buttons redraw the ranking.
+const fig = document.querySelector('[data-fig="score"]');
+fig.addEventListener("click", e => {
+  const b = e.target.closest("button.tg"); if (!b) return;
+  AC.STATE.lens = b.dataset.lens;
+  fig.querySelectorAll("button.tg").forEach(x => x.setAttribute("aria-pressed", x === b));
+  mount(fig.querySelector('[data-chart="score"]'));
+});
+mountCharts(); watch();
+</script>
+</body>
+</html>
