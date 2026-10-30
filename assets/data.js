@@ -881,6 +881,257 @@ window.CMS = {
       ""
      ]
     ]
+   },
+   "course": {
+    "page": "data-visualization.html",
+    "rooms": {
+     "lecture": "APB/E023/U (Wed 13:00–14:30)",
+     "exercise": "APB/E023/U (Wed 14:50–16:20, six dates only)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-14",
+      "label": "First lecture and course-work kick-off",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-11-04",
+      "label": "E2: Multivariate Data, teams of three from here on",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-11-18",
+      "label": "Buß- und Bettag: no lecture, no exercise",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-15",
+      "label": "Enrolment in OPAL and exam registration in Selma close",
+      "kind": "deadline"
+     },
+     {
+      "date": "2026-12-20",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-01-27",
+      "label": "Closing of the course work",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-02-03",
+      "label": "Last lecture (Flow Visualization 2, Summary & Outlook)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-COR-VIZ (CMS, basic professional training)",
+      "how": "Written exam, 90 min. The exercises are not graded and give no bonus points, but the exam asks about them.",
+      "selma": "open until 15 December 2026"
+     }
+    ],
+    "format": "2 SWS lecture + 2 SWS exercise, 5 LP. Lecture every Wednesday from 14 Oct; the exercise slot runs on six Wednesdays only, because the room is shared with User Interface Engineering.",
+    "contact": "Prof. Raimund Dachselt and Prof. Stefan Gumhold teach the lecture; Lennart Woidtke (CGV Lab) and Julián Méndez (Interactive Media Lab) run the course work. Questions go to the OPAL forum first; consultation slots are by appointment via email",
+    "opalNote": "WiSe 26/27 course",
+    "selmaNote": "open until 15 Dec",
+    "exerciseNote": "Five assignments, pen and paper first, then D3.js, then a SciVis toolkit that is still to be announced. Not graded, no bonus points, but the exam asks about them.",
+    "courseWork": [
+     "Five assignments with practical and theoretical tasks; from assignment 2 you work in teams of three.",
+     "Toolkits: pen and paper for assignment 1, D3.js for assignments 2 and 3, a SciVis toolkit announced with assignment 4.",
+     "Selected results are presented as a video: a screencast or recording with your voice, as mp4 with h264 at 1080p and at most 50 MB per minute.",
+     "Exercises are not reviewed. Feedback comes in consultation slots booked by email, or through the OPAL forum.",
+     "Results from earlier semesters do not transfer. AI tools are allowed if you state how you used them."
+    ],
+    "planNote": "The schedule also lists an optional Time Visualization topic after 9 Dec, without a date of its own.",
+    "materialsNote": "Slides, assignments and notes are in OPAL under Lecture and Course Work; they may not be republished, so the pages here are summaries in our own words. OPAL numbers the Perception deck 02 and Visual Variables 03, although Visual Variables came first in the schedule; the lecture cards follow the dates.",
+    "coursePage": "https://mt.inf.tu-dresden.de/lehre/datavis",
+    "lectures": [
+     {
+      "n": 1,
+      "title": "Introduction",
+      "date": "2026-10-14",
+      "icon": "🧭",
+      "covered": false,
+      "blurb": "Held; its slides are in OPAL but not read yet, so the write-up is still to come."
+     },
+     {
+      "n": 2,
+      "title": "Visual Variables",
+      "date": "2026-10-21",
+      "icon": "🎚️",
+      "covered": false,
+      "blurb": "Held; its slides are in OPAL but not read yet, so the write-up is still to come."
+     },
+     {
+      "n": 3,
+      "title": "Perception",
+      "date": "2026-10-28",
+      "icon": "👁️",
+      "covered": false,
+      "blurb": "Held; its slides are in OPAL but not read yet, so the write-up is still to come."
+     },
+     {
+      "n": 4,
+      "title": "Multivariate Data Visualization 1",
+      "date": "2026-11-04",
+      "icon": "🧮",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Multivariate Data Visualization 1."
+     },
+     {
+      "n": 5,
+      "title": "Multivariate Data Visualization 2",
+      "date": "2026-11-11",
+      "icon": "🕸️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Multivariate Data Visualization 2."
+     },
+     {
+      "n": 6,
+      "title": "Visualizing Relations",
+      "date": "2026-11-25",
+      "icon": "🔗",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Visualizing Relations."
+     },
+     {
+      "n": 7,
+      "title": "Presentation & Interaction 1",
+      "date": "2026-12-02",
+      "icon": "🖱️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Presentation & Interaction 1."
+     },
+     {
+      "n": 8,
+      "title": "Presentation & Interaction 2",
+      "date": "2026-12-09",
+      "icon": "🔍",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Presentation & Interaction 2."
+     },
+     {
+      "n": 9,
+      "title": "Introduction to Scientific Visualization",
+      "date": "2026-12-16",
+      "icon": "🔬",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Introduction to Scientific Visualization."
+     },
+     {
+      "n": 10,
+      "title": "Data Preparation",
+      "date": "2027-01-06",
+      "icon": "🧹",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Data Preparation."
+     },
+     {
+      "n": 11,
+      "title": "Volume Visualization 1",
+      "date": "2027-01-13",
+      "icon": "🧊",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Volume Visualization 1."
+     },
+     {
+      "n": 12,
+      "title": "Volume Visualization 2",
+      "date": "2027-01-20",
+      "icon": "🫧",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Volume Visualization 2."
+     },
+     {
+      "n": 13,
+      "title": "Flow Visualization 1",
+      "date": "2027-01-27",
+      "icon": "🌊",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Flow Visualization 1."
+     },
+     {
+      "n": 14,
+      "title": "Flow Visualization 2 + Summary & Outlook",
+      "date": "2027-02-03",
+      "icon": "🌀",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: Flow Visualization 2 + Summary & Outlook."
+     }
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "title": "Dear Data",
+      "date": "2026-10-14",
+      "published": "2026-10-14",
+      "icon": "✍️",
+      "covered": true,
+      "lecture": null,
+      "blurb": "Course-work kick-off: how the five assignments work, then the toolkits from pen and paper to D3.js and the SciVis stack, with explorers for scales, the data join and data sizes. Sheet A1 itself is not read yet."
+     },
+     {
+      "n": 2,
+      "title": "Multivariate Data",
+      "date": "2026-11-04",
+      "published": null,
+      "icon": "🧮",
+      "covered": false,
+      "lecture": 4,
+      "blurb": "Not held yet. Second assignment, the first one in teams of three and the first one in D3.js."
+     },
+     {
+      "n": 3,
+      "title": "Networks",
+      "date": "2026-12-02",
+      "published": null,
+      "icon": "🕸️",
+      "covered": false,
+      "lecture": 6,
+      "blurb": "Not held yet. Third assignment, graph visualization, in D3.js."
+     },
+     {
+      "n": 4,
+      "title": "Elevation Data",
+      "date": "2026-12-09",
+      "published": null,
+      "icon": "⛰️",
+      "covered": false,
+      "lecture": null,
+      "blurb": "Not held yet. The schedule calls it Elevation Data; the course-work slides list assignment 4 as Data Preparation. Starts the scientific visualization part; its toolkit will be announced with the assignment."
+     },
+     {
+      "n": 5,
+      "title": "Volume Data",
+      "date": "2027-01-06",
+      "published": null,
+      "icon": "🧊",
+      "covered": false,
+      "lecture": null,
+      "blurb": "Not held yet. Fifth assignment, volume visualization."
+     },
+     {
+      "n": 6,
+      "title": "Closing",
+      "date": "2027-01-27",
+      "published": null,
+      "icon": "🏁",
+      "covered": false,
+      "lecture": null,
+      "blurb": "Not held yet. Last course-work session."
+     }
+    ]
+   },
+   "status": {
+    "opal": true,
+    "selma": false
    }
   },
   "CMS-TRK-DCD": {
