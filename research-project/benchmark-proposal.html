@@ -217,17 +217,17 @@ document.getElementById("page").innerHTML = `
   </ol>
 
   ${sec(4, "Current benchmarks", "landscape")}
-  <p class="lead">Benchmarks moved from single functions to whole repositories and real issues. Only since 2026 do a few measure how a model <em>uses</em> context, and none scores the integration itself on the program’s structure.</p>
+  <p class="lead">Benchmarks moved from single functions to whole repositories and real issues. Some have measured context use since 2023 (RepoBench, RepoExec, CodeRAG-Bench). Among the 108 in the <a href="benchmarks-ai-coding.html">benchmark survey</a>, none scores an edit as a call-graph diff: SWE-PolyBench has syntax-tree metrics, and CABRA builds synthetic tasks from call graphs but reports task accuracy.</p>
   ${chart("landscape", `<div class="legend"><span class="li"><span class="key" style="--c:var(--vz-s1)"></span><span class="lt">scored by running tests</span></span><span class="li"><span class="key ring" style="border-color:var(--vz-s1)"></span><span class="lt">scored by matching a reference</span></span><span class="li"><span class="key" style="--c:var(--vz-s3)"></span><span class="lt">the supervisor’s paper</span></span><span class="li"><span class="key" style="--c:var(--vz-s2)"></span><span class="lt">this proposal</span></span></div>`, "", "Each dot is a benchmark, placed by its arXiv date. Hover or tab through a dot for size, venue and what it asks.")}
   ${landscapeTable()}
   <h3>The closest neighbours</h3>
-  <p>ReCUBE (Hong, Ascoli and Choi, 2026) is the nearest: it masks a whole file, scores the rebuild with usage-aware tests, and gives agents caller-centric graph tools. Even GPT-5 reaches only 37.57 % strict pass with the full repository as context. RepoExec (2024) already checks whether provided dependencies are invoked. WireBench adds what neither has: the context type as a controlled variable, generation against reuse, and integration scored edge by edge.</p>
+  <p>No single benchmark is clearly nearest; each comes close from a different side. ReCUBE (Hong, Ascoli and Choi, 2026) masks a whole file, scores the rebuild with usage-aware tests, and gives agents caller-centric graph tools. Even GPT-5 reaches only 37.57 % strict pass with the full repository as context. RepoExec (2024) already checks whether provided dependencies are invoked. ContextBench (2026) scores what agents retrieve against human gold contexts, and CABRA (2026) builds its tasks as call-graph transformations. WireBench adds what none of them has: the context type as a controlled variable, generation against reuse, and integration scored edge by edge.</p>
   ${coverage()}
-  <p class="muted" style="font-size:13.5px">Agent leaderboards such as SWE-bench Verified and SWE-Bench Pro change monthly, and third-party trackers disagree on the current top scores, so no leaderboard number is quoted here. Check the official boards when the related-work section is written.</p>
+  <p class="muted" style="font-size:13.5px">Agent leaderboards are weak evidence right now. OpenAI stopped reporting SWE-bench Verified in February 2026, and The Decoder reports that it also withdrew its backing of SWE-Bench Pro; the official boards are not current, and trackers disagree on the top scores. No leaderboard number is quoted here; the <a href="benchmarks-ai-coding.html">survey</a> has the dated sources.</p>
 
   ${sec(5, "The three most influential papers in this area", "influential")}
   <p class="lead">Chosen for how much they shaped the question of this project, with citation counts as a check: how code models are scored, what a realistic task is, and how repository context gets into the prompt.</p>
-  ${chart("cites", "", "", "Citation counts from Semantic Scholar, read on 29 Oct 2026. Blue: the three chosen. Gray: highly cited runners-up, shown for scale.")}
+  ${chart("cites", "", "", "Citation counts from Semantic Scholar, read on 29 Oct 2026. Blue: the three chosen. Gray: highly cited runners-up, shown for scale. OpenAlex gives far lower counts, so read these as rough rank only.")}
   ${citesTable()}
   <div class="three">
     <article><h4>Evaluating Large Language Models Trained on Code</h4><p class="by">Chen et al., OpenAI, 2021 · ${ax("2107.03374")}</p>
@@ -247,10 +247,12 @@ document.getElementById("page").innerHTML = `
     <li>Zhang, F. et al. (2023): RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation. EMNLP 2023. ${ax("2303.12570")}</li>
     <li>Hong, J., Ascoli, B. G., Choi, J. D. (2026): ReCUBE: Evaluating Repository-Level Context Utilization in Code Generation. ${ax("2603.25770")}</li>
     <li>Le Hai, N., Nguyen, D. M., Bui, N. D. Q. (2024): On the Impacts of Contexts on Repository-Level Code Generation (RepoExec). NAACL 2025. ${ax("2406.11927")}</li>
-    <li>FEA-Bench: A Benchmark for Evaluating Repository-Level Code Generation for Feature Implementation (2025). ACL 2025. ${ax("2503.06680")}</li>
+    <li>Li, W. et al. (2025): FEA-Bench: A Benchmark for Evaluating Repository-Level Code Generation for Feature Implementation. ACL 2025. ${ax("2503.06680")}</li>
     <li>Wang, Z. et al. (2024): CodeRAG-Bench: Can Retrieval Augment Code Generation? NAACL 2025 Findings. ${ax("2406.14497")}</li>
     <li>Deng, X., Da, J., Pan, E. et al. (2025): SWE-Bench Pro: Can AI Agents Solve Long-Horizon Software Engineering Tasks? ${ax("2509.16941")}</li>
-    <li>Zhu, J., Wu, J., Hu, M. (2026): SWE Context Bench: A Benchmark for Context Learning in Coding. ${ax("2602.08316")}</li>
+    <li>Zhu, J. et al. (2026): SWE Context Bench: A Benchmark for Context Learning in Coding. ${ax("2602.08316")}</li>
+    <li>Li, H. et al. (2026): ContextBench: A Benchmark for Context Retrieval in Coding Agents. ${ax("2602.05892")}</li>
+    <li>Balepur, N., Tomlinson, K., Schnabel, T. (2026): Code Understanding is a Bottleneck for Coding Agents (CABRA). ${ax("2610.10610")}</li>
     <li>Liu, T., Xu, C., McAuley, J. (2023): RepoBench: Benchmarking Repository-Level Code Auto-Completion Systems. ICLR 2024. ${ax("2306.03091")}</li>
     <li>Liu, N. F. et al. (2023): Lost in the Middle: How Language Models Use Long Contexts. TACL 2024. ${ax("2307.03172")}</li>
     <li>Yang, J. et al. (2024): SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering. NeurIPS 2024. ${ax("2405.15793")}</li>

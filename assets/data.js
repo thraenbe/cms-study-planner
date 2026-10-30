@@ -3682,6 +3682,15 @@ window.CMS = {
       "icon": "📚",
       "covered": true,
       "blurb": "SWE-bench, SWE-agent and ReAct, picked from 20 candidates on citations, later work and practice. No context or code-graph paper reaches the top three."
+     },
+     {
+      "n": 3,
+      "slug": "benchmarks-ai-coding",
+      "title": "Existing benchmarks for AI-assisted code development",
+      "date": "2026-10-30",
+      "icon": "🧪",
+      "covered": true,
+      "blurb": "108 benchmarks in eight families, what audits found in them, and what none of them can measure. No benchmark scores an edit as a call-graph diff, so WireBench keeps its gap."
      }
     ]
    }

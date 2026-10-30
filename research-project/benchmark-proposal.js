@@ -118,28 +118,30 @@ window.WB = (function () {
 
   // ---------------------------------------------------------------------------------------------------------
   // 2. The landscape: benchmarks by year and by what they ask of a model. Filled = scored by running tests,
-  //    ring = scored by matching a reference text. Every entry was checked against arXiv on 29 Oct 2026.
+  //    ring = scored by matching a reference text. Every entry was checked against arXiv on 29 Oct 2026 and corrected against the survey on 30 Oct.
   // ---------------------------------------------------------------------------------------------------------
   const LANES = ["Single functions", "Complete code inside a repo", "Generate code inside a repo", "Resolve real issues (agents)", "Measure context use"];
   const BENCH = [
     { n: "HumanEval", y: 2021.5, lane: 0, tests: true, id: "2107.03374", v: "Chen et al., 2021", d: "164 hand-written Python problems scored by unit tests; introduced pass@k." },
-    { n: "RepoEval", y: 2023.2, lane: 1, tests: true, id: "2303.12570", v: "with RepoCoder, EMNLP 2023", d: "Line, API and function completion in real repositories; the function level is scored by tests." },
+    { n: "RepoEval", y: 2023.2, lane: 1, tests: false, id: "2303.12570", v: "with RepoCoder, EMNLP 2023", d: "Line, API and function completion in real repositories; only the function level runs tests." },
     { n: "RepoBench", y: 2023.45, lane: 1, tests: false, id: "2306.03091", v: "ICLR 2024", d: "Retrieval, completion and the full pipeline across files; scored by exact match and edit similarity." },
-    { n: "CrossCodeEval", y: 2023.8, lane: 1, tests: false, id: "2310.11248", v: "2023", d: "Completions that are only solvable with cross-file context, in four languages; scored by matching." },
-    { n: "CoderEval", y: 2023.1, lane: 2, tests: true, id: "2302.00288", v: "2023", d: "Pragmatic generation from real Python and Java projects, including functions that depend on their surroundings." },
+    { n: "CrossCodeEval", y: 2023.8, lane: 1, tests: false, id: "2310.11248", v: "NeurIPS 2023 Datasets and Benchmarks", d: "Completions that are only solvable with cross-file context, in four languages; scored by matching." },
+    { n: "CoderEval", y: 2023.1, lane: 2, tests: true, id: "2302.00288", v: "ICSE 2024", d: "Pragmatic generation from real Python and Java projects, including functions that depend on their surroundings." },
     { n: "EvoCodeBench", y: 2024.25, lane: 2, tests: true, id: "2404.00599", v: "2024", d: "Repository-aligned generation that is refreshed over time to limit training-data leakage." },
-    { n: "DevEval", y: 2024.4, lane: 2, tests: true, id: "2405.19856", v: "2024", d: "Manually annotated generation tasks aligned with real repositories." },
+    { n: "DevEval", y: 2024.4, lane: 2, tests: true, id: "2405.19856", v: "ACL 2024", d: "Manually annotated generation tasks aligned with real repositories." },
     { n: "JavaBench", y: 2024.45, lane: 2, tests: true, id: "2406.12902", v: "ASE 2024", d: "Object-oriented Java projects: classes and methods that must work together." },
     { n: "RepoExec", y: 2024.55, lane: 2, tests: true, id: "2406.11927", v: "NAACL 2025", d: "Executability, functional correctness and whether cross-file dependencies are actually used." },
     { n: "REPOCOD", y: 2024.8, lane: 2, tests: true, id: "2410.21647", v: "2024", d: "Whole functions from popular projects, scored by the projects’ own tests." },
     { n: "FEA-Bench", y: 2025.2, lane: 2, tests: true, id: "2503.06680", v: "ACL 2025", d: "Implementing new features from real pull requests, the closest task to the paper’s feature tasks." },
     { n: "SWE-bench", y: 2023.78, lane: 3, tests: true, id: "2310.06770", v: "ICLR 2024", d: "2,294 GitHub issues from 12 Python repositories; a fix counts when the hidden tests pass." },
-    { n: "SWE-bench Verified", y: 2024.6, lane: 3, tests: true, id: null, v: "OpenAI, 2024", d: "A human-validated subset of 500 SWE-bench issues; the most quoted agent number today." },
+    { n: "SWE-bench Verified", y: 2024.6, lane: 3, tests: true, id: null, v: "OpenAI, 2024", d: "A human-validated subset of 500 SWE-bench issues; long the most quoted agent number, until OpenAI stopped reporting it in February 2026 over flawed tests and contamination." },
     { n: "SWE-Bench Pro", y: 2025.72, lane: 3, tests: true, id: "2509.16941", v: "2025", d: "1,865 long-horizon problems from 41 repositories, partly held out and partly commercial." },
-    { n: "CodeRAG-Bench", y: 2024.47, lane: 4, tests: true, id: "2406.14497", v: "NAACL 2025", d: "Does retrieval from docs, tutorials, posts or repositories help generation? Scored by tests." },
+    { n: "CodeRAG-Bench", y: 2024.47, lane: 4, tests: true, id: "2406.14497", v: "NAACL 2025", d: "Does retrieval from docs, tutorials, posts, repositories or competition solutions help generation? Scored by tests." },
     { n: "SWE-ContextBench", y: 2026.1, lane: 4, tests: true, id: "2602.08316", v: "2026", d: "1,100 base tasks plus 376 related ones: do agents reuse what they learned on an earlier task?" },
     { n: "ReCUBE", y: 2026.23, lane: 4, tests: true, id: "2603.25770", v: "2026", d: "Rebuild a masked file from the rest of the repo, scored by usage-aware tests. GPT-5 reaches 37.57 % strict pass with full context." },
-    { n: "Litvak et al.", y: 2026.6, lane: 4, tests: true, id: null, v: "the supervisor’s paper, 2026", d: "Typed context (structural, behavioural, functional) × generation vs reuse, 240 runs; compile and test rates." },
+    { n: "ContextBench", y: 2026.09, lane: 4, tests: false, id: "2602.05892", v: "2026", d: "1,136 issue tasks with human gold contexts: recall, precision and efficiency of what agents retrieve and use." },
+    { n: "CABRA", y: 2026.77, lane: 4, tests: true, id: "2610.10610", v: "2026", d: "6,840 synthetic tasks built as call-graph transformations; reports task accuracy. Agents stay near-perfect by offloading to tools such as grep." },
+    { n: "Reinhartz-Berger et al.", y: 2026.6, lane: 4, tests: true, id: null, v: "the supervisor’s paper, 2026", d: "Typed context (structural, behavioural, functional) × generation vs reuse, 240 runs; compile and test rates." },
   ];
   CHARTS.landscape = narrow => {
     const W = narrow ? 360 : 860, L = narrow ? 8 : 214, R = narrow ? 14 : 84, T = narrow ? 8 : 12, B = 30, rowH = narrow ? 16 : 19;
@@ -167,7 +169,7 @@ window.WB = (function () {
         <circle class="hit" cx="${cx}" cy="${cy}" r="12"/>
         <circle class="bdot anchor ${b.tests ? "tests" : "match"} ${b.n.startsWith("Litvak") ? "paper" : ""}" cx="${cx}" cy="${cy}" r="5.5"/>
         ${narrow ? "" : `<text class="dl" x="${cx + 9}" y="${cy + 4}">${b.n}</text>`}</g>`; }).join("");
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of ${BENCH.length} code benchmarks from 2021 to 2026 in five lanes, from single functions to measuring context use; almost all are scored by running tests, three by matching a reference.">${out}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of ${BENCH.length} code benchmarks from 2021 to 2026 in five lanes, from single functions to measuring context use; most are scored by running tests, ${BENCH.filter(b => !b.tests).length} by matching a reference.">${out}</svg>`;
   };
   const landscapeTable = () => tbl("Table view of the landscape", ["Benchmark", "Year", "What it asks", "Scoring", "Source"],
     BENCH.slice().sort((a, b) => a.y - b.y).map(b => ({ cells: [b.n, String(Math.floor(b.y)), LANES[b.lane], b.tests ? "tests" : "matching", b.id ? `<a href="https://arxiv.org/abs/${b.id}" target="_blank" rel="noopener">arXiv ${b.id}</a>` : esc(b.v)] })));
@@ -180,7 +182,9 @@ window.WB = (function () {
     { n: "RepoExec", v: [2, 1, 0, 1, 2], note: "measures whether provided dependencies are invoked" },
     { n: "CodeRAG-Bench", v: [1, 2, 0, 0, 2] },
     { n: "ReCUBE", v: [2, 1, 0, 0, 2], note: "four context settings; caller-centric tools for agents" },
-    { n: "Litvak et al. 2026", v: [2, 2, 2, 0, 2] },
+    { n: "ContextBench", v: [2, 1, 0, 0, 1], note: "scores retrieval against human gold contexts" },
+    { n: "CABRA", v: [0, 0, 0, 0, 1], note: "synthetic; tasks are built from call graphs, not scored on them" },
+    { n: "Reinhartz-Berger et al. 2026", v: [2, 2, 2, 0, 2] },
     { n: "WireBench", v: [2, 2, 2, 2, 2], prop: true },
   ];
   function coverage() {
