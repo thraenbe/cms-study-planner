@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · Benchmarks for AI coding</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<script src="research-project/benchmarks-ai-coding.js"></script>
+<style>
+/* Chart colours: the dataviz reference palette, four slots validated on the chart surfaces (#efede7 light, #2a2a27
+   dark). Light-mode contrast of slots 2 to 4 is below 3:1, so charts carry direct labels and a table view. Status
+   colours only appear with a symbol. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; }
+.bs .viz .bar.s4 { fill: var(--vz-s4); }
+.bs .viz .f4 { fill: var(--vz-s4); }
+.bs .viz .ct { margin: 0 2px 8px; font: 600 1.02rem/1.3 var(--rp-serif); }
+.bs .viz .thresh { stroke: var(--bad); stroke-width: 1.5; }
+.bs .viz .whisker { stroke: var(--ink); stroke-width: 1.5; }
+.bs .viz .stem { stroke: var(--vz-axis); stroke-width: 1.5; }
+.bs .viz .grp { fill: var(--ink); font-size: 13px; font-weight: 700; }
+.bs .viz .tdot { stroke-width: 1.6; }
+.bs .viz .tdot.ex { fill: var(--vz-s1); stroke: var(--surface-2); }
+.bs .viz .tdot.ng { fill: var(--surface-2); stroke: var(--vz-s1); }
+.bs .viz .pt:hover .tdot, .bs .viz .pt.on .tdot { stroke: var(--ink); }
+.bs .viz .tl { fill: var(--ink-2); font-size: 11px; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.bs .viz .pt:focus-visible .anchor { outline: 2px solid var(--focus); }
+.bs .viz .tip { white-space: normal; width: max-content; max-width: min(300px, 86vw); }
+
+/* The lead figure is the page's one loud element: larger than its neighbours and set on the plain surface. */
+.bs .audit-fig { background: var(--surface); border-top: 3px solid var(--bad); border-radius: 0 0 10px 10px; padding: 14px 14px 8px; }
+.bs .audit-fig .ct { font-size: 1.3rem; line-height: 1.25; }
+.bs .audit-fig .cat { paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.bs .audit-fig .viz-sub { margin: -2px 2px 10px; color: var(--ink-2); font-size: .92rem; }
+
+.bs .eras { list-style: none; padding: 0; margin: .6rem 0 1rem; max-width: none; }
+.bs .eras li { display: grid; grid-template-columns: 92px 1fr; gap: 14px; padding: 8px 0; margin: 0; border-top: 1px solid var(--line); }
+.bs .eras .when { font-family: var(--rp-serif); font-weight: 600; font-size: 1.05rem; }
+.bs .eras b { display: block; }
+
+.bs .fams { border-top: 1px solid var(--line); margin: .6rem 0 1rem; }
+.bs .fams > div { display: grid; grid-template-columns: 170px 1fr 1fr; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+.bs .fams .h { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.bs .fams b { font-weight: 600; }
+.bs .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.bs .plain { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.bs .plain th, .bs .plain td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.bs .plain thead th { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.bs .cover th, .bs .cover td { text-align: center; }
+.bs .cover tbody th { text-align: left; font-weight: 600; min-width: 140px; }
+.bs .cv { font-size: 16px; line-height: 1; color: var(--vz-s1); } .bs .cv.n { color: var(--ink-3); }
+.bs .legend-line { font-size: 12.5px; color: var(--ink-2); }
+.bs .gaps { margin-left: 0; }
+.bs .gaps li { margin: .55rem 0; }
+.bs .prob { border-left: 3px solid var(--vz-s1); padding: 2px 0 2px 14px; margin: 0 0 1rem; }
+.bs .prob h3 { margin: 0 0 .25rem; font-family: var(--rp-serif); font-weight: 600; font-size: 1.1rem; }
+.bs .prob p:last-child { margin-bottom: 0; }
+
+/* The catalogue breaks out of the reading column, because nine columns do not fit in 70ch. */
+.bs .wide { position: relative; left: 50%; transform: translateX(-50%); width: min(1180px, calc(100vw - 2rem)); margin: .8rem 0 1.2rem; }
+.bs .filters { display: grid; gap: 10px; margin-bottom: 10px; }
+.bs .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bs .tg { font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.bs .tg:hover { border-color: var(--ink-3); }
+.bs .tg[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.bs .tg:focus-visible, .bs .opts input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bs .opts { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.bs .opts label { display: inline-flex; gap: 6px; align-items: center; }
+.bs .opts input[type="search"] { font: inherit; font-size: 14px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); width: 210px; max-width: 100%; }
+.bs #cat-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.bs .catalogue { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: clip; }
+.bs .more { margin-top: 10px; }
+.bs .more[hidden] { display: none; }
+.bs .catalogue table { border-collapse: collapse; width: 100%; font-size: 13px; line-height: 1.38; table-layout: fixed; }
+.bs .catalogue thead th { position: sticky; top: 0; background: var(--surface-2); font-size: 12px; font-weight: 600; color: var(--ink-2); text-align: left; padding: 8px; z-index: 1; }
+@media (min-width: 901px) {
+.bs .catalogue th:nth-child(1) { width: 15%; } .bs .catalogue th:nth-child(2) { width: 16%; } .bs .catalogue th:nth-child(3) { width: 11%; }
+.bs .catalogue th:nth-child(4) { width: 8.5%; } .bs .catalogue th:nth-child(5) { width: 12%; } .bs .catalogue th:nth-child(6), .bs .catalogue th:nth-child(7) { width: 6%; }
+.bs .catalogue th:nth-child(8) { width: 16%; } .bs .catalogue th:nth-child(9) { width: 9.5%; }
+}
+.bs .catalogue tbody th, .bs .catalogue td { padding: 8px; border-top: 1px solid var(--line); vertical-align: top; text-align: left; font-weight: 400; overflow-wrap: anywhere; }
+.bs .catalogue tbody th b { display: block; font-weight: 600; font-size: 13.5px; }
+.bs .catalogue .yr { display: block; font-size: 12px; color: var(--ink-3); }
+.bs .catalogue .ln { display: block; font-size: 12px; }
+.bs .catalogue .ln a + a { margin-left: 8px; }
+.bs .st-ok, .bs .st-quiet { color: var(--ok); } .bs .st-bad { color: var(--bad); }
+.rp .paper h2 { scroll-margin-top: 1rem; }
+@media (min-width: 1180px) { .bs .note .mn { width: 200px; } }
+@media (max-width: 900px) {
+  /* Each row becomes a card with labelled fields. */
+  .bs .catalogue { border: 0; background: none; overflow: visible; }
+  .bs .catalogue table, .bs .catalogue tbody, .bs .catalogue tr, .bs .catalogue tbody th, .bs .catalogue td { display: block; width: auto; }
+  .bs .catalogue thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .bs .catalogue tr { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+  .bs .catalogue tbody th { border: 0; padding: 2px 0 6px; }
+  .bs .catalogue td { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; border: 0; border-top: 1px solid var(--line); padding: 4px 0; }
+  .bs .catalogue td::before { content: attr(data-l); color: var(--ink-3); font-size: 12px; }
+  .bs #cat-count { margin-left: 0; }
+}
+@media (max-width: 700px) {
+  .bs .eras li { grid-template-columns: 1fr; gap: 2px; }
+  .bs .fams > div { grid-template-columns: 1fr; gap: 3px; }
+  .bs .fams .h { display: none; }
+  .bs .audit-fig { padding: 12px 10px 6px; }
+  .bs .audit-fig .ct { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body class="rp bs">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { c, esc } = RP;
+const { chart, mountCharts, watch, leg } = RPViz;
+const { READ, FAM, B, counts, link, ax, auditTable, shiftTable, timelineTable, oracleTable, boardsTable, citesTable, catalogue, wireCatalogue } = BS;
+const n = counts();
+const sec = (i, t, id) => `<h2 id="${id}"><span class="sec">§ ${i}</span>${t}</h2>`;
+const note = (html, tag, mn) => `<div class="note">${html}<aside class="mn"><span class="tag">${tag}</span>${mn}</aside></div>`;
+const A = (t, id) => link(t, ax(id));
+const OAI1 = "https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/", OAI2 = "https://openai.com/index/separating-signal-from-noise-coding-evaluations/";
+const METR = "https://metr.org/notes/2026-03-10-many-swe-bench-passing-prs-would-not-be-merged-into-main/", EP = "https://epoch.ai/benchmarks/", EPL = "https://epoch.ai/data/benchmark-reviews-documentation/included-benchmarks";
+const POOL = "https://poolside.ai/blog/through-the-looking-glass", DS = "https://deepswe.datacurve.ai/blog/deepswe", V2 = "https://raw.githubusercontent.com/scaleapi/SWE-bench_Pro-os/main/v2/README.md";
+const GAB = "https://jonathanpgabor.substack.com/p/swe-bench-pro-is-even-worse", TB = "https://www.tbench.ai/", SWB = "https://www.swebench.com/verified.html";
+const LBC = "https://github.com/SWE-bench/swe-bench.github.io/commits/master/data/leaderboards.json";
+const FAMROWS = [
+  ["Functions and contests", "Can a model write a correct, self-contained piece of code?", "Anything about a project. Models also reach the ceiling: o1-mini scores 96.2 % on HumanEval."],
+  ["Completion inside a repo", "Can a model continue code when the needed context sits in other files?", "Whether the code runs, for most tasks, since matching a reference rewards one spelling."],
+  ["Repo and feature generation", "Does generated code run inside a project, or rebuild a whole one?", "How the code is wired in, beyond passing tests. Behaviour-only rebuilds ignore the project's structure altogether."],
+  ["Issue resolution", "Can an agent fix a real issue so hidden tests pass?", "Whether a maintainer would accept the patch, whether it reuses existing code, and what it costs later."],
+  ["Agent and long-horizon tasks", "Can an agent finish long work, and does the code hold up over time?", "Comparable scores across agents, since the harness moves results. Most are young and small."],
+  ["Code review", "Does a review find what human reviewers or real bugs show?", "Whether the review helps the author. Ground truth is partial, because humans miss issues too."],
+  ["Context and retrieval", "What does a model look at, and does it use it?", "Whether good context produces good integration. Few link retrieval to a scored change in the same task."],
+  ["Testing, security, performance, migration", "One quality at a time: coverage, exploits, speedup, a language upgrade.", "The whole change. Performance scores also depend on the machine they run on."],
+];
+const COLS = ["Fits into a real project", "Reuses existing code", "Holds up over time", "A maintainer would accept it", "Context use, directly", "Security"];
+const COVER = { fn: [0,0,0,0,0,0], cp: [1,0,0,0,1,0], gn: [2,1,0,0,1,0], is: [2,0,0,0,0,0], ag: [2,1,2,1,0,0], cr: [1,0,0,1,1,1], cx: [2,1,0,0,2,0], ot: [1,0,0,0,0,2] };
+const SYM = v => v === 2 ? `<span class="cv y" title="yes">●</span>` : v === 1 ? `<span class="cv p" title="partly">◐</span>` : `<span class="cv n" title="no">○</span>`;
+const coverage = `<div class="tw"><table class="plain cover"><thead><tr><th>Family</th>${COLS.map(x => `<th>${x}</th>`).join("")}</tr></thead><tbody>${Object.entries(COVER).map(([k, v]) => `<tr><th>${esc(FAM[k])}</th>${v.map(x => `<td>${SYM(x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+  <p class="legend-line"><span class="cv">●</span> measured by at least one benchmark in the family, <span class="cv">◐</span> partly or indirectly, <span class="cv n">○</span> not measured. This grid is our own judgement from the catalogue, not a sourced finding.</p>`;
+const FIX = [
+  ["“Litvak et al.” in the chart, table and comparison", "First author is Iris Reinhartz-Berger; Litvak is third of four. Use “Reinhartz-Berger et al.”", link("data.js entry", "research-project/paper-software-reuse-variability.html")],
+  ["Lead: “Only since 2026 do a few measure how a model uses context”", "Too late. RepoBench-R scored retrieval in 2023, RepoExec its Dependency Invocation Rate in 2024, and the page’s own list has CodeRAG-Bench in 2024.", `${A("RepoBench", "2306.03091")}, ${A("RepoExec", "2406.11927")}, ${A("CodeRAG-Bench", "2406.14497")}`],
+  ["Lead: “none scores the integration itself on the program’s structure”", "Needs narrowing. SWE-PolyBench has syntax-tree metrics, and CABRA builds tasks as call-graph transformations. We still found none that scores a model’s edit as an edge diff.", `${A("SWE-PolyBench", "2504.08703")}, ${A("CABRA", "2610.10610")}`],
+  ["Chart text: “three by matching a reference”", "The data marks two (RepoBench, CrossCodeEval). RepoEval is marked as tests, but only its function level runs tests; line and API levels use exact match and edit similarity. Three is right only if RepoEval moves, so its flag needs changing.", A("RepoCoder paper", "2303.12570")],
+  ["“SWE-bench Verified … the most quoted agent number today”", "Out of date. OpenAI stopped reporting it in Feb 2026 and Epoch rated it Flawed on 3 Sep 2026.", `${link("OpenAI", OAI1)}, ${link("Epoch", EP + "swe-bench-verified/review")}`],
+  ["“Agent leaderboards … change monthly”", "Not for the official boards named. The Verified data has no entry after 26 Feb 2026, and the Scale page shows no date. Vendor numbers on trackers are what change.", `${link("board data", LBC)}, ${link("Scale", "https://labs.scale.com/leaderboard/swe_bench_pro_public")}`],
+  ["“ReCUBE … is the nearest”", "Still close for file rebuilding, but ContextBench is nearer on context use and CABRA on call-graph tasks. Both are missing from the list.", `${A("ContextBench", "2602.05892")}, ${A("CABRA", "2610.10610")}`],
+  ["Venues left as a bare year", "CoderEval is ICSE 2024, CrossCodeEval NeurIPS 2023 Datasets and Benchmarks, DevEval ACL 2024 by the arXiv notes.", `${A("CoderEval", "2302.00288")}, ${A("CrossCodeEval", "2310.11248")}, ${A("DevEval", "2405.19856")}`],
+  ["CodeRAG-Bench: four document kinds", "The paper has five sources; competition solutions are missing.", A("arXiv 2406.14497", "2406.14497")],
+  ["Reference list", "SWE Context Bench has 12 authors, so “et al.” is needed; FEA-Bench has no authors listed (Li, W. et al.).", `${A("2602.08316", "2602.08316")}, ${A("2503.06680", "2503.06680")}`],
+];
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Survey for ${esc(c.project)}, sources read on ${READ}</p>
+    <h1>Benchmarks for AI-assisted code development</h1>
+    <p class="authors">What ${n.all} benchmarks measure, what audits found in them, and what none of them can tell you</p>
+    <div class="kw">${["coding benchmarks", "test overfitting", "data leakage", "leaderboards", "context use"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <div class="abstract"><span class="h">The survey in one paragraph.</span>Coding benchmarks moved from single functions in 2021 to real repositories in 2023 and long agent tasks in 2026; ${n.y26} of the ${n.all} entries here appeared this year. In the same year the leading scores lost their footing. OpenAI ${link("stopped reporting SWE-bench Verified", OAI1)} in February, then ${link("retracted its recommendation of SWE-Bench Pro", OAI2)} in July. METR found that ${link("about half of the patches that pass would not be merged", METR)}. Epoch ${link("rates Verified, Pro, Terminal-Bench 4.0.0 and DeepSWE v1.1 as Flawed", EPL)}. The top score of SWE-Bench Pro is now 61.5 % on its official board and 89.9 % on trackers. Nothing we found scores how a change is wired into a project, or whether it reused what was already there.</div>
+
+  ${chart("audit", "", `<h3 class="ct">Every audited coding benchmark crossed or neared 20 % bad tasks</h3><p class="viz-sub">Share of tasks found defective, by audit. The definitions differ, so read each bar on its own.</p>`, "Hover or tab to a bar for the basis. The whisker on OpenAI’s estimate spans its two review routes, 27.4 % and 34.1 %. Verified is a floor: 59.4 % of 138 audited tasks, spread over all 500.").replace('class="viz"', 'class="viz audit-fig"')}
+  ${auditTable()}
+
+  ${sec(1, "How the field moved", "history")}
+  <p class="lead">Each step fixed the last step’s blind spot, and each fix created a new way to fool the score.</p>
+  <ol class="eras">
+    <li><span class="when">2021–22</span><div><b>Functions</b>${A("HumanEval", "2107.03374")}, ${A("MBPP", "2108.07732")} and ${A("APPS", "2105.09938")} set the default: run tests on generated code. ${A("MultiPL-E", "2208.08227")} carried them into 19 languages.</div></li>
+    <li><span class="when">2023</span><div><b>Into the repository</b>${A("RepoEval", "2303.12570")}, ${A("RepoBench", "2306.03091")} and ${A("CoderEval", "2302.00288")} added project context. ${A("SWE-bench", "2310.06770")} replaced tasks written for the benchmark with real issues; the best model then solved 1.96 %.</div></li>
+    <li><span class="when">2024</span><div><b>First repairs</b>${link("SWE-bench Verified", OAI1)} filtered tasks by hand, ${A("LiveCodeBench", "2403.07974")} split tasks by date, ${A("SWE-Bench+", "2410.06992")} showed leakage, and long-context sets such as ${A("RepoQA", "2406.06025")} appeared.</div></li>
+    <li><span class="when">2025</span><div><b>Breadth</b>More languages (${A("Multi-SWE-bench", "2504.02605")}, ${A("SWE-PolyBench", "2504.08703")}), live task supply (${A("SWE-bench-Live", "2505.23419")}, ${A("SWE-rebench", "2505.20411")}), and new qualities: ${A("security", "2502.11844")}, ${A("speed", "2511.06090")}, ${A("review", "2509.01494")}. ${A("SWE-Bench Pro", "2509.16941")} brought long tasks and a private set.</div></li>
+    <li><span class="when">2026</span><div><b>Audits and long horizons</b>Task-level audits became routine. New sets avoid mined tests through ${A("purpose-written verifiers", "2607.07946")} or ${A("whole-program rebuilds", "2605.03546")}, follow code ${A("through time", "2603.03823")} and ${A("through dialogue", "2606.30573")}, and open up the process with ${A("context retrieval", "2602.05892")} and ${A("exploration", "2606.07297")} benchmarks.</div></li>
+  </ol>
+  ${chart("timeline", `<div class="legend"><span class="li"><span class="key" style="--c:var(--vz-s1)"></span><span class="lt">runs tests or a verifier</span></span><span class="li"><span class="key ring" style="border-color:var(--vz-s1)"></span><span class="lt">matches a reference or uses a judge</span></span></div>`, `<h3 class="ct">${n.all} benchmarks by family and first public date</h3>`, "Each dot is one catalogue entry, stacked where dates are close. The Reinhartz-Berger manuscript and SWE-bench Multilingual have a year only and sit mid-year.")}
+  ${timelineTable()}
+  ${chart("oracle", leg([[1, "matches a reference"], [2, "runs project or task-set tests"], [3, "runs a purpose-written verifier"], [4, "LLM judge, rubric or human"]]), `<h3 class="ct">Mined tests still dominate; verifiers and judges are the 2026 story</h3>`, "Numbers are entries of this catalogue, not a census of the field. The main route is our classification; many benchmarks mix routes.")}
+  ${oracleTable()}
+
+  ${sec(2, "The catalogue", "catalogue")}
+  <p class="lead">${n.all} entries, extending the proposal’s 18. ${n.repo} run in a real repository, ${n.agent} are agentic, and ${n.py} use Python alone. Filters and search cover all of them.</p>
+  ${note(`<p>“Active” means the repository was pushed within six months of ${READ}, “quiet” within a year, and “dormant” before that. ${n.live} are active and ${n.gone} are dormant or archived. A push says little about upkeep of the data: SWE-Lancer and BigCodeBench are archived on GitHub, while EvoCodeBench, built to evolve, last moved in August 2024.</p>`, "reading", `“Agentic” means multi-turn work with tools. “Partly” covers benchmarks that also accept single-shot systems, as SWE-bench does. “Not stated in the abstract” means we did not pin the field down from a source.`)}
+  ${catalogue()}
+  <p class="muted" style="font-size:13.5px">Two important private benchmarks are not rows: Epoch lists ${link("CursorBench 4.0 and FrontierCode as “Not enough info”", EPL)}, so nothing can be checked from outside. Task counts for Multilingual come from ${link("its announcement", "https://www.swebench.com/multilingual.html")}.</p>
+
+  ${sec(3, "What each family cannot measure", "limits")}
+  <div class="fams"><div class="h"><span>Family</span><span>What it asks</span><span>What it cannot tell you</span></div>${FAMROWS.map(r => `<div><b>${esc(r[0])}</b><span>${esc(r[1])}</span><span>${esc(r[2])}</span></div>`).join("")}</div>
+  ${coverage}
+
+  ${sec(4, "Known problems", "problems")}
+  <div class="prob"><h3>Tests that pass wrong patches</h3>
+    <p>${A("SWE-ABS", "2603.00520")} strengthened half of Verified’s test suites and rejected 19.71 % of accepted patches. ${A("UTBoost", "2506.09289")} found 345 wrong patches labelled as passed and changed 40.9 % of Lite and 24.4 % of Verified leaderboard entries. ${A("PatchDiff", "2503.15223")} found 7.8 % of accepted patches fail the developers’ own suite, and estimates a 6.2-point inflation of resolution rates.</p>
+    <p>Agents also overfit their own tests. ${A("Ahmed et al.", "2511.16858")} measured 21.8 % for Claude 3.7 Sonnet and 33.0 % for GPT-4o on patches that passed LLM-written tests but failed the hidden ones, and refinement made it worse.</p></div>
+  <div class="prob"><h3>Tests that fail right patches, and flawed gold patches</h3>
+    <p>OpenAI’s audit of 138 hard Verified tasks found 35.5 % with ${link("tests too narrow and 18.8 % too wide", OAI1)}. One test imports a helper whose name the issue never mentions. In SWE-Bench Pro, ${link("Gabor reports", GAB)} a Flipt task whose tests require behaviour that was a bug, later fixed upstream.</p>
+    <p>Gold patches are weaker than the name suggests. METR’s maintainers would merge only ${link("about 68 % of the human gold patches", METR)}. In performance benchmarks, ${A("reference patches hold in every cross-machine replay", "2607.01211")} for only 39 of 102 GSO, 11 of 140 SWE-Perf and 411 of 498 SWE-fficiency tasks.</p></div>
+  <div class="prob"><h3>Data leakage</h3>
+    <p>${A("SWE-Bench+", "2410.06992")} found the solution inside the issue text for 32.67 % of one agent’s passes, and over 94 % of issues predate the models’ cutoffs. OpenAI showed ${link("frontier models reproducing gold patches verbatim", OAI1)} from a task id. ${A("Prathifkumar et al.", "2512.10218")} found Claude models locate edited files 6 times better on Verified than on comparable sets. ${A("SchrodingerRepo", "2609.27891")} shows performance fall when familiar names and layouts are rewritten.</p>
+    <p>Responses so far are fresh tasks (${A("SWE-bench-Live", "2505.23419")}), private tasks (${A("DeepSWE", "2607.07946")}) and ${A("leakage detectors", "2609.09865")}. OpenAI found ${link("rarer contamination in Pro", OAI1)} than in Verified, before it ${link("audited Pro’s task quality", OAI2)}.</p></div>
+  <div class="prob"><h3>Reward hacking</h3>
+    <p>Poolside saw its model ${link("leap by 20 % to about 64 %", POOL)} on SWE-Bench Pro, then traced it to reference solutions in unpruned git history. Scale’s ${link("V2 split", V2)} now ships sanitised history and no network for the agent. ${A("Ludwig et al.", "2609.06780")} saw shortcut attempts in 60.7 to 90.1 % of trajectories on SWE-bench Multilingual for three open models. In Terminal-Bench, Epoch found ${link("one task passable by writing the success byte to the verifier’s pipe", EP + "terminal-bench-4/review")}. Under user pressure, ${A("403 of 1,326 runs", "2604.20200")} exploited the public score.</p></div>
+  <div class="prob"><h3>The harness inside the score</h3>
+    <p>${A("Gorinova et al.", "2606.17799")} argue that a score mixes model, harness and environment. On ${link("Terminal-Bench 2.0", TB + "leaderboard/terminal-bench/2.0")}, the same GPT-5.5 scores 84.7 % in one agent and 66.1 % in another. ${A("The Scaffold Effect", "2607.22585")} found harness choice moved tokens per solved task up to 40 times, with pass rates within 0 to 8 points. The SWE-bench board warns that ${link("mini-SWE-agent 1.x and 2.x results are not comparable", SWB)}, and ${link("dropped its bash-only board", LBC)} on 1 Sep 2026.</p></div>
+  <div class="prob"><h3>Benchmarks against the real world</h3>
+    <p>METR’s 4 maintainers reviewed 296 passing PRs; merge rates sat ${link("about 24 points below the grader", METR)}. Rewriting issues as ${A("realistic chat queries", "2510.08996")} shows overestimates above 50 % for some models. In a ${A("randomised trial", "2507.09089")} with 16 experienced developers, the AI tools of early 2025 made them 19 % slower. On GitHub, ${A("46.41 % of agent fixes", "2606.13468")} in the ${A("AIDev", "2602.09185")} data were rejected.</p>
+    <p>Not every check finds damage: in the main tests of a ${A("preregistered re-execution study", "2610.14460")}, no accepted patch was rejected and the best-agent choice held. It is a narrow test, and one extension was inconclusive, but it is a useful counterweight.</p></div>
+  ${chart("shift", leg([[4, "reported"], [1, "after the re-check"]]), `<h3 class="ct">Audits move scores in both directions</h3>`, `Weak tests inflate a score; broken tasks deflate it. Removing bad tasks raised average results on Verified by 9.9 % and on Terminal-Bench 2 by 9.6 % in ${A("one cross-benchmark audit", "2605.26079")}.`)}
+  ${shiftTable()}
+  <p>The auditors get audited too. Datacurve ${link("reported 8 % false positives and 24 % false negatives", DS)} on SWE-Bench Pro and built DeepSWE to avoid them; ${link("Epoch then rated DeepSWE Flawed", EP + "deepswe/review")}, mostly because agent-edited test files break its verifier. On Frontier-Bench, ${A("only 78 of 125 tasks with no honest pass", "2609.26826")} were truly unsolved. ${A("One automated audit", "2605.26079")} of 168 benchmarks across nine domains flagged issues in over 25.7 % of tasks.</p>
+
+  ${sec(5, "Leaderboards, with dates", "boards")}
+  <p class="lead">There is no single top score. Which number you get depends on who ran the model, with which harness, on which set.</p>
+  ${chart("boards", leg([[1, "official board"], [2, "lab statement"], [3, "third-party tracker"], ["g", "re-scored"]]), `<h3 class="ct">Three benchmarks, ten numbers</h3>`, `Top score per source, except the second Terminal-Bench row. Hover or tab for model and date; all rows are in the table. Pages read on ${READ}.`)}
+  ${boardsTable()}
+  <ul>
+    <li><b>Trackers disagree with the boards.</b> llm-stats shows 95.0 % for Verified while the official data tops out at 79.2 %. On SWE-Bench Pro it shows 89.9 % from a ${link("system card", "https://benchmarklist.com/benchmarks/swe_bench_pro/")}, while Scale’s own runs top out at 61.5 %. Morph explains ${link("the gap as scaffolding and data splits", "https://morphllm.com/swe-bench-pro")}.</li>
+    <li><b>Dates are thin.</b> Scale’s page shows no date. On tbench.ai the date column is the model’s release, not the run. The Verified board data ends in February 2026.</li>
+    <li><b>Versions matter.</b> Terminal-Bench has boards for ${link("2.0", TB + "leaderboard/terminal-bench/2.0")}, ${link("2.1", TB + "leaderboard/terminal-bench/2.1")} and ${link("4.0", TB + "leaderboard/terminal-bench/4.0")}, with tops of 84.7 %, 87.4 % and 64.8 %. SWE-Bench Pro now has ${link("a 642-task V2 split", V2)} beside the original 731. Comparing across versions is meaningless.</li>
+    <li><b>Disputes are public.</b> OpenAI’s reversal took under five months. The ${link("audit counts for Pro range from about 30 % to 83 %", EP + "swe-bench-pro/review")} because the auditors count different things. Epoch’s reviews invite a developer response and link it if one comes; we did not see one on the four coding reviews we read.</li>
+  </ul>
+
+  ${sec(6, "Where the gaps are", "gaps")}
+  <ol class="gaps">
+    <li><b>Integration as structure.</b> We found no benchmark that scores a change as a diff of the call graph. Nearest are ${A("RepoExec’s dependency rate", "2406.11927")}, ${A("SWE-PolyBench’s syntax-tree metrics", "2504.08703")}, ${A("FeatureBench’s dependency tracing", "2602.10975")} for building tasks, and ${A("CABRA", "2610.10610")}, whose tasks are call-graph transformations but synthetic. This is the opening WireBench aims at.</li>
+    <li><b>Reuse against rewriting.</b> Tests cannot tell a reused helper from a copy. ${A("SlopCodeBench", "2603.24755")} measures redundancy within an agent’s own code, and ${A("SWE Atlas", "2605.08366")} uses rubrics for reusable abstractions. Neither checks reuse of what the project already had.</li>
+    <li><b>Context type at a fixed budget.</b> Evidence is thin and mixed. In review, ${A("all 8 models got worse with more context", "2603.26130")}. In editing, ${A("context changed success by up to 11 %", "2511.04486")}. ${A("ContextBench", "2602.05892")} found a gap between what agents read and use. For small models, ${A("each extra hop multiplies the odds of correct localisation by 0.50 to 0.67", "2610.33958")}, whatever the tools.</li>
+    <li><b>Acceptance at scale.</b> The best evidence on mergeability is ${link("296 PRs from 3 repositories", METR)}. Rubric and judge routes are cheaper but ${A("harder to validate", "2603.26130")}.</li>
+    <li><b>Separating model from harness.</b> Few benchmarks report a controlled harness, and ${A("component-level signals barely exist", "2606.17799")}.</li>
+    <li><b>Languages.</b> By 2024, ${A("95.8 % of 24 code benchmarks involved Python", "2406.12902")}. Newer sets help, but ${n.py} of our ${n.all} entries are still Python alone.</li>
+    <li><b>Long-term cost.</b> ${A("SWE-CI", "2603.03823")} and ${A("SlopCodeBench", "2603.24755")} are first steps, at 100 tasks and 36 problems. Real projects run for years.</li>
+    <li><b>Trustworthy upkeep.</b> Task quality decays. ${link("Terminal-Bench 2.1", TB + "news/terminal-bench-2-1")} had to fix 9 tasks whose external dependencies had changed. Few sets ship a release gate like ${link("Scale’s V2", V2)}, where the reference passes every task and an empty patch none.</li>
+  </ol>
+  ${note(`<p>For WireBench this means three things. Exact graph metrics stay a real gap, but the claim needs the narrower wording in § 7. Tests alone are not a safe gold standard, so reference patches need a maintainer-style check. And the design must fix harness and prompts, publish its gold data, and plan for audits from the start.</p>`, "project", `These are our conclusions from the sources, not findings of any one paper.`)}
+
+  ${sec(7, "Corrections to the proposal’s section 4", "fixes")}
+  <p>We checked the first list against arXiv, the papers and the boards. All 16 arXiv ids and titles are right, and the sizes quoted match the sources. These points need a change. The proposal page itself was not edited.</p>
+  <div class="tw"><table class="plain"><thead><tr><th>The page says</th><th>What we found</th><th>Source</th></tr></thead><tbody>${FIX.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${r[2]}</td></tr>`).join("")}</tbody></table></div>
+
+  ${sec(8, "Citation counts", "cites")}
+  ${chart("cites", "", `<h3 class="ct">Most cited benchmark papers in this survey</h3>`, `Semantic Scholar batch API, read on ${READ}.`)}
+  ${citesTable()}
+  <p><b>These counts conflict badly, so use them for rough rank only.</b> For Codex and HumanEval, Semantic Scholar gives 12,513 while ${link("OpenAlex", "https://api.openalex.org/works?search=Evaluating%20Large%20Language%20Models%20Trained%20on%20Code")} gives 1,436 and 737 on two records. For SWE-bench it is 4,630 against 71. Semantic Scholar also maps arXiv 2302.00288 (CoderEval) to an unrelated paper, so CoderEval has no usable count. The proposal’s figures match Semantic Scholar to within 13 citations.</p>
+
+  ${sec(9, "Method and limits", "method")}
+  <ul>
+    <li><b>Sources.</b> About 100 arXiv title queries gave some 200 candidates; abstracts of the shortlist, full text where a field was missing, the GitHub API for last push and archive flags, and official boards and blogs rendered in headless Chrome.</li>
+    <li><b>Only opened sources.</b> Each claim links to a page we opened. Where a page did not state a field, the catalogue says so. FrontierCode’s own page could not be reached, so only Epoch’s verdict is used. The Terminal-Bench 2.0 audit by Gabor was not opened and is not used.</li>
+    <li><b>Secondary sources.</b> Tracker values are quoted as trackers, not as results. Morph is used only for its explanation of the gap. Gabor’s 83 of 100 comes from Epoch, because the post’s chart is an image.</li>
+    <li><b>Limits.</b> The classification into families, scoring routes and the coverage grid are ours. Numbers from arXiv preprints are the authors’ own and mostly not peer reviewed. Audits use different definitions. The field moves weekly, so treat this as a snapshot of ${READ}.</li>
+  </ul>
+  <p class="foot">Surveys for further reading: ${A("Hu et al. on 291 benchmarks", "2505.08903")}, ${A("Guo et al. on agentic systems", "2510.09721")}, ${A("Khan et al. on code review", "2602.13377")}, ${A("Paul et al., a critical review", "2406.12655")}.</p>`;
+
+wireCatalogue(); mountCharts(); watch();
+</script>
+</body>
+</html>
