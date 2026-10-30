@@ -31,6 +31,18 @@ const proposals = (c.proposals || []).map(p => `<a class="game-card paper" href=
     <p>${esc(p.blurb)}</p>
     ${U.doneBox(`${CODE}:proposal:${p.n}`, "discussed")}
   </a>`).join("");
+const sprints = (c.sprints || []).map(s => `<section class="game-card sprint">
+    <div class="game-icon">${s.icon}</div>
+    <h2>${esc(s.title)}</h2>
+    <p class="cite">${esc(s.project)} · <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.cwe)}</a> in <a href="${esc(s.view)}" target="_blank" rel="noopener">CWE-699</a></p>
+    <p>${esc(s.focus)}</p>
+    <div class="sprint-grid">
+      <div><h3>Task</h3><ol>${s.tasks.map(t => `<li>${esc(t)}</li>`).join("")}</ol></div>
+      <div><h3>Notes</h3><ul>${s.notes.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+        <dl>${s.setup.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+    </div>
+    ${U.doneBox(`${CODE}:sprint:${s.n}`)}
+  </section>`).join("");
 const orga = `<a class="game-card" href="research-project/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
@@ -44,6 +56,8 @@ document.getElementById("page").innerHTML = `
   </header>
   ${RP.topbar()}
   <main>
+    ${sprints ? `<div class="board-h"><h2>Sprints</h2><span class="muted">your assigned work · tick “done” once the sprint is finished</span></div>
+    <div class="game-cards">${sprints}</div>` : ""}
     <div class="board-h"><h2>Papers</h2><span class="muted">${c.papers.length} ${c.papers.length === 1 ? "paper" : "papers"} so far · tick “read” once you have worked through one</span></div>
     <p class="muted board-note">${esc(c.paperNote)}</p>
     <div class="game-cards">${papers}</div>

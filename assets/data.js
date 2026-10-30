@@ -3701,6 +3701,39 @@ window.CMS = {
       "covered": true,
       "blurb": "Three stages: replicate the supervisor's study with AST context, add a repair round where the compile error selects a call-graph lookup, then generalise to a second dataset."
      }
+    ],
+    "sprints": [
+     {
+      "n": 1,
+      "icon": "🛡️",
+      "title": "Sprint 1: Information Management Errors",
+      "project": "Context-aware AI for Secure Code Development",
+      "category": "Information Management Errors",
+      "cwe": "CWE-199",
+      "url": "https://cwe.mitre.org/data/definitions/199.html",
+      "view": "https://cwe.mitre.org/data/definitions/699.html",
+      "focus": "Your category from the CWE-699 Software Development view, which points towards features that handle sensitive data. Identify at least two specific weaknesses in the group; a single CWE can appear in several groups.",
+      "tasks": [
+       "Find the most relevant games and features in ApoGames for your category.",
+       "Find the weaknesses from your category in the target code, and fix them.",
+       "Reproduce the experiment from the variability paper, in both scenarios (generation and reuse), with additional context. The tests must include security-related tests."
+      ],
+      "setup": [
+       [
+        "Data",
+        "ApoGames"
+       ],
+       [
+        "Context",
+        "Target game, source game, security weaknesses"
+       ]
+      ],
+      "notes": [
+       "Use external tools, not AI, for context extraction and, later, context selection.",
+       "Do the error analysis with individual cases.",
+       "Build a knowledge graph of your weakness category, games and features, for automatic RAG retrieval in the final pipeline."
+      ]
+     }
     ]
    }
   },
