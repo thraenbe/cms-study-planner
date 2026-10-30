@@ -3673,6 +3673,15 @@ window.CMS = {
       "icon": "🔌",
       "covered": true,
       "blurb": "A benchmark that grows the supervisor's study into a reusable test: four task families, eight context conditions from none to call-graph neighbourhoods and MCP tools, and integration scored exactly on the call graph (wiring, reuse, phantom calls). With the paper in brief, current benchmarks and the three most influential papers."
+     },
+     {
+      "n": 2,
+      "slug": "papers-agentic-context",
+      "title": "The three most influential papers on agents and context for code",
+      "date": "2026-10-30",
+      "icon": "📚",
+      "covered": true,
+      "blurb": "SWE-bench, SWE-agent and ReAct, picked from 20 candidates on citations, later work and practice. No context or code-graph paper reaches the top three."
      }
     ]
    }
