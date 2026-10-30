@@ -3691,6 +3691,15 @@ window.CMS = {
       "icon": "🧪",
       "covered": true,
       "blurb": "108 benchmarks in eight families, what audits found in them, and what none of them can measure. No benchmark scores an edit as a call-graph diff, so WireBench keeps its gap."
+     },
+     {
+      "n": 4,
+      "slug": "repair-proposal",
+      "title": "When the build fails, which context fixes it?",
+      "date": "2026-10-30",
+      "icon": "🔧",
+      "covered": true,
+      "blurb": "Three stages: replicate the supervisor's study with AST context, add a repair round where the compile error selects a call-graph lookup, then generalise to a second dataset."
      }
     ]
    }
