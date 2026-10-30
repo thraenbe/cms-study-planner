@@ -3700,6 +3700,15 @@ window.CMS = {
       "icon": "🔧",
       "covered": true,
       "blurb": "Three stages: replicate the supervisor's study with AST context, add a repair round where the compile error selects a call-graph lookup, then generalise to a second dataset."
+     },
+     {
+      "n": 5,
+      "slug": "dataset-comparison",
+      "title": "Can ApoGames carry the security sprint?",
+      "date": "2026-10-30",
+      "icon": "🗃️",
+      "covered": true,
+      "blurb": "ApoGames can, but it has no security tests and no real secrets: the sensitive data is player names. Compares it with the other candidates and starts with Highscore in ApoMario and a new hidden test suite."
      }
     ],
     "sprints": [

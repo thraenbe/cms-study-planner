@@ -96,6 +96,7 @@ document.getElementById("page").innerHTML = `
   </header>
 
   <div class="abstract"><span class="h">The proposal in one paragraph.</span>Reinhartz-Berger et al. (2026) found that only 40 % of LLM-written features compile once placed into an existing Java game, while those that compile pass 72 % of their tests. Getting code to fit the project is the hard part. They ask three things in their outlook: does AST-based extraction give better context, what actually breaks, and do repair or iterative approaches do better than typed context alone? We propose to answer them in three stages. <b>Replicate</b> the study with AST extraction in place of regex. <b>Repair</b> failed builds in one round, where the compile error decides which small piece of call-graph context to fetch. <b>Generalise</b> the result on a second dataset with real compiler errors. All numbers below are plans; no experiment has run yet.</div>
+  <p class="muted" style="font-size:13.5px">Sprint 1 has since set a security focus for the project. This draft doesn’t cover it yet: it has no weakness fixes, security tests or knowledge graph.</p>
 
   <section class="repair" aria-label="Interactive example of one repair round">
     <div class="ctrl">${toggles("fail", "Failure", FAIL)}${toggles("arm", "Repair arm", ARMS)}</div>
@@ -109,7 +110,7 @@ document.getElementById("page").innerHTML = `
   ${note(`<p><b>The cells are small.</b> Each strategy-by-context rate rests on 15 runs. The intervals below overlap for most pairs. Structural vs. behavioural context for generation is 10 of 15 against 4 of 15 (Fisher’s exact test, p = 0.07), and full context vs. none for reuse is 8 of 15 against 4 of 15 (p = 0.26). The authors say themselves that their percentages are descriptive, so this extends their caution and doesn’t contradict it.</p>`, "Our own check", "The tests and intervals on this page are ours, computed from Table 2 of the paper. They ignore task effects, so they’re a first reading.")}
   ${chart("ci", leg([["1", "Generation (circle)"], ["2", "Reuse (diamond)"]]), "", "Compile success with 95 % Wilson intervals, from the paper’s Table 2. Hover or tab through a mark for its count.")}
   ${ciTable()}
-  <p><b>Two causes may be mixed.</b> As we read section 3.2, feature-level slicing narrows the context for reuse only. If so, “reuse likes rich context and generation likes lean context” could partly mean that reuse received filtered context. The published material should settle this.</p>
+  <p><b>The context was large and unfiltered.</b> Section 3.2 describes feature-level slicing for reuse, but the <a href="https://github.com/ieiris/llm-context-generation-reuse" target="_blank" rel="noopener">replication package</a> doesn’t show it in the runs: its prompt table gives generation and reuse the same target-game context files, about 150–190 KB each for ApoMario, and <code>run.py</code> doesn’t slice. Reuse additionally receives the source game’s files. So filtering is a new treatment to test, and the gap between the paper’s text and its package is worth asking about.</p>
   <p>Behavioural context matters most for us. It already lists each method’s outgoing calls, so it is the paper’s closest relative of a call graph, and it was the weakest context for generation (27 % alone, 13 % with S). We want to know whether it failed because regex made it noisy, because it was unfiltered, or because it was given at the wrong moment. Related evidence points the same way: in the RepoGraph figures on our <a href="research-project/papers-agentic-context.html">paper ranking</a>, one hop of graph context beat no graph and two hops fell below it.</p>
 
   ${sec(2, "The three stages", "stages")}
@@ -117,7 +118,7 @@ document.getElementById("page").innerHTML = `
   <div class="stages">
     <section class="stage"><h3>1. Replicate</h3><dl>
       <dt>Question</dt><dd>Is behavioural context bad, or badly extracted and unfiltered?</dd>
-      <dt>Changes</dt><dd>Regex to AST, then slicing on or off</dd>
+      <dt>Changes</dt><dd>Regex to AST, then feature filtering on or off</dd>
       <dt>Stays fixed</dt><dd>apo-games, prompts, single attempt</dd>
       <dt>Move on when</dt><dd>The original pattern is reproduced, or the difference is explained</dd></dl></section>
     <section class="stage"><h3>2. Repair</h3><dl>
@@ -138,17 +139,17 @@ document.getElementById("page").innerHTML = `
     <li><b>Audit the extraction.</b> Run regex and AST extraction on the same games and compare both with a hand-checked sample of classes, fields and calls. This needs no LLM and shows how much noise regex really adds.</li>
     <li><b>Replicate exactly.</b> Rerun the 240 runs with the authors’ prompts and model. Without this baseline, later differences mean little.</li>
     <li><b>Swap only the extractor.</b> Rerun the same 240 with AST context.</li>
-    <li><b>Widen the study.</b> Use about 12 features, four contexts (none, S, B, S+B), both strategies, both extractors, with and without slicing, and four runs per setting. That gives about ${12 * 4} runs per cell.</li>
+    <li><b>Widen the study.</b> Use about 12 features, four contexts (none, S, B, S+B), both strategies, both extractors, with and without filtering the context down to the feature, and four runs per setting. That gives about ${12 * 4} runs per cell.</li>
   </ol>
   ${note(`<p><b>Calls need type resolution.</b> A parser alone cannot tell which class <code>x.save()</code> belongs to. Without symbol resolution, the behavioural context would only be a cleaner version of the same list, so the AST arm must resolve calls to their targets.</p>`, "Tool", "CoGraph is the extraction tool of one team member. Its Java analyser has to be checked for type resolution, and its edges are cross-checked against a second extractor so it doesn’t decide alone what is correct.")}
   ${chart("power", "", "", `Runs per arm for 80 % power at α = .05 against a 40 % baseline, by normal approximation. Task effects raise these numbers, so the extra runs must come from more tasks, not more repeats of the same three.`)}
   ${powerTable()}
-  ${hyp([["H1", "AST extraction raises compile success for B and S+B more than for S, because calls suffer most from regex noise."], ["H2", "Slicing removes most of the penalty of behavioural context in generation."], ["H3", "With slicing equal in both strategies, the difference between generation and reuse in how they respond to context shrinks."]])}
+  ${hyp([["H1", "AST extraction raises compile success for B and S+B more than for S, because calls suffer most from regex noise."], ["H2", "Filtering the context to the feature removes most of the penalty of behavioural context in generation."]])}
 
   ${sec(4, "Stage 2: Repair", "repair")}
   <p class="lead">Instead of guessing the right context before generating, let the compile error select it.</p>
   <ol>
-    <li><b>Classify the failures.</b> Sort failed builds into the paper’s categories: unresolved references, contract violations and misplaced wiring. Two people code a shared sample so that we can report their agreement.</li>
+    <li><b>Classify the failures.</b> Sort failed builds into the paper’s categories: unresolved references, contract violations and misplaced wiring. Two people code a shared sample so that we can report their agreement. The <a href="research-project/dataset-comparison.html">dataset comparison</a> gives a first count from the published runs: 131 of the 145 failures stop on a symbol or signature question.</li>
     <li><b>Run one repair round.</b> Every failed attempt enters all three arms: error alone, error plus lookup, and error plus full context. Because each arm sees the same failures, differences come from the arm.</li>
     <li><b>Look up on the original project,</b> not on the broken attempt, so that a failed build can’t break the lookup.</li>
     <li><b>Keep hidden tests hidden.</b> The model sees compiler output only. Tests score the result at the end.</li>
@@ -157,23 +158,23 @@ document.getElementById("page").innerHTML = `
     <tr><td>Recovered builds</td><td>Share of failures that compile after repair, per arm and failure type</td></tr>
     <tr><td>Test pass rate</td><td>Reported over all attempts as well as compiled ones, so that it doesn’t only describe the survivors</td></tr>
     <tr><td>Context cost</td><td>Tokens of context per recovered build</td></tr>
-    <tr><td>Silent wiring failures</td><td>New code that compiles but has no caller, read from the call-graph diff</td></tr>
+    <tr><td>Silent wiring failures</td><td>New code that compiles but has no caller, read from the call-graph diff and compared with the package’s InvokedTest and AutonomousTest grading</td></tr>
     <tr><td>New errors</td><td>Whether a repair removes one error and introduces another</td></tr>
   </tbody></table></div>
-  ${hyp([["H4", "Error plus lookup recovers about as many builds as error plus full context (within 5 points), with far less context."], ["H5", "The gain from the lookup over the error alone differs by failure type: smallest where the compiler already names the fix."], ["H6", "A share of compiled code is silently unwired, and no compile-triggered repair can reach it."]])}
+  ${hyp([["H3", "Error plus lookup recovers about as many builds as error plus full context (within 5 points), with far less context."], ["H4", "The gain from the lookup over the error alone differs by failure type: smallest where the compiler already names the fix."], ["H5", "A share of compiled code is silently unwired, and no compile-triggered repair can reach it."]])}
   <p>As an exploratory extension, a call-graph check could raise wiring failures that the compiler cannot see (“new method has no callers”), which would give those cases a repair trigger too.</p>
 
   ${sec(5, "Stage 3: Generalise", "generalise")}
   <p class="lead">Game code is one domain. The result needs to survive real repositories without losing what the study is about.</p>
   <p>We rule out plain SWE-bench as the main dataset, despite its scale and ready harness. It is Python-only, so there’s no compile step to trigger repairs. It mostly tests issue fixing, not fitting new features into a project, and audits have questioned its Verified subset (see the <a href="research-project/benchmarks-ai-coding.html">benchmark survey</a>).</p>
-  <p>The provisional choice is the Java feature tasks of <b>SWE-PolyBench</b>, with real repositories, real compiler errors and feature work. Multi-SWE-bench’s Java tasks are the fallback, although they are issue resolution. A separate dataset comparison is checking how many tasks are usable and whether they build; this section will follow its result.</p>
+  <p>The provisional choice is the Java feature tasks of <b>SWE-PolyBench</b>, with real repositories, real compiler errors and feature work. Multi-SWE-bench’s Java tasks are the fallback, although they are issue resolution. The <a href="research-project/dataset-comparison.html">dataset comparison</a> has since found that a second dataset is optional and that none has ready security tests.</p>
   <p>Generation against reuse won’t transfer directly, because these datasets have no sibling projects. Stage 3 therefore tests the repair question only, and says so.</p>
 
   ${sec(6, "Runs and analysis", "runs")}
   <div class="plain"><table><thead><tr><th>Step</th><th>Setup</th><th style="text-align:right">Runs</th></tr></thead><tbody>
     <tr><td>Exact replication</td><td>3 tasks × 2 strategies × 8 contexts × 5 runs</td><td class="n">240</td></tr>
     <tr><td>AST swap</td><td>Same setup with AST context</td><td class="n">240</td></tr>
-    <tr><td>Widened study</td><td>12 tasks × 2 strategies × 4 contexts × 2 extractors × 2 slicing × 4 runs</td><td class="n">768</td></tr>
+    <tr><td>Widened study</td><td>12 tasks × 2 strategies × 4 contexts × 2 extractors × 2 filtering × 4 runs</td><td class="n">768</td></tr>
     <tr><td>Repair</td><td>Up to 300 failed builds × 3 arms</td><td class="n">900</td></tr>
     <tr><td>Generalise</td><td>100 tasks × 3 attempts, then up to 200 failures × 3 arms</td><td class="n">900</td></tr>
     <tr class="sum"><td>Total</td><td>Planned, to be adjusted after a pilot</td><td class="n">3,048</td></tr>
@@ -184,7 +185,7 @@ document.getElementById("page").innerHTML = `
   <p class="lead">The plan is useful whichever way the results fall, including the ones that don’t favour call graphs.</p>
   <div class="plain"><table><thead><tr><th>If we find</th><th>Then</th></tr></thead><tbody>
     <tr><td>AST rescues behavioural context</td><td>The paper’s result was partly an extraction artifact.</td></tr>
-    <tr><td>Only slicing rescues it</td><td>The amount of context was the problem, not its quality.</td></tr>
+    <tr><td>Only filtering rescues it</td><td>The amount of context was the problem, not its quality.</td></tr>
     <tr><td>Neither rescues it</td><td>Call information handed over up front is doubtful, which makes the on-demand route more interesting.</td></tr>
     <tr><td>Lookup matches full context at far lower cost</td><td>Targeted context is enough, which is the result we hope for.</td></tr>
     <tr><td>The error alone matches the lookup</td><td>The compiler already says enough, and the call graph adds little at repair time.</td></tr>
@@ -196,8 +197,7 @@ document.getElementById("page").innerHTML = `
   <p>The work divides into four packages for the team of four: <b>extraction</b> (AST pipeline and audit), <b>repair</b> (lookup and loop), <b>data</b> (tasks, builds and harness), and <b>analysis</b> (failure coding, statistics and write-up). Who takes which is for the team to decide.</p>
   <p><b>Questions for the supervisor:</b></p>
   <ul>
-    <li>Are the prompts, slicing code and raw run outputs available? The roughly 145 failed builds from the original study would be a direct start for stage 2.</li>
-    <li>Did slicing apply to reuse only, as we read it?</li>
+    <li>Section 3.2 describes slicing for reuse, but the package’s runs use the same whole-game context for both strategies. Which is right?</li>
     <li>Is a stronger model than Flash Lite in scope?</li>
     <li>Does apo-games offer about 12 shared features with usable tests?</li>
     <li>Does three stages fit the project’s scope, or should stage 3 be a smaller check?</li>
@@ -206,7 +206,7 @@ document.getElementById("page").innerHTML = `
 
   ${sec(9, "References", "refs")}
   <ol class="refs">
-    <li>Reinhartz-Berger, I., Gal-Oz, N., Litvak, M., Morad, A. (2026): LLM-assisted Code Generation and Reuse: An Exploratory Study on Contextual Information. Manuscript, LNCS format.</li>
+    <li>Reinhartz-Berger, I., Gal-Oz, N., Litvak, M., Morad, A. (2026): LLM-assisted Code Generation and Reuse: An Exploratory Study on Contextual Information. VARIABILITY 2026.</li>
     <li>Krüger, J. et al. (2018): Apo-Games: A Case Study for Reverse Engineering Variability from Cloned Java Variants. SPLC 2018.</li>
     <li>Rashid, M. S. et al. (2025): SWE-PolyBench: A multi-language benchmark for repository level evaluation of coding agents. ${ax("2504.08703")}</li>
     <li>Zan, D. et al. (2025): Multi-SWE-bench: A Multilingual Benchmark for Issue Resolving. ${ax("2504.02605")}</li>
