@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Data Visualization · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="data-visualization/viz.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="data-visualization/viz.js"></script>
+<script src="data-visualization/viz-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="viz">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today, EX } = VIZ;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = VIZViz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="data-visualization.html">← All lectures and exercises</a>`;
+const title = e => `${EX} ${e.n}${e.title ? ` – ${esc(e.title)}` : ""}`;
+function head(e) {
+  const meta = `${e.published ? `Sheet in OPAL since ${fmt(e.published)} · ` : ""}discussed ${fmt(e.date)}${exe ? ` · ${exe.start}–${exe.end} · ${esc(exe.room)}${exe.who ? ` · ${esc(exe.who)}` : ""}` : ""}${e.points ? ` · ${e.points} points` : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// A task of the sheet (its number and points on the left, the question restated in our own words, then the worked
+// answer), the answer tiles, and the context / worked-example boxes.
+const task = (id, pts, t, body) => `<section class="task" id="t${String(id).replace(/\W/g, "")}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2>${pts ? `<span class="pts">${pts} pt</span>` : `<span class="pts open">discussed in the session</span>`}</div>${body}</section>`;
+const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+
+// ---------------- Write-ups: one function per exercise, registered in WRITEUPS below ----------------
+// function exercise1() { return `${head(e)}<p class="lead">…</p>${task("1", 4, "…", `<p>…</p>${ans([["42", "answer"]])}`)}<h2>Before the session</h2><ul>…</ul>`; }
+
+// ---------------- Exercise 1: course-work kick-off and toolkits (slides of the course-work deck) ----------------
+const SIX = [4, 8, 15, 16, 23, 42];
+const days = iso => new Date(iso + "T12:00:00").getTime() / 864e5;
+const bytes = v => { const u = [[1e15, "PB"], [1e12, "TB"], [1e9, "GB"], [1e6, "MB"], [1e3, "kB"]].find(([f]) => v >= f) || [1, "B"]; return `${num(v / u[0], v / u[0] < 10 ? 2 : 0)} ${u[1]}`; };
+
+// When each assignment's session falls; rows, so the labels stay readable at phone width.
+const PLAN = [
+  { t: "A1 Foundations", s: "Dear Data", d: "2026-10-14", k: 1, tool: "pen and paper", team: "before teams start" },
+  { t: "A2 Multivariate", s: "E2: Multivariate Data", d: "2026-11-04", k: 1, tool: "D3.js", team: "team of three" },
+  { t: "A3 Graphs", s: "E3: Networks", d: "2026-12-02", k: 1, tool: "D3.js", team: "team of three" },
+  { t: "A4 Data prep.", s: "E4: Elevation Data", d: "2026-12-09", k: 2, tool: "to be announced", team: "team of three" },
+  { t: "A5 Volume vis", s: "E5: Volume Data", d: "2027-01-06", k: 2, tool: "to be announced", team: "team of three" },
+  { t: "Closing", s: "last course-work session", d: "2027-01-27", k: 0, tool: "", team: "" },
+];
+CHARTS.plan = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 92 : 118, R = narrow ? 14 : 22, T = 24, RH = 30, H = T + PLAN.length * RH + 26;
+  const x0 = days("2026-10-05"), x1 = days("2027-02-07"), x = iso => L + (days(iso) - x0) / (x1 - x0) * (W - L - R);
+  const months = narrow ? [["2026-11-01", "Nov"], ["2027-01-01", "Jan"]] : [["2026-11-01", "Nov"], ["2026-12-01", "Dec"], ["2027-01-01", "Jan"], ["2027-02-01", "Feb"]];
+  const grid = months.map(([d, t]) => `<line class="grid" x1="${x(d)}" x2="${x(d)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(d)}" y="${H - 6}" text-anchor="middle">${t}</text>`).join("");
+  const band = `<rect class="band" x="${x("2026-12-20")}" y="${T}" width="${x("2027-01-03") - x("2026-12-20")}" height="${H - 22 - T}"/><text class="note" x="${(x("2026-12-20") + x("2027-01-03")) / 2}" y="${T - 8}" text-anchor="middle">break</text>`;
+  const now = today >= "2026-10-05" && today <= "2027-02-07" ? `<line class="ann" x1="${x(today)}" x2="${x(today)}" y1="${T - 4}" y2="${H - 22}"/><text class="note" x="${x(today)}" y="${T - 8}" text-anchor="middle">today</text>` : "";
+  const rows = PLAN.map((p, i) => { const y = T + i * RH + RH / 2, right = x(p.d) > W - 90;
+    const tip = `<b>${esc(p.t)}</b>${esc(p.s)}, ${fmt(p.d)}${p.tool ? `<br>Toolkit: ${esc(p.tool)}<br>${esc(p.team)}` : ""}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y - RH / 2}" width="${W}" height="${RH}"/>
+      <text class="cat" x="${L - 8}" y="${y + 4}" text-anchor="end">${esc(p.t)}</text>
+      <circle class="dot" cx="${x(p.d)}" cy="${y}" r="5.5" style="fill:${p.k ? `var(--vz-s${p.k})` : "var(--vz-gray)"}"/>
+      <text class="vl2" x="${x(p.d) + (right ? -10 : 10)}" y="${y + 4}" text-anchor="${right ? "end" : "start"}">${U.fmtDate(p.d)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of the six course-work sessions from 14 October to 27 January. Assignments 1 to 3 are information visualization, assignments 4 and 5 scientific visualization.">${band}${grid}${now}${rows}</svg>`;
+};
+
+// The same six numbers in four visual channels, on one column grid.
+CHARTS.encode = narrow => {
+  const CH = [["Position", "dots on one shared scale"], ["Length", "bars from one baseline"], ["Area", "circle area"], ["Lightness", "stronger tint = more"]];
+  const W = narrow ? 340 : 600, L = narrow ? 66 : 120, RH = 66, T = 22, H = T + CH.length * RH, CW = (W - L) / 6, max = 42, top = 8, bh = RH - 16;
+  const head = SIX.map((v, j) => `<text class="tick" x="${L + (j + .5) * CW}" y="14" text-anchor="middle">${v}</text>`).join("");
+  const cell = (r, v, cx, y) => {
+    if (r === 0) return `<line class="axis" x1="${cx - CW / 2 + 3}" x2="${cx + CW / 2 - 3}" y1="${y + top + bh}" y2="${y + top + bh}"/><circle class="dot" cx="${cx}" cy="${y + top + bh - v / max * bh}" r="5"/>`;
+    if (r === 1) return `<line class="axis" x1="${cx - CW / 2 + 3}" x2="${cx + CW / 2 - 3}" y1="${y + top + bh}" y2="${y + top + bh}"/><path class="bar s1" d="${vbar(cx - 9, 18, y + top + bh - v / max * bh, y + top + bh)}"/>`;
+    if (r === 2) return `<circle class="f1" cx="${cx}" cy="${y + top + bh / 2}" r="${Math.sqrt(v / max) * Math.min(bh, CW - 4) / 2}"/>`;
+    return `<rect x="${cx - CW / 2 + 3}" y="${y + top + 6}" width="${CW - 6}" height="${bh - 12}" rx="4" style="fill:color-mix(in srgb, var(--vz-s1) ${Math.round(12 + 88 * v / max)}%, var(--surface-2))"/>`;
+  };
+  const rows = CH.map(([t, d], r) => { const y = T + r * RH;
+    return `<text class="cat" x="0" y="${y + 30}">${t}</text>${narrow ? "" : `<text class="note" x="0" y="${y + 46}">${d}</text>`}` +
+      SIX.map((v, j) => { const cx = L + (j + .5) * CW; return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${v}</b>${t}: ${d}`)}"><rect class="hit" x="${cx - CW / 2}" y="${y}" width="${CW}" height="${RH}"/>${cell(r, v, cx, y)}</g>`; }).join(""); }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The values 4, 8, 15, 16, 23 and 42 drawn four times: as position, length, circle area and colour lightness. The difference between 15 and 16 is visible by position and length, not by area or lightness.">${head}${rows}</svg>`;
+};
+
+// Volume size against the slide's ladder; the explorer's values feed the marked row.
+const VOL = { x: 512, y: 512, z: 1000, b: 16 };
+const volBytes = () => VOL.x * VOL.y * VOL.z * VOL.b / 8;
+CHARTS.ladder = narrow => {
+  const ROWS = [["Tables, InfoVis", 1e6, "order of MB", 0], ["CT or MRI volume", 524288000, "≈ 0.5 GB", 0], ["Simulation run", 1e12, "terabytes", 0], ["EM connectomics", 1e15, "up to petabytes", 0], ["Your volume", volBytes(), bytes(volBytes()), 1]];
+  const W = narrow ? 340 : 600, L = narrow ? 108 : 130, R = narrow ? 22 : 30, T = 8, RH = 32, H = T + ROWS.length * RH + 26, lo = 5, hi = 16;
+  const x = v => L + (Math.log10(Math.max(v, 10 ** lo)) - lo) / (hi - lo) * (W - L - R);
+  const ticks = [[1e6, "MB"], [1e9, "GB"], [1e12, "TB"], [1e15, "PB"]].map(([v, t]) => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${t}</text>`).join("");
+  const rows = ROWS.map(([t, v, s, mine], i) => { const y = T + i * RH + RH / 2, right = x(v) > W - 100;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${s}</b>${t}`)}"><rect class="hit" x="0" y="${y - RH / 2}" width="${W}" height="${RH}"/>
+      <text class="cat" x="${L - 10}" y="${y + 4}" text-anchor="end">${t}</text>
+      <circle class="dot" cx="${x(v)}" cy="${y}" r="${mine ? 6.5 : 5}" style="fill:${mine ? "var(--vz-s1)" : "var(--vz-gray)"}"/>
+      <text class="vl2" x="${x(v) + (right ? -11 : 11)}" y="${y + 4}" text-anchor="${right ? "end" : "start"}">${s}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dot plot on a logarithmic axis from megabytes to petabytes: tables about a megabyte, a CT volume about half a gigabyte, a simulation run terabytes, electron microscopy up to petabytes, and your volume at ${bytes(volBytes())}.">${ticks}${rows}</svg>`;
+};
+function initVol(body) {
+  const P = [["CT from the slide", 512, 512, 1000, 16], ["Clinical MRI", 256, 256, 180, 12], ["Finer CT", 1024, 1024, 2000, 16], ["EM block", 10000, 10000, 10000, 8]];
+  const F = [["x", "x voxels"], ["y", "y voxels"], ["z", "z slices"], ["b", "bits per voxel"]];
+  body.innerHTML = `<div class="presets">${P.map((p, i) => `<button class="preset" data-i="${i}" aria-pressed="${!i}">${p[0]}</button>`).join("")}</div>
+    <div class="ctl">${F.map(([k, t]) => `<label>${t} <input type="number" min="1" max="100000" data-k="${k}" value="${VOL[k]}"></label>`).join("")}</div>
+    ${chart("ladder", leg([[1, "your volume"], ["g", "sizes from the slide"]]))}</figure><div class="out"></div>`;
+  const out = body.querySelector(".out"), inputs = [...body.querySelectorAll("input")], btns = [...body.querySelectorAll(".preset")];
+  const draw = () => { mountCharts(); const n = VOL.x * VOL.y * VOL.z, B = volBytes();
+    out.innerHTML = `<dl class="ro"><dt>Voxels</dt><dd>${num(VOL.x, 0)} × ${num(VOL.y, 0)} × ${num(VOL.z, 0)} = ${num(n, 0)}</dd><dt>Bytes</dt><dd>${num(n, 0)} × ${VOL.b} / 8 = ${num(B, 0)} = ${bytes(B)} (${num(B / 2 ** 30)} GiB)</dd></dl>`; };
+  inputs.forEach(i => i.addEventListener("input", () => { const v = Math.floor(+i.value); if (v >= 1) { VOL[i.dataset.k] = v; btns.forEach(b => b.setAttribute("aria-pressed", "false")); draw(); } }));
+  body.addEventListener("click", ev => { const t = ev.target.closest(".preset"); if (!t) return; const p = P[+t.dataset.i]; Object.assign(VOL, { x: p[1], y: p[2], z: p[3], b: p[4] }); inputs.forEach(i => { i.value = VOL[i.dataset.k]; }); btns.forEach(b => b.setAttribute("aria-pressed", b === t)); draw(); });
+  draw();
+}
+
+// d3.scaleLinear: data value on the top ruler, the pixel it maps to on the bottom ruler.
+const SC = { d0: -100, d1: 100, r0: 0, r1: 500 };
+const scaleF = v => SC.r0 + (v - SC.d0) / (SC.d1 - SC.d0) * (SC.r1 - SC.r0);
+CHARTS.scale = narrow => {
+  const W = narrow ? 340 : 600, L = 16, R = 16, T = 34, B = 128, H = 160, PW = W - L - R;
+  const tLo = Math.min(SC.d0, SC.d1, 0), tHi = Math.max(SC.d0, SC.d1, 42), pHi = Math.max(SC.r0, SC.r1, ...SIX.map(scaleF), 500), pLo = Math.min(SC.r0, SC.r1, ...SIX.map(scaleF), 0);
+  const xT = v => L + (v - tLo) / (tHi - tLo) * PW, xB = v => L + (v - pLo) / (pHi - pLo) * PW;
+  const inside = v => v >= Math.min(SC.d0, SC.d1) && v <= Math.max(SC.d0, SC.d1);
+  const area = `<path class="band" d="M${xT(SC.d0)},${T} L${xT(SC.d1)},${T} L${xB(SC.r1)},${B} L${xB(SC.r0)},${B} Z"/>`;
+  const end = (X, Y, t, up) => `<line class="axis" x1="${X}" x2="${X}" y1="${Y - 5}" y2="${Y + 5}"/><text class="tick" x="${X}" y="${Y + (up ? -10 : 19)}" text-anchor="middle">${t}</text>`;
+  const seen = [];
+  const marks = SIX.map(v => { const p = scaleF(v), c = inside(v) ? 1 : 2;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${v} → ${num(p, 1)} px</b>${inside(v) ? "inside the domain" : "outside the domain: no clamping, so the scale extrapolates"}`)}"><line class="ann" x1="${xT(v)}" y1="${T}" x2="${xB(p)}" y2="${B}"/><circle class="dot" cx="${xT(v)}" cy="${T}" r="4.5" style="fill:var(--vz-s${c})"/><circle class="dot" cx="${xB(p)}" cy="${B}" r="4.5" style="fill:var(--vz-s${c})"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two rulers. The top ruler holds the data values 4, 8, 15, 16, 23, 42, the bottom ruler the pixels they map to; 42 maps to ${num(scaleF(42), 1)} pixels.">
+    <line class="axis" x1="${L}" x2="${W - R}" y1="${T}" y2="${T}"/><line class="axis" x1="${L}" x2="${W - R}" y1="${B}" y2="${B}"/>${area}
+    ${end(xT(SC.d0), T, num(SC.d0, 1), true)}${end(xT(SC.d1), T, num(SC.d1, 1), true)}${end(xB(SC.r0), B, num(SC.r0, 1) + " px", false)}${end(xB(SC.r1), B, num(SC.r1, 1) + " px", false)}${marks}</svg>`;
+};
+function initScale(body) {
+  const P = [["Slide: axis example", -100, 100, 0, 500], ["Fit the data", 0, 42, 0, 500], ["Flipped for y", 0, 42, 300, 0], ["Domain too small", 0, 20, 0, 500]];
+  const F = [["d0", "domain from"], ["d1", "to"], ["r0", "range from"], ["r1", "to"]];
+  body.innerHTML = `<div class="presets">${P.map((p, i) => `<button class="preset" data-i="${i}" aria-pressed="${!i}">${p[0]}</button>`).join("")}</div>
+    <div class="ctl">${F.map(([k, t]) => `<label>${t} <input type="number" data-k="${k}" value="${SC[k]}"></label>`).join("")}</div>
+    ${chart("scale", leg([[1, "value inside the domain"], [2, "value outside the domain"]]))}</figure><div class="out"></div>`;
+  const out = body.querySelector(".out"), inputs = [...body.querySelectorAll("input")], btns = [...body.querySelectorAll(".preset")];
+  const draw = () => { mountCharts(); const n = SIX.filter(v => v < Math.min(SC.d0, SC.d1) || v > Math.max(SC.d0, SC.d1)).length;
+    out.innerHTML = `<dl class="ro"><dt>Formula</dt><dd>scale(d) = ${num(SC.r0, 1)} + (d − ${num(SC.d0, 1)}) / ${num(SC.d1 - SC.d0, 1)} × ${num(SC.r1 - SC.r0, 1)}</dd><dt>For 42</dt><dd>${num(scaleF(42), 1)} px ${n ? flag("bad", `${n} of 6 values outside the domain`) : flag("ok", "every value inside the domain")}</dd></dl>`; };
+  inputs.forEach(i => i.addEventListener("input", () => { const v = +i.value; if (i.value !== "" && Number.isFinite(v)) { const old = SC[i.dataset.k]; SC[i.dataset.k] = v; if (SC.d0 === SC.d1) { SC[i.dataset.k] = old; return; } btns.forEach(b => b.setAttribute("aria-pressed", "false")); draw(); } }));
+  body.addEventListener("click", ev => { const t = ev.target.closest(".preset"); if (!t) return; const p = P[+t.dataset.i]; Object.assign(SC, { d0: p[1], d1: p[2], r0: p[3], r1: p[4] }); inputs.forEach(i => { i.value = SC[i.dataset.k]; }); btns.forEach(b => b.setAttribute("aria-pressed", b === t)); draw(); });
+  draw();
+}
+
+// The data join: which elements update, enter and exit when new data meets the bars already on the page.
+const JN = { cur: SIX.slice(), next: [4, 8, 15, 16, 23, 42, 7, 30], byKey: false };
+function joinRows(cur, next, byKey) {
+  if (!byKey) return [...next.map((v, i) => i < cur.length ? { s: "update", v, old: cur[i] } : { s: "enter", v }), ...cur.slice(next.length).map(v => ({ s: "exit", v }))];
+  const left = cur.slice(), rows = next.map(v => { const i = left.indexOf(v); if (i < 0) return { s: "enter", v }; left.splice(i, 1); return { s: "update", v, old: v }; });
+  return [...rows, ...left.map(v => ({ s: "exit", v }))];
+}
+function joinOut() {
+  const rows = joinRows(JN.cur, JN.next, JN.byKey), max = Math.max(...JN.cur, ...JN.next, 1), n = s => rows.filter(r => r.s === s).length, cls = { update: 1, enter: 2, exit: "g" };
+  return `<div class="jrows">${rows.map(r => `<div class="jrow"><span class="js">${key(cls[r.s])} ${r.s}</span><span class="jt"><span class="jb" style="width:${r.v / max * 100}%;--c:${r.s === "exit" ? "var(--vz-gray)" : `var(--vz-s${cls[r.s]})`}"></span></span><span class="jv">${r.s === "update" && r.old !== r.v ? `${r.old} → ${r.v}` : r.v}</span></div>`).join("")}</div>
+    <dl class="ro"><dt>Result</dt><dd>${n("update")} update, ${n("enter")} enter, ${n("exit")} exit</dd><dt>Call</dt><dd><code>.data(values${JN.byKey ? ", d =&gt; d" : ""})</code> ${JN.byKey ? "matches elements by value" : "matches elements by position"}</dd></dl>`;
+}
+function initJoin(body) {
+  const P = [["Two more values", [4, 8, 15, 16, 23, 42, 7, 30]], ["Two fewer", [4, 8, 15, 16]], ["Sorted descending", [42, 23, 16, 15, 8, 4]], ["First value removed", [8, 15, 16, 23, 42]]];
+  body.innerHTML = `<div class="presets">${P.map((p, i) => `<button class="preset" data-i="${i}" aria-pressed="${!i}">${p[0]}</button>`).join("")}</div>
+    <div class="ctl"><label>New data <input type="text" value="${JN.next.join(", ")}" spellcheck="false"></label><label><input type="checkbox"> key by value</label></div>
+    <p class="lab-note">Bars already on the page: ${SIX.join(", ")}.</p><div class="out"></div>`;
+  const [txt, cb] = body.querySelectorAll("input"), out = body.querySelector(".out"), btns = [...body.querySelectorAll(".preset")], draw = () => { out.innerHTML = joinOut(); };
+  txt.addEventListener("input", () => { const v = txt.value.split(/[,\s]+/).map(Number).filter(x => x > 0 && Number.isFinite(x)); if (v.length) { JN.next = v; btns.forEach(b => b.setAttribute("aria-pressed", "false")); draw(); } });
+  cb.addEventListener("change", () => { JN.byKey = cb.checked; draw(); });
+  body.addEventListener("click", ev => { const t = ev.target.closest(".preset"); if (!t) return; JN.next = P[+t.dataset.i][1].slice(); txt.value = JN.next.join(", "); btns.forEach(b => b.setAttribute("aria-pressed", b === t)); draw(); });
+  draw();
+}
+
+// Where each pipeline step runs in the four web strategies of the slide.
+const WEB = [
+  { t: "Rendering in the browser", e: "vtk.js, WebGL, WebGPU", c: ["b", "b", "b", "b"] },
+  { t: "Remote rendering", e: "ParaView Web, trame", c: ["s", "s", "s", "b"] },
+  { t: "Backend computes, frontend interacts", e: "Jupyter with Python or C++", c: ["s", "s", "b", "b"] },
+  { t: "Streaming on demand", e: "Neuroglancer", c: ["s", "b", "b", "b"] },
+];
+CHARTS.web = narrow => {
+  const W = narrow ? 340 : 600, STEPS = ["Data", "Compute", "Render", "Show"], L = narrow ? 0 : 190, RH = narrow ? 58 : 40, T = 20, H = T + WEB.length * RH, CW = (W - L) / 4;
+  const head = STEPS.map((s, j) => `<text class="tick" x="${L + (j + .5) * CW}" y="12" text-anchor="middle">${s}</text>`).join("");
+  const rows = WEB.map((w, i) => { const y = T + i * RH, top = narrow ? y + 20 : y + 4, h = narrow ? 30 : 30;
+    const tip = `<b>${esc(w.t)}</b>${esc(w.e)}<br>${w.c.map((c, j) => `${STEPS[j]}: ${c === "s" ? "server" : "browser"}`).join("<br>")}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y}" width="${W}" height="${RH}"/>
+      <text class="cat" x="0" y="${narrow ? y + 14 : y + 18}">${esc(w.t.length > 26 && !narrow ? "Backend + frontend" : w.t)}</text>${narrow ? "" : `<text class="note" x="0" y="${y + 32}">${esc(w.e)}</text>`}
+      ${w.c.map((c, j) => `<rect x="${L + j * CW + 1}" y="${top}" width="${CW - 2}" height="${h}" rx="4" style="fill:var(--vz-s${c === "s" ? 1 : 2})"/><text class="wc" x="${L + (j + .5) * CW}" y="${top + 19}" text-anchor="middle">${c === "s" ? "server" : "browser"}</text>`).join("")}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grid of four web strategies against four pipeline steps. Browser rendering does everything in the browser; remote rendering only shows images there; a backend with a frontend computes on the server and renders in the browser; streaming keeps the data on the server and does the rest in the browser.">${head}${rows}</svg>`;
+};
+
+function exercise1() {
+  return `${head(e)}
+    <p class="lead">The first exercise slot did not start with a task. It explained how the course work runs and walked through the toolkits for the semester, from pen and paper to D3.js to the large-data world of scientific visualization. Assignment 1, Dear Data, was handed out with it. This page works through the kick-off deck (21 slides) with four charts and three explorers. The numbers and D3 snippets come from the deck; everything else is marked.</p>
+    <div class="box status"><p style="margin:0"><b>Not covered yet: the A1 sheet.</b> The assignment PDF is in OPAL but has not been read for this page, so the task and its deadline are missing here. OPAL still shows A1 as open and not selected. All that is known from the kick-off deck is the rule that A1 uses no toolkit at all.</p></div>
+    <div class="tiles">
+      <div class="tile"><div class="v">5</div><div class="l">assignments, the first three on information visualization, the last two on scientific visualization</div></div>
+      <div class="tile"><div class="v">3</div><div class="l">people per team, starting with assignment 2</div></div>
+      <div class="tile"><div class="v">0</div><div class="l">bonus points, but the exam asks about the exercises</div></div>
+      <div class="tile"><div class="v">50 MB</div><div class="l">per minute at most for video submissions</div></div>
+    </div>
+
+    <h2>How the course work runs (slides 3–7)</h2>
+    <p>The assignments mix practical and theoretical tasks. You implement real visualizations and apply the lecture's principles to example datasets. Nobody reviews the solutions, because of the number of participants, so the only feedback is what you ask for: consultation slots by email, or the OPAL forum. Results from earlier semesters do not carry over, and AI tools are allowed if you state how you used them.</p>
+    ${chart("plan", leg([[1, "information visualization"], [2, "scientific visualization"], ["g", "closing"]]))}
+      <figcaption>The six course-work sessions. The grouping is from slide 5, the dates from the course schedule. The schedule calls the fourth session Elevation Data, while the deck calls assignment 4 Data Preparation. Hover or focus a row for its toolkit.</figcaption>
+    </figure>
+    ${tbl(["Session", "Date", "Toolkit", "Work mode"], PLAN.map(p => [esc(p.t), U.fmtDate(p.d), esc(p.tool || "–"), esc(p.team || "–")]))}
+    ${why("Context, not on the slides: reading an unreviewed exercise", "<p>With no review and no points, the exam question is the only external check. Exam questions about an exercise usually probe why a design or parameter was chosen, so a short note on each decision is worth keeping while you work. That is general study practice, not a statement about this exam.</p>")}
+    ${ex("Worked example: the video limit as a bitrate", "<p>50 MB per minute means 50 × 8 = 400 Mbit in 60 s, or about 6.67 Mbit/s for video and audio together. A 3-minute screencast may therefore be 150 MB. With audio at an assumed 160 kbit/s, HandBrake's average bitrate for the video track should stay near 6,500 kbit/s. Screencasts compress well, so they usually land far below that. The format is fixed: mp4, h264, 1080p.</p>")}
+
+    <h2>Pen and paper first (slide 9)</h2>
+    <p>Assignment 1 bans tools: no visualization toolkit, no programming, no Illustrator, not even Paint. The deck extends the idea to the later assignments too. Sketch first, and decide <b>what</b> you want to show and <b>why</b> before you think about <b>how</b> to build it.</p>
+    ${why("Context, not on the slides: Dear Data", "<p>The slide's images come from Dear Data, by the information designers Giorgia Lupi and Stefanie Posavec. For a year they each collected data on one everyday theme per week, drew it by hand on a postcard and mailed it across the Atlantic, with the legend on the back. Because nothing is templated, every encoding is a decision you make yourself. The project's own site is <a href=\"http://www.dear-data.com/theproject\" target=\"_blank\" rel=\"noopener\">dear-data.com</a>.</p>")}
+    <p>What an encoding decision does is easiest to see on the deck's own example data, the six numbers it uses for D3:</p>
+    ${chart("encode")}
+      <figcaption>The same six numbers in four visual channels, drawn here for this page. Position and length show that 16 is a little more than 15. Area and lightness hide it. Hover or focus a mark for its value.</figcaption>
+    </figure>
+    ${tbl(["Value", "Share of the largest value"], SIX.map(v => [v, pct(v / 42)]))}
+    ${why("Context, not on the slides: why the rows differ", "<p>Cleveland and McGill measured how accurately people compare values in each channel: position on a common scale is best, then length, while area and colour are clearly worse. Bertin's visual variables are the older design vocabulary for the same question. The Visual Variables and Perception lectures are the place to connect this to; their slides are not worked through here yet.</p>")}
+
+    <h2>The web stack (slide 10)</h2>
+    <p>D3 runs in the browser, so HTML, CSS and JavaScript are the entry requirement. The deck points to the Mozilla Developer Network as the best documentation and names three JavaScript questions worth being able to answer:</p>
+    <ul>
+      <li><b>Variable scope.</b> <code>let</code> and <code>const</code> live in their block, <code>var</code> in the whole function. Prefer the first two.</li>
+      <li><b>The <code>this</code> keyword.</b> It depends on how a function is called, not where it is written. Arrow functions have no <code>this</code> of their own, which matters in D3 event handlers.</li>
+      <li><b><code>==</code> versus <code>===</code>.</b> <code>==</code> converts types first, so <code>"4" == 4</code> is true; <code>===</code> does not. Values read from a CSV are strings, so this bites early.</li>
+    </ul>
+
+    <h2>D3.js: selections and data binding (slides 11–15)</h2>
+    <p>D3 stands for Data-Driven Documents. It draws nothing by itself: it <b>binds an array of data to DOM elements</b> and sets their attributes from the data. Selections (<code>d3.select</code>, <code>d3.selectAll</code>) pick elements; <code>attr</code>, <code>style</code>, <code>append</code> and <code>remove</code> act on them, and the calls chain. SVG elements are DOM elements too, which is why the same code draws charts.</p>
+    <p>The core idea is the data join. Calling <code>.data(array)</code> on a selection compares the array with the elements that exist and sorts them into three groups: <b>update</b> (a datum with an element), <b>enter</b> (a datum with no element yet) and <b>exit</b> (an element whose datum is gone). The deck's examples use <code>.enter().append()</code> and mention removing exiting elements.</p>
+    ${lab("join", "the data join on six bars")}
+    ${ex("Worked example: the deck's first chart", "<p><code>selectAll(\"rect\")</code> on an empty SVG finds nothing, so all six values land in enter and six rects appear. Width is the value, height 10, and y is i × 15, so the bars sit at y = 0, 15, 30, 45, 60, 75. The longest bar is only 42 px wide and the shortest 4 px. That is why real charts need a scale.</p>")}
+    <h3>Scales turn data into pixels</h3>
+    <p>A linear scale is a straight line through two point pairs: the <b>domain</b> (data values) and the <b>range</b> (pixels). The deck's axis example maps −100…100 onto 0…500.</p>
+    ${lab("scale", "d3.scaleLinear on the six values")}
+    ${ex("Worked example: the slide's scale", "<p>For d = 42: (42 − (−100)) / 200 = 0.71, and 0.71 × 500 = 355 px. For d = 4: 104 / 200 × 500 = 260 px. All six values land between 260 and 355 px, so a domain of −100…100 wastes four fifths of the width on this data. With the domain 0…42, the same values spread from about 48 to 500 px. For a y axis, flip the range to [height, 0], because SVG's y grows downwards.</p>")}
+    ${why("Context, not on the slides: when the deck's snippets meet current D3", `<p>The deck's snippets are condensed, and some follow older versions. Checked against D3 7 and plain JavaScript syntax:</p>
+      <div class="tt-wrap"><table class="tt syn"><tr><th>On the slide</th><th>What happens</th><th>Write instead</th></tr>
+      <tr><td><code>.on("mouseover", function(d) …)</code></td><td>Since D3 6 the first argument is the event, so <code>d</code> is not the datum.</td><td><code>function(event, d)</code>. Keep <code>function</code>, because <code>d3.select(this)</code> fails in an arrow function.</td></tr>
+      <tr><td><code>d3.csv(file, function(error, data) …)</code></td><td>The callback form was removed in D3 5.</td><td><code>d3.csv(file).then(data =&gt; …)</code>, and convert numbers yourself.</td></tr>
+      <tr><td><code>.enter().append("rect")</code></td><td>Still valid, but it only handles enter.</td><td><code>.join("rect")</code> handles all three groups.</td></tr>
+      <tr><td><code>.attr(…);</code> then <code>.attr(…);</code> on slide 14</td><td>A semicolon ends the chain, so the next line is a syntax error.</td><td>Only one semicolon, at the end of the chain.</td></tr>
+      <tr><td>Axis object from <code>d3.axisBottom()</code></td><td>Nothing is drawn yet.</td><td><code>svg.append("g").call(axisX)</code></td></tr>
+      </table></div>`)}
+    <h3>A current starting point for assignment 2</h3>
+    <pre class="code">&lt;svg id="c" width="500" height="120"&gt;&lt;/svg&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/d3@7"&gt;&lt;/script&gt;
+&lt;script&gt;
+const data = [4, 8, 15, 16, 23, 42];
+const x = d3.scaleLinear().domain([0, 42]).range([0, 480]);
+d3.select("#c").selectAll("rect").data(data).join("rect")
+  .attr("x", 0).attr("y", (d, i) =&gt; i * 15)
+  .attr("height", 10).attr("width", d =&gt; x(d))
+  .on("mouseover", function (event, d) { d3.select(this).attr("fill", "steelblue"); })
+  .on("mouseout", function () { d3.select(this).attr("fill", null); });
+&lt;/script&gt;</pre>
+
+    <h2>Scientific visualization and large data (slides 17–20)</h2>
+    <p>Information visualization often fits in a browser's memory. Scientific visualization usually does not, and each step of the ladder is about a factor of 1,000. That is why the classic toolchain is C++ for the application and data handling, plus GPU computing with CUDA, OpenCL or compute shaders.</p>
+    ${lab("vol", "how big is a volume?")}
+    ${ex("Worked example: the slide's CT scan", "<p>512 × 512 × 1000 = 262,144,000 voxels. At 16 bit, or 2 bytes each, that is 524,288,000 bytes, about 0.5 GB. Doubling the resolution along all three axes multiplies this by 8, which is why size grows so fast in 3D. Bit depth only scales it linearly.</p>")}
+    <p><b>Toolkits.</b> Most are domain-specific, and many build on the Visualization Toolkit VTK, a C++ library with more than 700 classes and over a million lines of code. ParaView is the free desktop application on top of it, and Python bindings exist, for example PyVista. The deck sorts the field into three families:</p>
+    <ul>
+      <li><b>Scalar, vector and tensor fields:</b> VisIt, OpenDX.</li>
+      <li><b>Volumes, often medical data:</b> SCIRun, MeVisLab, VolViz.</li>
+      <li><b>Particles, often biomolecular data:</b> VMD, PyMOL, MegaMOL.</li>
+    </ul>
+    <p><b>Moving to the web.</b> SciVis increasingly runs in the browser with nothing to install. WebGL and, since 2025, WebGPU in all major browsers bring GPU rendering and compute shaders there. The strategies differ in what stays on the server:</p>
+    ${chart("web", leg([[1, "runs on the server"], [2, "runs in the browser"]]))}
+      <figcaption>The four approaches of slide 19. The assignment of steps to server and browser is our reading of the slide's descriptions. The deciding question is whether the data fits through the network. If it does not, only images or small chunks travel.</figcaption>
+    </figure>
+    ${tbl(["Strategy", "Example", "Data", "Compute", "Render", "Show"], WEB.map(w => [esc(w.t), esc(w.e), ...w.c.map(c => c === "s" ? "server" : "browser")]))}
+    <p><b>Goals of the SciVis part.</b> Understand how scalar fields, height fields and volumes become images. Apply transfer functions and colour mapping, contouring with iso-lines and iso-surfaces, and volume rendering. Learn what the parameters do and which artifacts they cause. The toolkit and setup come with assignment 4.</p>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What counts for the grade?</b> Only the 90-minute exam, but it asks about the exercises.</li>
+      <li><b>What is the rule for A1?</b> Pen and paper only, and think about what and why first.</li>
+      <li><b>What does the data join do?</b> It sorts elements and data into update, enter and exit.</li>
+      <li><b>What does a scale do?</b> It maps a data domain linearly onto a pixel range, and it does not clamp by default.</li>
+      <li><b>Why is SciVis different?</b> Data grows by factors of 1,000, up to petabytes, so where it is computed and rendered becomes the main design decision.</li>
+    </ul>
+    <h2>Before the next session</h2>
+    <ul>
+      <li>Read the A1 sheet in OPAL and check its submission status.</li>
+      <li>Form a team of three for assignment 2.</li>
+      <li>Try D3 now, as the deck recommends, for example with the snippet above.</li>
+    </ul>
+    <p class="muted">Next: <a href="data-visualization/exercise.html?n=2">E2: Multivariate Data</a>, ${fmt("2026-11-04")}, after <a href="data-visualization/lecture.html?n=4">lecture 4</a>. Slides: OPAL → Course Work → Slides &amp; Notes (they may not be republished).</p>`;
+}
+
+function placeholder() {
+  const d = daysUntil(e.date), prev = e.lecture != null ? c.lectures.find(x => x.n === e.lecture) : null;
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.published ? "Sheet online, write-up pending" : "Not published yet"}</h2>
+      <p class="muted">This session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}${exe ? `, ${exe.start}–${exe.end}, ${esc(exe.room)}` : ""}.<br>${esc(e.blurb)}${prev ? ` <a href="data-visualization/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it draws on.` : ""}<br>The write-up appears here once the sheet is available.</p>
+    </div>`;
+}
+const WRITEUPS = { 1: exercise1 };
+const LABS = { join: initJoin, scale: initScale, vol: initVol };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!e) {
+  page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

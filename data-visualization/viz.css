@@ -1,0 +1,308 @@
+/* Data Visualization pages: the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.viz { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.viz .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.viz .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.viz .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.viz header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.viz .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.viz .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.viz .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.viz .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.viz .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.viz .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.viz .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.viz .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.viz .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.viz .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.viz .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.viz .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.viz .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.viz .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.viz .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.viz .kd.past { opacity: .55; }
+.viz .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.viz .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.viz .detail { max-width: 760px; margin: 0 auto; }
+.viz .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.viz .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.viz .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.viz .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.viz .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.viz .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.viz .detail p { margin: 0 0 0.7rem; }
+.viz .detail p.lead { font-size: 1.08rem; }
+.viz .detail ul, .viz .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.viz .detail li { margin: 0.2rem 0; }
+.viz .detail .muted { color: var(--ink-2); }
+.viz .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.viz .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.viz .detail .placeholder .big-icon { font-size: 3.2rem; }
+.viz .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Figures */
+.viz .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.viz .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.viz .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.viz .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.viz .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.viz .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.viz .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.viz .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.viz .viz .bar.s1 { fill: var(--vz-s1); }
+.viz .viz .bar.gray { fill: var(--vz-gray); }
+.viz .viz .hit { fill: transparent; }
+.viz .viz .row:hover .bar, .viz .viz .row:focus .bar { filter: brightness(1.12); }
+.viz .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.viz .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.viz .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.viz .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.viz .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.viz .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.viz .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.viz .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.viz .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.viz .cmp .v { display: flex; align-items: center; gap: 6px; }
+.viz .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.viz .cmp .sw.t { background: var(--vz-s1); }
+.viz .cmp .sw.v { background: var(--vz-gray); }
+.viz details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.viz details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.viz details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.viz details.tbl td, .viz details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.viz details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.viz .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.viz .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.viz .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.viz .grade b { display: block; }
+.viz .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.viz table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.viz .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.viz .plan tr:last-child td { border-bottom: 0; }
+.viz .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.viz .plan td.k { width: 22px; }
+.viz .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.viz .plan .sw.lec { background: var(--c-core); }
+.viz .plan .sw.exe { background: var(--c-trk); }
+.viz .plan tr.past td { color: var(--ink-3); }
+.viz .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.viz .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.viz .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.viz .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.viz .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.viz ul.reading { font-size: 0.92rem; }
+.viz ul.reading b { font-weight: 500; }
+.viz .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .viz .hero h1 { font-size: 1.55rem; }
+  .viz .cmp { grid-template-columns: 1fr; }
+  .viz .plan td.d { width: 70px; }
+}
+
+/* Chart marks: lines, dots, tooltips; truth tables and formulas */
+.viz .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.viz .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.viz .viz .pt:hover .dot, .viz .viz .pt:focus .dot { r: 6; }
+.viz .viz .pt:focus { outline: none; }
+.viz .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.viz .viz .note { fill: var(--ink-2); font-size: 11px; }
+.viz .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.viz .viz .tip.show { opacity: 1; }
+.viz .viz .tip b { display: block; }
+.viz .viz .chart-wrap { position: relative; }
+.viz table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.viz table.tt th, .viz table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.viz table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.viz table.tt td.one { font-weight: 700; }
+.viz .tt-wrap { overflow-x: auto; }
+.viz .tt-wrap table.tt { margin-top: 0; }
+.viz .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.viz .cmp { grid-template-columns: 1fr; }
+.viz .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.viz .cmp li b { align-self: center; }
+@media (max-width: 760px) { .viz .cmp li { grid-template-columns: 1fr; } }
+.viz .plan .sw.off, .viz .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.viz .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.viz .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.viz .legend .sw.lec { background: var(--c-core); }
+.viz .legend .sw.exe { background: var(--c-trk); }
+.viz .cmp .v { display: block; }
+.viz .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.viz .viz .f1 { fill: var(--vz-s1); }
+.viz .viz .f2 { fill: var(--vz-s2); }
+.viz .viz .f3 { fill: var(--vz-s3); }
+.viz .viz .f4 { fill: var(--vz-s4); }
+.viz .viz .bar.s2 { fill: var(--vz-s2); }
+.viz .viz .line.k2 { stroke: var(--vz-s2); }
+.viz .viz .dot.gray { fill: var(--vz-gray); }
+.viz .viz .nohit { pointer-events: none; }
+.viz .viz .ann, .viz .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.viz .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.viz .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.viz .viz .code.on .link, .viz .viz .code.on .vl { opacity: 1; }
+.viz .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.viz .viz .code.on .dot { r: 5.5; }
+.viz .viz .pt.on .bar { filter: brightness(1.12); }
+.viz .viz .plot:focus { outline: none; }
+.viz .viz .legend { margin: 0 2px 8px; }
+.viz .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.viz .legend .lt { display: inline; }
+.viz .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.viz .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.viz table.tt th .key { margin-right: 5px; }
+.viz .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.viz .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.viz .t1 { --c: var(--vz-s1); } .viz .t2 { --c: var(--vz-s2); } .viz .t3 { --c: var(--vz-s3); } .viz .t4 { --c: var(--vz-s4); }
+.viz table.tt td.t1, .viz table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.viz .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.viz .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.viz .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.viz .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.viz .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.viz .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.viz .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.viz .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.viz .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.viz .preset:hover { border-color: var(--ink-3); }
+.viz .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.viz .lab button:focus-visible, .viz .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.viz .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.viz .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.viz .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.viz .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.viz .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.viz .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.viz .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.viz .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.viz .cell.one { color: var(--ink); font-weight: 700; }
+.viz .cell.t1, .viz .cell.t2, .viz .cell.t3, .viz .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.viz button.cell { cursor: pointer; }
+.viz button.cell:hover { filter: brightness(1.06); }
+.viz .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.viz .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.viz .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.viz .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.viz .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.viz .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.viz .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.viz .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.viz .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.viz .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.viz .fxc { display: grid; gap: 3px; justify-items: center; }
+.viz .fxc .cell { width: 34px; }
+.viz .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.viz .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.viz .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.viz .fgw { display: grid; gap: 3px; }
+.viz .fgw small { font-size: 11px; color: var(--ink-3); }
+.viz .fg { display: inline-flex; gap: 2px; }
+.viz .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .viz .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .viz .fg { gap: 1px; }
+  .viz .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .viz .agrid .rl { font-size: 12px; }
+  .viz .fxc .cell { width: 30px; }
+  .viz .ro { grid-template-columns: 1fr; gap: 2px; }
+  .viz .ro dd { margin-bottom: 6px; }
+}
+.viz .ex, .viz .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.viz .ex { --c: var(--focus); }
+.viz .why { --c: var(--c-team); }
+.viz .ex p, .viz .why p { margin: 0 0 0.4rem; }
+.viz .ex p:last-child, .viz .why p:last-child { margin-bottom: 0; }
+.viz .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.viz .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.viz .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.viz .task-h h2 { margin: 0; font-size: 1.25rem; }
+.viz .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.viz .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.viz .pts.open { color: var(--ink-3); border-style: dashed; }
+.viz .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.viz .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.viz .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.viz .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.viz .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.viz .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.viz .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.viz .board-h h2 { margin: 0; font-size: 1.15rem; }
+.viz .board-h .muted { font-size: 0.85rem; }
+.viz .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.viz .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.viz .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.viz .game-card.exe { border-top: 4px solid var(--c-trk); }
+.viz .game-card.lec { border-top: 4px solid var(--c-core); }
+.viz .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+.viz .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.viz .q { background: color-mix(in srgb, var(--warn) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1rem; }
+.viz .q ul { margin: 0; }
+.viz .ctx { display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--c-team); font-weight: 700; margin-left: 6px; }
+.viz .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.viz .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.viz .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.viz .viz .bar.s2 { fill: var(--vz-s2); } .viz .viz .bar.s3 { fill: var(--vz-s3); } .viz .viz .bar.s4 { fill: var(--vz-s4); }
+.viz .viz .pt.on .bar, .viz .viz .pt:focus .bar { filter: brightness(1.12); }
+.viz .viz .ring { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.viz .viz .band { fill: var(--ink-3); opacity: .08; }
+
+/* Data Visualization extras: inputs of the explorers, the data-join rows, code blocks, text inside chart cells. */
+.viz .ctl input[type="number"] { font: 14px ui-monospace, "IBM Plex Mono", monospace; width: 6.5em; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.viz .viz svg text.wc { fill: #fff; font-size: 11.5px; font-weight: 600; pointer-events: none; }
+.viz .lab .viz { background: var(--surface); }
+.viz .lab .viz .dot { stroke: var(--surface); }
+.viz .jrows { display: grid; gap: 4px; margin: 0 0 8px; }
+.viz .jrow { display: grid; grid-template-columns: 74px 1fr 72px; gap: 8px; align-items: center; font-size: .88rem; }
+.viz .js { color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
+.viz .jt { background: var(--surface); border-radius: 4px; height: 14px; display: block; }
+.viz .jb { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--c); }
+.viz .jv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.viz pre.code { font: 12.5px/1.5 ui-monospace, "IBM Plex Mono", monospace; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: .4rem 0 1rem; overflow-x: auto; max-width: 100%; }
+.viz .detail table.tt.syn td { font-size: .86rem; }
+.viz .detail table.tt.syn code { overflow-wrap: anywhere; }
+.viz .viz .vl2 { fill: var(--ink); font-size: 11.5px; font-weight: 500; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.viz .lab .viz .vl2 { stroke: var(--surface); }
+.viz .viz .band { fill: var(--ink-3); opacity: .1; }
+.viz .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.viz .viz .dot { stroke: var(--surface-2); stroke-width: 2; }
+.viz .detail table.tt.syn { width: 100%; }
+.viz .detail table.tt.syn td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; }
+@media (max-width: 600px) {
+  .viz .ctl input[type="number"] { width: 5.5em; }
+  .viz .jrow { grid-template-columns: 64px 1fr 58px; gap: 6px; }
+  .viz .tt-wrap { font-size: .9rem; }
+}
+@media (max-width: 600px) { .viz .viz svg .cat { font-size: 11px; } .viz .viz svg text.wc { font-size: 10.5px; } }
