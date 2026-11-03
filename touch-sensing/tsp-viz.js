@@ -78,6 +78,39 @@ window.TSPViz = (function () {
     wireLines();
   }
 
+  // What the camera of a vision-based tactile sensor sees: a height map (the pressed-in gel) lit from three sides by a
+  // red, a green and a blue LED at 32° elevation, Lambertian shading per channel, drawn on a canvas. Lecture 4 uses it
+  // with shape presets, Practice 3 with the LED intensities (0–15 like the OpenTouch sliders). A cartoon, not a model
+  // of a specific sensor: no soft-shadowing, no elastomer coating, no lens.
+  const GEL_LIGHTS = [[90, "r"], [210, "g"], [330, "b"]].map(([az, c]) => { const a = az * Math.PI / 180, e = 32 * Math.PI / 180; return { c, az, v: [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)] }; });
+  function gelHeight(shape, u, v, depth) {
+    const r = Math.hypot(u, v);
+    switch (shape) {
+      case "dome": return depth * Math.exp(-(r * r) / 0.09);
+      case "ridge": return depth * Math.exp(-(u * u) / 0.025);
+      case "ring": return depth * Math.exp(-((r - 0.5) ** 2) / 0.01);
+      case "screw": return depth * Math.exp(-(r * r) / 0.26) * (1 - 0.7 * Math.exp(-(Math.min(Math.abs(u), Math.abs(v)) ** 2) / 0.004) * (r < 0.45 ? 1 : 0));
+      case "cloth": return depth * 0.35 * (1 + Math.sin(u * 16) * Math.sin(v * 16)) * Math.exp(-(r * r) / 0.5);
+      default: return 0;
+    }
+  }
+  function gelRender(canvas, { shape = "dome", depth = 0.6, light = { r: 15, g: 15, b: 15 }, w = 128, h = 96 } = {}) {
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d"), img = ctx.createImageData(w, h), d = img.data, step = 2 / w, amb = 0.1;
+    const z = (i, j) => gelHeight(shape, (i / w) * 2 - 1, (j / w) * 2 - h / w, depth) * 0.45;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const dzdx = (z(i + 1, j) - z(i - 1, j)) / (2 * step), dzdy = (z(i, j + 1) - z(i, j - 1)) / (2 * step);
+      const nl = Math.hypot(dzdx, dzdy, 1), n = [-dzdx / nl, dzdy / nl, 1 / nl], k = (j * w + i) * 4; // canvas y grows downwards
+      GEL_LIGHTS.forEach((L, c) => { const I = light[L.c] / 15, dot = Math.max(0, n[0] * L.v[0] + n[1] * L.v[1] + n[2] * L.v[2]); d[k + c] = Math.min(255, 255 * I * (amb + 0.95 * dot)); });
+      d[k + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  // Small compass of the three LED directions for the gel labs (the camera looks along the viewer's line of sight).
+  const gelCompass = light => `<svg class="gel-compass" viewBox="0 0 80 80" aria-label="LED directions: red from the top, green from the lower left, blue from the lower right">
+    <circle cx="40" cy="40" r="26" fill="none" stroke="var(--line)"/><text class="tick" x="40" y="44" text-anchor="middle">camera</text>
+    ${GEL_LIGHTS.map(L => { const a = L.az * Math.PI / 180, x = 40 + 34 * Math.cos(a), y = 40 - 34 * Math.sin(a), col = { r: "#e5484d", g: "#30a46c", b: "#3e63dd" }[L.c];
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${col}" opacity="${light ? 0.25 + 0.75 * light[L.c] / 15 : 1}"/>`; }).join("")}</svg>`;
 
-  return { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, lineGeo, lineSVG, line, wireLines, mountCharts, isNarrow };
+  return { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, lineGeo, lineSVG, line, wireLines, mountCharts, isNarrow, gelRender, gelCompass, GEL_LIGHTS };
 })();

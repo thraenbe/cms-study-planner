@@ -24,7 +24,7 @@
 <div class="wrap"><div class="detail" id="page"></div></div>
 <script>
 const { m, c, esc, U, fmt, daysUntil, roomOn, today, exShort } = TSP;
-const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = TSPViz;
+const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow, gelRender, gelCompass } = TSPViz;
 const q = new URLSearchParams(location.search).get("n");
 const e = q === null ? null : c.exercises.find(x => x.n === q);
 const page = document.getElementById("page");
@@ -324,6 +324,71 @@ function exerciseH1() {
     <p class="muted" style="margin-top:1rem">Worth one third of the 20 home-exercise points of the portfolio if the three exercises are weighted equally (<a href="touch-sensing/exercise.html?n=0">Practice 0</a>). Slides and the template are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
+// ======================================================================================
+// Exercise 3 – Practice 3: hands-on with the DIGIT and OpenTouch
+// ======================================================================================
+// Illumination lab: the gel-camera cartoon of Lecture 4 with the three LED sliders of the OpenTouch dashboard (0–15).
+const IL = { shape: "screw", r: 15, g: 15, b: 15 };
+LABS.illum = body => {
+  const shapes = [["screw head", "screw"], ["fingertip", "dome"], ["edge", "ridge"], ["fabric", "cloth"]];
+  body.innerHTML = `<div class="presets">${shapes.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === IL.shape}">${t}</button>`).join("")}</div>
+    <div class="gel"><canvas aria-label="Simulated DIGIT image under the chosen LED intensities"></canvas><div class="side"><div class="compass"></div>
+    <p style="margin:0 0 6px">The dashboard's Red, Green and Blue sliders set the LED currents. Turn one off and the slopes that faced it go dark: the image loses one of its three equations for the surface normal.</p>
+    <div class="ctl">${["r", "g", "b"].map(c => `<label class="${c}">${{ r: "red", g: "green", b: "blue" }[c]} <input type="range" data-c="${c}" min="0" max="15" step="1" value="${IL[c]}"><output>${IL[c]}</output></label>`).join("")}</div></div></div>`;
+  const cv = body.querySelector("canvas"), comp = body.querySelector(".compass");
+  const draw = () => { gelRender(cv, { shape: IL.shape, depth: 0.7, light: { r: IL.r, g: IL.g, b: IL.b } }); comp.innerHTML = gelCompass({ r: IL.r, g: IL.g, b: IL.b }); };
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { IL.shape = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  body.querySelectorAll("input[type=range]").forEach(r => r.addEventListener("input", () => { IL[r.dataset.c] = +r.value; r.nextElementSibling.value = r.value; draw(); }));
+  draw();
+};
+// Size of an uncompressed QVGA recording at 60 fps against its length (320·240·3 bytes · 60 per second = 13.8 MB/s).
+const RECS = [["5 s", 5], ["10 s", 10], ["30 s", 30], ["60 s", 60], ["5 min", 300]];
+CHARTS.recsize = narrow => {
+  const mbps = 320 * 240 * 3 * 60 / 1e6, W = narrow ? 340 : 600, L = narrow ? 8 : 60, R = 70, T = narrow ? 22 : 10, BH = 18, GAP = narrow ? 30 : 12, PW = W - L - R, mx = 4200, x = v => L + Math.min(v, mx) / mx * PW;
+  const H = T + RECS.length * (BH + GAP) + 28;
+  const grid = [0, 1000, 2000, 3000, 4000].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T - 4}" y2="${H - 26}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v ? v / 1000 + " GB" : "0"}</text>`).join("");
+  const bars = RECS.map(([k, s], i) => { const y = T + i * (BH + GAP), v = mbps * s;
+    const label = narrow ? `<text class="cat" x="${L}" y="${y - 6}">${k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${k}</text>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k} at QVGA, 60 fps</b>${s * 60} frames · ${num(v, 0)} MB uncompressed`)}"><rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}<path class="bar" style="fill:var(--vz-s${s >= 300 ? 2 : 1})" d="${hbar(L, x(v), y, BH)}"/><text class="val" x="${x(v) + 6}" y="${y + BH / 2 + 4}">${num(v, 0)} MB</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: uncompressed size of a QVGA 60 fps recording, 69 MB for 5 seconds up to 4.1 GB for 5 minutes">${grid}${bars}</svg>`;
+};
+const P3_STEPS = [
+  "<b>Install.</b> Follow the installation instructions of the OpenTouch Interface repository (lasr-lab on GitHub, also on PyPI as <code>opentouch-interface</code>); Android alternative: the OpenTouch app from the Play Store.",
+  "<b>Connect.</b> Plug in the DIGIT (USB) and start the dashboard from a terminal in the folder where the data should land: <code>opentouch-dashboard</code>.",
+  "<b>Add the sensor.</b> In the Opentouch Viewer choose Add Sensor, pick the sensor type (or upload a YAML config, or select a dataset to replay), then open Live View.",
+  "<b>Record.</b> In Live View, Group 0 shows the Live Data of the finger; set the file name under Save recording to, click Start Recording, touch, click Stop Recording. The file lands in a new <code>datasets</code> folder next to where the dashboard was started.",
+  "<b>Replay and export.</b> Select the dataset in the viewer to replay it; in Python open the touch file, step through the frames, save the interesting ones as PNG.",
+];
+function exercise3() {
+  return `${head(e)}
+    <p class="lead">The first practice with hardware: a DIGIT on the table, the OpenTouch interface on the laptop. The goal is a working pipeline from sensor to file to frames to PNG, because the next practices build on the data recorded today: connect the DIGIT, collect data, visualise frames from touch files, and export frames into separate directories for next time.</p>
+    <h2>Recap of Lectures 3 and 4 (slides 2–4)</h2>
+    <p>Six criteria for a tactile sensor (form factor, availability and cost, ease of manufacturing, ease of use, reliability with robustness and durability, performance), the taxonomy of technologies (capacitive, piezoresistive, piezoelectric, thermoresistive, inductive, magnetic, optical, vision-based), and the GelSight layout: object on elastomer on a support plate, LEDs from the sides, camera below. The DIGIT in front of you is that layout shrunk to a fingertip. Full write-ups: <a href="touch-sensing/lecture.html?n=3">Lecture 3</a> and <a href="touch-sensing/lecture.html?n=4">Lecture 4</a>.</p>
+    <h2>The pipeline (slides 5–13)</h2>
+    <div class="steps">${P3_STEPS.map((s, i) => `<div class="step"><span class="n">${i + 1}</span><span>${s}</span></div>`).join("")}</div>
+    <p>The dashboard's Live View has three parts: <b>Payload</b> (the sensor group's data stream), <b>Group Settings</b> (remove group, download the config as YAML, the recording file name, Start Recording, a "jump to" time for replay) and <b>Sensors</b> with the settings of the finger: resolution (QVGA at 60 fps by default) and the three LED sliders Red, Green, Blue, each 0–15, next to the live image.</p>
+    ${why("If the installation fails on libportaudio2 (slides 8–10)", `<p>The slides give two routes. On your own machine install the system library with the package manager (<code>libportaudio2</code>) and retry. On a pool machine without root: install a user-level conda (Miniforge), create an environment with Python 3.12, pip, portaudio and python-sounddevice from conda-forge, activate it and install <code>opentouch-interface</code> from PyPI or from the cloned repository. Check with a one-liner that <code>sounddevice</code> loads its library from inside the environment and that <code>pip check</code> is clean, then run the dashboard from that environment.</p>`)}
+    <h2>Task 1 · Connect the DIGIT with OpenTouch (slide 7)</h2>
+    ${qbox("What to get working", ["Installation according to the repository's instructions, or the Android app.", "The DIGIT is recognised and its live image shows in the dashboard."])}
+    <h2>Task 2 · Collect data (slide 14)</h2>
+    ${qbox("Three recordings", ["Record without any contact (a baseline of the gel and the lighting).", "Record while touching an object with a pattern, a fabric or a textured surface, moving the finger as in palpation.", "Replay one of the touch files in the dashboard."])}
+    <p>Why the no-contact recording matters: every later processing step (Practice 4 and 5, the ML lectures) subtracts or compares against the untouched gel; the baseline also shows the sensor's own noise, dust and gel marks ${ctx}.</p>
+    ${chart("recsize")}<figcaption>Uncompressed size of a recording at the default QVGA, 60 fps (13.8 MB/s): a reason to keep recordings short and to export only the interesting frames. The actual touch file may be smaller if the format compresses; the frame count is exact.</figcaption></figure>
+    ${tbl(["Length", "Frames", "MB uncompressed"], RECS.map(([k, s]) => [k, (s * 60).toLocaleString("en-GB"), num(320 * 240 * 3 * 60 * s / 1e6, 0)]))}
+    <h2>Task 3 · Visualise the data in code (slide 15)</h2>
+    ${qbox("A Python script that", ["loads a touch file,", "replays its frames,", "saves some interesting frames as PNG."])}
+    ${ex("A sketch of the loop", `<p>The OpenTouch interface provides a reader for the touch files; the loop is the same as for any video: open the file, iterate over frames (each a H × W × 3 array), show them with the image library of your choice, and write the ones you want with an image writer, numbered by frame index so they can be found again. Keep the no-contact frames and the contact frames in separate folders, as the practice asks, because next time they are compared.</p>`)}
+    <h2>Task 4 · Changing the illumination (slide 16)</h2>
+    ${qbox("Collect more data from a script, with different LED settings", ["Change the illumination settings of the DIGIT while collecting.", "Visualise the data and save it as PNG.", "How do the images change?"])}
+    ${lab("illum", "the same contact under different LEDs")}
+    ${ex("What to expect, and why (our answer to the slide's question)", `<p>Each LED colour lights the gel from one side. A slope facing the red LED reflects red; turn red down and that slope goes dark while the others keep their colour, so the image loses contrast exactly on the faces that pointed at the missing light. With a single colour left the picture still shows the contact, but the direction information is one-sided: a bump and a dent lit from one side look alike, which is why Lecture 4's principle needs lights from several directions and why Lecture 5's reconstruction will use all three channels. Setting all three low makes a darker, noisier image; setting them to the maximum can saturate the flat gel to a bright grey. The default (15, 15, 15) is the calibrated one; record the settings with every dataset ${ctx}.</p>`)}
+    <h2>Before the next practice (slide 17)</h2>
+    ${["the OpenTouch environment runs and the DIGIT is recognised", "the datasets folder with the no-contact and the contact recordings", "the exported PNG frames, in separate directories per recording", "the script from Task 3, and the LED settings used in Task 4 noted next to the data"].map(s => `<div class="check"><span class="bx"></span><span>${s}</span></div>`).join("")}
+    <p style="margin-top:.8rem">Practice 4 (10 Nov) continues with the same sensor and data. Also still open: <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>, due 13 Nov.</p>
+    ${why("what this practice trains", `<p>Two of Lecture 4's design axes become tangible: the <i>lighting</i> (Task 4) and the <i>electronics and bandwidth</i> (the file sizes above). The pipeline sensor → file → frames → images is the data-collection half of every ML-for-touch project, and the oral exam's portfolio variant assumes the home exercises are done with exactly this kind of data.</p>`)}
+    <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>; the OpenTouch Interface is public on GitHub (lasr-lab/opentouch-interface).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date);
   return `${head(e)}
@@ -333,7 +398,7 @@ function placeholder() {
       <p class="muted">${e.kind === "home" ? `The window is ${fmt(e.date)} – ${fmt(e.due)} according to Practice 0.` : `This practice is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(e.date)}, 09:20–10:50, ${esc(roomOn(e.date))}.`}<br>The write-up appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1 };
+const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1, "3": exercise3 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise "${esc(q)}".</p>`;

@@ -3521,7 +3521,8 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 1",
       "date": "2026-11-02",
       "icon": "📷",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "blurb": "How vision-based tactile sensors work: a camera films a lit elastomer from inside. History from Kappl 1963 to GelSight, the families (GelSight, TacTip, FingerVision, DIGIT), finger-shaped designs (OmniTact, GelTip), the five design choices, advantages and limitations, and the resolution chart with VBTS added.",
+      "covered": true
      },
      {
       "n": 5,
@@ -3655,7 +3656,8 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 1",
       "date": "2026-11-03",
       "icon": "📷",
-      "blurb": "Not held yet."
+      "blurb": "Hands-on with the DIGIT and the OpenTouch interface: install and connect, record data with and without contact in the dashboard, replay touch files, export frames as PNG from a Python script, and record under different LED settings.",
+      "covered": true
      },
      {
       "n": "4",
