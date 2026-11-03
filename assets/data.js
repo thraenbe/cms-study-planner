@@ -1337,7 +1337,7 @@ window.CMS = {
       "n": 1,
       "title": "Variability Patterns",
       "date": "2026-10-28",
-      "published": null,
+      "published": "2026-09-29",
       "icon": "📁",
       "covered": true,
       "lecture": 2,
