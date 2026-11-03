@@ -13,10 +13,10 @@
 // Course pages: modules[code].course (key dates, grading, reading list) and modules[code].status
 // ({ opal, selma } flags, Bela's own registration state) feed the per-course dashboards (touch-sensing.html, computer-vision.html).
 // modules[code].noTimes replaces the "no session times yet" text on module.html for courses without sessions.
-// Generated once by a script, now edited directly (last: 2026-10-22).
+// Generated once by a script, now edited directly (last: 2026-11-03).
 window.CMS = {
  "semester": "Winter 2026/27",
- "updated": "2026-10-22",
+ "updated": "2026-11-03",
  "term": {
   "src": "https://tu-dresden.de/studium/im-studium/studienorganisation/studienjahresablauf",
   "start": "2026-10-01",
@@ -74,7 +74,7 @@ window.CMS = {
  },
  "enrolled": [
   "CMS-COR-HPC",
-  "CMS-COR-VIZ",
+  "CMS-COR-SSE",
   "CMS-TRK-APSS",
   "CMS-TRK-CAI",
   "CMS-PRO",
@@ -84,7 +84,6 @@ window.CMS = {
  ],
  "toConfirm": [],
  "toRegister": [
-  "CMS-COR-SSE",
   "CMS-TRK-HWSWC"
  ],
  "opalStatus": {
@@ -117,8 +116,8 @@ window.CMS = {
    "text": "In the course group and in tutorial group 2 (Fridays 13:00–14:30, APB/E006/U; first tutorial on 30 Oct)."
   },
   "CMS-COR-VIZ": {
-   "level": "ok",
-   "text": "Signed up for the course."
+   "level": "info",
+   "text": "Not in your schedule (dropped on 3 Nov in favour of Design Patterns and Frameworks, taken as Scientific Software Engineering); the OPAL enrolment is untouched. Unenrol in OPAL if you want to free the place."
   },
   "CMS-PRO": {
    "level": "info",
@@ -131,9 +130,13 @@ window.CMS = {
   "CMS-COR-ML": {
    "level": "ok",
    "text": "Enrolled in “Machine Learning 1 – Winter 2026/27” (380 of 500) and in exercise group 1 (Tuesday 16:40, POT/0081/H). Not in your schedule (dropped on 12 Oct); the OPAL enrolment is untouched."
+  },
+  "CMS-COR-SSE": {
+   "level": "ok",
+   "text": "In the OPAL course “Design Patterns and Frameworks (WS26/27)” of the Software Technology Group, which you take as CMS-COR-SSE. Slides, learning videos, recordings and exercise sheets are there; the exam is an online oral exam."
   }
  },
- "opalChecked": "2026-10-15",
+ "opalChecked": "2026-11-03",
  "priorities": [
   {
    "id": "core3",
@@ -142,8 +145,8 @@ window.CMS = {
     "CMS-COR-SAP",
     "CMS-COR-SSE"
    ],
-   "why": "Basic professional training needs 3 modules; you have High-Performance Computing and Data Visualization.",
-   "hint": "Stochastics and Probability is taught this winter (as “Stochastic Modeling and Simulation”); Scientific Software Engineering isn't in this winter's catalogue."
+   "why": "Basic professional training needs 3 modules: High-Performance Computing, Stochastics and Probability and Scientific Software Engineering (Data Visualization dropped on 3 Nov).",
+   "hint": "Stochastics and Probability is taught this winter as “Stochastic Modeling and Simulation”; Scientific Software Engineering is taken as “Design Patterns and Frameworks” (Software Technology Group)."
   },
   {
    "id": "dcd",
@@ -772,8 +775,18 @@ window.CMS = {
    "prereq": "Object-oriented programming (Java, C#, Python, C++), UML",
    "goals": "Students will master fundamental methods, design elements, and notations for the systematic modeling, design, and development of large object-oriented software systems for scientific computing, with particular emphasis on the reuse of classes and frameworks, the use of design patterns, and the underlying principles of role-based modeling. They will be able to contribute to the design and development of large software systems in accordance with the current state of the art and apply these systems in practical scenarios.",
    "contents": "The module covers classic design patterns in UML and programming languages for the variability, extensibility, and reuse of components and software frameworks.",
-   "links": {},
-   "register": "Not in this winter's faculty catalogue under this name or module number. Its content (design patterns and frameworks, Prof. Aßmann's chair) matches the course “Design Patterns and Frameworks”; ask the study office whether that course counts as CMS-COR-SSE before registering."
+   "links": {
+    "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/55835459584"
+   },
+   "register": "Taken this winter as “Design Patterns and Frameworks” (Software Technology Group, Dr. Sebastian Götz), which counts as CMS-COR-SSE. The exam is an online oral exam in one of two exam weeks (February or March, dates announced around Christmas): register in Selma, then ask the chair for an appointment.",
+   "winter": {
+    "who": "Dr. Sebastian Götz (as “Design Patterns and Frameworks”)",
+    "q": "Design Patterns and Frameworks"
+   },
+   "status": {
+    "opal": true,
+    "selma": false
+   }
   },
   "CMS-COR-VIZ": {
    "code": "CMS-COR-VIZ",
@@ -4548,6 +4561,77 @@ window.CMS = {
    "who": "Chair of Highly-Parallel VLSI Systems",
    "src": "course page",
    "tentative": true
+  },
+  {
+   "code": "CMS-COR-SSE",
+   "kind": "Lecture",
+   "day": 2,
+   "start": "14:50",
+   "end": "16:20",
+   "room": "APB/E023/U",
+   "who": "Dr. Sebastian Götz",
+   "src": "OPAL course “Design Patterns and Frameworks (WS26/27)”, Organisation page (checked 3 Nov); hybrid, also streamed",
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2310",
+   "dates": [
+    "2026-10-20",
+    "2026-10-27",
+    "2026-11-03",
+    "2026-11-10",
+    "2026-11-17",
+    "2026-11-24",
+    "2026-12-01",
+    "2026-12-08",
+    "2027-01-05",
+    "2027-01-12",
+    "2027-01-19"
+   ],
+   "labels": {
+    "2026-10-20": "#01 Introduction",
+    "2026-10-27": "#02 Simple Patterns for Variability",
+    "2026-11-03": "#03 Creational Variability",
+    "2026-11-10": "#04 Simple Patterns for Extensibility",
+    "2026-11-17": "#05 Bridging Architectural Mismatch",
+    "2026-11-24": "#06 Role-based Design",
+    "2026-12-01": "#07 Design Patterns as Role Models",
+    "2026-12-08": "#08 Role-Object Pattern",
+    "2027-01-05": "#09 Framework Variability",
+    "2027-01-12": "#10 Framework Extensibility",
+    "2027-01-19": "#11 Tools and Materials, summary and exam preparation"
+   }
+  },
+  {
+   "code": "CMS-COR-SSE",
+   "kind": "Exercise",
+   "day": 3,
+   "start": "14:50",
+   "end": "16:20",
+   "room": "online",
+   "who": "",
+   "src": "OPAL course “Design Patterns and Frameworks (WS26/27)”, Organisation page (checked 3 Nov)",
+   "dates": [
+    "2026-10-28",
+    "2026-11-04",
+    "2026-11-11",
+    "2026-11-25",
+    "2026-12-02",
+    "2026-12-16",
+    "2027-01-06",
+    "2027-01-13",
+    "2027-01-20",
+    "2027-02-03"
+   ],
+   "labels": {
+    "2026-10-28": "E1: Variability Patterns",
+    "2026-11-04": "E2: Creational Patterns",
+    "2026-11-11": "E3: Extensibility Patterns",
+    "2026-11-25": "E4: Architecture Mismatch",
+    "2026-12-02": "E5: Formal Models of Design Patterns 1",
+    "2026-12-16": "E6: Formal Models of Design Patterns 2",
+    "2027-01-06": "E7: Role Object Pattern",
+    "2027-01-13": "E8: Frameworks",
+    "2027-01-20": "E9: Extensibility Patterns – Extension Access",
+    "2027-02-03": "E10: Tools and Materials"
+   }
   }
  ]
 };
