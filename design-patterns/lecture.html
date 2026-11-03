@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Scientific Software Engineering · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="design-patterns/dpf.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="design-patterns/dpf.js"></script>
+<script src="design-patterns/dpf-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="dpf">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today } = DPF;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow, dgm, seq } = DPFViz;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="design-patterns.html">← All lectures and exercises</a>`;
+// Write-up building blocks: a context box (what a lecturer says aloud, not on the slides), a worked example,
+// a question box, a table view for a chart (accessibility), and the lecture header.
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const qbox = (t, items) => `<div class="q"><div class="kicker">${t}</div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+function head(l) {
+  const meta = `${l.date ? fmt(l.date) : "no fixed date"}${lec ? ` · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who || "")}` : ""}`;
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${meta}</p>`;
+}
+
+// ---------------- Write-ups: one function per lecture, registered in WRITEUPS below ----------------
+// Pattern (see .claude/skills/study-dashboard/references/page-pattern.md):
+//   CHARTS.name = narrow => `<svg viewBox="0 0 ${narrow ? 340 : 600} …" role="img" aria-label="…">…</svg>`;
+//   function lecture1() { return `${head(l)}<p class="lead">…</p><h2>…</h2>${chart("name", leg([[1, "series"]]))}<figcaption>…</figcaption></figure>${why("Context, not on the slides: …", "<p>…</p>")}${ex("Worked example: …", "<p>…</p>")}<h2>Take-home</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}${lec ? `, ${lec.start}–${lec.end}, ${esc(lec.room)}` : ""}.<br>Planned topic: ${esc(l.blurb)}<br>The summary appears here once the lecture has taken place and its slides are available.</p>
+    </div>`;
+}
+// ======================= Lecture 1: Introduction (47 slides, 20 Oct) =======================
+// Course map: the three parts of the course as rows of tiles, each tile a topic with the lectures that cover it.
+const MAP = [
+  { part: "Part 3 · Frameworks", tiles: [["Metapatterns and framework patterns", "L9, L10"], ["Layered frameworks", "L8, L10"], ["Tools & Materials", "L11"]] },
+  { part: "Part 2 · Roles", tiles: [["Role models", "L6"], ["Composite patterns", "L7, L8"]] },
+  { part: "Part 1 · Basic patterns", tiles: [["Variability patterns", "L2, L3"], ["Extensibility patterns", "L4"], ["Glue patterns", "L5"]] },
+  { part: "Ground", tiles: [["Intro", "L1"], ["Employment and usage", "all along"]] },
+];
+const wrapTxt = (t, n) => { const out = []; let line = ""; t.split(" ").forEach(w => { if ((line + " " + w).trim().length > n) { out.push(line.trim()); line = w; } else line += " " + w; }); out.push(line.trim()); return out; };
+CHARTS.map = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 0 : 150, T = 6, RH = narrow ? 84 : 64, H = T + MAP.length * RH + 4;
+  const slots = ["s4", "s3", "s1", "g"];
+  const rows = MAP.map((r, i) => {
+    const y = T + i * RH, n = r.tiles.length, gap = 6, tw = (W - L - gap * (n - 1)) / n, th = narrow ? 50 : 50;
+    const lab = narrow ? `<text class="cat" x="0" y="${y + 11}" font-size="11">${r.part}</text>` : `<text class="cat" x="0" y="${y + th / 2 + 4}">${r.part}</text>`;
+    const ty = narrow ? y + 18 : y, c = slots[i] === "g" ? "var(--vz-gray)" : `var(--vz-${slots[i]})`;
+    const tiles = r.tiles.map(([t, l], k) => { const x = L + k * (tw + gap), lines = wrapTxt(t, narrow ? 14 : 20);
+      return `<g class="pt" tabindex="0" data-tip="<b>${esc(t)}</b>${esc(l)}"><rect x="${x}" y="${ty}" width="${tw}" height="${th}" rx="5" style="fill:${c};opacity:.16"/><rect x="${x}" y="${ty}" width="4" height="${th}" rx="2" style="fill:${c}"/>
+        ${lines.map((ln, q) => `<text class="val" x="${x + 10}" y="${ty + 15 + q * 13}" font-size="${narrow ? 10.5 : 12}">${esc(ln)}</text>`).join("")}<text class="tick" x="${x + 10}" y="${ty + th - 7}">${esc(l)}</text></g>`; }).join("");
+    return lab + tiles;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Course map: part 1 basic patterns (variability, extensibility, glue; lectures 2 to 5), part 2 roles (role models and composite patterns; lectures 6 to 8), part 3 frameworks (metapatterns, layered frameworks, tools and materials; lectures 9 to 11), on top of the introduction and the running theme of employment and usage.">${rows}</svg>`;
+};
+// History of the pattern idea, slide 15, drawn as a timeline with the two strands (practice and theory) on one axis.
+const HIST = [
+  [1972, "Desktop and window metaphors", "Xerox PARC Smalltalk group: conceptual patterns before the word existed", 1],
+  [1978, "MVC for Smalltalk", "Goldberg and Reenskaug, during the Norwegian Smalltalk port", 1],
+  [1979, "Alexander, The Timeless Way of Building", "the notions of pattern and pattern language", 2],
+  [1987, "Cunningham and Beck, OOPSLA", "five Alexander patterns applied to Smalltalk programs", 2],
+  [1991, "Gamma's PhD thesis", "patterns found while building ET++, an early C++ window framework", 1],
+  [1993, "ECOOP paper by the four authors", "Design Patterns: Abstraction and Reuse of OO Design", 2],
+  [1994, "First PLoP conference", "Pattern Languages of Programming", 2],
+  [1995, "The GOF book", "the catalogue every software engineer is expected to own", 2],
+  [1997, "Riehle: role models and design patterns", "the view part 2 of this course takes", 2],
+  [2005, "Collaborations in UML 2", "class-role models become a standard notation", 2],
+];
+CHARTS.hist = narrow => {
+  const W = narrow ? 340 : 600, AX = narrow ? 44 : 60, T = 10, H = narrow ? 330 : 300, gapMin = narrow ? 24 : 22;
+  const sy = yr => T + 8 + (yr - 1970) / 36 * (H - T - 24);
+  let last = -1e9; const ys = HIST.map(([yr]) => { const y = Math.max(sy(yr), last + gapMin); last = y; return y; });
+  const ticks = [1970, 1980, 1990, 2000].map(y => `<line class="grid" x1="${AX - 4}" x2="${AX + 4}" y1="${sy(y)}" y2="${sy(y)}"/><text class="tick" x="${AX - 8}" y="${sy(y) + 4}" text-anchor="end">${y}</text>`).join("");
+  const axis = `<line class="axis" x1="${AX}" x2="${AX}" y1="${sy(1970)}" y2="${sy(2006)}"/>`;
+  const pts = HIST.map(([yr, t, d, s], i) => { const Y = sy(yr), LY = ys[i], lines = narrow ? wrapTxt(`${yr} ${t}`, 40) : [`${yr} ${t}`];
+    return `<g class="pt" tabindex="0" data-tip="<b>${yr} · ${esc(t)}</b>${esc(d)}"><path class="link" style="opacity:1" d="M${AX},${Y} L${AX + 14},${LY}"/><circle class="dot" cx="${AX}" cy="${Y}" r="4.5" style="fill:var(--vz-s${s})"/>
+      ${lines.map((ln, q) => `<text class="lbl" x="${AX + 18}" y="${LY + 4 + q * 12}" font-size="${narrow ? 10.5 : 11.5}" font-weight="${q ? 400 : 600}">${esc(ln)}</text>`).join("")}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline 1970 to 2006: desktop metaphor (early 1970s), MVC (1978), Alexander's book (1979), Cunningham and Beck (1987), Gamma's thesis (1991), the ECOOP paper (1993), the first PLoP (1994), the GOF book (1995), Riehle's role models (1997), collaborations in UML (2005).">${axis}${ticks}${pts}</svg>`;
+};
+// MVC as a composition of three simpler patterns (slides 18 to 20), drawn as a class diagram with role tints.
+CHARTS.mvc = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 3, rowH: narrow ? 70 : 80 });
+  const model = D.box(0, 0, { name: "Model", ops: ["attach(View)", "notify()", "getData()"], role: "t" });
+  const view = D.box(1, 0, { name: "View", ops: ["update()", "draw()"], role: "h", abstract: true });
+  const ctrl = D.box(narrow ? 0 : 2, narrow ? 2.3 : 0, { name: "Controller", ops: ["handleInput()"], role: "c", abstract: true });
+  const comp = D.box(1, 1.1, { name: "CompositeView", ops: ["children: View[*]", "update()"], role: "h" });
+  const leaf = D.box(0, 1.1, { name: "BarView", ops: ["update()"], role: "h" });
+  const ctrlA = D.box(narrow ? 1 : 2, narrow ? 2.3 : 1.1, { name: "KeyboardController", ops: ["handleInput()"], role: "c" });
+  D.ref(view, model, { label: "observes *" });
+  D.inh(comp, view); D.inh(leaf, view); D.inh(ctrlA, ctrl);
+  D.ref(comp, view, { label: "children", kind: "agg" });
+  if (!narrow) D.ref(view, ctrl, { label: "strategy" });
+  return D.svg("Class diagram of MVC: views observe the model (Observer), CompositeView nests views (Composite), and a view selects a Controller (Strategy); BarView and KeyboardController are concrete examples.");
+};
+// What a pattern description holds (slide 21): bad smell, forces, good smell.
+CHARTS.anatomy = narrow => {
+  const W = narrow ? 340 : 600, bw = narrow ? 200 : 170, bh = 64, gap = narrow ? 30 : 30, H = narrow ? 3 * bh + 2 * gap + 30 : bh + 34;
+  const items = [["p", "bad smell", ["the structure to avoid", "a query that detects it"]], ["c", "forces", ["context, rationale, needs", "and constraints"]], ["t", "good smell", ["the standard solution", "a query that proves it"]]];
+  const pos = i => narrow ? [W / 2 - bw / 2, 4 + i * (bh + gap)] : [8 + i * (bw + gap), 4];
+  const boxes = items.map(([cls, t, sub], i) => { const [x, y] = pos(i); return `<g class="cls ${cls}"><rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="8"/><text class="cn" x="${x + bw / 2}" y="${y + 22}" text-anchor="middle">${t}</text>${sub.map((l, k) => `<text class="op" x="${x + bw / 2}" y="${y + 39 + k * 13}" text-anchor="middle">${l}</text>`).join("")}</g>`; }).join("");
+  const arrows = [0, 1].map(i => { const [x1, y1] = pos(i), [x2, y2] = pos(i + 1);
+    return narrow ? `<g class="edge"><path class="ln" d="M${x1 + bw / 2},${y1 + bh} L${x2 + bw / 2},${y2 - 3}"/><path class="arr" d="M${x2 + bw / 2 - 5},${y2 - 10} L${x2 + bw / 2},${y2 - 3} L${x2 + bw / 2 + 5},${y2 - 10}"/></g>`
+      : `<g class="edge"><path class="ln" d="M${x1 + bw},${y1 + bh / 2} L${x2 - 3},${y2 + bh / 2}"/><path class="arr" d="M${x2 - 10},${y2 + bh / 2 - 5} L${x2 - 3},${y2 + bh / 2} L${x2 - 10},${y2 + bh / 2 + 5}"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="A pattern description has three parts: a bad smell (the structure to avoid, with a query that detects it), the forces (context, rationale, needs and constraints), and a good smell (the standard solution with a query that proves it). The forces turn the bad into the good.">${boxes}${arrows}<text class="note" x="${W / 2}" y="${H - 6}" text-anchor="middle">the forces decide the move from the bad structure to the standard solution</text></svg>`;
+};
+// Kinds of patterns (slides 25 to 36): a tile grid; the ones this course treats are highlighted.
+const KINDS = [
+  ["Conceptual", "form in domain terms: desktop, tool, material", true], ["Design", "relations superimposed on classes and objects", true],
+  ["Architectural", "coarse-grain structure of a system, e.g. MVVM", true], ["Framework instantiation", "couples framework hooks to application code", true],
+  ["Idiom (LDDP)", "a construct another language has built in", false], ["Workaround", "an idiom faking a missing construct", false],
+  ["Antipattern", "defect pattern: spaghetti, casts everywhere", false], ["Process", "how to make something; automated: workflow", false],
+  ["Organizational", "hierarchy or matrix organisation", false], ["Enterprise / reengineering", "named on the slide, not treated", false],
+];
+CHARTS.kinds = narrow => {
+  const W = narrow ? 340 : 600, cols = narrow ? 2 : 5, gap = 6, tw = (W - gap * (cols - 1)) / cols, th = narrow ? 76 : 86, rows = Math.ceil(KINDS.length / cols), H = rows * (th + gap);
+  const wrap = (s, n) => { const out = []; let line = ""; s.split(" ").forEach(w => { if ((line + " " + w).trim().length > n) { out.push(line.trim()); line = w; } else line += " " + w; }); out.push(line.trim()); return out.slice(0, 3); };
+  const tiles = KINDS.map(([t, d, inC], i) => { const x = (i % cols) * (tw + gap), y = Math.floor(i / cols) * (th + gap);
+    const tl = wrapTxt(t, narrow ? 20 : 15), c = inC ? "var(--vz-s1)" : "var(--vz-gray)";
+    return `<g class="pt" tabindex="0" data-tip="<b>${esc(t)}</b>${esc(d)}${inC ? "<br>treated in this course" : ""}"><rect x="${x}" y="${y}" width="${tw}" height="${th}" rx="6" style="fill:${c};opacity:${inC ? .16 : .08}"/><rect x="${x}" y="${y}" width="4" height="${th}" rx="2" style="fill:${c};opacity:${inC ? 1 : .5}"/>
+      ${tl.map((l, k) => `<text class="val" x="${x + 10}" y="${y + 15 + k * 12}" font-size="11.5">${esc(l)}</text>`).join("")}${wrap(d, narrow ? 26 : 17).map((l, k) => `<text class="tick" x="${x + 10}" y="${y + 15 + tl.length * 12 + 2 + k * 11}" font-size="10">${esc(l)}</text>`).join("")}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ten kinds of patterns as tiles: conceptual, design, architectural and framework instantiation patterns are highlighted as the kinds this course treats; idioms, workarounds, antipatterns, process, organizational and enterprise patterns are listed for contrast.">${tiles}</svg>`;
+};
+// Explorer: a working MVC in miniature. Edit the model, watch notify() reach every registered view, detach one.
+function initMvc(body) {
+  const M = { rows: [["x", 60, 30, 10], ["y", 50, 30, 20], ["z", 80, 10, 10]], views: ["bars", "pie", "table"], log: [] };
+  const sel = () => M.rows.find(r => r[0] === M.row) || M.rows[2];
+  const bars = () => { const r = sel(); return `<svg viewBox="0 0 160 70" role="img" aria-label="bar view"><text class="cat" x="4" y="12" font-size="11">bars of ${r[0]}</text>${[1, 2, 3].map(i => `<rect class="bar s${i}" x="${12 + (i - 1) * 50}" y="${60 - r[i] * .45}" width="34" height="${r[i] * .45}" rx="3"/><text class="tick" x="${29 + (i - 1) * 50}" y="68" text-anchor="middle">${"abc"[i - 1]}</text>`).join("")}</svg>`; };
+  const pie = () => { const r = sel(), tot = r[1] + r[2] + r[3]; let a = -Math.PI / 2; const segs = [1, 2, 3].map(i => { const f = r[i] / tot, a1 = a + f * 2 * Math.PI, R = 28, cx = 80, cy = 38;
+      const d = `M${cx},${cy} L${cx + R * Math.cos(a)},${cy + R * Math.sin(a)} A${R},${R} 0 ${f > .5 ? 1 : 0} 1 ${cx + R * Math.cos(a1)},${cy + R * Math.sin(a1)} Z`; a = a1; return `<path class="f${i}" d="${d}" stroke="var(--surface-2)" stroke-width="2"/>`; }).join("");
+    return `<svg viewBox="0 0 160 70" role="img" aria-label="pie view"><text class="cat" x="4" y="12" font-size="11">pie of ${r[0]}</text>${segs}<text class="tick" x="118" y="32">a ${Math.round(r[1] / tot * 100)} %</text><text class="tick" x="118" y="44">b ${Math.round(r[2] / tot * 100)} %</text><text class="tick" x="118" y="56">c ${Math.round(r[3] / tot * 100)} %</text></svg>`; };
+  const table = () => `<table class="tt"><tr><th></th><th>a</th><th>b</th><th>c</th></tr>${M.rows.map(r => `<tr class="${r[0] === sel()[0] ? "" : ""}"><td>${r[0]}</td>${r.slice(1).map(v => `<td class="${r[0] === sel()[0] ? "one" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table>`;
+  const render = () => {
+    body.innerHTML = `<p class="lab-note">The model is the table below (slide 19). Edit a number, choose the row the two charts show, or detach a view: the model calls <code>notify()</code>, every attached view pulls fresh data with <code>getData()</code> and redraws itself. The model never knows how a view draws.</p>
+      <div class="ctl"><label>row shown <select data-k="row">${M.rows.map(r => `<option ${r[0] === sel()[0] ? "selected" : ""}>${r[0]}</option>`).join("")}</select></label>
+        ${M.rows.map((r, i) => `<label>${r[0]}: ${[1, 2, 3].map(j => `<input type="number" min="0" max="100" value="${r[j]}" data-cell="${i},${j}" style="width:3.6em;font:inherit;font-size:13px;padding:3px 4px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink)">`).join(" ")}</label>`).join("")}</div>
+      <div class="ctl">${["bars", "pie", "table"].map(v => `<label><input type="checkbox" data-view="${v}" ${M.views.includes(v) ? "checked" : ""}> ${v} view attached</label>`).join("")}</div>
+      <div class="fac">${M.views.includes("bars") ? `<div class="f"><b>BarView · update()</b><figure class="viz mini">${bars()}</figure></div>` : ""}${M.views.includes("pie") ? `<div class="f"><b>PieView · update()</b><figure class="viz mini">${pie()}</figure></div>` : ""}${M.views.includes("table") ? `<div class="f"><b>TableView · update()</b>${table()}</div>` : ""}</div>
+      <div class="trace">${M.log.slice(-4).map(l => `<div>${l}</div>`).join("") || "<span class='muted'>no change yet</span>"}</div>`;
+    body.querySelectorAll("[data-cell]").forEach(el => el.addEventListener("input", e => { const [i, j] = e.target.dataset.cell.split(",").map(Number); M.rows[i][j] = Math.max(0, Math.min(100, +e.target.value || 0)); M.log.push(`model.set(${M.rows[i][0]}, ${"abc"[j - 1]}, ${M.rows[i][j]}) → notify() → ${M.views.map(v => v + "View.update()").join(", ") || "nobody listens"}`); const f = document.activeElement === e.target; render(); if (f) { const n = body.querySelector(`[data-cell="${i},${j}"]`); n.focus(); } }));
+    body.querySelector("[data-k=row]").addEventListener("change", e => { M.row = e.target.value; M.log.push(`controller: show row ${M.row} → notify() → ${M.views.map(v => v + "View.update()").join(", ")}`); render(); });
+    body.querySelectorAll("[data-view]").forEach(el => el.addEventListener("change", e => { const v = e.target.dataset.view; if (e.target.checked) { M.views.push(v); M.log.push(`model.attach(${v}View) → ${v}View.update()`); } else { M.views = M.views.filter(x => x !== v); M.log.push(`model.detach(${v}View): it no longer hears notify()`); } render(); }));
+  };
+  render();
+}
+function lecture1() {
+  return `${head(l)}
+    <p class="lead">The opening lecture says what the course is for and what a pattern is. Three standard design problems run through the whole semester: <b>variability</b> (exchange parts easily), <b>extensibility</b> (software must change) and <b>gluing</b> (couple things not built for each other). The patterns that solve them are explained with templates and hooks, later with roles, and finally as the structure of frameworks. The second half of the lecture sorts the zoo of pattern kinds and ends with how the course runs. Written from the 47-slide deck in OPAL; slide numbers refer to it.</p>
+
+    <h2>What the course wants from you (slides 5–13)</h2>
+    <p>Slide 5 lists the goals: know several kinds of patterns and the incentives behind them, explain patterns for variability and extensibility, understand frameworks and product lines, know systematic structures for systems above 100 KLOC (layered frameworks, facets), and learn a different way of object-oriented design, role-based design. Slides 7 to 12 expand each goal into the patterns that will appear, and slide 13 draws the map of the course that the chart below redraws.</p>
+    ${chart("map")}<figcaption>The course map of slide 13 with the lecture numbers of the OPAL schedule added. Part 1 treats the basic patterns by problem class, part 2 reinterprets them as role models, part 3 lifts them to frameworks and ends with the Tools-and-Materials pattern language. Hover a tile for its lectures.</figcaption></figure>
+    <ul>
+      <li><b>Variability</b> (slide 7): fix a common part, the framework, and parametrise it at variation points. The tools are templates and hooks (Template Method versus Template Class, dimensional class hierarchies, Bridge) and the creational patterns (Factory Method, Factory Class, Builder), which are <a href="design-patterns/lecture.html?n=2">lecture 2</a> and <a href="design-patterns/lecture.html?n=3">lecture 3</a>.</li>
+      <li><b>Extensibility</b> (slide 8): for unforeseen product variants, evolution and dynamic change. Object Recursion versus Template Method, Decorator versus Proxy versus Composite versus Chain of Responsibility, Visitor, Observer; parallel class hierarchies as the implementation of facets; hooks that are extended rather than bound.</li>
+      <li><b>Gluing</b> (slide 9): architectural mismatch, adapting and bridging between heterogeneous components, anonymous and scalable communication.</li>
+      <li><b>Role modelling</b> (slide 10): which roles does an object play? Design patterns are role models of class diagrams (Reenskaug, Riehle); roles are mapped to classes and composed.</li>
+      <li><b>Frameworks</b> (slide 11) and <b>Tools and Materials</b> (slide 12): hook types of frameworks, the Role Object pattern, layered frameworks, and TAM (Werkzeug-Automat-Material) as a pattern language for interactive applications.</li>
+    </ul>
+
+    <h2>Where patterns come from (slides 15–17)</h2>
+    ${chart("hist", leg([[1, "practice: frameworks and GUIs"], [2, "theory: books, papers, conferences"]]))}<figcaption>The history of slide 15 as a timeline. The practical strand (desktop metaphor, MVC, ET++, InterViews) runs ahead of the theoretical one (Alexander, PLoP, the GOF book) by about a decade: patterns were found in working systems before they were named. Hover a point for the detail.</figcaption></figure>
+    <p>Christopher Alexander's <i>The Timeless Way of Building</i> (1979) is where the word comes from. Alexander hunts the "quality without a name": when are buildings beautiful, when do they live? His answer (slide 16) is that beauty cannot be invented, only generated by combining patterns from a <b>pattern language</b>, and that such a language depends on culture. Software took the idea over in 1987 (Cunningham and Beck), and the Gang of Four book of 1995 made it common property.</p>
+    <p>The working definition (slide 17): a design pattern is a description of a <b>standard solution</b> for a <b>standard design problem</b> in a <b>certain context</b>. The goal is reuse of design information, so a pattern must not be new. A pattern writer needs an "aggressive disregard for originality": patterns are the engineering handbook of software, the way mechanical or electrical engineering have theirs.</p>
+    ${why("Context, not on the slides: why disregard originality", "<p>A catalogue entry is only useful if many people recognise the problem and trust the solution. That is why the GOF rule of thumb is that a pattern needs three known uses before it is written down, and why pattern papers read like field reports rather than inventions. The point of learning the names is communication: saying “that is a Strategy” transfers a whole design, its trade-offs included, in two words.</p>")}
+
+    <h2>MVC, the first example (slides 18–20)</h2>
+    <p>Model-View-Controller was built for the Smalltalk GUI in 1978 and is already a <b>composite</b> pattern: Observer, Composite and Strategy in one agglomeration. The model is the invisible data structure, views are its representations on screen, and the controller encapsulates the reaction to user input and couples model and views.</p>
+    ${chart("mvc", leg([[1, "template / subject role"], [2, "hook / observer role"], [3, "client / strategy role"]]))}<figcaption>Our own class diagram of the three patterns inside MVC: views register at the model and are notified of changes (Observer); a CompositeView is a View and holds Views (Composite); a view chooses its Controller subclass, even at run time (Strategy).</figcaption></figure>
+    <ul>
+      <li><b>Observer</b>: views register at the model and are notified when it changes; each view then reads the model's data and redraws. Views are independent of each other, and the model does not know how it is visualised. "Observer decouples strongly."</li>
+      <li><b>Composite</b>: views may be nested. For a client, Composite unifies the access to root, inner nodes and leaves. MVC adds the requirement of an abstract superclass View with CompositeView as a subclass usable like any View.</li>
+      <li><b>Strategy</b>: the relation between controller and view. Control strategies differ (lazy or eager update, menu or keyboard input), and a view may pick a Controller subclass dynamically. That exchangeability is variability.</li>
+    </ul>
+    ${lab("mvc", "a miniature MVC with Observer in action")}
+    ${ex("Worked example: the table of slide 19 with three views", "<p>The model holds the rows x = (60, 30, 10), y = (50, 30, 20) and z = (80, 10, 10). Three views are attached: a bar chart, a pie chart and the table itself. When the controller changes z's first value from 80 to 60, the model calls <code>notify()</code> once; each of the three views reacts with its own <code>update()</code>, calls <code>getData()</code>, and redraws: the bars shrink, the pie now shows 60 / 10 / 10 = 75 %, 12.5 %, 12.5 %, the table shows 60. Detach the pie view and the same change reaches only two views; the model's code did not change at all. That is the decoupling the lecture means: adding a fourth view is a new subclass of View and one <code>attach()</code> call.</p>")}
+
+    <h2>What a pattern description contains (slides 21–23)</h2>
+    ${chart("anatomy")}<figcaption>A pattern as slide 21 draws it: a part with a bad smell (the structure to avoid, and a query or graph parse that recognises it), a part with the good smell (the standard solution and a query that proves it), and the forces between them: context, rationale, needs and constraints.</figcaption></figure>
+    <p>The GOF form (slide 22) is the template for writing one down: name and synonyms, motivation (including the bad smells avoided), employment, the solution as structure (UML class or object diagram), participants, interactions (sequence diagrams, statecharts, collaboration diagrams), consequences (advantages and disadvantages), implementation variants and code, known uses, related patterns. The write-ups of this board follow that order for every pattern.</p>
+    <p>Why bother (slide 23)? Patterns improve communication between clients, programmers, designers and testers; they create an ontology of software design and a glossary, so that re-invention stops; and they document abstract design concepts. Two lines worth remembering: "a software engineer without the knowledge of patterns is a programmer", and "patterns are mini-frameworks", which is why frameworks are documented by the patterns they use.</p>
+
+    <h2>Kinds of patterns (slides 25–37)</h2>
+    <p>There is no "the pattern". The general definition the slides adopt from Riehle and Züllighoven: a pattern is the abstraction from a concrete form which keeps recurring in specific, non-arbitrary contexts. Below that umbrella sit very different things.</p>
+    ${chart("kinds", leg([[1, "treated in this course"], ["g", "named for contrast"]]))}<figcaption>Kinds of patterns from slides 25 to 36, as tiles. Slide 36 says the course mainly treats conceptual, architectural and framework instantiation patterns, all of them design patterns in the wide sense; the others are defined so you can tell them apart.</figcaption></figure>
+    <ul>
+      <li><b>Conceptual patterns</b> (slide 26) describe their form in the terms of an application domain: the desktop with folders, icons and a trash can, drag and drop as moving things on a screen. The Tools-and-Materials language of lecture 11 works on such concepts (tool, material, automaton).</li>
+      <li><b>Design patterns</b> (slide 27) superimpose a simple structure of relations on the static or dynamic semantics of a system; nodes are objects, classes or packages. Appleton's phrase: "a named nugget of insight which conveys the essence of a proven solution to a recurring problem within a certain context amidst competing concerns".</li>
+      <li><b>Types of design patterns</b> (slide 28): fundamental ones that no language construct can express; language-dependent ones that another language has as a construct; architectural patterns for the coarse-grain structure (slide 31 shows MVVM: model, view model and view with notify and bind links, as used in .NET and Android); framework instantiation patterns, which couple a framework's variation points to application code.</li>
+      <li><b>Idioms and workarounds</b> (slides 29–30): an idiom's form is described by language constructs; a workaround is an idiom that stands in for a missing construct.</li>
+      <li><b>Antipatterns</b> (slide 32): bad structure recognised by analysis: no modules, if-cascades instead of polymorphism, casts everywhere, spaghetti control flow, bad cohesion and coupling.</li>
+      <li><b>Process and organisational patterns</b> (slides 33–35): recipes for making something (automated they become workflows, as in ARIS or FlowMark) and for organising people (hierarchy, matrix).</li>
+      <li><b>Pattern languages</b> (slide 37): related patterns for related problems in one domain; each pattern transforms a system in its context into a new system with new problems for the next layer of patterns. The TAM language is the course's large example.</li>
+    </ul>
+    ${ex("Worked example: idiom versus workaround on the slides' Java and C", `<p>Slide 29's idiom is check-and-return for contract checking: the public method tests every precondition and returns early, then delegates to a private method that assumes everything is fine.</p>
+<pre class="code">public void processIt(Document doc) {
+  <i>if</i> (doc == null) return;           <em>// contract checks, one per line</em>
+  <i>if</i> (doc.notReady()) return;
+  <i>if</i> (internalDoc == doc) return;
+  internalProcessIt(doc);              <em>// no checks inside any more</em>
+}</pre>
+<p>Slide 30's workaround fakes polymorphism in a language without it: a type tag and an if-cascade that dispatches by hand to <code>processText</code> or <code>processFigure</code>. The two look alike, but the first is a good habit in any language and the second is a missing feature re-implemented, and it is also antipattern number two on slide 32. The test: would a construct of the language make this disappear? If yes, it is a workaround.</p>`)}
+
+    <h2>How the course runs (slides 39–45)</h2>
+    <div class="tiles"><div class="tile"><div class="v">1 paper / week</div><div class="l">about 3–4 h; mandatory reading marked "to be read"</div></div><div class="tile"><div class="v">1 week</div><div class="l">to solve each sheet before its exercise session</div></div><div class="tile"><div class="v">Feb / Mar 2027</div><div class="l">two oral exam weeks, announced early January</div></div><div class="tile"><div class="v">&gt; 100 KLOC</div><div class="l">where "middle-size" systems start, slide 43</div></div></div>
+    <ul>
+      <li>Lectures give the concise overview; the reading goes with them. No book covers the course: the GOF book is a <b>prerequisite</b>, not the content (Head First Design Patterns is the named alternative). Papers behind paywalls open from the university network.</li>
+      <li>Exercise sheets: one week to solve on your own, then the solutions are explained in the exercise session. The chair's course page carries the news.</li>
+      <li>Slide 43 states it plainly: the oral exam expects that you attended the lectures and solved all sheets, and the GOF book alone is not enough. Slide 45: two exam weeks between February and March 2027, enrolment by e-mail to the chair with your preferred time, the module and your course of study; no oral exams during the summer lecture period, next slot August/September 2027. The Orga page has the Selma side of it.</li>
+    </ul>
+    ${why("Context, not on the slides: reading the first three papers", "<p>Tesanovic's <i>What is a pattern?</i> is a short survey of definitions and is the quickest way into the vocabulary of slides 25 to 37. Appleton's web essay is the source of the “nugget of insight” definition and of the forces vocabulary. The ICSE 1996 experience report by Beck and others is where the “improves communication” claims of slide 23 come from, told from industry projects. Read them in that order; they are all freely available.</p>")}
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What is a design pattern?</b> A standard solution to a standard design problem in a context, written down for reuse, deliberately not new.</li>
+      <li><b>Which three problems does the course solve with patterns?</b> Variability, extensibility, gluing; plus optimisation and the structuring of interactive applications as further incentives.</li>
+      <li><b>Why is MVC a composite pattern?</b> It combines Observer (model to views), Composite (nested views) and Strategy (view to controller).</li>
+      <li><b>What does a pattern description hold?</b> Bad smell, good smell, forces; in GOF form: name, motivation, structure, participants, interactions, consequences, implementation, known uses, related patterns.</li>
+      <li><b>Idiom, workaround, antipattern?</b> Language-level pattern; idiom replacing a missing construct; recognisable bad structure.</li>
+      <li><b>Which pattern kinds does the course treat?</b> Conceptual, architectural and framework instantiation patterns, explained through role models and frameworks.</li>
+    </ul>
+    <p class="muted">Next: <a href="design-patterns/lecture.html?n=2">lecture 2, Simple Patterns for Variability</a> (27 Oct), with templates and hooks. The first sheet, <a href="design-patterns/exercise.html?n=1">exercise 1</a>, belongs to it. Slides and learning video: OPAL → Lectures (they may not be republished).</p>`;
+}
+// ======================= Lecture 2: Simple Patterns for Variability (85 slides, 27 Oct) =======================
+const ROLES = leg([[1, "template role (fixed part)"], [2, "hook role (variable part)"]]);
+// Template Method: one class carries template and hooks (slide 14), with the Actor example of slide 15 as the names.
+CHARTS.tm = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 3, rowH: narrow ? 92 : 96 });
+  const a = D.box(narrow ? 0 : 0, 0, { name: "Actor", ops: ["play()        ◂ template", "recite()      ◂ hook", "dance()       ◂ hook"], role: "t", abstract: true, span: narrow ? 2 : 1 });
+  const s = D.box(0, 1, { name: "ShakespeareActor", ops: ["recite()", "dance()"], role: "h" });
+  const t = D.box(1, 1, { name: "TVActor", ops: ["recite()", "dance()"], role: "h" });
+  D.inh(s, a); D.inh(t, a);
+  if (!narrow) D.note(1.35, 0, ["play() {", "  …; recite(); …", "  dance(); …", "}"], a, { span: 1.4 });
+  return D.svg("Template Method as a class diagram: the abstract class Actor owns the concrete template method play() and the abstract hook methods recite() and dance(); the subclasses ShakespeareActor and TVActor bind the hooks.");
+};
+// Objectifier (slide 21) with the Student / LearningStyle example (slide 22).
+CHARTS.obj = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 86 : 92 });
+  const c = D.box(0, 0, { name: "Student", ops: ["prepareExam()"], role: "c" });
+  const o = D.box(narrow ? 1 : 2, 0, { name: "LearningStyle", ops: ["learn()"], role: "h", abstract: true });
+  const a = D.box(narrow ? 0 : 1.5, 1, { name: "OnDemandLearning", ops: ["learn()"], role: "h" });
+  const b = D.box(narrow ? 1 : 2.5, 1, { name: "ExhaustiveLearning", ops: ["learn()"], role: "h" });
+  D.ref(c, o, { label: "learningStyle" }); D.inh(a, o); D.inh(b, o);
+  if (!narrow) D.note(0, 1, ["prepareExam() {", "  …", "  learningStyle.learn();", "}"], c);
+  return D.svg("Objectifier: the client Student holds a reference learningStyle to the abstract class LearningStyle with the reified method learn(); OnDemandLearning and ExhaustiveLearning implement it, and the client calls it polymorphically.");
+};
+// Template Class (slide 24) with the Actor / ActorRealization example (slide 28).
+CHARTS.tc = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 100 });
+  const t = D.box(0, 0, { name: "Actor", ops: ["play()        ◂ template"], role: "t" });
+  const h = D.box(narrow ? 1 : 2, 0, { name: "ActorRealization", ops: ["recite()      ◂ hook", "dance()       ◂ hook"], role: "h", abstract: true });
+  const a = D.box(narrow ? 0 : 1.5, 1, { name: "ShakespeareActor", ops: ["recite()", "dance()"], role: "h" });
+  const b = D.box(narrow ? 1 : 2.5, 1, { name: "TVActor", ops: ["recite()", "dance()"], role: "h" });
+  D.ref(t, h, { label: "realization" }); D.inh(a, h); D.inh(b, h);
+  if (!narrow) D.note(0, 1, ["play() {", "  realization.recite();", "  realization.dance();", "}"], t);
+  return D.svg("Template Class: Actor is the template class with play(); it delegates to a hook object of the abstract class ActorRealization whose subclasses ShakespeareActor and TVActor implement recite() and dance(). The whole hook object can be swapped at run time.");
+};
+// Generic Template Class (slide 33): the hook is a type parameter, bound at compile time.
+CHARTS.gtc = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 84 : 92 });
+  const t = D.box(0, 0, { name: "TextApplication", stereo: "T extends Exporter", ops: ["T hookObject", "save()"], role: "t" });
+  const h = D.box(narrow ? 1 : 2.5, 0, { name: "Exporter", ops: ["export(Document)"], role: "h", abstract: true });
+  const a = D.box(0, narrow ? 3.4 : 1.15, { name: "TextApplication<TeXExporter>", ops: ["bind T with TeXExporter"], role: "t", span: narrow ? 2 : 1.6 });
+  const b = D.box(narrow ? 1 : 2, narrow ? 1.25 : 1.15, { name: "TeXExporter", ops: ["export(Document)"], role: "h" });
+  const c = D.box(narrow ? 0.5 : 3, narrow ? 2.3 : 1.15, { name: "WordExporter", ops: ["export(Document)"], role: "h" });
+  D.ref(t, h, { label: "T", kind: "dep" }); D.inh(b, h); D.inh(c, h); if (!narrow) D.ref(a, t, { kind: "dep", label: "bind" });
+  return D.svg("Generic Template Class: TextApplication is parameterised with T extends Exporter and holds a T hookObject; TextApplication<TeXExporter> binds the parameter at compile time; TeXExporter and WordExporter are the hook classes.");
+};
+// Bridge / Dimensional Class Hierarchies with the DataGenerator example (slides 37 to 41).
+CHARTS.bridge = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 90 : 96 });
+  const t = D.box(narrow ? 0.5 : 0, 0, { name: "DataGenerator", ops: ["Data data", "generate()"], role: "t", abstract: true });
+  const h = D.box(narrow ? 0.5 : 2, narrow ? 2.4 : 0, { name: "GeneratorImpl", ops: ["generateData(data)"], role: "h", abstract: true });
+  const t1 = D.box(0, narrow ? 1.2 : 1.1, { name: "TestDataGenerator", ops: ["generate()"], role: "t" });
+  const t2 = D.box(1, narrow ? 1.2 : 1.1, { name: "ReportGenerator", ops: ["generate()"], role: "t" });
+  const h1 = D.box(narrow ? 0 : 2, narrow ? 3.6 : 1.1, { name: "ExhaustiveGenerator", ops: ["generateData(data)"], role: "h" });
+  const h2 = D.box(narrow ? 1 : 3, narrow ? 3.6 : 1.1, { name: "RandomGenerator", ops: ["generateData(data)"], role: "h" });
+  D.ref(t, h, { label: narrow ? "" : "impl" }); D.inh(t1, t); D.inh(t2, t); D.inh(h1, h); D.inh(h2, h);
+  if (!narrow) D.note(0.9, 2.05, ["generate() {", "  data = parseTestData();", "  impl.generateData(data);", "}"], t1, { span: 1.1 });
+  if (!narrow) D.note(2.3, 2.05, ["generate() {", "  data = readFromForm();", "  impl.generateData(data);", "}"], t2, { span: 1.1 });
+  return D.svg("Bridge (dimensional class hierarchies): the abstraction DataGenerator with subclasses TestDataGenerator and ReportGenerator holds a reference impl to the implementation GeneratorImpl with subclasses ExhaustiveGenerator and RandomGenerator; both hierarchies vary independently.");
+};
+// Visitor on compiler ASTs (slides 51 to 59): structure, and the double dispatch as a sequence.
+CHARTS.visitor = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 88 : 92 });
+  const n = D.box(narrow ? 0.5 : 0, 0, { name: "Node", ops: ["accept(NodeVisitor v)"], role: "t", abstract: true });
+  const v = D.box(narrow ? 0.5 : 2.4, narrow ? 2.4 : 0, { name: "NodeVisitor", ops: ["visitVariableRef(VariableRefNode)", "visitAssignment(AssignmentNode)"], role: "h", abstract: true, span: narrow ? 1 : 1.6 });
+  const n1 = D.box(0, narrow ? 1.2 : 1.15, { name: "VariableRefNode", ops: ["accept(v)"], role: "t" });
+  const n2 = D.box(1, narrow ? 1.2 : 1.15, { name: "AssignmentNode", ops: ["accept(v)"], role: "t", dx: narrow ? 0 : -10 });
+  const v1 = D.box(narrow ? 0 : 2.2, narrow ? 3.7 : 1.15, { name: "TypeCheckingVisitor", ops: ["visitVariableRef(…)", "visitAssignment(…)"], role: "h", dx: narrow ? 0 : 8 });
+  const v2 = D.box(narrow ? 1 : 3.2, narrow ? 3.7 : 1.15, { name: "CodeGenVisitor", ops: ["visitVariableRef(…)", "visitAssignment(…)"], role: "h", dx: narrow ? 0 : 8 });
+  D.ref(n, v, { kind: "dep", label: narrow ? "" : "argument" }); D.inh(n1, n); D.inh(n2, n); D.inh(v1, v); D.inh(v2, v);
+  if (!narrow) D.note(0.2, 2.1, ["accept(v) {", "  v.visitAssignment(this);", "}"], n2, { span: 1.2 });
+  return D.svg("Visitor on an abstract syntax tree: the data hierarchy Node, VariableRefNode and AssignmentNode is the template side with accept(v); the algorithm hierarchy NodeVisitor with TypeCheckingVisitor and CodeGenVisitor is the hook side; accept calls back the visit method for its own class.");
+};
+CHARTS.dispatch = narrow => seq(narrow, [{ name: "client", role: "c" }, { name: "anAssignmentNode", role: "t" }, { name: "aTypeChecker", role: "h" }],
+  [{ from: 0, to: 1, text: "accept(aTypeChecker)", tag: "1st dispatch: on the node's class" }, { from: 1, to: 2, text: "visitAssignment(this)", tag: "2nd dispatch: on the visitor's class" }, { from: 2, to: 2, text: narrow ? "check types" : "check types of lhs, rhs" }, { from: 2, to: 1, text: "", ret: true }, { from: 1, to: 0, text: "", ret: true }],
+  "Sequence diagram of the Visitor's double dispatch: the client calls accept on an assignment node, which is dispatched on the node's class; the node calls visitAssignment(this) on the visitor, dispatched on the visitor's class; the visitor does the work and returns.");
+// Facets: classes needed with and without factoring, slide 65's remark that a full model multiplies all classes.
+const FAC = [1, 2, 3, 4, 5].map(n => ({ n, mult: 3 ** n, fac: 3 * n }));
+CHARTS.facets = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 34 : 44, R = 10, T = 26, B = 30, H = narrow ? 230 : 250, PW = W - L - R, PH = H - T - B, max = 250;
+  const y = v => T + PH - Math.min(v, max) / max * PH, gw = PW / FAC.length, bw = narrow ? 22 : 34;
+  const yt = [0, 50, 100, 150, 200, 250].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = FAC.map((d, i) => { const x0 = L + i * gw + gw / 2;
+    return `<g class="pt" tabindex="0" data-tip="<b>${d.n} facet${d.n > 1 ? "s" : ""} × 3 values</b>one hierarchy: ${d.mult} concrete classes<br>facets with bridges: ${d.fac} classes">
+      <path class="bar gray" d="${vbar(x0 - bw - 2, bw, y(d.mult), y(0))}"/>${d.mult > max ? `<text class="val" x="${x0 - 2 - bw / 2}" y="${T + 10}" text-anchor="middle" font-size="11">${d.mult}↑</text>` : `<text class="val" x="${x0 - 2 - bw / 2}" y="${y(d.mult) - 4}" text-anchor="middle" font-size="11">${d.mult}</text>`}
+      <path class="bar s1" d="${vbar(x0 + 2, bw, y(d.fac), y(0))}"/><text class="val" x="${x0 + 2 + bw / 2}" y="${y(d.fac) - 4}" text-anchor="middle" font-size="11">${d.fac}</text>
+      <text class="cat" x="${x0}" y="${H - 10}" text-anchor="middle">${d.n} facet${d.n > 1 ? "s" : ""}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: concrete classes needed for n facets of three values each. One combined hierarchy needs 3 to the power n classes: 3, 9, 27, 81, 243. Factored into facets with bridges it needs 3 n classes: 3, 6, 9, 12, 15.">${yt}${bars}<text class="note" x="${L - 30}" y="10">classes</text></svg>`;
+};
+// Pattern family of the lecture (slide 44), as a map of "is a variant of" relations.
+CHARTS.family = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 58 : 62 });
+  const th = D.box(narrow ? 0.5 : 1.5, 0, { name: "Template & Hook (Pree)", role: "g", h: 24 });
+  const obj = D.box(narrow ? 0 : 0.5, 1, { name: "Objectifier", role: "h", h: 24 });
+  const tm = D.box(narrow ? 1 : 2, 1, { name: "TemplateMethod", role: "t", h: 24 });
+  const str = D.box(narrow ? 0 : 0.5, 2, { name: "Strategy", role: "h", h: 24 });
+  const tc = D.box(narrow ? 1 : 2, 2, { name: "TemplateClass", role: "t", h: 24 });
+  const gtc = D.box(narrow ? 0 : 3, narrow ? 3 : 2, { name: "GenericTemplateClass", role: "t", h: 24, dx: narrow ? 0 : 14 });
+  const dch = D.box(narrow ? 1 : 1.6, narrow ? 4 : 3, { name: "Dimensional Class Hierarchies", role: "t", h: 24, span: narrow ? 1 : 1.8, dx: narrow ? 0 : 0 });
+  const br = D.box(narrow ? 0 : 1.2, narrow ? 5 : 4, { name: "Bridge", role: "t", h: 24 });
+  const vis = D.box(narrow ? 1 : 2.6, narrow ? 5 : 4, { name: "Visitor", role: "t", h: 24 });
+  D.ref(tm, th, { kind: "dep" }); D.ref(obj, th, { kind: "dep" }); D.ref(tc, tm, { kind: "dep", label: "+ Objectifier" }); D.ref(str, obj, { kind: "dep", label: "same structure" });
+  D.ref(gtc, tc, { kind: "dep" }); D.ref(dch, tc, { kind: "dep", label: "vary both sides" }); D.ref(br, dch, { kind: "dep" }); D.ref(vis, dch, { kind: "dep" });
+  return D.svg("Map of the lecture's patterns: Template Method and Objectifier realise Pree's template-and-hook idea; Template Class combines them; Strategy shares the Objectifier's structure; Generic Template Class, Dimensional Class Hierarchies, Bridge and Visitor are variants with different incentives.");
+};
+// Facets versus layers (slides 80 to 84): independent dimensions versus directed dependencies.
+CHARTS.layers = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 150, bw = narrow ? 96 : 130, bh = 34, gp = narrow ? 18 : 66;
+  const grp = (x0, y0, title, deps) => { const xs = [0, 1, 2].map(i => x0 + i * (bw + gp));
+    const boxes = ["Habitat", "Age", "Group"].map((t, i) => `<g class="cls ${deps ? "t" : "h"}"><rect x="${xs[i]}" y="${y0 + 18}" width="${bw}" height="${bh}" rx="5"/><text class="cn" x="${xs[i] + bw / 2}" y="${y0 + 39}" text-anchor="middle">Facet ${i + 1}: ${t}</text></g>`).join("");
+    const arrows = deps ? [0, 1].map(i => `<g class="edge"><path class="ln" d="M${xs[i] + bw},${y0 + 35} L${xs[i + 1] - 3},${y0 + 35}"/><path class="arr" d="M${xs[i + 1] - 10},${y0 + 30} L${xs[i + 1] - 3},${y0 + 35} L${xs[i + 1] - 10},${y0 + 40}"/>${narrow ? "" : `<text class="el" x="${xs[i] + bw + gp / 2}" y="${y0 + 29}" text-anchor="middle">depends on</text>`}</g>`).join("")
+      : [0, 1].map(i => `<text class="tick" x="${xs[i] + bw + gp / 2}" y="${y0 + 39}" text-anchor="middle">∥</text>`).join("");
+    return `<text class="cat" x="${x0}" y="${y0 + 8}">${title}</text>${boxes}${arrows}`; };
+  const row = narrow ? (i => 10 + i * 118) : (i => 6 + i * 72);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two rows: a facet space, where the three dimensions Habitat, Age and Group are independent, and a layered object space, where Habitat depends on Age and Age on Group through directed, acyclic calls.">${grp(narrow ? 8 : 10, row(0), "Facet space: dimensions independent, varied separately", false)}${grp(narrow ? 8 : 10, row(1), "Layered object space: directed, acyclic dependencies", true)}</svg>`;
+};
+// Explorer: compose one logical animal from three facets with a multi-bridge and count the classes a single hierarchy would need.
+function initFacets(body) {
+  const F = { Habitat: ["Air", "Land", "Sea"], Age: ["Young", "Middle", "Old"], Group: ["Mammal", "Insect", "Reptile"] };
+  const S = { Habitat: "Air", Age: "Young", Group: "Mammal" };
+  const render = () => {
+    const names = Object.keys(F), combos = names.reduce((p, k) => p * F[k].length, 1), bridgeClasses = 1 + names.length + names.reduce((p, k) => p + F[k].length, 0);
+    const W = 340, boxes = names.map((k, i) => `<g class="cls h"><rect x="${10 + i * 110}" y="78" width="100" height="40" rx="5"/><text class="cn" x="${60 + i * 110}" y="95" text-anchor="middle">${S[k]}</text><text class="op" x="${60 + i * 110}" y="110" text-anchor="middle">: ${k}</text></g><g class="edge"><path class="ln" d="M170,44 L${60 + i * 110},76"/><path class="arr" d="M${60 + i * 110 - 6},${70} L${60 + i * 110},76 L${60 + i * 110 + 6},70"/></g>`).join("");
+    body.innerHTML = `<div class="fac">${names.map(k => `<div class="f"><b>Facet: ${k}</b><select data-f="${k}">${F[k].map(v => `<option ${S[k] === v ? "selected" : ""}>${v}</option>`).join("")}</select></div>`).join("")}</div>
+      <figure class="viz" style="margin-top:0"><svg viewBox="0 0 ${W} 126" role="img" aria-label="Object diagram: one Animal core object references one hook object per facet: ${names.map(k => S[k] + " as " + k).join(", ")}."><g class="cls t"><rect x="120" y="6" width="100" height="38" rx="5"/><text class="cn" x="170" y="22" text-anchor="middle">anAnimal</text><text class="op" x="170" y="36" text-anchor="middle">: Animal (core)</text></g>${boxes}</svg></figure>
+      <dl class="ro"><dt>with bridges</dt><dd>${bridgeClasses} classes: 1 core + ${names.length} abstract facets + ${names.reduce((p, k) => p + F[k].length, 0)} values; this object is a core plus ${names.length} hook objects, swappable at run time</dd>
+      <dt>one hierarchy</dt><dd>${combos} leaf classes, one per combination; this object would be an instance of <code>${names.map(k => S[k]).join("")}</code> and could never change its age</dd></dl>`;
+    body.querySelectorAll("[data-f]").forEach(el => el.addEventListener("change", e => { S[e.target.dataset.f] = e.target.value; render(); }));
+  };
+  render();
+}
+function lecture2() {
+  return `${head(l)}
+    <p class="lead">Variability is the first of the course's three problems: how to produce several products from one code base. Lecture 2 builds the whole toolbox from one idea, Pree's <b>template and hook</b>: a fixed common part and an exchangeable variable part. Put both in one class and you have Template Method; reify the hook into its own object and you have Objectifier and Template Class; let both sides have hierarchies and you have dimensional class hierarchies, Bridge and Visitor. The last third shows what that buys at scale: facets factor a class explosion into independent dimensions, and layered objects add directed dependencies between them. Written from the 85-slide deck; slide numbers refer to it.</p>
+
+    <h2>The problem: a screwdriver (slides 6–13)</h2>
+    <p>Slides 6 to 11 are photographs: a screw in wood, screw heads, a drawer of screwdrivers, and finally one screwdriver taken apart into its exchangeable bit and its fixed handle. The bit is the <b>hook</b> (variable part, can be exchanged), the handle the <b>template</b> (common part, stays fixed). Slide 12 translates: an office backbone (template) with a word processor, a presentation tool and a spreadsheet as products (hooks). Design patterns centre on exactly this split: what is common to several applications leads to frameworks or product lines, what differs leads to the products of the line.</p>
+    <p>Pree's conceptual pattern (slide 13): <b>templates</b> contain skeleton code common to the entire product line; <b>hooks</b> are placeholders for the instance-specific code of one product, also called slots or hot spots. The context decides how the hook is filled. Slide 18 adds the distinction that organises the next lectures: a hook can be <b>bound</b> once (a slot, variability) or <b>extended</b> by further hook values (extensibility, lecture 4).</p>
+
+    <h2>Template Method (slides 14–18)</h2>
+    ${chart("tm", ROLES)}<figcaption>Our drawing of slide 14 with the names of slide 15. The template method play() is concrete and calls the abstract hooks recite() and dance(); a subclass binds the hooks. Both roles live in one class hierarchy, so binding requires inheritance.</figcaption></figure>
+    <ul>
+      <li><b>Intent.</b> Define the skeleton of an algorithm in a concrete template method and delegate parts of it to abstract hook methods (slot methods) that subclasses fill. Template and hook are in the same class, in different methods.</li>
+      <li><b>Binding a hook</b> (slide 16) means deriving a concrete subclass that implements the hook method. The extension is controlled: subclasses bind hooks, they do not override the template method. That is a smaller promise than general polymorphism, where every method may be overridden.</li>
+      <li><b>Consequences</b> (slide 17): Template Method realises template and hook on the level of methods and is the basis of Factory Method (<a href="design-patterns/lecture.html?n=3">lecture 3</a>) and Template Class.</li>
+    </ul>
+
+    <h2>Reify the hook: Objectifier and Template Class (slides 20–29)</h2>
+    <p>Methods can be <b>reified</b>, represented as objects. Zimmer's Objectifier does that for the hook method: the client keeps a reference to an abstract class whose one method is the reified hook, and subclasses supply the implementations. The client calls through the reference polymorphically, so the hook object can be swapped at run time.</p>
+    ${chart("obj", leg([[3, "client role"], [2, "hook role (reified method)"]]))}<figcaption>Objectifier (slide 21) with the example of slide 22: instead of a method learn() in Student, an objectified method in the class LearningStyle. Student.prepareExam() calls learningStyle.learn().</figcaption></figure>
+    <p>With the Objectifier, template and hook become <b>roles of classes</b> (slide 23): a template class owns the template method and a hook class owns the hook method. That is Template Class, combined from Template Method and Objectifier.</p>
+    ${chart("tc", ROLES)}<figcaption>Template Class (slide 24) on the Actor example of slide 28: play() stays in Actor, recite() and dance() move to the hook class ActorRealization. Exchanging the realization object swaps both methods at once and consistently.</figcaption></figure>
+    <ul>
+      <li>Similar to Template Method, but hook objects can be <b>exchanged at run time</b>, and a whole set of methods is exchanged together: a consistent swap of several parts of an algorithm, not one method (slide 26).</li>
+      <li>Binding a hook (slide 29) still means deriving a concrete subclass, now from the abstract hook class.</li>
+      <li>Template Class is the basis of Bridge, Builder, Command, Iterator, Observer, Prototype, State, Strategy and Visitor (slide 27): most of the GOF behavioural patterns are a template class with a particular incentive.</li>
+    </ul>
+    ${ex("Worked example: the text exporter as Strategy, in code", `<p>Slide 32's Strategy: a TextApplication saves documents through an exchangeable Exporter.</p>
+<pre class="code"><b>abstract class</b> Exporter { <b>abstract void</b> export(Document d); }   <em>// hook class</em>
+<b>class</b> TeXExporter <b>extends</b> Exporter { <b>void</b> export(Document d) { … } }
+<b>class</b> WordExporter <b>extends</b> Exporter { <b>void</b> export(Document d) { … } }
+
+<b>class</b> TextApplication {                                   <em>// template class</em>
+  Exporter exporter;                                         <em>// the hook object</em>
+  <b>void</b> save() { …; <i>exporter.export</i>(doc); … }                <em>// template method</em>
+  <b>void</b> setExporter(Exporter e) { exporter = e; }           <em>// swap at run time</em>
+}</pre>
+<p>Compare the Template Method version: TextApplication would be abstract with an abstract export(), and TeXApplication and WordApplication would subclass it. One application object could then never change its format; with the hook object it is one call to setExporter(). The price is a second object and a second dispatch per call.</p>`)}
+    ${why("Context, not on the slides: same structure, different incentive", "<p>Slides 30 and 31 make a point that the exam likes: GOF Strategy has exactly the structure of Objectifier, and Template Class has the same structure as Strategy. What differs is the <b>incentive</b> and therefore the roles handed out. Objectifier reifies a method; Strategy varies an algorithm (roles client and algorithm); Template Class fixes a template (roles template and hook). “Design patterns may have the same structure and behaviour but a different incentive” is the sentence to remember: naming a pattern is naming why, not only what. The exercise sheet asks for exactly these comparisons (<a href=\"design-patterns/exercise.html?n=1\">exercise 1, task 3</a>).</p>")}
+
+    <h2>Generic Template Class (slides 33–35)</h2>
+    ${chart("gtc", ROLES)}<figcaption>Slide 34 redrawn: the hook becomes a type parameter T extends Exporter. TextApplication&lt;TeXExporter&gt; binds it statically, so the hook hierarchy is expanded at compile time instead of dispatched at run time.</figcaption></figure>
+    <p>In languages with generics (C++, Java 5, C#, Eiffel) the subclassing of the hook hierarchy can be replaced by static generic expansion: more type safety, less run-time dispatch, but the binding is fixed per instantiated class. Slide 35 points onward: GenVoca (Batory) nests such parameterisations into layered systems, and template metaprogramming uses the parameters for other things than hooks.</p>
+
+    <h2>Dimensional class hierarchies and Bridge (slides 37–45)</h2>
+    <p>So far only the hook side had a hierarchy. Let the template class vary too, and the two hierarchies form the two dimensions of a <b>dimensional class hierarchy</b>: the upper layer (template methods) calls the lower layer (hook methods), and both can be varied independently. Sub-template classes may change the template algorithm but must keep the contract of the superclass: same interface and visible behaviour, different implementation (slide 38). The factoring, also called orthogonalisation, increases reuse.</p>
+    ${chart("bridge", ROLES)}<figcaption>The DataGenerator example of slide 41 as a Bridge: TestDataGenerator and ReportGenerator decide where the data comes from; ExhaustiveGenerator and RandomGenerator decide how it is generated. Two by two combinations from four classes.</figcaption></figure>
+    <ul>
+      <li><b>Bridge</b> (slides 39–42) is the same structure with a different incentive: the left hierarchy is the abstraction (handle), the right the implementation (body). An abstraction may have several bridges, and bridges can be replicated; slide 43 hangs a second one, Data with StringData and GraphData, off the same generator.</li>
+      <li>Slide 45 relates the books: Pree and the Gang of Four worked together, then published separately; Pree's focus was templates and hooks (framework patterns), GOF's arbitrary patterns in arbitrary contexts. Any GOF pattern becomes a framework pattern by adding the template-and-hook constraint, and any framework pattern becomes a general one by removing it.</li>
+    </ul>
+    ${chart("family")}<figcaption>The lecture's pattern family (slide 44) as a map: arrows read "is built from" or "is a variant of". Blue boxes hand out a template role, orange ones are about the hook.</figcaption></figure>
+    ${ex("Worked example: counting what the Bridge saves", "<p>Two data sources (test data, report form) times two generation methods (exhaustive, random) is four behaviours. As one hierarchy that is four leaf classes, ExhaustiveTestDataGenerator and friends, and adding a third source means two more leaves. As a Bridge it is two abstraction subclasses plus two implementation subclasses, and a third source is one more class. With s sources and g methods the single hierarchy needs s·g classes and the Bridge s + g; the two are equal only for 2 × 2, which is why the slide example looks harmless. The facet chart below extends the count to three and more dimensions.</p>")}
+
+    <h2>Parallel class hierarchies and Visitor (slides 47–59)</h2>
+    <p>Sometimes the two dimensions are <b>not independent</b>: when one is varied, the other must be varied too. Then the hierarchies have equal size and structure (they are isomorphic), and the Bridge carries a <b>parallelism constraint</b>. Typical examples (slide 47): containers and their elements, diagrams and their node types (ClassDiagram with ClassBox, StateChart with StateBox), figures and figure elements, record lists and record types.</p>
+    <p>Visitor is the dimensional class hierarchy where the template hierarchy is a polymorphic data structure, usually a tree, and the hook hierarchy is a polymorphic algorithm: an operation on the tree, reified as an object (slide 50). Separating the tree from the operations keeps both hierarchies simple; otherwise every new operation touches every node class (slide 58: typeCheck, generateCode and prettyPrint spread over VariableRefNode, AssignmentNode and all the rest).</p>
+    ${chart("visitor", ROLES)}<figcaption>Slide 59 redrawn with role tints. The explicit hook reference of the Template Class becomes an argument: accept(v) receives the visitor and calls back v.visitAssignment(this), the hook method for its own class.</figcaption></figure>
+    ${chart("dispatch")}<figcaption>Slide 52 as a sequence: first dispatch on the data (which accept runs), second dispatch on the visitor (which visit method runs). Visitor is the object-oriented abbreviation of a multimethod, a method polymorphic in two arguments (slide 54).</figcaption></figure>
+    ${ex("Worked example: type-checking an assignment, call by call", "<p>The client holds a Node reference that happens to be an AssignmentNode and a NodeVisitor reference that is a TypeCheckingVisitor. It calls <code>node.accept(visitor)</code>. Dispatch one: Java picks AssignmentNode.accept because of the node's run-time class. That method's single line is <code>visitor.visitAssignment(this)</code>; dispatch two picks TypeCheckingVisitor.visitAssignment because of the visitor's run-time class. Now the visitor has a statically typed AssignmentNode in hand and checks that the types of left and right side agree, recursing with <code>child.accept(this)</code> into the subtrees. Swap the visitor for a CodeGenVisitor and the same two dispatches land in code generation; add a WhileNode and you add one accept method and one visit method per visitor, which is the cost of the parallelism constraint: the hook hierarchy must know every element class.</p>")}
+
+    <h2>Facets: factoring a class explosion (slides 61–75)</h2>
+    <p>A <b>facet</b> is an orthogonal dimension of a model with its own, entirely abstract, class hierarchy; facet classes do not know each other, and a concrete class in the combined model inherits from every facet and offers the union of their features (slide 61). Dijkstra's separation of concerns (slides 62–63) is the philosophical backing: study one aspect in depth while knowing it is only one aspect.</p>
+    ${chart("facets", leg([["g", "one combined hierarchy: 3ⁿ leaf classes"], [1, "facets with bridges: 3·n classes"]]))}<figcaption>Classes needed for n facets of three values each, our count from slide 65's remark that a full model multiplies all classes. The Living Beings model (habitat, age, group) is n = 3: 27 leaf classes against 9 facet classes plus the core. Hover a pair for the numbers.</figcaption></figure>
+    ${tbl(["Facets", "One hierarchy", "Facets with bridges"], FAC.map(d => [d.n, d.mult, d.fac]))}
+    ${lab("facets", "compose an animal from three facets")}
+    <ul>
+      <li><b>Multi-bridge with core</b> (slides 68–69): one central facet is the abstraction (Animal), every other facet is a hook class reached over a bridge. The "don't know" bottom of each facet disappears into the multiplicity: 1 means no bottom, 0..1 means the facet may be absent.</li>
+      <li><b>Multiple bridge without core</b> (slide 70): pick one facet as primary and relate the others by bridges; the problem is that the primary facet then knows the others.</li>
+      <li><b>Recognising facets</b> (slides 71–72): a class with several different partitions of its heirs is a facet model in disguise. TypeOfEater with Gourmet, Gourmand, Vegetarian and MeatEater as siblings does not partition: quality and sort of eater are two facets, resolved by a simple Bridge or a double bridge with core.</li>
+      <li><b>Trade-offs</b> (slides 73–74): bridges allow dynamic variation and need fewer classes, but there is no type check on the product classes, no control over illegal combinations, object schizophrenia (one logical object is several physical ones), memory for the allocations and slower calls, so not for embedded systems. Use multiple inheritance when type checking matters (frameworks), bridges when the language has no multiple inheritance or the dimensions change at run time.</li>
+      <li>Several facet groups can coexist (slide 75): a computer modelled by CPU, memory and network facets, where the network facet is itself built from the protocol-layer facets.</li>
+    </ul>
+    ${why("Context, not on the slides: object schizophrenia", "<p>The term on slide 73 names a real bug class. When one logical animal is a core object plus three facet objects, <code>this</code> inside the Age object is not the animal: it cannot call the habitat's methods without a back-pointer, equality and identity checks compare the wrong objects, and serialisation or copying must gather all parts. Role-based design (lectures 6 to 8) is the course's answer to exactly this, which is why facets are introduced now.</p>")}
+
+    <h2>Layered objects (slides 77–84)</h2>
+    ${chart("layers")}<figcaption>Facet space versus layered object space, after slides 80 and 83. In a layered object space the upper layer calls the lower one and uses what it delivers; the dependencies form a directed acyclic graph, and the abstract top class of each layer is the contract the other layers program against.</figcaption></figure>
+    <p>Whenever you meet a Bridge, ask whether the dimensions are independent (slide 77). If one dimension calls another, an interface between them is needed, and the picture changes from a facet space to <b>layered objects</b> implemented by a chain bridge: the DataGenerator of slide 82 becomes a two-chain bridge where the generator first asks its Data object to clean itself and then hands the data to the generation implementation. Everything in a layer can be exchanged as long as it conforms to the layer's interface, and layered object spaces apply much more broadly than facet spaces (slide 84). GenVoca's nested generics (slide 35) are the compile-time version of the same idea.</p>
+
+    <div class="tiles"><div class="tile"><div class="v">1 class</div><div class="l">Template Method: template and hook as methods of one class</div></div><div class="tile"><div class="v">2 classes</div><div class="l">Template Class: hook reified into an exchangeable object</div></div><div class="tile"><div class="v">2 hierarchies</div><div class="l">dimensional class hierarchies, Bridge, Visitor</div></div><div class="tile"><div class="v">3·n vs 3ⁿ</div><div class="l">classes with facets versus one combined hierarchy</div></div></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Template versus hook?</b> The fixed skeleton common to the product line versus the placeholder one product fills; binding fixes a hook once, extension adds to it.</li>
+      <li><b>Template Method versus Template Class?</b> Same class with different methods versus two classes with a hook object; the latter swaps whole method sets at run time at the cost of a second object and dispatch.</li>
+      <li><b>Objectifier, Strategy, Template Class?</b> One structure, three incentives: reify a method, vary an algorithm, fix a template.</li>
+      <li><b>Generic Template Class?</b> The hook as a type parameter, bound at compile time: type-safe, no dispatch, no run-time swap.</li>
+      <li><b>Bridge versus Visitor?</b> Both are dimensional class hierarchies; Bridge separates abstraction and implementation that vary independently, Visitor couples a data hierarchy to an algorithm hierarchy with a parallelism constraint and double dispatch.</li>
+      <li><b>What is a facet, when do bridges implement it?</b> An orthogonal, fully abstract dimension; bridges when combinations may change at run time or the language lacks multiple inheritance, multiple inheritance when type checking matters.</li>
+      <li><b>Facets versus layers?</b> Independent dimensions versus directed, acyclic dependencies between dimensions with interfaces between them.</li>
+    </ul>
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=1">exercise 1, Variability Patterns</a> (28 Oct) works through exactly these patterns on a file system and a sensor unit. Next: <a href="design-patterns/lecture.html?n=3">lecture 3, Creational Variability</a> (3 Nov): Factory Method, Factory Class and Builder as the creational side of template and hook. Slides and learning video: OPAL → Lectures (they may not be republished).</p>`;
+}
+// ======================= Lecture 3: Creational Variability (33 slides, 3 Nov) =======================
+const CROLES = leg([[1, "creator / template role"], [2, "hook: the factory method or class"], [4, "product"]]);
+// Factory Method structure (slide 5) with the MazeGame instance of slide 6.
+CHARTS.fm = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 96 });
+  const cr = D.box(0, 0, { name: "MazeGame", ops: ["createMaze()   ◂ template", "makeRoom()     ◂ factory method"], role: "t", abstract: true, span: narrow ? 2 : 1.4 });
+  const pr = D.box(narrow ? 0.5 : 2.6, narrow ? 2.1 : 0, { name: "Room", ops: ["enter()"], role: "p", abstract: true, span: narrow ? 1 : 1.4 });
+  const c1 = D.box(0, 1.1, { name: "StandardGame", ops: ["makeRoom(): new StandardRoom"], role: "h", span: narrow ? 1 : 1.1 });
+  const c2 = D.box(narrow ? 1 : 1.2, 1.1, { name: "MagicGame", ops: ["makeRoom(): new MagicRoom"], role: "h", span: narrow ? 1 : 1.1 });
+  const p1 = D.box(narrow ? 0 : 2.6, narrow ? 3.1 : 1.1, { name: "StandardRoom", role: "p", h: 24 });
+  const p2 = D.box(narrow ? 1 : 3.4, narrow ? 3.1 : 1.1, { name: "MagicRoom", role: "p", h: 24, dx: narrow ? 0 : 12 });
+  D.inh(c1, cr); D.inh(c2, cr); D.inh(p1, pr); D.inh(p2, pr);
+  D.ref(cr, pr, { kind: "dep", label: narrow ? "" : "room = makeRoom()" });
+  if (!narrow) D.note(0.1, 2.05, ["createMaze() {", "  room = makeRoom();  // hook", "  …", "}"], cr, { span: 1.4 });
+  return D.svg("Factory Method: the abstract creator MazeGame has the template method createMaze() which calls the abstract factory method makeRoom(); StandardGame and MagicGame implement makeRoom() and return a StandardRoom or a MagicRoom, subclasses of the abstract product Room.");
+};
+// Factory methods in parallel hierarchies (slide 10).
+CHARTS.par = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 84 : 92 });
+  const rf = D.box(narrow ? 0.5 : 0, 0, { name: "ReadableFigure", ops: ["createManipulator()"], role: "t", abstract: true, span: narrow ? 1 : 1.3 });
+  const mf = D.box(narrow ? 0.5 : 2.5, narrow ? 2.5 : 0, { name: "ManipulatorOfFigure", ops: ["draw()", "drag()"], role: "p", abstract: true, span: narrow ? 1 : 1.3 });
+  const a = D.box(0, narrow ? 1.2 : 1.15, { name: "ReadableFigureA", ops: ["createManipulator():", "  new ManipulatorA(this)"], role: "h", span: narrow ? 1 : 1.1 });
+  const b = D.box(narrow ? 1 : 1.2, narrow ? 1.2 : 1.15, { name: "ReadableFigureB", ops: ["createManipulator():", "  new ManipulatorB(this)"], role: "h", span: narrow ? 1 : 1.1 });
+  const ma = D.box(narrow ? 0 : 2.5, narrow ? 3.7 : 1.15, { name: "ManipulatorA", ops: ["draw()", "drag()"], role: "p" });
+  const mb = D.box(narrow ? 1 : 3.4, narrow ? 3.7 : 1.15, { name: "ManipulatorB", ops: ["draw()", "drag()"], role: "p", dx: narrow ? 0 : -24 });
+  D.inh(a, rf); D.inh(b, rf); D.inh(ma, mf); D.inh(mb, mf);
+  D.ref(rf, mf, { label: narrow ? "" : "manipulator" });
+  return D.svg("Factory methods in parallel class hierarchies: every ReadableFigure subclass implements createManipulator() and returns the manipulator at exactly the same level of the parallel ManipulatorOfFigure hierarchy; the parallelism constraint is a constraint on the polymorphic allocator.");
+};
+// Abstract Factory structure (slide 15) with the widget example of slide 16.
+CHARTS.af = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 80 : 60 });
+  const cl = D.box(narrow ? 1 : 3, 0, { name: "Client", ops: ["init()"], role: "c" });
+  const af = D.box(0, 0, { name: "WidgetFactory", ops: ["createWindow()", "createScrollbar()"], role: "h", abstract: true, span: narrow ? 1 : 1.3 });
+  const f1 = D.box(0, narrow ? 1.2 : 1.6, { name: "SWTFactory", ops: ["createWindow()", "createScrollbar()"], role: "h" });
+  const f2 = D.box(1, narrow ? 1.2 : 1.6, { name: "XFactory", ops: ["createWindow()", "createScrollbar()"], role: "h", dx: narrow ? 0 : -8 });
+  const w = D.box(narrow ? 0.5 : 2.2, narrow ? 2.4 : 1.3, { name: "Window", role: "p", abstract: true, h: 24 });
+  const w1 = D.box(narrow ? 0 : 2.2, narrow ? 3.2 : 2.1, { name: "SWTWindow", role: "p", h: 22 });
+  const w2 = D.box(narrow ? 1 : 3.1, narrow ? 3.2 : 2.1, { name: "XWindow", role: "p", h: 22, dx: narrow ? 0 : 12 });
+  const s = D.box(narrow ? 0.5 : 2.2, narrow ? 4.1 : 3.1, { name: "Scrollbar", role: "p", abstract: true, h: 24 });
+  const s1 = D.box(narrow ? 0 : 2.2, narrow ? 4.9 : 3.9, { name: "SWTScrollbar", role: "p", h: 22 });
+  const s2 = D.box(narrow ? 1 : 3.1, narrow ? 4.9 : 3.9, { name: "XScrollbar", role: "p", h: 22, dx: narrow ? 0 : 12 });
+  D.inh(f1, af); D.inh(f2, af); D.inh(w1, w); D.inh(w2, w); D.inh(s1, s); D.inh(s2, s);
+  D.ref(cl, af, { label: "factory" }); if (!narrow) D.ref(cl, w, { kind: "dep", label: "uses" });
+  if (!narrow) D.note(0.05, 3.3, ["init() { factory = cond ?", "  new SWTFactory() : new XFactory();", "  w = factory.createWindow(); }"], cl, { span: 2 });
+  return D.svg("Abstract Factory on the widget example: the client holds a WidgetFactory; SWTFactory and XFactory implement createWindow() and createScrollbar() and return the matching products SWTWindow, XWindow, SWTScrollbar, XScrollbar of the abstract products Window and Scrollbar. Choosing the concrete factory chooses the whole family.");
+};
+// Prototyping factory (slide 21): one concrete factory that clones prototypes.
+CHARTS.proto = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 90 : 96 });
+  const af = D.box(0, 0, { name: "AbstractFactory", ops: ["createProductA()", "createProductB()"], role: "h", abstract: true, span: narrow ? 1 : 1.3 });
+  const cf = D.box(0, narrow ? 1.3 : 1.15, { name: "ConcreteFactory", ops: ["protoA: ProductA", "protoB: ProductB", "createProductA()"], role: "h", span: narrow ? 1 : 1.3 });
+  const pa = D.box(narrow ? 1 : 2.4, 0, { name: "ProductA", ops: ["clone()"], role: "p", abstract: true, stereo: "Prototype" });
+  const a1 = D.box(narrow ? 1 : 2, narrow ? 1.3 : 1.15, { name: "ProductA1", role: "p", h: 24, dy: narrow ? 0 : 6 });
+  const a2 = D.box(narrow ? 0.5 : 3, narrow ? 2.4 : 1.15, { name: "ProductA2", role: "p", h: 24, dy: narrow ? 0 : 6 });
+  D.inh(cf, af); D.inh(a1, pa); D.inh(a2, pa); D.ref(cf, pa, { label: "protoA" });
+  if (!narrow) D.note(0.05, 2.2, ["createProductA() {", "  return protoA.clone();", "}"], cf, { span: 1.3 });
+  if (!narrow) D.note(1.8, 2.2, ["// family 1: factory configured with", "// new ProductA1(), new ProductB1()", "// family 2: with A2, B2 — same class"], cf, { span: 2.2 });
+  return D.svg("Prototyping factory: a single ConcreteFactory holds one prototype object per product and implements createProductA() by cloning protoA; the product family is chosen by the prototypes the factory is configured with, not by subclassing the factory.");
+};
+// Classes per product family count, our count from the three factory structures (slides 15, 21, 23).
+const FAMS = [1, 2, 3, 4, 5, 6];
+CHARTS.fams = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 30 : 40, R = 10, T = 14, B = 30, H = narrow ? 220 : 240, PW = W - L - R, PH = H - T - B, max = 8;
+  const y = v => T + PH - v / max * PH, gw = PW / FAMS.length, bw = narrow ? 11 : 16;
+  const yt = [0, 2, 4, 6, 8].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = FAMS.map((k, i) => { const x0 = L + i * gw + gw / 2, vals = [k + 1, k + 1, 2];
+    return `<g class="pt" tabindex="0" data-tip="<b>${k} product famil${k > 1 ? "ies" : "y"}</b>Factory Class: ${k + 1} factory classes<br>interpretive factory: ${k + 1}, with one method each<br>prototyping factory: 2, configured ${k} ways">
+      <path class="bar s2" d="${vbar(x0 - 1.5 * bw - 3, bw, y(vals[0]), y(0))}"/><path class="bar s4" d="${vbar(x0 - bw / 2, bw, y(vals[1]), y(0))}"/><path class="bar s1" d="${vbar(x0 + bw / 2 + 3, bw, y(vals[2]), y(0))}"/>
+      <text class="cat" x="${x0}" y="${H - 10}" text-anchor="middle">${k}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped bar chart: factory classes needed for one to six product families. Factory Class and the interpretive variant need one abstract plus one concrete factory per family; the prototyping factory stays at two classes and is configured per family.">${yt}${bars}<text class="note" x="${L - 26}" y="10">factory classes</text><text class="tick" x="${W / 2}" y="${H - 0}" text-anchor="middle"></text></svg>`;
+};
+// Builder structure (slide 26) with the RTF reader of slide 27.
+CHARTS.builder = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 104 });
+  const dir = D.box(0, 0, { name: "RTFReader", ops: ["parseRTF()   ◂ director"], role: "t", span: narrow ? 1 : 1.2 });
+  const ab = D.box(narrow ? 1 : 2, 0, { name: "TextConverter", ops: ["convChar(c)", "convCharSet(cs)", "convParagraph()", "getText()"], role: "h", abstract: true, span: narrow ? 1 : 1.2 });
+  const b1 = D.box(narrow ? 0 : 1.4, 1.25, { name: "ASCIIConverter", ops: ["convChar(c) …", "getText(): ASCIIText"], role: "h", span: narrow ? 1 : 1.2 });
+  const b2 = D.box(narrow ? 1 : 2.8, 1.25, { name: "TeXConverter", ops: ["convChar(c) …", "getText(): TeXText"], role: "h", span: narrow ? 1 : 1.2 });
+  const p1 = D.box(narrow ? 0 : 1.4, narrow ? 2.25 : 2.1, { name: "ASCIIText", role: "p", h: 24, dy: narrow ? 0 : 6 });
+  const p2 = D.box(narrow ? 1 : 2.8, narrow ? 2.25 : 2.1, { name: "TeXText", role: "p", h: 24, dy: narrow ? 0 : 6 });
+  D.ref(dir, ab, { label: "builder" }); D.inh(b1, ab); D.inh(b2, ab); D.ref(b1, p1, { kind: "dep", label: "builds" }); D.ref(b2, p2, { kind: "dep", label: "builds" });
+  if (!narrow) D.note(0, 1.25, ["parseRTF() {", " for each token, by the", " RTF grammar:", "  builder.convParagraph()", "  builder.convChar(c) …", " text = builder.getText()", "}"], dir, { span: 1.2 });
+  return D.svg("Builder on the RTF example: the director RTFReader walks the document by the RTF grammar and calls the part-building methods of the abstract builder TextConverter; ASCIIConverter and TeXConverter implement them and hand out the structured products ASCIIText and TeXText with getText().");
+};
+// The RTF protocol of slides 28 and 29 as a tree.
+CHARTS.rtf = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 210, lv = narrow ? [12, 62, 112, 162, 212] : [12, 60, 108, 156, 204];
+  const bw = narrow ? 86 : 120, bh = 26, cols = [0, 1, 2].map(i => W / 2 + (i - 1) * (narrow ? 112 : 180));
+  const node = (x, y, t, role, star) => `<g class="cls ${role}"><rect x="${x - bw / 2}" y="${y - bh / 2}" width="${bw}" height="${bh}" rx="5"/><text class="cn" x="${x}" y="${y + 4}" text-anchor="middle">${t}</text>${star ? `<text class="el" x="${x + bw / 2 + 4}" y="${y + 4}" text-anchor="start">*</text>` : ""}</g>`;
+  const link = (x1, y1, x2, y2) => `<path class="ln" d="M${x1},${y1 + bh / 2} L${x2},${y2 - bh / 2}" style="fill:none;stroke:var(--ink-3);stroke-width:1.2"/>`;
+  const sub = (x, star) => [["RTFParagraph", lv[2], true], ["Word", lv[3], true], ["Char", lv[4], true]].map(([t, y, s]) => node(x, y, t, "p", s)).join("") + link(x, lv[1], x, lv[2]) + link(x, lv[2], x, lv[3]) + link(x, lv[3], x, lv[4]);
+  const top = node(W / 2, lv[0], "RTFDocument", "t") + ["RTFHeader", "RTFBody", "RTFFooter"].map((t, i) => node(cols[i], lv[1], t, "t") + link(W / 2, lv[0], cols[i], lv[1])).join("");
+  return `<svg viewBox="0 0 ${W} ${H - (narrow ? 0 : 0)}" role="img" aria-label="Tree of the RTF builder protocol: an RTFDocument is a header, a body and a footer; each consists of any number of paragraphs, a paragraph of any number of words, a word of any number of characters. The star marks repetition.">${top}${cols.map(c => sub(c)).join("")}</svg>`;
+};
+// Explorer: the builder as a protocol machine. Buttons are the part-building calls; the grammar decides which are legal.
+function initProto(body) {
+  const S = { section: -1, para: false, word: false, log: [], counts: [0, 0, 0], chars: 0, done: false };
+  const SEC = ["Header", "Body", "Footer"];
+  const legal = () => ({ sec: !S.done && S.section < 2, para: !S.done && S.section >= 0, word: !S.done && S.para, chr: !S.done && S.word, res: !S.done && S.section === 2 });
+  const step = (k) => {
+    const L = legal(), name = { sec: `begin${SEC[Math.min(S.section + 1, 2)]}()`, para: "convParagraph()", word: "convWord()", chr: "convChar('a')", res: "getText()" }[k];
+    if (!L[k]) { S.log.push(`<span class="bad">✗ ${name}</span> rejected: ${S.done ? "the document is finished" : k === "chr" ? "a character needs an open word" : k === "word" ? "a word needs an open paragraph" : k === "para" ? "a paragraph needs an open section" : k === "res" ? "header, body and footer must all have been built" : "all three sections are built"}`); return; }
+    if (k === "sec") { S.section++; S.para = S.word = false; S.log.push(`<span class="ok">✓ ${name}</span> state: in ${SEC[S.section]}`); }
+    if (k === "para") { S.para = true; S.word = false; S.counts[S.section]++; S.log.push(`<span class="ok">✓ ${name}</span> paragraph ${S.counts[S.section]} of the ${SEC[S.section].toLowerCase()}`); }
+    if (k === "word") { S.word = true; S.log.push(`<span class="ok">✓ ${name}</span> word opened`); }
+    if (k === "chr") { S.chars++; S.log.push(`<span class="ok">✓ ${name}</span> ${S.chars} char${S.chars > 1 ? "s" : ""} so far`); }
+    if (k === "res") { S.done = true; S.log.push(`<span class="ok">✓ ${name}</span> product: ${S.counts.map((c, i) => `${c} ${SEC[i].toLowerCase()} paragraph${c === 1 ? "" : "s"}`).join(", ")}, ${S.chars} chars`); }
+  };
+  const render = () => { const L = legal();
+    body.innerHTML = `<p class="lab-note">The builder keeps the state of the construction and accepts only calls the grammar RTFDocument ::= Header Body Footer, section ::= Paragraph*, Paragraph ::= Word*, Word ::= Char* allows at this point. Illegal calls are refused: that is how a builder enforces structural rules.</p>
+      <div class="proto">${[["sec", `begin ${SEC[Math.min(S.section + 1, 2)]}`], ["para", "convParagraph()"], ["word", "convWord()"], ["chr", "convChar()"], ["res", "getText()"]].map(([k, t]) => `<button data-k="${k}" class="${L[k] ? "ok" : ""}" aria-disabled="${!L[k]}">${t}</button>`).join("")}<button data-k="reset">reset</button></div>
+      <dl class="ro"><dt>state</dt><dd>${S.done ? "finished" : S.section < 0 ? "nothing built yet" : `in ${SEC[S.section]}${S.para ? ", paragraph open" : ""}${S.word ? ", word open" : ""}`}</dd></dl>
+      <div class="trace">${S.log.slice(-5).map(l => `<div>${l}</div>`).join("") || "<span class='muted'>press a part-building method</span>"}</div>`;
+    body.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { if (b.dataset.k === "reset") { Object.assign(S, { section: -1, para: false, word: false, log: [], counts: [0, 0, 0], chars: 0, done: false }); } else step(b.dataset.k); render(); }));
+  };
+  render();
+}
+function lecture3() {
+  return `${head(l)}
+    <p class="lead">Lecture 3 applies the template-and-hook idea of <a href="design-patterns/lecture.html?n=2">lecture 2</a> to one stubborn spot: object creation. Constructors in Java and most polymorphic languages are concrete and cannot be varied polymorphically, so a framework that writes <code>new Room()</code> has fixed its product forever. Three patterns fix that at three scales: <b>Factory Method</b> is Template Method for creation (one product), <b>Factory Class</b> (Abstract Factory) is Template Class for creation (a whole family of products), and <b>Builder</b> is a Template Class with a stateful template method that assembles a structured product according to a protocol. Written from the 33-slide deck plus the Java appendix on modern builders; slide numbers refer to the deck.</p>
+
+    <h2>Factory Method, the polymorphic constructor (slides 3–11)</h2>
+    <p>The restriction (slide 3): an abstract Creator whose <code>collect()</code> allocates <code>new Set(10)</code> cannot be told to allocate a ListBasedSet instead, except by overriding <code>collect()</code> by hand in every subclass, carefully, with all its other code duplicated. The constructor is the one method that is not virtual.</p>
+    <p>The solution (slide 4): the abstract creator offers an <b>abstract constructor</b>, a factory method such as <code>createSet(int n)</code>; concrete creator subclasses implement it with the <code>new</code> of their choice, and the template code calls <code>cr.createSet(10)</code> without knowing which class comes back. The implementation of "construct" changes with the allocation of the concrete creator.</p>
+    ${chart("fm", CROLES)}<figcaption>Our drawing of slides 5 and 6: the Factory Method is a Template Method whose hook returns a product. The framework class MazeGame calls makeRoom() inside createMaze(); extension 1 (StandardGame) and extension 2 (MagicGame) decide which Room comes out. The same maze returns as <a href="design-patterns/exercise.html?n=2">exercise 2</a>.</figcaption></figure>
+    ${ex("Worked example: the building framework of slides 7 and 8", `<p>A framework for planning buildings has a class Building with a template method construct() that plans a building interactively and calls the abstract methods createWall(), createDoor(), createWindow(), createRoom(). Users add subclasses such as Skyscraper and Bungalow. The problem: how does the framework create an object of a subclass it has never seen (unforeseen extension)? With a factory method:</p>
+<pre class="code"><b>abstract class</b> Building {
+  <b>abstract</b> Building <i>createBuilding</i>();          <em>// the polymorphic constructor</em>
+  <b>void</b> construct() { Building house = <i>createBuilding</i>(); house.createWall(); house.createDoor(); … }
+}
+<b>class</b> Skyscraper <b>extends</b> Building {
+  Building <i>createBuilding</i>() { <em>/* fill in more info, e.g. an extra dialogue */</em> <b>return new</b> Skyscraper(); }
+}
+<b>class</b> Bungalow <b>extends</b> Building { Building <i>createBuilding</i>() { <b>return new</b> Bungalow(); } }</pre>
+<p>The subclass specialises the constructor and may enrich it with behaviour, for example additional dialogues. The abstract class knows <b>when</b> a building must be allocated; the subclass knows <b>which</b>. That split is the information hiding of slide 11: the framework's abstract classes do not know which application class they work on, only when to create one, and the knowledge which class is encapsulated in the application.</p>`)}
+    <ul>
+      <li><b>Reflection</b> (slide 9): the constructor can also allocate a statically unknown class by name, <code>Class.forName(name).newInstance()</code>; it is slow because bytecode is looked up and class code loaded on the fly. A factory method is the place where such a reflective allocation would sit.</li>
+      <li><b>Parallel class hierarchies</b> (slide 10): one hierarchy offers a factory method that creates objects of a second hierarchy, implemented on every level by the class at exactly the same level. Readable figures create their manipulators; the parallelism constraint of lecture 2 becomes a constraint on the polymorphic allocator.</li>
+      <li><b>Relatives</b> (slide 11): a Factory Method is a hook method called by a template method that returns a product, which is why factory methods are always called inside template methods.</li>
+    </ul>
+    ${chart("par", leg([[1, "readable figures (template side)"], [2, "their factory methods"], [4, "manipulators (parallel hierarchy)"]]))}<figcaption>Slide 10 redrawn: every ReadableFigureA allocates exactly a ManipulatorA, the class at the same height of the parallel hierarchy. Exercise 2, task 3 builds this for UML editors.</figcaption></figure>
+
+    <h2>Factory Class, the Abstract Factory (slides 13–24)</h2>
+    <p>The forces (slide 13): a package holds a <b>family</b> of classes, widgets of a window system, stones of a Tetris game, products of a company. How is the whole family switched to a variant in one go, Swing widgets to Windows widgets, 2D stones to 3D stones, cheap variants to expensive ones?</p>
+    <p>A Factory groups the factory methods of a family into one class (slide 14): the AbstractFactory holds the interfaces of the constructors, each ConcreteFactory the implementations for one family, and the products of a family have a strong parallelism constraint (isomorphic hierarchies). The client creates one concrete factory and thereby decides the entire family, without naming any product constructor (slide 15).</p>
+    ${chart("af", leg([[3, "client"], [2, "factory hierarchy (hook)"], [4, "product hierarchies"]]))}<figcaption>Abstract Factory on the widget example of slide 16: SWTFactory and XFactory each return a complete, matching set of widgets. Slide 17 does the same for compiler element factories (JavaFactory, EiffelFactory creating Assign and Plus nodes).</figcaption></figure>
+    <ul>
+      <li><b>Employment</b> (slide 18): window styles (all widgets are used abstractly by the framework, the style is a concrete factory: Swing, AWT), families of similar documents in office systems, families of similar products in business systems, tools for several languages. Factory Class relates to Tools-and-Materials because the products are materials (lecture 11).</li>
+      <li><b>Pragmatics</b> (slide 19): a factory deals with 3 + x inheritance hierarchies, the factory plus one per product type, and all product hierarchies must be maintained in parallel. The pattern guarantees that every object is created inside the parallelism constraint: "same height of products".</li>
+      <li><b>Variant: prototyping factory</b> (slides 20–21): instead of one concrete factory per family, one factory instance that holds a prototype of every product and clones it. The variability of the products is handled by which prototypes the factory is configured with. Especially useful when products have complex default state or do not vary much.</li>
+      <li><b>Variant: interpretive factory method</b> (slides 22–23): when more factory methods keep being added, editing the abstract factory and every concrete factory becomes tedious; one <code>createProduct(String what)</code> with an if-chain over the name replaces them. It trades compile-time checking of the product set for a string.</li>
+      <li><b>Related</b> (slide 24): an abstract factory is a special hook class called by template classes; a factory is often a Singleton (a class with one instance); concrete factories can be created by parameterising a factory with prototype objects.</li>
+    </ul>
+    ${chart("proto", leg([[2, "the one concrete factory"], [4, "products with clone()"]]))}<figcaption>Prototyping factory, slide 21 redrawn: one ConcreteFactory, products that know how to clone themselves. Family 1 and family 2 are two configurations of the same factory class.</figcaption></figure>
+    ${chart("fams", leg([[2, "Factory Class (one concrete factory per family)"], [4, "interpretive factory (one string-dispatching method)"], [1, "prototyping factory (one factory, configured)"]]))}<figcaption>Factory classes needed for k product families, our count from the three structures on slides 15, 21 and 23. The prototyping factory does not grow with the families, it grows with the prototype objects to configure; the interpretive variant has as many classes as the classic one but one method instead of one per product type. Hover a group for the numbers.</figcaption></figure>
+    ${tbl(["Families", "Factory Class", "Interpretive", "Prototyping"], FAMS.map(k => [k, k + 1, k + 1, 2]))}
+    ${why("Context, not on the slides: when the family changes versus when the product set changes", "<p>The three variants answer two different change requests. A new <b>family</b> (a third widget look) costs one concrete factory in the classic and interpretive forms and one more configuration in the prototyping form. A new <b>product type</b> (a Slider) costs one new method in the abstract factory and every concrete factory in the classic form, one more if-branch per concrete factory in the interpretive form, and one more prototype field in the prototyping form. Which axis changes more often decides the variant; the exam question “compare the solutions” in exercise 2 is answered along these two axes.</p>")}
+
+    <h2>Builder, the factory with a protocol (slides 26–32)</h2>
+    <p>A Builder is a factory class that produces a <b>structured product</b>, a whole with parts: a business object, product data, a document. The director's template method walks the structure "for all objects according to the protocol" and calls <code>buildPart()</code> on the abstract builder; the concrete builder assembles the product and hands it out with <code>getResult()</code> (slide 26).</p>
+    ${chart("builder", leg([[1, "director (template with state)"], [2, "builder (hook class)"], [4, "structured product"]]))}<figcaption>Slide 27's RTF example redrawn: the reader parses the file by the RTF grammar and drives whichever TextConverter it was given; an ASCIIConverter yields ASCIIText, a TeXConverter TeXText, from the same sequence of calls.</figcaption></figure>
+    ${chart("rtf")}<figcaption>The builder protocol of slides 28 and 29: the EBNF grammar as a tree. The sequence of convParagraph, convWord and convChar calls a reader may issue is exactly a walk of this tree.</figcaption></figure>
+    ${lab("proto", "the builder as a protocol machine")}
+    <ul>
+      <li><b>State</b> (slide 30): the builder memorises where in the construction of the complex structure it is. The structure defines the protocol of the elementary calls and must itself be defined by a grammar, a regular expression, a protocol machine (statechart acceptor) or Petri nets. The reverse holds too: as soon as a data structure is defined by a grammar, a Builder can be written for it.</li>
+      <li><b>Information hiding</b> (slide 31): the builder hides the protocol (the structure of the data), the current status, and the implementation of the data structure. Like an Iterator, it hides the structure from the client.</li>
+      <li><b>Known uses</b> (slide 32): parsers in compilers are builders that contain the grammar of the concrete syntax; builders for intermediate representations of programming, specification and graphical languages such as UML; builders for all complex data structures with integrity constraints, databases included.</li>
+    </ul>
+    ${ex("Worked example: the modern builder of the Java appendix", `<p>The appendix file shows the idiom most Java code calls "builder" today: a static inner class that can reach the private fields of its outer class, setter-like methods that return <code>this</code>, and a <code>build()</code> that checks constraints and hands out the finished object.</p>
+<pre class="code"><b>public class</b> ComplexObject {
+  <b>private</b> String s1, s2, s3, s4; <b>private int</b> i1, i2, i3;
+  <b>private</b> ComplexObject() {}                                      <em>// hidden; only the builder may call it</em>
+  <b>public static class</b> ComplexObjectBuilder {
+    <b>private</b> ComplexObject result = <b>new</b> ComplexObject();       <em>// the state under construction</em>
+    <b>public</b> ComplexObjectBuilder <i>s1</i>(String v) { result.s1 = v; <b>return this</b>; }
+    <b>public</b> ComplexObjectBuilder <i>s2</i>(String v) { result.s2 = v; <b>return this</b>; }
+    <b>public</b> ComplexObject <i>build</i>() { <em>/* check constraints here or in the setters */</em> <b>return</b> result; }
+  }
+}
+ComplexObject co = <b>new</b> ComplexObjectBuilder().s1("…").s2("…").build();   <em>// instead of a 7-argument constructor</em></pre>
+<p>Against the GOF form: the client is its own director (it issues the protocol), the inner class is the one concrete builder, and the product is the outer class. The protocol here is almost free (any order of setters), which is why the slides' version with a grammar is the general case and this one the common special case: a constructor with seven positional arguments, two of them null, is the bad smell it removes.</p>`)}
+
+    <h2>What have we learned (slide 33)</h2>
+    <ul class="cmp">
+      <li><b>Factory Method</b><span class="v">problem: constructors cannot be varied</span><span class="v">solution: Template Method applied to creation</span></li>
+      <li><b>Factory Class</b><span class="v">problem: no variability of constructors in dimensional class hierarchies</span><span class="v">solution: Template Class applied to creation</span></li>
+      <li><b>Builder</b><span class="v">problem: complex products are built by a protocol that must vary too</span><span class="v">solution: Template Class with a stateful template method</span></li>
+    </ul>
+    <div class="tiles"><div class="tile"><div class="v">1 product</div><div class="l">Factory Method: one hook method returns it</div></div><div class="tile"><div class="v">1 family</div><div class="l">Factory Class: one hook object creates them all</div></div><div class="tile"><div class="v">1 protocol</div><div class="l">Builder: a grammar drives the part calls</div></div><div class="tile"><div class="v">3 + x</div><div class="l">hierarchies a factory keeps in parallel</div></div></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Why can constructors not be exchanged?</b> They are concrete and not dispatched polymorphically; the creator's code names the class.</li>
+      <li><b>What is a Factory Method?</b> A hook method, called from a template method, that returns a product; subclasses decide which class is allocated.</li>
+      <li><b>What does Abstract Factory add?</b> A hook class that groups the factory methods of a product family, so a whole family is exchanged at once under a parallelism constraint.</li>
+      <li><b>Prototyping and interpretive factories?</b> One factory that clones configured prototypes; one factory method that dispatches on a name string.</li>
+      <li><b>What is a Builder, and how does it enforce structure?</b> A factory with a protocol: a stateful director walks a grammar and calls part builders; calls outside the grammar are refused, so only well-formed products exist.</li>
+      <li><b>Which lecture-2 pattern is behind each?</b> Template Method, Template Class, Template Class with state.</li>
+    </ul>
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=2">exercise 2, Creational Patterns</a> (sheet since 30 Oct, discussed 4 Nov) applies all three to the maze game and to UML editors. Next: lecture 4, Simple Patterns for Extensibility (10 Nov). Slides, the learning video and the builder appendix: OPAL → Lectures (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
+const LABS = { mvc: initMvc, facets: initFacets, proto: initProto };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

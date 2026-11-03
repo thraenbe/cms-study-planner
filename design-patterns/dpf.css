@@ -1,0 +1,327 @@
+/* Scientific Software Engineering pages: the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.dpf { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.dpf .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.dpf .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.dpf .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.dpf header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.dpf .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.dpf .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.dpf .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.dpf .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dpf .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.dpf .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.dpf .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.dpf .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.dpf .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.dpf .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.dpf .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.dpf .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.dpf .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.dpf .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.dpf .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.dpf .kd.past { opacity: .55; }
+.dpf .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.dpf .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.dpf .detail { max-width: 760px; margin: 0 auto; }
+.dpf .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.dpf .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.dpf .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.dpf .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.dpf .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.dpf .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.dpf .detail p { margin: 0 0 0.7rem; }
+.dpf .detail p.lead { font-size: 1.08rem; }
+.dpf .detail ul, .dpf .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.dpf .detail li { margin: 0.2rem 0; }
+.dpf .detail .muted { color: var(--ink-2); }
+.dpf .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.dpf .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.dpf .detail .placeholder .big-icon { font-size: 3.2rem; }
+.dpf .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Figures */
+.dpf .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.dpf .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.dpf .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dpf .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.dpf .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.dpf .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.dpf .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.dpf .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.dpf .viz .bar.s1 { fill: var(--vz-s1); }
+.dpf .viz .bar.gray { fill: var(--vz-gray); }
+.dpf .viz .hit { fill: transparent; }
+.dpf .viz .row:hover .bar, .dpf .viz .row:focus .bar { filter: brightness(1.12); }
+.dpf .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.dpf .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.dpf .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.dpf .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.dpf .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.dpf .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.dpf .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.dpf .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.dpf .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.dpf .cmp .v { display: flex; align-items: center; gap: 6px; }
+.dpf .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.dpf .cmp .sw.t { background: var(--vz-s1); }
+.dpf .cmp .sw.v { background: var(--vz-gray); }
+.dpf details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.dpf details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.dpf details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.dpf details.tbl td, .dpf details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.dpf details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.dpf .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.dpf .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.dpf .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.dpf .grade b { display: block; }
+.dpf .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.dpf table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.dpf .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.dpf .plan tr:last-child td { border-bottom: 0; }
+.dpf .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.dpf .plan td.k { width: 22px; }
+.dpf .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.dpf .plan .sw.lec { background: var(--c-core); }
+.dpf .plan .sw.exe { background: var(--c-trk); }
+.dpf .plan tr.past td { color: var(--ink-3); }
+.dpf .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.dpf .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.dpf .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.dpf .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dpf .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.dpf ul.reading { font-size: 0.92rem; }
+.dpf ul.reading b { font-weight: 500; }
+.dpf .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .dpf .hero h1 { font-size: 1.55rem; }
+  .dpf .cmp { grid-template-columns: 1fr; }
+  .dpf .plan td.d { width: 70px; }
+}
+
+/* Chart marks: lines, dots, tooltips; truth tables and formulas */
+.dpf .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dpf .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.dpf .viz .pt:hover .dot, .dpf .viz .pt:focus .dot { r: 6; }
+.dpf .viz .pt:focus { outline: none; }
+.dpf .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dpf .viz .note { fill: var(--ink-2); font-size: 11px; }
+.dpf .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.dpf .viz .tip.show { opacity: 1; }
+.dpf .viz .tip b { display: block; }
+.dpf .viz .chart-wrap { position: relative; }
+.dpf table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.dpf table.tt th, .dpf table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.dpf table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.dpf table.tt td.one { font-weight: 700; }
+.dpf .tt-wrap { overflow-x: auto; }
+.dpf .tt-wrap table.tt { margin-top: 0; }
+.dpf .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.dpf .cmp { grid-template-columns: 1fr; }
+.dpf .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.dpf .cmp li b { align-self: center; }
+@media (max-width: 760px) { .dpf .cmp li { grid-template-columns: 1fr; } }
+.dpf .plan .sw.off, .dpf .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.dpf .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.dpf .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.dpf .legend .sw.lec { background: var(--c-core); }
+.dpf .legend .sw.exe { background: var(--c-trk); }
+.dpf .cmp .v { display: block; }
+.dpf .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.dpf .viz .f1 { fill: var(--vz-s1); }
+.dpf .viz .f2 { fill: var(--vz-s2); }
+.dpf .viz .f3 { fill: var(--vz-s3); }
+.dpf .viz .f4 { fill: var(--vz-s4); }
+.dpf .viz .bar.s2 { fill: var(--vz-s2); }
+.dpf .viz .line.k2 { stroke: var(--vz-s2); }
+.dpf .viz .dot.gray { fill: var(--vz-gray); }
+.dpf .viz .nohit { pointer-events: none; }
+.dpf .viz .ann, .dpf .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.dpf .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.dpf .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.dpf .viz .code.on .link, .dpf .viz .code.on .vl { opacity: 1; }
+.dpf .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.dpf .viz .code.on .dot { r: 5.5; }
+.dpf .viz .pt.on .bar { filter: brightness(1.12); }
+.dpf .viz .plot:focus { outline: none; }
+.dpf .viz .legend { margin: 0 2px 8px; }
+.dpf .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.dpf .legend .lt { display: inline; }
+.dpf .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.dpf .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.dpf table.tt th .key { margin-right: 5px; }
+.dpf .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.dpf .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.dpf .t1 { --c: var(--vz-s1); } .dpf .t2 { --c: var(--vz-s2); } .dpf .t3 { --c: var(--vz-s3); } .dpf .t4 { --c: var(--vz-s4); }
+.dpf table.tt td.t1, .dpf table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.dpf .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.dpf .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.dpf .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.dpf .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.dpf .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.dpf .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.dpf .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.dpf .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.dpf .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dpf .preset:hover { border-color: var(--ink-3); }
+.dpf .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.dpf .lab button:focus-visible, .dpf .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dpf .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.dpf .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.dpf .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.dpf .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.dpf .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.dpf .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dpf .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.dpf .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.dpf .cell.one { color: var(--ink); font-weight: 700; }
+.dpf .cell.t1, .dpf .cell.t2, .dpf .cell.t3, .dpf .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.dpf button.cell { cursor: pointer; }
+.dpf button.cell:hover { filter: brightness(1.06); }
+.dpf .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.dpf .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.dpf .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.dpf .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.dpf .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.dpf .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.dpf .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.dpf .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.dpf .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.dpf .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.dpf .fxc { display: grid; gap: 3px; justify-items: center; }
+.dpf .fxc .cell { width: 34px; }
+.dpf .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dpf .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.dpf .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.dpf .fgw { display: grid; gap: 3px; }
+.dpf .fgw small { font-size: 11px; color: var(--ink-3); }
+.dpf .fg { display: inline-flex; gap: 2px; }
+.dpf .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .dpf .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .dpf .fg { gap: 1px; }
+  .dpf .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .dpf .agrid .rl { font-size: 12px; }
+  .dpf .fxc .cell { width: 30px; }
+  .dpf .ro { grid-template-columns: 1fr; gap: 2px; }
+  .dpf .ro dd { margin-bottom: 6px; }
+}
+.dpf .ex, .dpf .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.dpf .ex { --c: var(--focus); }
+.dpf .why { --c: var(--c-team); }
+.dpf .ex p, .dpf .why p { margin: 0 0 0.4rem; }
+.dpf .ex p:last-child, .dpf .why p:last-child { margin-bottom: 0; }
+.dpf .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.dpf .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.dpf .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.dpf .task-h h2 { margin: 0; font-size: 1.25rem; }
+.dpf .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.dpf .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.dpf .pts.open { color: var(--ink-3); border-style: dashed; }
+.dpf .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.dpf .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.dpf .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.dpf .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.dpf .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.dpf .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.dpf .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.dpf .board-h h2 { margin: 0; font-size: 1.15rem; }
+.dpf .board-h .muted { font-size: 0.85rem; }
+.dpf .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.dpf .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.dpf .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.dpf .game-card.exe { border-top: 4px solid var(--c-trk); }
+.dpf .game-card.lec { border-top: 4px solid var(--c-core); }
+.dpf .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+.dpf .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.dpf .q { background: color-mix(in srgb, var(--warn) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1rem; }
+.dpf .q ul { margin: 0; }
+.dpf .ctx { display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--c-team); font-weight: 700; margin-left: 6px; }
+.dpf .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.dpf .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.dpf .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.dpf .viz .bar.s2 { fill: var(--vz-s2); } .dpf .viz .bar.s3 { fill: var(--vz-s3); } .dpf .viz .bar.s4 { fill: var(--vz-s4); }
+.dpf .viz .pt.on .bar, .dpf .viz .pt:focus .bar { filter: brightness(1.12); }
+.dpf .viz .ring { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.dpf .viz .band { fill: var(--ink-3); opacity: .08; }
+
+/* Class and sequence diagrams (DPFViz.dgm / seq): role-tinted boxes, ink edges, dashed notes. */
+.dpf .viz svg.dgm { overflow: visible; }
+.dpf .viz .cls rect { fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.3; }
+.dpf .viz .cls.t rect { fill: color-mix(in srgb, var(--vz-s1) 14%, var(--surface)); stroke: var(--vz-s1); }
+.dpf .viz .cls.h rect { fill: color-mix(in srgb, var(--vz-s2) 14%, var(--surface)); stroke: var(--vz-s2); }
+.dpf .viz .cls.c rect { fill: color-mix(in srgb, var(--vz-s3) 14%, var(--surface)); stroke: var(--vz-s3); }
+.dpf .viz .cls.p rect { fill: color-mix(in srgb, var(--vz-s4) 16%, var(--surface)); stroke: var(--vz-s4); }
+.dpf .viz .cls .cn { fill: var(--ink); font-size: 12px; font-weight: 700; }
+.dpf .viz .cls .cn.abs { font-style: italic; font-weight: 600; }
+.dpf .viz .cls .st { fill: var(--ink-2); font-size: 10px; }
+.dpf .viz .cls .op { fill: var(--ink-2); font-size: 10.5px; }
+.dpf .viz .cls .op.mono { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 10px; }
+.dpf .viz .cls .sep { stroke: var(--ink-3); stroke-width: 0.8; opacity: .6; }
+.dpf .viz .edge .ln, .dpf .viz .msg .ln { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.dpf .viz .edge .ln.dash, .dpf .viz .msg .ln.dash { stroke-dasharray: 4 3; }
+.dpf .viz .edge .tri { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.3; }
+.dpf .viz .edge .dia { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.3; }
+.dpf .viz .edge .arr, .dpf .viz .msg .arr { fill: none; stroke: var(--ink-2); stroke-width: 1.3; }
+.dpf .viz .el { fill: var(--ink-2); font-size: 10.5px; font-weight: 600; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; }
+.dpf .viz .tag { fill: var(--vz-s2); font-size: 10px; font-weight: 700; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; }
+.dpf .viz .note rect { fill: color-mix(in srgb, var(--vz-s4) 9%, var(--surface-2)); stroke: var(--ink-3); stroke-width: 0.9; stroke-dasharray: 3 2; }
+.dpf .viz .note .nt { fill: var(--ink-2); font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 9.5px; }
+.dpf .viz .note .ncon { stroke: var(--ink-3); stroke-width: 0.9; stroke-dasharray: 1.5 2.5; }
+.dpf .viz .life { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.dpf .viz .hl { fill: none; stroke: var(--vz-s2); stroke-width: 1.5; stroke-dasharray: 5 3; }
+.dpf .viz .zone { fill: var(--ink-3); opacity: .07; }
+.dpf .viz .zl { fill: var(--ink-2); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; }
+.dpf pre.code { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12.5px; line-height: 1.45; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 0.4rem 0 1rem; overflow-x: auto; color: var(--ink); }
+.dpf pre.code b { color: var(--vz-s1); font-weight: 700; }
+.dpf pre.code i { color: var(--vz-s2); font-style: normal; font-weight: 700; }
+.dpf pre.code em { color: var(--ink-3); font-style: italic; }
+.dpf .proto { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 0 0 10px; }
+.dpf .proto button { font: inherit; font-size: 13px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dpf .proto button:disabled { opacity: .4; cursor: not-allowed; }
+.dpf .proto button.ok { border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); }
+.dpf .trace { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12.5px; line-height: 1.5; min-height: 2.6em; margin: 0 0 8px; }
+.dpf .trace .bad { color: var(--bad); }
+.dpf .trace .ok { color: var(--ok); }
+.dpf .fac { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0 0 10px; }
+.dpf .fac .f { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.dpf .fac .f b { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }
+.dpf .fac .f select { font: inherit; font-size: 13px; width: 100%; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.dpf .timeline { position: relative; }
+.dpf .viz.mini { padding: 0; border: 0; background: none; margin: 0; }
+.dpf .viz.mini .bar.s1 { fill: var(--vz-s1); } .dpf .viz.mini .bar.s2 { fill: var(--vz-s2); } .dpf .viz.mini .bar.s3 { fill: var(--vz-s3); }
+.dpf .viz .cls .cn.sm { font-size: 10px; }
