@@ -78,6 +78,40 @@ window.HPCViz = (function () {
     wireLines();
   }
 
+  // Non-preemptive list scheduling on m identical CPUs, as the lecture does it: at every event time the free CPUs take the
+  // runnable jobs in priority order; jobs that start together go to the lower-numbered CPU in ID order. Priorities:
+  // fifo = submission time, sjn = estimated runtime, aging = sjn plus one point for every time a runnable job was passed over.
+  function listSchedule(jobs, m, algo) {
+    const st = {}, fin = {}, cpuOf = {}, prio = {}, log = [], done = j => fin[j.id] !== undefined;
+    const busy = Array(m).fill(0), byId = Object.fromEntries(jobs.map(j => [j.id, j]));
+    let t = 0, guard = 0;
+    while (Object.keys(fin).length < jobs.length && guard++ < 500) {
+      jobs.forEach(j => { if (j.sub <= t && prio[j.id] === undefined) prio[j.id] = -j.t; });
+      const free = busy.map((b, i) => b <= t ? i : -1).filter(i => i >= 0);
+      const runnable = () => jobs.filter(j => j.sub <= t && !done(j) && st[j.id] === undefined && (j.pre || []).every(p => fin[p] !== undefined && fin[p] <= t));
+      const picks = [];
+      for (const c of free) {
+        const r = runnable(); if (!r.length) break;
+        const key = j => algo === "fifo" ? [j.sub, j.id] : algo === "sjn" ? [j.t, j.id] : [-prio[j.id], j.id];
+        r.sort((a, b) => { const ka = key(a), kb = key(b); return ka[0] - kb[0] || ka[1] - kb[1]; });
+        const p = r[0]; st[p.id] = t; fin[p.id] = t + p.t; picks.push(p);
+        log.push({ t, pick: p.id, others: r.slice(1).map(j => ({ id: j.id, prio: prio[j.id] })) });
+        if (algo === "aging") r.slice(1).forEach(j => prio[j.id] += 1);
+      }
+      picks.sort((a, b) => a.id - b.id).forEach((p, k) => { cpuOf[p.id] = free[k]; busy[free[k]] = fin[p.id]; });
+      const next = [...busy.filter(b => b > t), ...jobs.filter(j => j.sub > t).map(j => j.sub)];
+      if (!next.length) break; t = Math.min(...next);
+    }
+    const ms = Math.max(...Object.values(fin)), turn = jobs.map(j => fin[j.id] - j.sub);
+    return { st, fin, cpuOf, ms, avg: turn.reduce((a, b) => a + b, 0) / jobs.length, turn, log, util: jobs.reduce((s, j) => s + j.t, 0) / (ms * m) };
+  }
+  function ganttHTML(jobs, m, r, pe = "P", jl = "j") {
+    const cols = r.ms, slot = j => (j.id - 1) % 4 + 1;
+    const rows = Array.from({ length: m }, (_, c) => { const row = Array(cols).fill("");
+      jobs.filter(j => r.cpuOf[j.id] === c).forEach(j => { for (let t = r.st[j.id]; t < r.fin[j.id]; t++) row[t] = `<span class="pc s${slot(j)}" title="${jl}${j.id}: t = ${r.st[j.id]} to ${r.fin[j.id]}">${jl}${j.id}</span>`; });
+      return `<div class="rl">${pe}${c}</div>${row.map(x => `<div class="gc">${x}</div>`).join("")}`; }).join("");
+    return `<div class="gantt" style="--cols:${cols}"><div class="rl"></div>${Array.from({ length: cols }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${rows}</div>`;
+  }
 
-  return { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, lineGeo, lineSVG, line, wireLines, mountCharts, isNarrow };
+  return { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, lineGeo, lineSVG, line, wireLines, mountCharts, isNarrow, listSchedule, ganttHTML };
 })();

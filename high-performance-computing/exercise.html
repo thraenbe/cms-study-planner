@@ -361,6 +361,190 @@ function exercise2() {
     <p class="muted">Next: lecture 2, Batch Systems, follows this session in the same room at ${lec.start}. The next online exercise is expected in OPAL about a week before the <a href="high-performance-computing/exercise.html?n=3">4 Nov session</a>. The sheet itself may not be republished; the tasks above are restated in our own words.</p>`;
 }
 
+// ---------------- Exercise 03: scheduling and batch systems ----------------
+// Six jobs on two processors, submitted at t = 0; the sheet's rule for simultaneous starts is "lowest job ID on the
+// lowest processor ID". Schedules come from HPCViz.listSchedule (FIFO = by ID, SJN = by runtime) or are written out.
+const { listSchedule, ganttHTML } = HPCViz;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const E3 = [[1, 5], [2, 7], [3, 8], [4, 6], [5, 1], [6, 3]];
+const E3DEP = { 3: [1, 2], 4: [3], 6: [5, 1] };
+const e3jobs = deps => E3.map(([id, t]) => ({ id, t, sub: 0, pre: deps ? (E3DEP[id] || []) : [] }));
+// A schedule written out by hand: plan = { id: [cpu, start] }.
+function fixed(jobs, plan) {
+  const st = {}, fin = {}, cpuOf = {};
+  jobs.forEach(j => { const [c, s] = plan[j.id]; st[j.id] = s; fin[j.id] = s + j.t; cpuOf[j.id] = c; });
+  const ms = Math.max(...Object.values(fin)), turn = jobs.map(j => fin[j.id] - j.sub);
+  return { st, fin, cpuOf, ms, turn, avg: turn.reduce((a, b) => a + b, 0) / jobs.length };
+}
+const SCHED = {
+  fifo: { name: "FIFO", jobs: e3jobs(false), r: listSchedule(e3jobs(false), 2, "fifo") },
+  sjn: { name: "SJN", jobs: e3jobs(false), r: listSchedule(e3jobs(false), 2, "sjn") },
+  opt: { name: "optimal", jobs: e3jobs(false), r: fixed(e3jobs(false), { 5: [0, 0], 4: [0, 1], 3: [0, 7], 6: [1, 0], 1: [1, 3], 2: [1, 8] }) },
+  dfifo: { name: "FIFO with dependencies", jobs: e3jobs(true), r: listSchedule(e3jobs(true), 2, "fifo") },
+  dsjn: { name: "SJN with dependencies", jobs: e3jobs(true), r: listSchedule(e3jobs(true), 2, "sjn") },
+  dopt: { name: "optimal with dependencies", jobs: e3jobs(true), r: fixed(e3jobs(true), { 2: [0, 0], 3: [0, 7], 4: [0, 15], 5: [1, 0], 1: [1, 1], 6: [1, 6] }) },
+};
+// The sheet's answer format: one row per processor, the job number per time slot, "-" where the processor idles.
+function fillHTML(s, T) {
+  const rows = [0, 1].map(c => { const cells = Array.from({ length: T }, (_, t) => { const j = s.jobs.find(j => s.r.cpuOf[j.id] === c && s.r.st[j.id] <= t && t < s.r.fin[j.id]); return j ? String(j.id) : "-"; });
+    return `<b>P${c}</b>  ${cells.map(x => x.padStart(2)).join(" ")}`; }).join("\n");
+  return `<div class="fill"><b>t </b>  ${Array.from({ length: T }, (_, t) => String(t + 1).padStart(2)).join(" ")}\n${rows}</div>`;
+}
+const turnList = s => s.jobs.map(j => `j${j.id} = ${s.r.fin[j.id]}`).join(", ");
+const sumTurn = s => s.r.turn.reduce((a, b) => a + b, 0);
+const schedBlock = (k, T) => `${ganttHTML(SCHED[k].jobs, 2, SCHED[k].r)}${fillHTML(SCHED[k], T)}`;
+
+// Average turnaround and makespan of the six schedules, side by side.
+CHARTS.cmp = narrow => {
+  const rows = Object.values(SCHED), W = narrow ? 340 : 600, L = narrow ? 104 : 190, R = 36, T = 8, RH = 44, H = T + rows.length * RH + 26, PW = W - L - R, x = v => L + v / 24 * PW;
+  const ticks = [0, 4, 8, 12, 16, 20, 24].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const bars = rows.map((s, i) => { const y0 = T + i * RH + 4, bh = 14;
+    const tip = `<b>${s.name}</b><span class="ov">t</span> = ${sumTurn(s)} / 6 = ${num(s.r.avg, 2)}<br>makespan ${s.r.ms}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - 4}" width="${W}" height="${RH}"/>
+      <path class="bar s1" d="${hbar(x(0), x(s.r.avg), y0, bh)}"/><text class="val" x="${x(s.r.avg) + 5}" y="${y0 + 11}">${num(s.r.avg, 1)}</text>
+      <path class="bar s2" d="${hbar(x(0), x(s.r.ms), y0 + bh + 2, bh)}"/><text class="val" x="${x(s.r.ms) + 5}" y="${y0 + bh + 13}">${s.r.ms}</text>
+      <text class="cat" x="${L - 8}" y="${y0 + bh + 4}" text-anchor="end">${narrow ? s.name.replace(" with dependencies", " + deps") : s.name}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paired bar chart of the six schedules. Average turnaround and makespan: FIFO 11.3 and 16, SJN 8.2 and 17, optimal 8.2 and 15; with dependencies FIFO 10.5 and 21, SJN 10.0 and 22, optimal 9.8 and 21.">${ticks}${bars}</svg>`;
+};
+// The dependency set as an activity-on-node and an activity-on-arrow network.
+CHARTS.net = narrow => {
+  const W = narrow ? 340 : 600, colW = narrow ? 70 : 110, rowH = narrow ? 40 : 46, L = 30, T = 24;
+  // activity on node
+  const pos = { 1: [0, 0], 2: [0, 2], 5: [0, 3], 3: [1, 1], 6: [1, 3], 4: [2, 1] };
+  const px = c => L + 14 + c * colW, py = r => T + 14 + r * (rowH - 6);
+  const edges = Object.entries(E3DEP).flatMap(([q, ps]) => ps.map(p => `<line class="ed" x1="${px(pos[p][0])}" y1="${py(pos[p][1])}" x2="${px(pos[q][0])}" y2="${py(pos[q][1])}" marker-end="url(#arrn)"/>`)).join("");
+  const nodes = E3.map(([id, t]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>j${id}: ${t} units</b>${E3DEP[id] ? "after " + E3DEP[id].map(p => "j" + p).join(" and ") : "no predecessor"}`)}"><circle class="nd" cx="${px(pos[id][0])}" cy="${py(pos[id][1])}" r="7"/><text class="vl2" x="${px(pos[id][0]) + 10}" y="${py(pos[id][1]) - 8}">j${id}/${t}</text></g>`).join("");
+  // activity on arrow: nodes are events, jobs are arrows, dashed arrows are dummies that only carry a precedence
+  const oy = T + 4 * (rowH - 6) + 16, ax = c => L + 14 + c * colW, ay = r => oy + T + 10 + r * rowH;
+  const N = { S: [0, 1], A: [1, 1], B: [2, 1], C: [3, 1], D: [4, 1], E: [2, 2], F: [3, 2] };
+  const NL = { S: "start", A: "j1 done", B: "j1 and j2 done", C: "j3 done", D: "j4 done", E: "j1 and j5 done", F: "j6 done" };
+  const above = { A: true };
+  const seg = (a, b, cls, lbl, dy) => { const [x1, y1] = [ax(N[a][0]), ay(N[a][1])], [x2, y2] = [ax(N[b][0]), ay(N[b][1])];
+    return `<line class="ed ${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#arrn)"/>${lbl ? `<text class="vl2" x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 + dy}" text-anchor="middle">${lbl}</text>` : ""}`; };
+  const curve = `<path class="ed" d="M${ax(0)},${ay(1)} Q${ax(1)},${ay(1) - rowH * 1.4} ${ax(2)},${ay(1)}" marker-end="url(#arrn)"/><text class="vl2" x="${ax(1)}" y="${ay(1) - rowH * 0.7 - 4}" text-anchor="middle">j2</text>`;
+  const aoa = [seg("S", "A", "", "j1", -6), curve, seg("A", "B", "dummy", "", 0), seg("B", "C", "", "j3", -6), seg("C", "D", "", "j4", -6), seg("S", "E", "", "j5", 16), seg("A", "E", "dummy", "", 0), seg("E", "F", "", "j6", -6)].join("")
+    + Object.entries(N).map(([k, [c, r]]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${NL[k]}</b>synchronisation point`)}"><circle class="nd sync" cx="${ax(c)}" cy="${ay(r)}" r="6"/>${narrow ? "" : `<text class="tick" x="${ax(c)}" y="${ay(r) + (above[k] ? -12 : 19)}" text-anchor="middle">${NL[k]}</text>`}</g>`).join("");
+  const H = ay(2) + 30;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Top, activity on node: j1 and j2 point to j3, j3 to j4, j5 and j1 to j6. Below, activity on arrow: seven event nodes with the jobs as arrows and two dashed dummy arrows that carry j1's precedence to the events where j3 and j6 start.">
+    <defs><marker id="arrn" viewBox="0 0 10 10" refX="15" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arr"/></marker></defs>
+    <text class="cat" x="${L}" y="${T - 8}">${narrow ? "Activity on node" : "Activity on node (node = job, arrow = precedence)"}</text>${edges}${nodes}
+    <text class="cat" x="${L}" y="${oy + T - 10}">${narrow ? "Activity on arrow (dashed = dummy)" : "Activity on arrow (node = event, arrow = job, dashed = dummy)"}</text>${aoa}</svg>`;
+};
+
+// SJN with and without aging on the sheet's seven jobs (submission times, preconditions, two CPUs).
+const AG7 = [[1, null, 0, 7], [2, null, 1, 2], [3, null, 1, 1], [4, null, 2, 4], [5, 3, 2, 5], [6, 1, 3, 3], [7, 3, 3, 2]].map(([id, pre, sub, t]) => ({ id, t, sub, pre: pre ? [pre] : [] }));
+const AGS = { aging: false };
+function agOut7() {
+  const r = listSchedule(AG7, 2, AGS.aging ? "aging" : "sjn"), g = ganttHTML(AG7, 2, r, "CPU", "J");
+  const log = r.log.map(l => `<tr><td>${l.t}</td><td class="pick">J${l.pick}</td><td>${l.others.length ? l.others.map(o => `J${o.id} (${o.prio}${AGS.aging ? " → " + (o.prio + 1) : ""})`).join(", ") : "—"}</td></tr>`).join("");
+  return `${g}<div class="tt-wrap"><table class="tt log"><tr><th>t</th><th>starts</th><th>runnable but passed over${AGS.aging ? " (priority before → after)" : " (priority)"}</th></tr>${log}</table></div>
+    <dl class="ro"><dt>Makespan</dt><dd><b>${r.ms}</b></dd>
+      <dt>Turnaround</dt><dd>${AG7.map(j => `J${j.id} = ${r.fin[j.id]} − ${j.sub} = ${r.fin[j.id] - j.sub}`).join(", ")} → ${r.turn.reduce((a, b) => a + b, 0)} / 7 = <b>${num(r.avg, 1)}</b></dd></dl>`;
+}
+function initAging(body) {
+  body.innerHTML = `<div class="ctl"><label><input type="checkbox"${AGS.aging ? " checked" : ""}> aging: every runnable job that is passed over gains one priority point</label></div><div class="out"></div>`;
+  const cb = body.querySelector("input"), out = body.querySelector(".out"), draw = () => { out.innerHTML = agOut7(); };
+  cb.addEventListener("change", () => { AGS.aging = cb.checked; draw(); });
+  draw();
+}
+
+function exercise3() {
+  const s = SCHED;
+  return `${head(e)}
+    <p class="lead">The first exercise on <a href="high-performance-computing/lecture.html?n=2">lecture 2</a>: the same six jobs scheduled six ways by hand (FIFO, shortest job next and the optimum, each with and without dependencies), both precedence-network notations, a Slurm dependency chain, SJN with aging on seven jobs that arrive over time, and three batch scripts to run on ZIH's Romeo cluster. Fourteen parts with 42.9 points in total, plus a 2-point optional "another tip?" item; this page works every task in our own words and gives the Gantt rows in the sheet's fill-in format. Discussed on <b>${fmt(e.date)}, ${exe.start}</b>.</p>
+    <div class="box">
+      <p><b>Definitions the sheet gives up front.</b> <i>Utilisation</i> is the fraction of time a device is busy; <i>throughput</i> the completions per unit time; <i>service time</i> what a request needs on the device; <i>queueing time</i> what it waits; <i>residence time</i> = service + queueing; <i>response time</i> is used like residence time in this lecture; <i>makespan</i> is the time from submission until the last job is done. The jobs: j1/5, j2/7, j3/8, j4/6, j5/1, j6/3 on two processors, all submitted at t = 0, so turnaround = finishing time. Tie rule: when several jobs start at once, the lower job number takes the lower processor number.</p>
+    </div>
+    ${chart("cmp", leg([[1, "average turnaround <span class='ov'>t</span>"], [2, "makespan (processing time)"]]))}
+      <figcaption>All six answers at a glance. SJN already reaches the smallest possible turnaround sum (49), but its greedy choice leaves the makespan at 17; the optimum keeps the 49 and packs the jobs 15/15. Dependencies lift every makespan to the critical path j2 → j3 → j4 = 21 or beyond. Hover a row.</figcaption>
+    </figure>
+
+    ${task("1", 6, "Scheduling with FIFO", `
+      <p>Draw the Gantt chart of the six jobs under FIFO on P0 and P1 and give the average turnaround and the processing time (one decimal).</p>
+      ${schedBlock("fifo", 19)}
+      ${ans([["<span class='ov'>t</span> = 11.3", "(5 + 7 + 13 + 13 + 14 + 16) / 6 = 68 / 6"], ["t = 16", "processing time = makespan"]])}
+      ${ex("Worked answer", `<p>FIFO takes the jobs in ID order whenever a processor frees up. t = 0: j1 → P0 (until 5), j2 → P1 (until 7). t = 5: P0 takes j3 (5–13). t = 7: P1 takes j4 (7–13). t = 13: both free, j5 → P0 (13–14) and j6 → P1 (13–16). Turnarounds ${turnList(s.fifo)}: sum ${sumTurn(s.fifo)}, average <b>${num(s.fifo.r.avg, 1)}</b>; the last job ends at <b>${s.fifo.r.ms}</b>. P0 idles from 14 to 16, hence the "-" cells.</p>`)}`)}
+
+    ${task("2", 6, "Scheduling with SJN", `
+      <p>Same jobs, shortest job next: whenever a processor is free, start the shortest waiting job.</p>
+      ${schedBlock("sjn", 19)}
+      ${ans([["<span class='ov'>t</span> = 8.2", "(1 + 3 + 6 + 9 + 13 + 17) / 6 = 49 / 6 = 8.17"], ["t = 17", "makespan"]])}
+      ${ex("Worked answer", `<p>Sorted by runtime: j5 (1), j6 (3), j1 (5), j4 (6), j2 (7), j3 (8). t = 0: j5 → P0, j6 → P1. t = 1: P0 takes j1 (1–6). t = 3: P1 takes j4 (3–9). t = 6: P0 takes j2 (6–13). t = 9: P1 takes j3 (9–17). Turnarounds ${turnList(s.sjn)}: sum 49, average <b>8.2</b>. The sum 49 is the lowest any schedule can reach (shortest-first minimises the sum of completion times on identical machines), but the long j3 starts last and alone, so the makespan is <b>17</b> and P0 idles for 4 units.</p>`)}`)}
+
+    ${task("3", 6, "Scheduling with an optimal solution", `
+      <p>Find a schedule with the shortest possible processing time; among those, the one with the best average turnaround. The sheet's hint: job 5 goes on processor 0.</p>
+      ${schedBlock("opt", 19)}
+      ${ans([["t = 15", "both processors fully busy: 30 / 2"], ["<span class='ov'>t</span> = 8.2", "(1 + 3 + 7 + 8 + 15 + 15) / 6 = 49 / 6"]])}
+      ${ex("Worked answer", `<p>The jobs sum to 30 units, so two processors cannot finish before 15, and 15 is reachable only if the jobs split into two sets of 15. There are two such splits: {j2, j3} | {j1, j4, j5, j6} and {j1, j2, j6} | {j3, j4, j5}. On each processor the shortest-first order gives the smallest sum of finishing times. Split one: 7, 15 and 1, 4, 9, 15 → 51. Split two: 3, 8, 15 and 1, 7, 15 → <b>49</b>, which equals SJN's sum, so it is the best possible. With j5 on P0 the rows are P0: j5, j4, j3 (ends 1, 7, 15) and P1: j6, j1, j2 (ends 3, 8, 15). Average 49 / 6 = <b>8.2</b>, makespan <b>15</b>.</p>`)}`)}
+
+    ${task("4–5", 2, "Dependencies: activity-on-node and activity-on-arrow networks", `
+      <p>The jobs now depend on each other: j1 and j2 before j3, j3 before j4, j5 and j1 before j6. Draw both network forms (file upload, 1 point each).</p>
+      ${chart("net")}
+        <figcaption>Activity on node: one circle per job, labelled with its time; an arrow means "must finish first". Activity on arrow: the jobs are the arrows and the circles are events; because j1 is needed by both j3 and j6 while j2 and j5 are not, the "j1 done" event needs two dashed dummy arrows into the two join events. That is the usual price of the arrow form.</figcaption>
+      </figure>
+      ${why("Context, not on the sheet: reading the critical path off the network", `<p>Longest chain in the node network: j2 (7) → j3 (8) → j4 (6) = 21 units; the other chains, j1 → j3 → j4 = 19, j1 → j6 = 8 and j5 → j6 = 4, are shorter. No schedule with these dependencies can finish before 21, whatever the number of processors. That bound decides tasks 6–8.</p>`)}`)}
+
+    ${task("6", 5, "Scheduling with dependencies: FIFO", `
+      <p>FIFO with backfill allowed: when the next job in ID order is blocked by an unfinished predecessor, a later job that is ready may take the free processor. Gantt rows to t = 30, average turnaround and makespan.</p>
+      ${schedBlock("dfifo", 30)}
+      ${ans([["<span class='ov'>t</span> = 10.5", "(5 + 7 + 15 + 21 + 6 + 9) / 6 = 63 / 6"], ["t = 21", "makespan = the critical path"]])}
+      ${ex("Worked answer", `<p>t = 0: ready are j1, j2, j5 (j3 waits for j1 and j2, j4 for j3, j6 for j5 and j1); j1 → P0 (0–5), j2 → P1 (0–7). t = 5: P0 is free, j3 is next in line but j2 is still running; backfill lets j5 run (5–6). t = 6: j5 and j1 are done, so j6 is ready (6–9) on P0. t = 7: j2 ends, j3 is ready → P1 (7–15). t = 9: P0 is free but j4 still waits for j3: six idle slots. t = 15: j4 → P0 (15–21). Turnarounds ${turnList(s.dfifo)}: sum ${sumTurn(s.dfifo)}, average <b>10.5</b>, makespan <b>21</b>. Without backfill P0 would wait from 5 to 7 for j3 and j5, j6 would queue behind j4; the makespan stays 21 but the average turnaround gets worse. Fill in the backfill version first, it is what the sheet asks for.</p>`)}`)}
+
+    ${task("7", 5, "Scheduling with dependencies: SJN", `
+      <p>Shortest job next among the jobs whose predecessors are done.</p>
+      ${schedBlock("dsjn", 30)}
+      ${ans([["<span class='ov'>t</span> = 10.0", "(5 + 8 + 16 + 22 + 1 + 8) / 6 = 60 / 6"], ["t = 22", "makespan, one more than the bound"]])}
+      ${ex("Worked answer", `<p>t = 0: ready j1 (5), j2 (7), j5 (1); the two shortest are j5 and j1, and by the tie rule j1 → P0, j5 → P1. t = 1: P1 is free; j6 needs j1 (until 5), j3 needs j1 and j2, so only j2 is ready → P1 (1–8). t = 5: P0 is free and j6 (3) is ready (5–8). t = 8: both free, only j3 is ready → P0 (8–16); P1 idles. t = 16: j4 → P0 (16–22). Turnarounds ${turnList(s.dsjn)}: sum 60, average <b>10.0</b>, makespan <b>22</b>. SJN beats FIFO on turnaround here but pays one unit of makespan: by running the short j5 first it delays j2, the head of the critical path, by one unit, and that unit is never recovered. If you place j5 on P0 and j1 on P1 at t = 0 the rows swap but the numbers do not change.</p>`)}`)}
+
+    ${task("8", 5, "Scheduling with dependencies: optimal solution", `
+      <p>Shortest possible makespan with the dependencies; among those schedules, the best average turnaround.</p>
+      ${schedBlock("dopt", 30)}
+      ${ans([["t = 21", "the critical path j2 → j3 → j4"], ["<span class='ov'>t</span> = 9.8", "(6 + 7 + 15 + 21 + 1 + 9) / 6 = 59 / 6"]])}
+      ${ex("Worked answer", `<p>The makespan cannot beat the critical path, 21, and the chain j2 → j3 → j4 has no slack at all: j2 must start at 0 and the three run back to back on one processor, finishing at 7, 15 and 21 (sum 43). The other processor gets j1, j5 and j6, where j6 needs both. Two orders respect that: j1, j5, j6 finishes at 5, 6, 9 (sum 20); j5, j1, j6 finishes at 1, 6, 9 (sum 16). The second wins: total 59, average <b>9.8</b>, makespan <b>21</b>. By the tie rule j2 (starting with j5 at t = 0) takes P0, so P0: j2, j3, j4 and P1: j5, j1, j6. Every other schedule with makespan 21 has a turnaround sum of 60 or more (checked by enumeration).</p>`)}`)}
+
+    ${task("9", 1, "Slurm job submission", `
+      <p>A shell script submits four batch jobs: initialize, foo, bar, finalize. Extend it so that foo runs if initialize succeeds, bar if it fails, and finalize after whichever of the two ran. The sheet reminds you that backticks capture a command's output and that <code>sbatch</code> prints "Submitted batch job &lt;id&gt;".</p>
+      <div class="formula">#!/bin/sh<br>init=\`sbatch --parsable ./job_initialize\`<br>foo=\`sbatch --parsable --dependency=afterok:$init ./job_foo\`<br>bar=\`sbatch --parsable --dependency=afternotok:$init ./job_bar\`<br>sbatch --dependency=afterany:$foo?afterany:$bar ./job_finalize</div>
+      ${ex("Worked answer", `<p><code>--parsable</code> makes sbatch print only the job ID, so the variable holds a number; without it, <code>\`sbatch ./job_initialize | awk '{print $4}'\`</code> cuts the fourth word out of "Submitted batch job 6072294". <code>afterok</code> waits for a zero exit code, <code>afternotok</code> for a non-zero one (lecture 2, slide 70). Exactly one of foo and bar will ever run; the other's dependency can never be satisfied and Slurm leaves it pending with that reason or cancels it, depending on the site's configuration. That is why finalize must not wait for <i>both</i>: the question mark between two dependency expressions means "any of these" (an OR), so finalize starts as soon as the one that ran has finished, whatever its exit code (<code>afterany</code>). A colon list, <code>afterany:$foo:$bar</code>, would be an AND and could wait forever.</p>`)}`)}
+
+    ${task("10", 4, "SJN with aging", `
+      <p>Seven sequential jobs arrive at a two-CPU scheduler at different times, some with a precondition: J1 at 0 (7 s), J2 at 1 (2 s), J3 at 1 (1 s), J4 at 2 (4 s), J5 at 2 (5 s, after J3), J6 at 3 (3 s, after J1), J7 at 3 (2 s, after J3). Priority is the negative estimated runtime; whenever a CPU is free the runnable job with the highest priority starts, ties to the earlier submission; with aging, every runnable job that is passed over gains one point. Events at the same time happen in the order: jobs join the queue, jobs finish, free CPUs are filled. Makespan and average turnaround with SJN, then with SJN and aging (one decimal; turnaround counts from each job's own submission time).</p>
+      ${lab("aging", "the seven jobs with and without aging")}
+      ${ans([["15", "makespan with SJN"], ["<span class='ov'>t</span> = 6.0", "SJN: 42 / 7"], ["13", "makespan with aging"], ["<span class='ov'>t</span> = 6.0", "aging: also 42 / 7"]])}
+      ${ex("Worked answer, SJN", `<p>t = 0: only J1 is there → CPU0 (0–7). t = 1: J2 (−2) and J3 (−1) arrive; CPU1 takes J3 (1–2). t = 2: J4 (−4) and J5 (−5) arrive, J3 finishes so J5 is runnable; CPU1 picks the best of J2 (−2), J4, J5 → J2 (2–4). t = 3: J6 (needs J1, not runnable) and J7 (−2, J3 is done) arrive; no CPU is free. t = 4: J2 ends; J7 (−2) beats J4 (−4) and J5 (−5) → J7 (4–6). t = 6: J4 (6–10). t = 7: J1 ends, J6 becomes runnable (−3) and beats J5 (−5) → J6 on CPU0 (7–10). t = 10: J5 at last (10–15). Makespan <b>15</b>. Turnarounds: J1 7, J2 3, J3 1, J4 8, J5 13, J6 7, J7 3 → 42 / 7 = <b>6.0</b>.</p>`)}
+      ${ex("Worked answer, SJN with aging", `<p>Same start. t = 1: J3 picked, J2 passed over → −1. t = 2: J2 (−1) picked; J4 → −3, J5 → −4. t = 4: J7 picked; J4 → −2, J5 → −3. t = 6: J4 (−2) picked; J5 → −2. t = 7: CPU0 is free, J5 (−2) now beats the fresh J6 (−3) → J5 (7–12); J6 → −2. t = 10: J4 ends, J6 (10–13). Makespan <b>13</b>. Turnarounds: J1 7, J2 3, J3 1, J4 8, J5 10, J6 10, J7 3 → again 42 / 7 = <b>6.0</b>: J5 gains three units, J6 loses three, and the machine finishes two units earlier because the long J5 no longer runs alone at the end.</p>`)}
+      ${why("Context, not on the sheet: which aging convention the auto-check assumes", `<p>The explorer raises priorities once per <i>selection</i>, which is the lecture's algorithm on slide 23 (pick, remove, raise the rest). Raising them once per scheduling <i>time</i> instead gives the same schedule here, since no decision point ever selects two jobs at once while a third waits. If the checker disagrees with 13 / 6.0, the other reading to try is counting turnaround from t = 0 rather than from submission: that would give 54 / 7 = 7.7, with and without aging.</p>`)}`)}
+
+    <h2>Practical part on Romeo</h2>
+    <p>The remaining tasks run on ZIH's Romeo cluster: connect from eduroam or the TU VPN, SSH to Romeo's login node with your ZIH login, unpack the exercise sources with the download command from the sheet (a datashare link, not reproduced here) and read the README files. A basic batch script sits in the <code>slurm</code> folder of the sources and is also what compiles the programs in <code>src</code> into <code>build</code>. The optional "do you want another tip?" item carries 2 points of its own; the exercise's answers are what you observe in your own output, so the expectations below are for checking, not copying.</p>
+
+    ${task("11", 0.9, "Sequential versus parallel execution", `
+      <p>A batch script allocates 2 nodes with 48 processes in total, prints "Sequential job", runs <code>hostname</code> as a sequential step, prints "Parallel job", then runs <code>hostname</code> as a parallel step. How often does each unique line appear, and how many lines does the parallel step print?</p>
+      <div class="formula">#!/bin/sh<br>#SBATCH -N 2<br>#SBATCH -n 48<br>#SBATCH -t 00:05:00<br>echo "Sequential job"<br>hostname<br>echo "Parallel job"<br>srun hostname</div>
+      ${ans([["1 ×", "Sequential job"], ["1 ×", "one hostname: the batch step's node"], ["1 ×", "Parallel job"], ["24 × and 24 ×", "two hostnames, 48 lines in total"]])}
+      ${ex("Why", `<p>The batch script itself runs once, on the first node of the allocation, so a plain <code>hostname</code> prints that node's name once. <code>srun hostname</code> starts one task per allocated process: 48 tasks spread over the two nodes, which with Slurm's default even distribution is 24 per node, so each of the two names appears 24 times and the step prints 48 lines (the order is interleaved and does not matter). If the site packs tasks instead of spreading them the split can be uneven; the count of 48 and the two distinct names do not change. Write down what your output shows.</p>`)}`)}
+
+    ${task("12", 1, "Process and thread parallelism on Slurm tasks", `
+      <p>Allocate 1 node and 24 processes, print a label, run the MPI example (<code>mpi_simple</code> in <code>build</code>) with <code>srun</code>, print another label, run the OpenMP example (<code>omp_simple</code>). Give one example line and the lines with the lowest and highest rank for each program.</p>
+      <div class="formula">#SBATCH -N 1<br>#SBATCH -n 24<br>echo "MPI: process parallel"<br>srun ./build/mpi_simple<br>echo "Open MP: thread parallel"<br>srun ./build/omp_simple</div>
+      ${ex("What to expect", `<p><code>-n 24</code> means 24 processes with one core each (<code>-c</code> defaults to 1). The MPI program therefore runs as 24 ranks: the lowest line names rank 0 of 24, the highest rank 23 of 24, each on the same node. The OpenMP program is started 24 times too, and each copy is pinned by Slurm's cgroup plugin to its single core, so every copy sees one thread: 24 lines that all say thread 0 of 1, lowest and highest alike. Copy the exact wording from your output; the numbers are the point.</p>`)}`)}
+
+    ${task("13", 1, "Process and thread parallelism on cores", `
+      <p>Change the allocation to 1 node, 1 process and 24 cores per process (<code>-N 1 -n 1 -c 24</code>) and rerun both programs.</p>
+      ${ex("What to expect", `<p>Now there is one task with 24 cores. The MPI program runs as a single rank: lowest and highest line are both rank 0 of 1. The OpenMP program starts once and gets 24 cores, so its threads number 0 to 23 of 24. That is the whole lesson of lecture 2's <code>srun</code> slide: <code>-n</code> buys processes, <code>-c</code> buys cores for threads, and a program that is parallel the wrong way for its allocation gets nothing out of it.</p>`)}`)}
+
+    <h2>Before Wednesday</h2>
+    <ul>
+      <li><b>Fill in the OPAL attempt</b> with the Gantt rows above (type "-" into every idle slot, the sheet insists), the averages to one decimal, the two network drawings as uploads, and the Slurm script.</li>
+      <li><b>Run the three batch scripts on Romeo</b> and copy the lines from your own output; the project's CPU-hour budget is shared, so keep <code>-t</code> short.</li>
+      <li><b>Reread</b> the algorithms and anomalies sections of <a href="high-performance-computing/lecture.html?n=2">lecture 2</a> and play with its scheduler explorer, which has these six jobs as a preset.</li>
+      <li><b>Ask in the session</b> if the auto-check disagrees on the aging task (selection-based versus time-based aging, turnaround from submission versus from 0) or on the row assignment of task 7.</li>
+      <li><b>Context / not on the sheet.</b> Gantt charts for FIFO and SJN with a turnaround average, plus a critical-path bound for the optimum, are standard written-exam material for this kind of course; doing one without the explorer is worth the ten minutes.</li>
+    </ul>
+    <p class="muted">Next: lecture 3, Shared Memory, follows this session in the same room at ${lec.start}. The next online exercise is expected in OPAL about a week before the <a href="high-performance-computing/exercise.html?n=4">11 Nov session</a>. The sheet itself may not be republished; the tasks above are restated in our own words.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date), prev = c.lectures.find(x => x.n === e.lecture);
   return `${head(e)}
@@ -370,8 +554,8 @@ function placeholder() {
       <p class="muted">This exercise session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(e.blurb)}${prev ? ` <a href="high-performance-computing/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it will draw on.` : ""}<br>The write-up appears here once the online exercise is in OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 2: exercise2 };
-const LABS = { tree: initTree, loop: initLoop };
+const WRITEUPS = { 2: exercise2, 3: exercise3 };
+const LABS = { tree: initTree, loop: initLoop, aging: initAging };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(q)}.</p>`;

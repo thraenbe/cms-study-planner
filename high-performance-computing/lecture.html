@@ -644,6 +644,375 @@ function lecture1() {
     <p class="muted">Next: Batch Systems (<a href="high-performance-computing/lecture.html?n=2">lecture 2</a>, 28 Oct). Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
 }
 
+const { listSchedule, ganttHTML } = HPCViz;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+// ---------------- Lecture 2: Batch Systems ----------------
+// Rectangle packings of jobs on a machine (CPU rows × time columns): the batch-system example of slides 7–8 and the
+// builtin vs backfill plugins of slides 67–68. Each panel lists jobs as {id, c0, c1, t0, t1, slot, tip}.
+function packSVG(narrow, panels, C, T, aria) {
+  const gap = 18, W = narrow ? 340 : 600, PWt = narrow ? W : (W - gap) / 2, L = 30, Tp = 22, B = 36;
+  const cw = (PWt - L - 6) / T, rh = narrow ? 16 : 20, PH = Tp + C * rh + B;
+  const H = narrow ? panels.length * PH + 8 : PH;
+  const panel = (p, k) => {
+    const ox = narrow ? 0 : k * (PWt + gap), oy = narrow ? k * PH : 0;
+    const x = t => ox + L + t * cw, y = c => oy + Tp + c * rh;
+    const cells = [];
+    for (let c = 0; c < C; c++) for (let t = 0; t < T; t++) cells.push(`<rect class="slot" x="${x(t) + .5}" y="${y(c) + .5}" width="${cw - 1}" height="${rh - 1}"/>`);
+    const jobs = p.jobs.map(j => `<g class="pt" tabindex="0" data-tip="${esc(j.tip)}"><rect class="job f${j.slot}" x="${x(j.t0) + 1}" y="${y(j.c0) + 1}" width="${(j.t1 - j.t0) * cw - 2}" height="${(j.c1 - j.c0) * rh - 2}" rx="3"/><text class="jl" x="${x((j.t0 + j.t1) / 2)}" y="${y((j.c0 + j.c1) / 2) + 4}" text-anchor="middle">${j.id}</text></g>`).join("");
+    const used = p.jobs.reduce((s, j) => s + (j.t1 - j.t0) * (j.c1 - j.c0), 0), ms = Math.max(...p.jobs.map(j => j.t1));
+    const ticks = Array.from({ length: Math.floor(T / 2) + 1 }, (_, i) => i * 2).map(t => `<text class="tick" x="${x(t)}" y="${y(C) + 13}" text-anchor="middle">${t}</text>`).join("");
+    return `<text class="cat" x="${ox + L}" y="${oy + 14}">${p.title}</text><text class="note" x="${ox + L}" y="${y(C) + 30}">${p.note || `makespan ${ms}, ${num(used / (ms * C) * 100, 0)} % of the CPU time used`}</text>
+      ${cells}${jobs}<text class="note" x="${ox + L - 4}" y="${y(C / 2) + 4}" text-anchor="end" transform="rotate(-90 ${ox + L - 10} ${y(C / 2)})">CPUs</text>${ticks}`;
+  };
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(aria)}">${panels.map(panel).join("")}</svg>`;
+}
+const PACK = [
+  { id: "Job 1", c: 4, t: 6, slot: 1 }, { id: "Job 2", c: 2, t: 2, slot: 2 }, { id: "Job 3", c: 2, t: 2, slot: 3 },
+  { id: "Job 4", c: 2, t: 7, slot: 4 }, { id: "Job 5", c: 6, t: 3, slot: 1 },
+];
+const pj = (k, c0, t0) => { const j = PACK[k]; return { id: j.id.replace("Job ", "J"), c0, c1: c0 + j.c, t0, t1: t0 + j.t, slot: j.slot, tip: `<b>${j.id}: ${j.c} CPUs × ${j.t} time units</b>starts at t = ${t0}, ends at t = ${t0 + j.t}` }; };
+CHARTS.pack = narrow => packSVG(narrow, [
+  { title: "Submission order, no reordering", jobs: [pj(0, 2, 0), pj(1, 0, 0), pj(2, 0, 2), pj(3, 0, 4), pj(4, 0, 11)] },
+  { title: "Packed by the batch system", jobs: [pj(0, 0, 0), pj(3, 4, 0), pj(1, 0, 6), pj(2, 2, 6), pj(4, 0, 8)] },
+], 6, 14, "Two packings of five jobs on a six-CPU machine. Taken in submission order, job 5 waits for job 4 and the machine finishes at t = 14 with 34 idle CPU-slots. Reordered by the batch system, job 4 starts beside job 1, jobs 2 and 3 fill the gap, and everything is done at t = 11.");
+CHARTS.backfill = narrow => {
+  const big = { id: "J1", c0: 2, c1: 6, t0: 0, t1: 6, slot: 1, tip: "<b>Job 1, priority 100</b>4 CPUs for 6 units" };
+  const j2 = { id: "J2", c0: 0, c1: 2, t0: 0, t1: 2, slot: 1, tip: "<b>Job 2, priority 100</b>2 CPUs for 2 units" };
+  const j5 = { id: "J5", c0: 0, c1: 2, t0: 2, t1: 4, slot: 1, tip: "<b>Job 5, priority 100</b>2 CPUs for 2 units" };
+  const j3 = t0 => ({ id: "J3", c0: 0, c1: 6, t0, t1: t0 + 2, slot: 3, tip: `<b>Job 3, priority 50</b>needs the whole machine for 2 units, starts at t = ${t0}` });
+  const j4 = (t0, how) => ({ id: "J4", c0: 0, c1: 2, t0, t1: t0 + 2, slot: 4, tip: `<b>Job 4, priority 25</b>2 CPUs for 2 units, ${how}` });
+  return packSVG(narrow, [
+    { title: "builtin: strict priority order", jobs: [big, j2, j5, j3(6), j4(8, "may only start after job 3")] },
+    { title: "backfill: fill holes without delaying", jobs: [big, j2, j5, j4(4, "slips into the hole before job 3"), j3(6)] },
+  ], 6, 10, "Builtin versus backfill scheduling of five jobs with priorities 100, 100, 100, 50 and 25 on six CPUs. With builtin, job 4 of priority 25 cannot start before job 3 of priority 50 and the machine finishes at t = 10. With backfill, job 4 runs in the idle hole from t = 4 to 6 while job 1 is still running, and everything is done at t = 8.");
+};
+
+// The A–F example of slides 11–13: activity-on-node network plus two schedules on two processors.
+const AF = { A: 3, B: 2, C: 2, D: 1, E: 5, F: 4 }, AFDEP = [["A", "C"], ["B", "C"], ["C", "D"], ["E", "D"], ["E", "F"]];
+const AFPOS = { A: [0, 0], B: [0, 2], C: [1, 1], E: [2, 2], D: [3, 1], F: [4, 2] };
+const AFSCHED = {
+  slide: { title: "Schedule on the slide: length 11", rows: [["P1", [["A", 0], ["C", 3], ["D", 7]]], ["P0", [["B", 0], ["E", 2], ["F", 7]]]] },
+  best: { title: "A better list: length 9", rows: [["P1", [["A", 0], ["B", 3], ["C", 5], ["D", 7]]], ["P0", [["E", 0], ["F", 5]]]] },
+};
+CHARTS.dag = narrow => {
+  const W = narrow ? 340 : 600, nx = narrow ? 64 : 92, ny = narrow ? 34 : 38, L = 26, T = 32;
+  const px = k => L + 14 + k * nx, py = r => T + 12 + r * ny;
+  const edges = AFDEP.map(([a, b]) => { const [ax, ay] = AFPOS[a], [bx, by] = AFPOS[b]; return `<line class="ed" x1="${px(ax)}" y1="${py(ay)}" x2="${px(bx)}" y2="${py(by)}" marker-end="url(#arr)"/>`; }).join("");
+  const nodes = Object.keys(AF).map(k => { const [x, y] = AFPOS[k]; return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k} takes ${AF[k]}</b>${AFDEP.filter(d => d[1] === k).map(d => d[0]).join(", ") || "no"} predecessor${AFDEP.filter(d => d[1] === k).length === 1 ? "" : "s"}`)}"><circle class="nd" cx="${px(x)}" cy="${py(y)}" r="7"/><text class="vl2" x="${px(x) + 10}" y="${py(y) - 8}">${k}/${AF[k]}</text></g>`; }).join("");
+  const gT = T + 3 * ny + 20, rowH = narrow ? 22 : 24, gL = narrow ? 30 : 40, gW = W - gL - 16, tx = t => gL + t / 12 * gW;
+  let y0 = gT; const gantts = Object.values(AFSCHED).map(s => {
+    const head = `<text class="cat" x="${gL}" y="${y0 + 2}">${s.title}</text>`;
+    const rows = s.rows.map(([pe, jobs], i) => { const y = y0 + 10 + i * (rowH + 4);
+      return `<text class="tick" x="${gL - 5}" y="${y + rowH / 2 + 4}" text-anchor="end">${pe}</text>` + jobs.map(([j, st]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${j} on ${pe}</b>t = ${st} to ${st + AF[j]}`)}"><rect class="job f${"ABCDEF".indexOf(j) % 4 + 1}" x="${tx(st) + 1}" y="${y}" width="${tx(st + AF[j]) - tx(st) - 2}" height="${rowH}" rx="3"/><text class="jl" x="${tx(st + AF[j] / 2)}" y="${y + rowH / 2 + 4}" text-anchor="middle">${j}</text></g>`).join(""); }).join("");
+    const ax = y0 + 10 + 2 * (rowH + 4);
+    const ticks = [0, 2, 4, 6, 8, 10, 12].map(t => `<line class="grid" x1="${tx(t)}" x2="${tx(t)}" y1="${y0 + 8}" y2="${ax}"/><text class="tick" x="${tx(t)}" y="${ax + 12}" text-anchor="middle">${t}</text>`).join("");
+    const out = head + ticks + rows; y0 = ax + 30; return out; }).join("");
+  return `<svg viewBox="0 0 ${W} ${y0 - 8}" role="img" aria-label="Activity-on-node network of six jobs A to F with times 3, 2, 2, 1, 5, 4 and precedences A and B before C, C and E before D, E before F; below it two schedules on two processors: the slide's with length 11 (A, C, D on processor 1, B, E, F on processor 0) and a better one with length 9 (A, B, C, D on processor 1, E and F on processor 0).">
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="16" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arr"/></marker></defs>
+    <text class="cat" x="${L}" y="14">${narrow ? "Activity on node" : "Activity-on-node network (node = job, edge = precedence)"}</text>${edges}${nodes}${gantts}</svg>`;
+};
+// Activity-on-arrow version of the small three-job network of slide 11: A and B must finish before C.
+CHARTS.aoa = narrow => {
+  const W = narrow ? 340 : 600, H = 96, cx = W / 2;
+  const n = (x, label) => `<circle class="nd sync" cx="${x}" cy="48" r="7"/><text class="tick" x="${x}" y="72" text-anchor="middle">${label}</text>`;
+  const x0 = cx - (narrow ? 110 : 150), x1 = cx, x2 = cx + (narrow ? 110 : 150);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Activity-on-arrow network: two synchronisation nodes joined by two arcs labelled A/3 and B/2, then one arrow labelled C/2 to a third node. Nodes are synchronisation points, the edges are the jobs.">
+    <path class="ed" d="M${x0 + 7},48 Q${(x0 + x1) / 2},6 ${x1 - 7},48" marker-end="url(#arr2)"/><path class="ed" d="M${x0 + 7},48 Q${(x0 + x1) / 2},90 ${x1 - 7},48" marker-end="url(#arr2)"/><line class="ed" x1="${x1 + 7}" y1="48" x2="${x2 - 7}" y2="48" marker-end="url(#arr2)"/>
+    <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arr"/></marker></defs>
+    <text class="vl2" x="${(x0 + x1) / 2}" y="22" text-anchor="middle">A/3</text><text class="vl2" x="${(x0 + x1) / 2}" y="84" text-anchor="middle">B/2</text><text class="vl2" x="${(x1 + x2) / 2}" y="42" text-anchor="middle">C/2</text>
+    ${n(x0, "start")}${n(x1, "A and B done")}${n(x2, "C done")}</svg>`;
+};
+
+// FIFO depends on the order of arrival (slides 19 and 22): three jobs of 2, 2 and 10 units on one CPU.
+CHARTS.fifo = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 92 : 176, R = narrow ? 48 : 76, rowH = 22, T = 10, gap = 14, PW = W - L - R, tx = t => L + t / 14 * PW;
+  const rows = [
+    { lbl: "short jobs first", short: "short first", seq: [["j1", 2], ["j2", 2], ["j3", 10]], avg: "6⅔" },
+    { lbl: "long job first", short: "long first", seq: [["j1", 10], ["j2", 2], ["j3", 2]], avg: "12" },
+    { lbl: "SJN, short jobs keep coming", short: "SJN stream", seq: [["j2", 2], ["j3", 2], ["j4", 2], ["j5", 2], ["j1", 6]], avg: "j1 starves", starve: true },
+  ];
+  const H = T + rows.length * (rowH + gap) + 22;
+  const body = rows.map((r, i) => { const y = T + i * (rowH + gap); let t = 0;
+    const bars = r.seq.map(([j, d], k) => { const x0 = tx(t), x1 = tx(t + d); t += d;
+      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${j}: ${d} units</b>finishes at t = ${t}, turnaround ${t}`)}"><rect class="job f${k % 4 + 1}${r.starve && j === "j1" ? " late" : ""}" x="${x0 + 1}" y="${y}" width="${x1 - x0 - 2}" height="${rowH}" rx="3"/><text class="jl" x="${(x0 + x1) / 2}" y="${y + rowH / 2 + 4}" text-anchor="middle">${j}</text></g>`; }).join("");
+    return `<text class="cat" x="${L - 8}" y="${y + rowH / 2 + 4}" text-anchor="end">${narrow ? r.short : r.lbl}</text>${bars}<text class="val" x="${tx(t) + 6}" y="${y + rowH / 2 + 4}">${r.starve ? (narrow ? "" : "starves") : "<tspan class=\"ov\">t</tspan> = " + r.avg}</text>`; }).join("");
+  const ax = T + rows.length * (rowH + gap) - gap + 6;
+  const ticks = [0, 2, 4, 6, 8, 10, 12, 14].map(t => `<line class="grid" x1="${tx(t)}" x2="${tx(t)}" y1="${T - 4}" y2="${ax}"/><text class="tick" x="${tx(t)}" y="${ax + 12}" text-anchor="middle">${t}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Three single-CPU timelines. Short jobs first: j1 and j2 of 2 units then j3 of 10 give an average turnaround of 6 and two thirds. Long job first: 12. Shortest job next with a stream of 2-unit jobs: the 6-unit j1 keeps being postponed.">${ticks}${body}</svg>`;
+};
+
+// Explorer: the three algorithms on a small job set.
+const SC = { set: "slide", m: 1, algo: "fifo" };
+const SETS = {
+  slide: { name: "slide 19: 2, 2, 10", jobs: [[1, 2], [2, 2], [3, 10]] },
+  stream: { name: "slide 22: a stream of short jobs", jobs: [[1, 6], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2]] },
+  six: { name: "six jobs, two CPUs", jobs: [[1, 5], [2, 7], [3, 8], [4, 6], [5, 1], [6, 3]], m: 2 },
+  deps: { name: "the same six with dependencies", jobs: [[1, 5], [2, 7], [3, 8, [1, 2]], [4, 6, [3]], [5, 1], [6, 3, [5, 1]]], m: 2 },
+};
+function scOut() {
+  const set = SETS[SC.set], jobs = set.jobs.map(([id, t, pre]) => ({ id, t, sub: 0, pre: pre || [] })), r = listSchedule(jobs, SC.m, SC.algo);
+  const deps = jobs.filter(j => j.pre.length).map(j => `j${j.id} after ${j.pre.map(p => "j" + p).join(", ")}`).join("; ");
+  return `${ganttHTML(jobs, SC.m, r)}
+    <dl class="ro">
+      <dt>Jobs</dt><dd>${jobs.map(j => `j${j.id}/${j.t}`).join(" · ")}${deps ? ` · ${deps}` : ""}</dd>
+      <dt>Turnaround</dt><dd>${jobs.map(j => `j${j.id} = ${r.fin[j.id]}`).join(", ")} → <span class="ov">t</span> = ${r.turn.reduce((a, b) => a + b, 0)} / ${jobs.length} = <b>${num(r.avg, 2)}</b></dd>
+      <dt>Processing time</dt><dd><b>${r.ms}</b> (the makespan, when the last job ends) · ${pct(r.util)} of the CPU time used</dd>
+      ${SC.algo === "aging" ? `<dt>Aging</dt><dd>${r.log.filter(l => l.others.length).map(l => `t = ${l.t}: j${l.pick} picked, ${l.others.map(o => `j${o.id} ${o.prio}→${o.prio + 1}`).join(", ")}`).join("<br>") || "no job was ever passed over"}</dd>` : ""}
+    </dl>`;
+}
+function initSched(body) {
+  body.innerHTML = `<div class="presets">${Object.entries(SETS).map(([k, s]) => `<button class="preset" data-set="${k}" aria-pressed="${k === SC.set}">${s.name}</button>`).join("")}</div>
+    <div class="ctl"><label>Algorithm <select><option value="fifo">FIFO</option><option value="sjn">SJN</option><option value="aging">SJN with aging</option></select></label>
+      <label>CPUs <input type="range" min="1" max="3" step="1" value="${SC.m}"> <output>${SC.m}</output></label></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), rng = body.querySelector("input"), out = body.querySelector(".out"), o = body.querySelector("output");
+  const draw = () => { o.textContent = SC.m; out.innerHTML = scOut(); };
+  sel.addEventListener("change", () => { SC.algo = sel.value; draw(); });
+  rng.addEventListener("input", () => { SC.m = +rng.value; draw(); });
+  body.addEventListener("click", e => { const b = e.target.closest("button[data-set]"); if (!b) return; SC.set = b.dataset.set; SC.m = SETS[SC.set].m || 1; rng.value = SC.m;
+    body.querySelectorAll("button[data-set]").forEach(x => x.setAttribute("aria-pressed", x === b)); draw(); });
+  draw();
+}
+
+// Graham's anomalies (slides 27–34): nine tasks, priority by index, list scheduling. Four variants of the same input.
+const GR = { v: "base" };
+const GRV = {
+  base: { name: "base: 3 PEs", m: 3, t: [3, 2, 2, 2, 4, 4, 4, 4, 9], dep: { 9: [1], 5: [4], 6: [4], 7: [4], 8: [4] } },
+  nodep: { name: "T5 and T6 no longer wait for T4", m: 3, t: [3, 2, 2, 2, 4, 4, 4, 4, 9], dep: { 9: [1], 7: [4], 8: [4] } },
+  more: { name: "one PE more", m: 4, t: [3, 2, 2, 2, 4, 4, 4, 4, 9], dep: { 9: [1], 5: [4], 6: [4], 7: [4], 8: [4] } },
+  faster: { name: "every task one unit shorter", m: 3, t: [2, 1, 1, 1, 3, 3, 3, 3, 8], dep: { 9: [1], 5: [4], 6: [4], 7: [4], 8: [4] } },
+};
+const grRun = k => { const v = GRV[k], jobs = v.t.map((t, i) => ({ id: i + 1, t, sub: 0, pre: v.dep[i + 1] || [] })); return { v, jobs, r: listSchedule(jobs, v.m, "fifo") }; };
+function grOut() {
+  const { v, jobs, r } = grRun(GR.v), base = grRun("base").r.ms, idle = r.ms * v.m - v.t.reduce((a, b) => a + b, 0);
+  const g = ganttHTML(jobs, v.m, r, "PE", "T");
+  return `${g}<dl class="ro">
+      <dt>Schedule length</dt><dd><b>${r.ms}</b>${GR.v !== "base" ? ` ${flag(r.ms > base ? "bad" : "ok", `${r.ms > base ? "longer" : "shorter"} than the base case, ${base}`)}` : " · the reference"}</dd>
+      <dt>Idle</dt><dd>${idle} PE-units of ${r.ms * v.m}; the work itself is ${v.t.reduce((a, b) => a + b, 0)} units, so ${v.m} PEs could not finish before ${Math.ceil(v.t.reduce((a, b) => a + b, 0) / v.m)}</dd>
+      <dt>Dependencies</dt><dd>${Object.entries(v.dep).map(([j, p]) => `T${j} after ${p.map(x => "T" + x).join(", ")}`).join("; ")}</dd></dl>`;
+}
+function initGraham(body) {
+  body.innerHTML = `<div class="presets">${Object.entries(GRV).map(([k, v]) => `<button class="preset" data-v="${k}" aria-pressed="${k === GR.v}">${v.name}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = grOut(); };
+  body.addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; GR.v = b.dataset.v; body.querySelectorAll("button[data-v]").forEach(x => x.setAttribute("aria-pressed", x === b)); draw(); });
+  draw();
+}
+CHARTS.anom = narrow => {
+  const rows = Object.entries(GRV).map(([k, v]) => ({ k, name: v.name, ms: grRun(k).r.ms }));
+  const W = narrow ? 340 : 600, L = narrow ? 120 : 230, R = 40, T = 8, RH = 34, H = T + rows.length * RH + 26, PW = W - L - R, x = v => L + v / 18 * PW;
+  const ticks = [0, 4, 8, 12, 16].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const bars = rows.map((d, i) => { const y0 = T + i * RH + 8, bh = 18;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.name}</b>schedule length ${d.ms}${d.k === "base" ? "" : d.ms > 12 ? `, ${d.ms - 12} longer than the base` : `, ${12 - d.ms} shorter`}`)}"><rect class="hit" x="0" y="${y0 - 8}" width="${W}" height="${RH}"/>
+      <path class="bar ${d.k === "base" ? "gray" : "s1"}" d="${hbar(x(0), x(d.ms), y0, bh)}"/>${d.k !== "base" ? `<line class="ann dash" x1="${x(12)}" x2="${x(12)}" y1="${y0 - 3}" y2="${y0 + bh + 3}"/>` : ""}
+      <text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${narrow ? d.name.replace("every task one unit shorter", "tasks shorter").replace("T5 and T6 no longer wait for T4", "fewer deps") : d.name}</text><text class="val" x="${x(d.ms) + 6}" y="${y0 + 13}">${d.ms}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: schedule length of the nine-task example. Base case 12; with two dependencies removed 16; with a fourth processor 15; with every task one unit shorter 13. The dashed line marks the base length.">${ticks}${bars}</svg>`;
+};
+
+// Slurm terminology (slide 37): four jobs with their job steps as rectangles of CPUs × time.
+CHARTS.steps = narrow => {
+  const W = narrow ? 340 : 600, L = 30, T = 10, B = 22, C = 8, Tt = 16, cw = (W - L - 8) / Tt, rh = narrow ? 15 : 19;
+  const x = t => L + t * cw, y = c => T + (C - c) * rh;
+  const box = (c0, c1, t0, t1, cls, label, tip) => `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="${cls}" x="${x(t0) + 1}" y="${y(c1) + 1}" width="${(t1 - t0) * cw - 2}" height="${(c1 - c0) * rh - 2}" rx="3"/><text class="jl" x="${x((t0 + t1) / 2)}" y="${y((c0 + c1) / 2) + 4}" text-anchor="middle">${label}</text></g>`;
+  const alloc = (c0, c1, t0, t1, tip) => `<rect class="alloc" x="${x(t0) + 1}" y="${y(c1) + 1}" width="${(t1 - t0) * cw - 2}" height="${(c1 - c0) * rh - 2}" rx="4"><title>${tip}</title></rect>`;
+  const items = [
+    alloc(0, 4, 0, 6, "Job 1: allocation of 4 CPUs for 6 units"), box(0, 1, 0, 1.5, "job f1", "1.1", "<b>Job step 1.1</b>sequential, 1 of the 4 allocated CPUs"), box(0, 1, 1.5, 3, "job f1", "1.2", "<b>Job step 1.2</b>sequential, after 1.1"), box(0, 3, 3, 6, "job f1", "1.3", "<b>Job step 1.3</b>3 processes in parallel"),
+    alloc(0, 6, 6, 10, "Job 2: 6 CPUs for 4 units"), box(0, 6, 6, 10, "job f2", "2.1", "<b>Job 2, one step</b>6 processes in parallel"),
+    alloc(4, 8, 10, 16, "Job 3: 4 CPUs for 6 units"), box(4, 8, 10, 16, "job f3", "3.1", "<b>Job 3, one step</b>sequential program in a 4-CPU allocation"),
+    alloc(0, 4, 10, 16, "Job 4: 4 CPUs for 6 units"), box(0, 2, 10, 13, "job f4", "4.1", "<b>Job step 4.1</b>2 processes, started together with 4.2"), box(2, 4, 10, 16, "job f4", "4.2", "<b>Job step 4.2</b>2 processes, runs longer than 4.1"),
+  ].join("");
+  const ticks = [0, 4, 8, 12, 16].map(t => `<text class="tick" x="${x(t)}" y="${y(0) + 14}" text-anchor="middle">${t}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${T + C * rh + B}" role="img" aria-label="Four Slurm jobs drawn as CPU-by-time rectangles. Job 1 holds 4 CPUs and runs steps 1.1 and 1.2 one after the other on a single CPU, then step 1.3 on three CPUs, so part of the allocation idles. Job 2 is one 6-process step. Job 3 is one sequential step inside a 4-CPU allocation. Job 4 runs steps 4.1 and 4.2 at the same time; 4.2 takes longer.">${items}<text class="note" x="${L - 4}" y="${y(C / 2)}" text-anchor="end" transform="rotate(-90 ${L - 10} ${y(C / 2)})">CPUs</text>${ticks}</svg>`;
+};
+
+// A NUMA node (slides 78–81): two processors with two cores each and their own memory.
+CHARTS.numa = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 150 : 160, pw = narrow ? 120 : 200, mw = narrow ? 44 : 70, gapm = 12;
+  const px0 = W / 2 - pw - 20, px1 = W / 2 + 20, py = 30, ph = 70;
+  const proc = (px, k, cores) => `<rect class="edge" x="${px}" y="${py}" width="${pw}" height="${ph}" rx="8"/><text class="tick" x="${px + 8}" y="${py + ph - 7}">Processor ${k}</text>
+    ${cores.map((c, i) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>Core ${c}</b>local memory ${k}: fast · memory ${1 - k}: via the other processor, slower`)}"><rect class="core" x="${px + 10 + i * (pw - 20) / 2 + (i ? 4 : 0)}" y="${py + 10}" width="${(pw - 20) / 2 - 4}" height="30" rx="4"/><text class="jl" x="${px + 10 + i * (pw - 20) / 2 + (i ? 4 : 0) + ((pw - 20) / 2 - 4) / 2}" y="${py + 29}" text-anchor="middle">core ${c}</text></g>`).join("")}`;
+  const mem = (x, k) => `<rect class="mem" x="${x}" y="${py + 8}" width="${mw}" height="${ph - 16}" rx="6"/><text class="tick" x="${x + mw / 2}" y="${py + ph / 2 + 4}" text-anchor="middle">Mem ${k}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="A node with two processors of two cores each. Processor 0 with cores 0 and 1 sits next to memory 0, processor 1 with cores 2 and 3 next to memory 1; the processors are linked. A core reaches its own memory faster than the other processor's memory.">
+    ${mem(px0 - mw - gapm, 0)}${proc(px0, 0, [0, 1])}${proc(px1, 1, [2, 3])}${mem(px1 + pw + gapm, 1)}
+    <line class="sl" x1="${px0 + pw}" y1="${py + ph / 2}" x2="${px1}" y2="${py + ph / 2}"/><text class="note" x="${W / 2}" y="${py - 8}" text-anchor="middle">inter-processor link</text>
+    <text class="note" x="${W / 2}" y="${py + ph + 24}" text-anchor="middle">local access: short path · remote access: across the link, higher latency, lower bandwidth</text>
+    <text class="note" x="${W / 2}" y="${py + ph + 40}" text-anchor="middle">same for network cards and GPUs: they hang off one of the processors</text></svg>`;
+};
+
+function lecture2() {
+  const tbl = (h, rows) => `<details class="tbl"><summary>Table view</summary><table><tr>${h.map(x => `<th>${x}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((x, i) => `<td${i ? ' class="n"' : ""}>${x}</td>`).join("")}</tr>`).join("")}</table></details>`;
+  return `${head(l)}
+    <p class="lead">Lecture 1 explained why a program is cut into parallel parts; this one is about the layer that decides <b>when and where those parts run on a shared cluster</b>. It starts with the reason batch systems exist, defines how a schedule is written down, works through three non-preemptive algorithms (FIFO, shortest job next, SJN with aging) and Graham's warning that "better" inputs can make a schedule worse, then opens up Slurm: its vocabulary, commands, daemons, scheduling loop, plugins and priority factors. A short coda covers what happens <i>inside</i> a node (OS scheduler, NUMA, pinning) and the other batch systems you may meet. Seven charts and two explorers below; the slides are in OPAL, this page is a summary in our own words.</p>
+
+    <h2>Why a batch system (slides 4–9)</h2>
+    <p>An HPC system is a set of nodes, each with processors, cores and its own DRAM, joined by a switch. On a <b>dedicated</b> machine the workflow is simple: write the program, prepare the input, run it, wait, use the results (the slides' engineer starts a CAD tool, builds a mesh, runs the solver and drinks a coffee). On a shared system that breaks down for two reasons:</p>
+    <ul>
+      <li><b>People work during the day.</b> Too much work at daytime, an empty machine at night; a system this expensive cannot sit at 50 % utilisation. The fix is to <b>decouple submitting a job from running it</b>: that is what a batch system is.</li>
+      <li><b>Many users, one machine.</b> Who gets which resources, should some job be prioritised, which job runs first and where? The batch system picks the best resources for each job.</li>
+    </ul>
+    ${chart("pack", leg([[1, "Jobs 1 and 5"], [2, "Job 2"], [3, "Job 3"], [4, "Job 4"]]))}
+      <figcaption>Slides 7–8 redrawn with made-up sizes: six CPUs, five jobs as rectangles of CPUs × time. Left, nothing is reordered and the wide job 5 waits for the long job 4; right, the batch system starts job 4 beside job 1 and fills the gap with jobs 2 and 3. Hover a job for its size.</figcaption>
+    </figure>
+    <p>To do that packing the system has to <b>know the hardware</b> (which nodes exist, their internal structure down to processors, cores and hardware threads, their memory, how they are connected) and <b>know the jobs</b> (how long each will probably run, what else it needs such as GPUs, instruction-set extensions or memory, and which jobs deserve priority). Both sides of that knowledge come back later: the hardware side in the Slurm daemons, the job side in the batch script.</p>
+
+    <h2>Writing a schedule down (slides 11–14)</h2>
+    <p>The notation is small: a set of jobs J = {j<sub>1</sub>, …, j<sub>n</sub>}, a <b>precedence relation</b> R ⊆ J × J where (j<sub>p</sub> ≺ j<sub>q</sub>) means j<sub>p</sub> must finish before j<sub>q</sub> starts, and a time requirement t<sub>i</sub> for each job. The relation can be drawn two ways:</p>
+    <ul class="cmp" aria-label="Two network notations">
+      <li><b>Activity on node</b><span class="v"><span class="sw t"></span>A node is a job (with its time, "A/3"), an edge is a precedence. The usual picture.</span></li>
+      <li><b>Activity on arrow</b><span class="v"><span class="sw v"></span>An edge is a job, a node is a synchronisation point where its incoming jobs must all be done.</span></li>
+    </ul>
+    ${chart("dag", leg([[1, "A, E"], [2, "B, F"], [3, "C"], [4, "D"]]))}
+      <figcaption>The slides' example: A/3, B/2, C/2, D/1, E/5, F/4 with A, B ≺ C, C, E ≺ D and E ≺ F. The schedule of slide 13 takes 11 units; the second one, which starts the long chain E → F first, takes 9. Hover a node or a bar.</figcaption>
+    </figure>
+    ${chart("aoa")}
+      <figcaption>The same idea as activity-on-arrow for A, B ≺ C: the middle node is the synchronisation "A and B are done", and the jobs sit on the arrows.</figcaption>
+    </figure>
+    ${ex("Worked example: is the slide's schedule the best one?", `<p>Two lower bounds: the total work is 3 + 2 + 2 + 1 + 5 + 4 = 17 units, so two processors need at least ⌈17 / 2⌉ = 9; and the longest chain of precedences, E (5) → F (4), is 9 as well. The slide's schedule finishes at 11 because E only starts at t = 2 behind B and D waits for E until 7. Start E at t = 0 on P0 and F right behind it, and put A, B, C, D in that order on P1 (A 0–3, B 3–5, C 5–7, D 7–8): length 9, both bounds met, so this is optimal. It is also what the exercise asks you to do by hand: find the processing-time optimum first, then the best average turnaround among the optimal schedules.</p>`)}
+    <p>In HPC the problem is harder than this toy: many parallel programs at once, heterogeneous hardware (different architectures, memory sizes, GPUs). Finding an optimal schedule is <b>NP-hard</b>, so real systems use simple algorithms such as FIFO and accept that they are not optimal (slide 14).</p>
+
+    <h2>Three scheduling algorithms (slides 16–26)</h2>
+    <p>Only <b>non-preemptive</b> algorithms here: once a job runs, it runs to the end. What "good" means depends on who asks. Users want a low total flow time t<sub>processing</sub>(J) (when the last job is done) and a low average turnaround <span class="ov">t</span><sub>turnaround</sub> = waiting time + execution time, averaged over the jobs (in the examples every job is submitted at t = 0, so turnaround = finishing time), plus fairness, above all no starvation. The site wants high CPU utilisation and throughput.</p>
+    <ul class="cmp three" aria-label="FIFO, SJN and SJN with aging">
+      <li><b>Rule</b><span class="v"><span class="sw t"></span>FIFO (first come, first served): by submission time, among the jobs whose dependencies are fulfilled.</span><span class="v"><span class="sw v"></span>SJN (shortest job next, also SJF, SPN): by estimated runtime.</span><span class="v"><span class="sw p"></span>SJN with aging: by priority = −runtime, and every job that is passed over gains a fixed aging factor.</span></li>
+      <li><b>Good</b><span class="v"><span class="sw t"></span>Easy to implement, fair in arrival order.</span><span class="v"><span class="sw v"></span>Lowest average turnaround.</span><span class="v"><span class="sw p"></span>Low turnaround and no starvation.</span></li>
+      <li><b>Bad</b><span class="v"><span class="sw t"></span>Not optimal: one long job in front delays everyone.</span><span class="v"><span class="sw v"></span>Needs a runtime estimate; a long job can starve while short ones keep arriving.</span><span class="v"><span class="sw p"></span>Needs the estimate, one more variable per job, and someone has to choose the aging factor.</span></li>
+      <li><b>Queue</b><span class="v"><span class="sw t"></span>Append on submit, take the head when a resource frees up.</span><span class="v"><span class="sw v"></span>Sort in on submit, take the head.</span><span class="v"><span class="sw p"></span>Sort in on submit, take the head and update everyone else.</span></li>
+    </ul>
+    ${chart("fifo", leg([[1, "first job"], [2, "second"], [3, "third"], [4, "fourth"]]))}
+      <figcaption>Slides 19 and 22 on one CPU. The same three jobs give <span class="ov">t</span> = (2 + 4 + 14) / 3 = 6⅔ when the short ones go first and (10 + 12 + 14) / 3 = 12 when the long one does; FIFO cannot choose. SJN would always pick the short ones, and if they keep arriving the long j1 waits forever: starvation.</figcaption>
+    </figure>
+    ${ex("Worked example: priorities as the lecture defines them (slide 23)", `<p>Every algorithm is "pick the job with the highest priority"; they differ in the priority function. FIFO uses the negative queueing time: j1 submitted at 10 s and j2 at 20 s have priorities −10 and −20, max picks j1. SJN uses the negative estimated runtime: j1 with 100 s and j2 with 20 s have −100 and −20, max picks j2. Aging adds a step per scheduling iteration: pick j<sub>next</sub> = argmax priority, remove it, and raise every remaining job's priority by the aging factor. With factor 1 the 100-second job climbs one point each time it is skipped; after 80 skips it beats a fresh 20-second job, so it eventually runs (slide 24's j1 finally runs, and even j6 behind it gets its turn).</p>`)}
+    ${lab("sched", "FIFO, SJN and aging on four job sets")}
+    <p>When does the scheduler decide? The naive answer is "whenever a resource is free, search the unsorted set for the highest priority". The smarter one keeps sorted queues: FIFO appends on submission and pops the head; SJN sorts in on submission; SJN with aging sorts in, pops the head and then updates the priorities of what is left (slide 25). <b>Preemptive</b> scheduling, where the scheduler can suspend a running task, is not this lecture's focus but two names are worth knowing: <i>shortest remaining time</i> (SJN plus: a new job preempts the running one if it would finish sooner) and <i>round robin</i> (FIFO plus a time slice, after which the job goes to the back of the queue).</p>
+
+    <h2>Graham's scheduling anomalies (slides 27–34)</h2>
+    <p>A 1972 result by Graham, shown as four Gantt charts: nine tasks on three PEs, scheduled greedily in index order, take 12 units. Then the input is "improved" three ways, and each time the schedule gets <b>longer</b>: remove two dependencies, 16; add a fourth PE, 15; make every task one unit shorter, 13. The lesson of slide 34: changing environment parameters has unexpected effects on scheduling quality, so never assume that more hardware or fewer constraints shorten a greedy schedule.</p>
+    ${lab("graham", "the nine tasks, four ways")}
+    ${chart("anom", leg([["g", "base case"], [1, "the \"improved\" inputs"]]))}
+      <figcaption>Schedule lengths of the four variants as the explorer computes them; the dashed line is the base length 12. All three changes that should help make the list schedule worse.</figcaption>
+    </figure>
+    ${why("Context, not on the slides: why greedy list scheduling misbehaves", `<p>A list scheduler never leaves a PE idle while some task is runnable, which sounds safe but means it commits early. Removing T4 → T5 lets T5 and T6 grab PEs at t = 2, which pushes the 9-unit T9 behind T6 to t = 7; with the dependency in place T9 started at 3. Graham proved the damage is bounded: any list schedule is at most 2 − 1/m times the optimal length on m PEs, and that bound is tight, so the 16 versus 12 here is well inside it. Real batch systems live with this because computing the optimum is NP-hard; what they add instead are priorities, backfilling and runtime estimates, which is where Slurm comes in.</p>`)}
+
+    <h2>Slurm: what a job is (slides 36–38)</h2>
+    <p>Slurm is the workload manager on ZIH's systems: a job scheduler for Linux and other Unix systems started at Lawrence Livermore, now developed by SchedMD (with NVIDIA), open source, written in C, with a plugin architecture. The 2012 figures on slide 36: scalable to 33 million cores, 600 jobs started and 1,000 submissions per second. Its vocabulary has three layers:</p>
+    <ul>
+      <li><b>Job</b>: one allocation, one set of resources, holding one or more programs to run.</li>
+      <li><b>Job step</b>: one program, run on one or several nodes within the job's allocation, as one or many processes.</li>
+      <li><b>Process</b>: runs on one node of the allocation, is pinned to some processor cores, and can have several threads.</li>
+    </ul>
+    ${chart("steps", leg([[1, "Job 1"], [2, "Job 2"], [3, "Job 3"], [4, "Job 4"]]))}
+      <figcaption>Slide 37's example: an allocation (light frame) is not the same as what runs in it. Job 1's two sequential steps use one of four CPUs, so three idle until step 1.3; job 4 runs two steps at once. Allocated-but-unused CPUs are still charged to the project.</figcaption>
+    </figure>
+
+    <h2>The workflow with Slurm (slides 39–46)</h2>
+    <p>The dedicated-machine workflow maps onto four stages, each with its tools:</p>
+    <div class="tt-wrap"><table class="tt syn"><tr><th>Stage</th><th>What happens</th><th>Tools</th></tr>
+      <tr><td><b>Prepare</b></td><td>Write a batch script that defines the job: hardware (GPUs, memory, number of CPUs), software (modules, environment variables) and the expected runtime.</td><td>an editor, bash</td></tr>
+      <tr><td><b>Submit</b></td><td>Hand the description to the batch system, which registers it, queues it and returns a job ID for later queries. Jobs can be cancelled after submission.</td><td><code>sbatch</code> (a script), <code>srun</code> (one step as a job), <code>squeue</code>, <code>scancel</code></td></tr>
+      <tr><td><b>Run</b></td><td>Slurm allocates the resources and runs the job steps inside the allocation, checking step dependencies; a job can give resources back.</td><td><code>srun</code> inside the script, <code>scontrol</code>, <code>skill</code></td></tr>
+      <tr><td><b>Completion</b></td><td>The job leaves the system, temporary files are gone, return code and stdout/stderr come back to the user, who can query accounting data.</td><td><code>sacct</code> (time, energy, nodes used, …)</td></tr>
+    </table></div>
+    <p>Failures, in the slides' "order of appearance": the program failed, the runtime limit was exceeded, the memory limit was exceeded, the hardware failed. The first three are yours to fix; the overestimated runtime of slide 43 (<code>-t</code>) is the usual culprit of the second.</p>
+    <h3>sbatch, srun, salloc (slides 42–44)</h3>
+    <ul class="cmp three" aria-label="The three ways to get resources">
+      <li><b>Command</b><span class="v"><span class="sw t"></span><code>sbatch script</code></span><span class="v"><span class="sw v"></span><code>srun [opts] program</code></span><span class="v"><span class="sw p"></span><code>salloc [opts]</code></span></li>
+      <li><b>Does</b><span class="v"><span class="sw t"></span>Submits a batch script and returns at once; Slurm parses it and runs it when resources are free, as one job whose steps are the <code>srun</code> lines inside.</span><span class="v"><span class="sw v"></span>Starts a job step inside a job; outside one, creates a job with that single step. Stands in for <code>mpirun</code> (lecture 7).</span><span class="v"><span class="sw p"></span>Blocks until the resources are granted, then opens a shell <i>on the login node</i> from which <code>srun</code> starts steps in the allocation.</span></li>
+      <li><b>Resources</b><span class="v"><span class="sw t"></span>As comments in the script: <code>#SBATCH -n 2</code>, <code>#SBATCH -t 00:30:00</code></span><span class="v"><span class="sw v"></span>Options: <code>-N</code> nodes, <code>-n</code> processes, <code>-c</code> cores per process (for threads), <code>-t</code> runtime; all default to 1 except the site's default time.</span><span class="v"><span class="sw p"></span>Same options; steps started with <code>&amp;</code> run side by side inside the allocation.</span></li>
+    </ul>
+    <div class="formula">srun -n 128 ./mpi_program &nbsp;&nbsp;# 128 processes on 128 CPUs<br>salloc -n 128 &nbsp;&nbsp;# then: srun ./a (1 process) · srun -n 64 ./b &amp; · srun -n 64 ./c (b and c in parallel)</div>
+    ${why("Context, not on the slides: -n versus -c, and why it matters next week", `<p><code>-n</code> counts <i>processes</i> (each an MPI rank, pinned to <code>-c</code> cores); <code>-c</code> counts <i>cores per process</i>, which is what OpenMP threads need. <code>-N 1 -n 24</code> gives 24 single-core processes: a thread-parallel program launched this way sees one core per copy. <code>-N 1 -n 1 -c 24</code> gives one process with 24 cores: an MPI program is then a single rank, a thread-parallel one gets all 24. Exercise 03's last two tasks are exactly this experiment, and the cgroup plugin of slide 84 is what enforces the pinning on ZIH's machines.</p>`)}
+
+    <h2>Inside Slurm (slides 48–66)</h2>
+    <p>Four kinds of programs: the user commands <code>srun</code>, <code>salloc</code>, <code>sbatch</code> on the login and compute nodes; <b>slurmctld</b>, the control daemon on the management node, which knows the hardware and the jobs, holds the queue and starts and manages jobs; <b>slurmd</b>, one per compute node, reached from slurmctld over a software tree network, which starts the processes and answers health checks; and <b>slurmdbd</b>, the database daemon on the management node that stores accounting and configuration in MySQL. The control and database daemons each have a backup (slide 52).</p>
+    <p>Scheduling is done by a <b>plugin of slurmctld</b>, in regular intervals, for a set of jobs, based on the job requests, the available resources and policy limits, and it is an <b>allocation of resources, not a placement of jobs</b> on cores (slide 53): placement inside a node is the OS's and the cgroup plugin's business. Slurmctld's background loop (slides 54–59) cycles through: update node states (idle, allocated, reserved, maintained, failed, …), terminate jobs that exceed their limits (compare runtime with the predicted runtime), ping the nodes for health, schedule the queue, trigger external programs on events (a failed node, a finished job), and send updates to the accounting database.</p>
+    <ol>
+      <li><b>Build the job/partition queue</b>: a list of jobs.</li>
+      <li><b>Pop the top-priority job</b>, taking preemptiveness into account.</li>
+      <li><b>Reject non-runnable jobs</b>: if it cannot run now (insufficient resources), skip it.</li>
+      <li><b>Find nodes</b>: omit reserved nodes, build the list of preemptable jobs, pick the best nodes and return them with the preemptee list.</li>
+      <li><b>Preempt</b> jobs if that list is not empty.</li>
+      <li><b>Start the job</b> on the selected nodes and <b>update the job and node state</b> for the next round.</li>
+    </ol>
+    <h3>Two scheduling plugins (slides 67–68)</h3>
+    ${chart("backfill", leg([[1, "priority 100"], [3, "priority 50"], [4, "priority 25"]]))}
+      <figcaption>The same five jobs under the two plugins, sizes made up to match the slides' picture. builtin is FIFO by priority: a lower-priority job never starts before a higher one, so job 4 waits behind the whole-machine job 3. backfill lets a lower-priority job use resources that are free anyway, as long as it does not delay the higher ones: job 4 fits before job 3 even starts.</figcaption>
+    </figure>
+    <ul>
+      <li><b>builtin</b>: simple; FIFO when paired with <code>priority=basic</code>; lower-priority jobs cannot be scheduled before higher-priority ones, higher ones can postpone lower ones; resources may go unused.</li>
+      <li><b>backfill</b>: lower-priority jobs may run alongside higher ones if there are still free resources; higher-priority jobs can still postpone lower ones; better resource usage. This is what makes a good runtime estimate pay: the scheduler can only backfill a job into a hole whose length it knows.</li>
+    </ul>
+    <h3>Other scheduling features (slides 69–70)</h3>
+    <ul>
+      <li><b>Oversubscription</b>: more than one operation on one machine, switched in time slices, controlled by QoS or priority.</li>
+      <li><b>Gang scheduling</b>: schedule specific threads or processes at the same time. If two preempted operations communicate, one may stall waiting for the other; gang scheduling runs them together.</li>
+      <li><b>Job reduction and expansion</b>: fewer processors during a job is simple; more means submitting a new job with an expand query that takes over the original's resources.</li>
+      <li><b>Dependencies</b> with <code>--dependency</code>: <code>afterok</code>, <code>afternotok</code> (react to success or failure), <code>afterany</code> over a list of jobs, <code>singleton</code> (wait for all earlier jobs of the same name and user). The slide's chain: job 1, then job 2 after it succeeds or job 3 after it fails, then jobs 4–6 after any of those, then a singleton job 7. Exercise 03 asks you to write exactly this chain for initialize / foo / bar / finalize.</li>
+    </ul>
+    <h3>Priority factors (slides 71–72)</h3>
+    <p>Which job is "top of the queue" is a weighted sum of factors, each between 0 and 1, each with a 32-bit integer weight ω, normalised back to 0 … 1:</p>
+    <div class="formula">priority = ( ω<sub>age</sub>·f<sub>age</sub> + ω<sub>size</sub>·f<sub>size</sub> + ω<sub>partition</sub>·f<sub>partition</sub> + ω<sub>QoS</sub>·f<sub>QoS</sub> + ω<sub>TRES</sub>·f<sub>TRES</sub> + ω<sub>fair-share</sub>·f<sub>fair-share</sub> ) / Σ ω</div>
+    <div class="tt-wrap"><table class="tt syn"><tr><th>Factor</th><th>Grows with</th><th>Note</th></tr>
+      <tr><td><b>Age</b></td><td>time the job has waited in the queue while eligible</td><td>not increased while a dependency or missing resources keep it ineligible; the lecture's aging, built in</td></tr>
+      <tr><td><b>Job size</b></td><td>nodes or CPUs requested</td><td>can favour small jobs, large jobs, or large jobs with short runtimes</td></tr>
+      <tr><td><b>Partition</b></td><td>the partition the job is in</td><td>parts of the system with their own factor</td></tr>
+      <tr><td><b>QoS</b></td><td>the quality-of-service class the job names</td><td></td></tr>
+      <tr><td><b>TRES</b></td><td>trackable resources requested: CPU, memory, GPU, licences</td><td>each resource has a cost</td></tr>
+      <tr><td><b>Fair-share</b></td><td>how little of its assigned share a user or project has used</td><td>used less than the share: higher; used more: lower</td></tr>
+    </table></div>
+
+    <h2>PCAM again, with Slurm as the mapper (slide 74)</h2>
+    ${ex("Worked example: 10,000 image sets from a microscope", `<p>A program <i>foo</i> inspects each set; where it finds an interesting cell development, <i>bar</i> analyses it. <b>Tasks</b>: 10,000 runs of foo, then x runs of bar. <b>Communication</b>: bar depends on foo's result, and Slurm's job and job-step boundaries are the synchronisation points. <b>Agglomeration</b>: bundle many foo runs into one job, so Slurm has less to manage. <b>Mapping</b>: the Slurm scheduler does it. The units of execution are the foo and bar processes (which may be thread-parallel inside), the processing elements are whatever hardware is allocated to a UE, a core or a set of cores. The afterok / afternotok dependencies of the previous section are how "if foo found something, run bar" is written without a script that polls.</p>`)}
+
+    <h2>Scheduling inside a node (slides 76–85)</h2>
+    <p>Three schedulers stack up. The <b>task scheduler</b> of a programming model (OpenMP's runtime) maps tasks, loop iterations, parallel sections to threads inside one process (lectures 1 and 4). The <b>batch scheduler</b> maps processes to nodes and counts the cores they use. In between sits the <b>operating system scheduler</b>: it knows the node's memory, cores and network, which threads and processes exist and need resources, and it re-evaluates at regular intervals which thread runs on which processor, preempting as needed. On HPC nodes there is usually one process or thread per core, so almost no preemption happens, but the default is still that <b>nothing is pinned</b>: a thread may run on any CPU, and that causes four problems.</p>
+    ${chart("numa")}
+      <figcaption>Slides 78–81's node: two processors, two cores each, each with its own memory. A thread on core 0 reaches memory 0 faster than core 2 does; two communicating threads on cores 0 and 1 talk faster than on cores 0 and 2; threads sharing a resource (a core's SMT siblings, a cache) get sub-linear speedups; and the OS may move a thread to another core at any time, taking it away from its data.</figcaption>
+    </figure>
+    <div class="tt-wrap"><table class="tt syn"><tr><th>Tool</th><th>Pins what</th><th>How</th></tr>
+      <tr><td><b>taskset</b></td><td>a process to a set of CPUs</td><td><code>taskset -c 0,1 ls</code>; children inherit the mask but may change it</td></tr>
+      <tr><td><b>cgroup</b></td><td>a process and all its children to a resource set</td><td>defined by the OS; the process cannot escape it without superuser rights; also limits memory nodes and whether memory may migrate</td></tr>
+      <tr><td><b>numactl</b></td><td>a process's memory policy</td><td><i>local</i> (fail if no local memory), <i>local preferred</i> (the default: fall back to foreign nodes), <i>specific</i> node, <i>interleaved</i> across nodes page by page: <code>numactl --interleave=all ls</code></td></tr>
+      <tr><td><b>Slurm's cgroup plugin</b></td><td>each MPI process to its <code>-c</code> cores</td><td>enabled on ZIH's systems: this is why <code>-c</code> matters for threads</td></tr>
+      <tr><td><b>Threads</b></td><td>one thread to one CPU</td><td>no generic way with cgroup or taskset (a process with n − 1 children is at best pinned to n CPUs); use <code>pthread_setaffinity</code> in the source, environment variables such as <code>OMP_PLACES</code> or <code>GOMP_CPU_AFFINITY</code>, or a wrapper library such as likwid that pins new threads as they appear</td></tr>
+    </table></div>
+
+    <h2>Other batch systems (slides 87–88)</h2>
+    <ul>
+      <li><b>PBS</b> (Portable Batch System, since 1991): scheduling by a meta-scheduler (Maui, its Molokini fork, Moab/TORQUE, none of them developed further); Python plugins; the lineage OpenPBS (1998), TORQUE and the dual-licensed PBS Professional by Altair, the preferred commercial scheduler on Cray systems as of 2018.</li>
+      <li><b>LSF</b> (Platform Load Sharing Facility): built by Platform Computing for ad-hoc networks of workstations, bought by IBM, now IBM Spectrum LSF; its open-source branch OpenLava was shut down after IBM's lawsuit over copyright and trade secrets.</li>
+    </ul>
+
+    <h2>The practical exercises (slide 90)</h2>
+    <p>You get an invitation link to the course's HPC project; click it and wait about half an hour for the account to be set up. The basic batch script lives in the project's <code>hpc-exercises/slurm</code> folder: copy it, adapt it, submit it with <code>sbatch my_script.sbatch</code>. The project, meaning everyone in the course together, has a strict monthly budget of CPU hours, shown at login. The exercise sheet adds the login details for the Romeo cluster and a download of the exercise sources; see the <a href="high-performance-computing/exercise.html?n=3">exercise 03 write-up</a>.</p>
+
+    <h2>Background: scheduling theory in α | β | γ (slides 93–98)</h2>
+    <p>The appendix (after the references, based on Brucker's textbook) gives the formal frame: m machines M<sub>j</sub> execute n jobs J<sub>i</sub>; a schedule allocates each job one or more time intervals on one or more machines; a job has operations O<sub>ij</sub>, each allowed on a set of machines; a cost function f<sub>i</sub>(t) prices finishing J<sub>i</sub> at time t. Problems are named in the three-field notation of Graham, Lawler, Lenstra and Rinnooy Kan (1979):</p>
+    <div class="tt-wrap"><table class="tt syn"><tr><th>Field</th><th>Describes</th><th>Values</th></tr>
+      <tr><td><b>α</b> machines</td><td>α<sub>1</sub> the machine environment, α<sub>2</sub> the number of machines</td><td>single-operation jobs on 1 machine, P identical, Q uniform or R unrelated parallel machines (plus PMPM, QMPM); multi-operation shop problems G, X, O, J, F; α<sub>2</sub> a number or ∘ for "any"</td></tr>
+      <tr><td><b>β</b> jobs</td><td>six optional sub-fields</td><td>pmtn if preemption is allowed; precedence relations (e.g. a DAG); release dates r<sub>i</sub> if not all 0; restrictions on processing times or operation counts; deadlines; batching</td></tr>
+      <tr><td><b>γ</b> objective</td><td>a bottleneck (max) or sum objective over the cost functions</td><td>makespan C<sub>max</sub> = max C<sub>i</sub>; total flow time Σ C<sub>i</sub>; weighted flow time Σ ω<sub>i</sub> C<sub>i</sub></td></tr>
+    </table></div>
+    <p>Two of the slides' examples: <b>P | prec; p<sub>i</sub> = 1 | C<sub>max</sub></b> is "identical parallel machines, a DAG of unit-time tasks, minimise the makespan" (m and the DAG still have to be given); <b>1 | s-batch | Σ ω<sub>i</sub> C<sub>i</sub></b> is "one machine, jobs grouped into batches, minimise the weighted flow time". In this language the exercise's tasks are P2 | | C<sub>max</sub> and P2 | prec | C<sub>max</sub>, with Σ C<sub>i</sub> as the tie-breaker.</p>
+
+    <div class="tiles" aria-label="Numbers and formulas to remember">
+      <div class="tile"><div class="v">Σ C<sub>i</sub> / n</div><div class="l">average turnaround when every job is submitted at 0</div></div>
+      <div class="tile"><div class="v">C<sub>max</sub></div><div class="l">makespan = processing time = total flow time</div></div>
+      <div class="tile"><div class="v">12 → 16 · 15 · 13</div><div class="l">Graham's base schedule after removing dependencies, adding a PE, shortening tasks</div></div>
+      <div class="tile"><div class="v">-N -n -c -t</div><div class="l">nodes, processes, cores per process, runtime</div></div>
+      <div class="tile"><div class="v">33 M</div><div class="l">cores Slurm scaled to in 2012; 1,000 submissions/s</div></div>
+    </div>
+    <h2>Take-home: the lecture's five questions</h2>
+    <ul>
+      <li><b>Why a batch scheduler?</b> To decouple submitting from running (daytime load, idle nights) and to share one machine among many users by choosing which job runs first and where.</li>
+      <li><b>Notation?</b> Jobs with times t<sub>i</sub>, a precedence relation j<sub>p</sub> ≺ j<sub>q</sub>, drawn activity-on-node or activity-on-arrow; a schedule's quality is its processing time (makespan) and average turnaround; formally α | β | γ.</li>
+      <li><b>Three simple algorithms?</b> FIFO by arrival (easy, order-dependent), SJN by runtime (best turnaround, needs estimates, can starve), SJN with aging (priority = −runtime plus a bonus per skip, no starvation). Optimal scheduling is NP-hard, and greedy schedules can get worse with "better" inputs.</li>
+      <li><b>How does Slurm work?</b> Jobs hold job steps hold processes; sbatch / srun / salloc submit, slurmctld schedules by plugin (builtin or backfill) from a multi-factor priority, slurmd runs the processes, slurmdbd accounts.</li>
+      <li><b>Other scheduling to be aware of?</b> The OS scheduler inside the node: unpinned threads suffer NUMA latency, slow communication, contention and migration; fix it with taskset, cgroups, numactl, OpenMP affinity variables, or Slurm's cgroup plugin via <code>-c</code>.</li>
+    </ul>
+    <h2>Exercise</h2>
+    <p><a href="high-performance-computing/exercise.html?n=3">Exercise 03 on scheduling and batch systems</a> has been in OPAL since 30 Oct: Gantt charts for FIFO, SJN and the optimum with and without dependencies, activity networks, a Slurm dependency script, SJN with aging on seven jobs, and three batch scripts to run on Romeo. The write-up here works every task. Your group discusses it on <b>Wed 4 Nov, 07:30</b> in ${esc(exe.room)}.</p>
+    <p class="muted">Next: Shared Memory, parallelism within a processor and on a node (<a href="high-performance-computing/lecture.html?n=3">lecture 3</a>, 4 Nov). Previous: <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>. Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -653,8 +1022,8 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the course overview: ${esc(l.blurb)}<br>The summary appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1 };
-const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2 };
+const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;

@@ -442,8 +442,8 @@ window.CMS = {
       "date": "2026-10-28",
       "icon": "🗃️",
       "type": "software",
-      "covered": false,
-      "blurb": "Scheduling basics and scheduling algorithms, Slurm and other batch systems: how jobs get onto a shared cluster."
+      "covered": true,
+      "blurb": "Why batch systems exist, the notation of schedules (precedence relations, activity-on-node and on-arrow networks), FIFO, shortest job next and SJN with aging, Graham's scheduling anomalies, then Slurm: jobs and job steps, sbatch/srun/salloc, the daemons, the scheduling loop, builtin vs backfill, priority factors, and scheduling inside a node (NUMA, pinning)."
      },
      {
       "n": 3,
@@ -560,14 +560,14 @@ window.CMS = {
      },
      {
       "n": 3,
-      "title": null,
+      "title": "Scheduling and Batch Systems",
       "date": "2026-11-04",
-      "published": null,
+      "published": "2026-10-30",
       "icon": "📐",
-      "covered": false,
+      "covered": true,
       "lecture": 2,
-      "points": null,
-      "blurb": "Expected to follow lecture 2 (Batch Systems); the online exercise usually appears in OPAL about a week before the session."
+      "points": 42.9,
+      "blurb": "Gantt charts for FIFO, SJN and the optimum on two processors with and without dependencies, activity-on-node and on-arrow networks, a Slurm dependency script, SJN with aging on seven jobs arriving over time, and three batch scripts on Romeo (sequential vs parallel steps, -n vs -c)."
      },
      {
       "n": 4,
