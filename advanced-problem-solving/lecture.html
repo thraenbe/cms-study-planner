@@ -11,6 +11,7 @@
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <script src="advanced-problem-solving/apss.js"></script>
+<script src="advanced-problem-solving/apss-viz.js"></script>
 <style>
 /* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
 :root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
@@ -27,121 +28,12 @@ const q = new URLSearchParams(location.search).get("n");
 const l = q === null ? null : c.lectures.find(x => x.n === Number(q));
 const page = document.getElementById("page");
 const back = `<a class="back" href="advanced-problem-solving.html">← All lectures</a>`;
-const isNarrow = () => matchMedia("(max-width: 600px)").matches;
 
 function head(l) {
   return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who)}${l.planned ? " · planned topic, date assumed" : ""}</p>`;
 }
 
-// ---------------- Shared chart and explorer helpers (as on the other course boards) ----------------
-// Colour roles: categorical slots 1-4 from the palette above, gray for reference marks and unvisited nodes.
-// Text stays in ink; colour sits on marks, swatches, underlines and tinted cells.
-const key = (s, kind = "") => `<span class="key ${kind}" style="--c:${s === "g" ? "var(--vz-gray)" : `var(--vz-s${s})`}"></span>`;
-const leg = items => `<div class="legend">${items.map(([s, t, k]) => `<span class="li">${s ? key(s, k) : ""}<span class="lt">${t}</span></span>`).join("")}</div>`;
-const flag = (k, t) => `<span class="flag ${k}">${k === "ok" ? "✓" : "⚠"} ${t}</span>`;
-const hbar = (x0, x1, y0, h) => { const r = Math.min(4, (x1 - x0) / 2, h / 2); return `M${x0},${y0} H${x1 - r} Q${x1},${y0} ${x1},${y0 + r} V${y0 + h - r} Q${x1},${y0 + h} ${x1 - r},${y0 + h} H${x0} Z`; };
-const vbar = (x0, w, y0, y1) => { const r = Math.min(4, w / 2, Math.max(0, (y1 - y0) / 2)); return `M${x0},${y1} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + w - r} Q${x0 + w},${y0} ${x0 + w},${y0 + r} V${y1} Z`; };
-const num = (v, d = 2) => v.toLocaleString("en-GB", { maximumFractionDigits: d });
-const sci = v => { if (v < 1e6) return num(v, 0); const e = Math.floor(Math.log10(v)); return `${num(v / 10 ** e, 2)} × 10<tspan dy="-5" font-size="9">${e}</tspan>`; };
-const sciH = v => { if (v < 1e6) return num(v, 0); const e = Math.floor(Math.log10(v)); return `${num(v / 10 ** e, 2)} × 10<sup>${e}</sup>`; };
-const col = s => `var(--vz-${s.slot ? "s" + s.slot : "gray"})`;
-const CHARTS = {}, LINES = {};
-const place = (tip, wrap, x, y) => { tip.classList.add("show"); const half = tip.offsetWidth / 2; tip.style.left = Math.min(Math.max(x, half), wrap.clientWidth - half) + "px"; tip.style.top = y + "px"; };
-const chart = (name, legend = "") => `<figure class="viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div>`;
-const lab = (name, title) => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div><div class="lab-body"></div></div>`;
-const stepBar = (n, label) => `<div class="steps"><button class="preset" data-s="reset">↺ Reset</button><button class="preset" data-s="prev">← Back</button><button class="preset" data-s="next">Step →</button><button class="preset" data-s="end">⇥ Run to end</button><span class="scount">step <output>0</output> of ${n}${label ? ` · ${label}` : ""}</span></div>`;
-// Wires reset/back/step/end buttons to a state {i, n} and a render() callback.
-function wireSteps(body, st, render) {
-  body.querySelectorAll("[data-s]").forEach(b => b.addEventListener("click", () => {
-    const k = b.dataset.s; st.i = k === "reset" ? 0 : k === "prev" ? Math.max(0, st.i - 1) : k === "next" ? Math.min(st.n, st.i + 1) : st.n; render(); }));
-}
-
-// Line charts on a linear x axis; y linear or log10. Series are functions of x; direct labels at the right end,
-// a crosshair snaps to whole x and lists every series in the tooltip.
-function lineGeo(cfg, narrow) {
-  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = narrow ? 40 : 48, R = narrow ? 14 : cfg.labelW || 96, T = 24, B = 30;
-  const PW = W - L - R, PH = H - T - B, [x0, x1] = cfg.x, [y0, y1] = cfg.y, ty = v => cfg.log ? Math.log10(v) : v;
-  return { W, H, L, R, T, B, PW, PH, x: v => L + (v - x0) / (x1 - x0) * PW, y: v => T + PH - (ty(v) - ty(y0)) / (ty(y1) - ty(y0)) * PH,
-    inv: px => x0 + Math.min(1, Math.max(0, (px - L) / PW)) * (x1 - x0) };
-}
-function lineSVG(name, narrow) {
-  const cfg = LINES[name], g = lineGeo(cfg, narrow), { W, H, L, R, T, PW, PH, x, y } = g;
-  const xt = (narrow && cfg.xTicksN || cfg.xTicks).map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("");
-  const yt = cfg.yTicks.map(v => `<line class="${v === cfg.y[0] ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${cfg.fmtTick ? cfg.fmtTick(v) : v}</text>`).join("");
-  const n = 200, sx = Array.from({ length: n + 1 }, (_, k) => cfg.x[0] + (cfg.x[1] - cfg.x[0]) * k / n);
-  const d = f => "M" + sx.map(v => `${x(v).toFixed(1)},${Math.max(T - 2, y(Math.min(f(v), cfg.y[1] * 10))).toFixed(1)}`).join(" L");
-  const lines = cfg.series.map(s => `<path class="line${s.dash ? " dash" : ""}" style="stroke:${col(s)}" d="${d(s.f)}"/>`).join("");
-  const lbl = s => { const at = s.labelAt || cfg.x[1], X = x(at), Y = y(Math.min(s.f(at), cfg.y[1])) + (s.dy || 0);
-    return at === cfg.x[1] ? `<text class="lbl" x="${X + 6}" y="${Y + 4}">${s.short || s.name}</text>` : `<text class="lbl" x="${X - 6}" y="${Y}" text-anchor="end">${s.short || s.name}</text>`; };
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">
-    <defs><clipPath id="clip-${name}"><rect x="${L}" y="${T - 3}" width="${PW + 3}" height="${PH + 3}"/></clipPath></defs>
-    ${yt}${xt}<text class="note" x="${L - 36}" y="12">${cfg.yTitle}</text><text class="note" x="${W - R}" y="${H - 10}" text-anchor="end">${cfg.xTitle || ""}</text>
-    <g clip-path="url(#clip-${name})">${lines}</g>${cfg.extra ? cfg.extra(g, narrow) : ""}${narrow ? "" : cfg.series.map(lbl).join("")}
-    <g class="xh-layer" style="display:none"><line class="xh" y1="${T}" y2="${T + PH}"/>${cfg.series.map(s => `<circle class="dot" style="fill:${col(s)}" r="4.5"/>`).join("")}</g>
-    <rect class="hit plot" x="${L}" y="${T}" width="${PW}" height="${PH}" tabindex="0" aria-label="${esc(cfg.hitLabel)}"/></svg>`;
-}
-const line = (name, cfg) => { LINES[name] = cfg; CHARTS[name] = narrow => lineSVG(name, narrow); };
-function wireLines() {
-  document.querySelectorAll("[data-chart]").forEach(el => {
-    const cfg = LINES[el.dataset.chart]; if (!cfg) return;
-    const g = lineGeo(cfg, el.dataset.narrow === "true"), svg = el.querySelector("svg"), wrap = el.parentElement, tip = wrap.querySelector(".tip");
-    const layer = svg.querySelector(".xh-layer"), [ln, ...dots] = layer.children, hit = svg.querySelector(".plot");
-    const at = raw => {
-      const v = Math.min(cfg.x[1], Math.max(cfg.x[0], Math.round(raw))), X = g.x(v), ys = cfg.series.map(s => s.f(v));
-      layer.style.display = ""; ln.setAttribute("x1", X); ln.setAttribute("x2", X); hit.dataset.v = v;
-      dots.forEach((dt, i) => { dt.setAttribute("cx", X); dt.setAttribute("cy", g.y(Math.min(ys[i], cfg.y[1]))); dt.style.display = ys[i] > cfg.y[1] || ys[i] < cfg.y[0] ? "none" : ""; });
-      const order = ys.map((_, i) => i).sort((a, b) => ys[b] - ys[a]);
-      tip.innerHTML = `<b>${cfg.tipHead(v)}</b>${order.map(i => `<span class="trow"><i style="--c:${col(cfg.series[i])}"></i><strong>${cfg.fmtY(ys[i])}</strong> ${cfg.series[i].name}</span>`).join("")}`;
-      const s = svg.getBoundingClientRect(), w = wrap.getBoundingClientRect(), vis = dots.filter(dt => dt.style.display !== "none");
-      const top = vis.length ? Math.min(...vis.map(dt => dt.getBoundingClientRect().top)) : s.top + g.T / g.H * s.height;
-      place(tip, wrap, s.left - w.left + X / g.W * s.width, top - w.top);
-    };
-    const off = () => { layer.style.display = "none"; tip.classList.remove("show"); };
-    hit.addEventListener("pointermove", e => { const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse()); at(g.inv(p.x)); });
-    hit.addEventListener("pointerleave", off); hit.addEventListener("blur", off); hit.addEventListener("focus", () => at(cfg.focusAt || cfg.x[0]));
-    hit.addEventListener("keydown", e => { const v = +hit.dataset.v; const nv = { ArrowRight: v + 1, ArrowLeft: v - 1 }[e.key]; if (nv === undefined) return; e.preventDefault(); at(Math.min(cfg.x[1], Math.max(cfg.x[0], nv))); });
-  });
-}
-// Grouped vertical bars: cats on x, one bar per series, optional log y. Each group is a hover target.
-function vbars(name, cfg) {
-  CHARTS[name] = narrow => {
-    const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = narrow ? 44 : 56, R = 12, T = 18, B = 34, PW = W - L - R, PH = H - T - B;
-    const [y0, y1] = cfg.y, ty = v => cfg.log ? Math.log10(v) : v, y = v => T + PH - (ty(Math.max(v, y0)) - ty(y0)) / (ty(y1) - ty(y0)) * PH;
-    const n = cfg.cats.length, gw = PW / n, k = cfg.series.length, bw = Math.min(28, (gw * 0.7) / k), pad = (gw - bw * k) / 2;
-    const yt = cfg.yTicks.map(v => `<line class="${v === y0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${cfg.fmtTick ? cfg.fmtTick(v) : v}</text>`).join("");
-    const groups = cfg.cats.map((cat, i) => {
-      const x0 = L + i * gw, vals = cfg.series.map(s => s.vals[i]);
-      const bars = cfg.series.map((s, j) => `<path class="bar" style="fill:${col(s)}" d="${vbar(x0 + pad + j * bw + 1, bw - 2, y(vals[j]), T + PH)}"/>`).join("");
-      const tip = `<b>${cfg.tipHead(cat, i)}</b>${cfg.series.map((s, j) => `<span class="trow"><i style="--c:${col(s)}"></i><strong>${cfg.fmtY(vals[j])}</strong> ${s.name}</span>`).join("")}`;
-      return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit anchor" x="${x0}" y="${T}" width="${gw}" height="${PH}"/>${bars}<text class="tick" x="${x0 + gw / 2}" y="${H - 12}" text-anchor="middle">${cat}</text></g>`; }).join("");
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">${yt}<text class="note" x="${L - 44}" y="11">${cfg.yTitle}</text>${groups}</svg>`;
-  };
-}
-// Charts by name: <div data-chart="name"> is filled with CHARTS[name](narrow) and redrawn when the width class changes.
-function mountCharts() {
-  document.querySelectorAll("[data-chart]").forEach(el => {
-    el.dataset.narrow = isNarrow(); el.innerHTML = CHARTS[el.dataset.chart](isNarrow());
-    const wrap = el.parentElement, tip = wrap.querySelector(".tip"), svg = el.querySelector("svg");
-    const show = g => { const a = (g.querySelector(".anchor") || g.querySelector(".dot") || g.querySelector(".bar") || g).getBoundingClientRect(), w = wrap.getBoundingClientRect();
-      tip.innerHTML = g.dataset.tip; g.classList.add("on"); svg.classList.add("hovering"); place(tip, wrap, a.left + a.width / 2 - w.left, a.top - w.top); };
-    const hide = g => { g.classList.remove("on"); svg.classList.remove("hovering"); tip.classList.remove("show"); };
-    el.querySelectorAll(".pt[data-tip]").forEach(g => { g.addEventListener("pointerenter", () => show(g)); g.addEventListener("focus", () => show(g));
-      g.addEventListener("pointerleave", () => hide(g)); g.addEventListener("blur", () => hide(g)); });
-  });
-  wireLines();
-}
-// A node in a search drawing: circle + letter, state class decides the colour (legend + ring, never colour alone).
-const nodeSVG = (x, y, label, cls = "", r = 13, extra = "") => `<g class="node ${cls}" transform="translate(${x},${y})">${extra}<circle r="${r}"/><text y="4">${label}</text></g>`;
-// Complete binary tree of `depth` levels (0..depth) with letters A, B, C … laid out in a W×H box.
-function binTree(depth, W, H, top = 22) {
-  const nodes = [], edges = [], N = 2 ** (depth + 1) - 1, rowH = (H - top - 20) / depth;
-  for (let i = 0; i < N; i++) {
-    const lv = Math.floor(Math.log2(i + 1)), pos = i + 1 - 2 ** lv, cnt = 2 ** lv;
-    nodes.push({ id: i, label: String.fromCharCode(65 + i), depth: lv, x: W * (pos + 0.5) / cnt, y: top + lv * rowH, parent: i ? Math.floor((i - 1) / 2) : null, kids: 2 * i + 1 < N ? [2 * i + 1, 2 * i + 2] : [] });
-    if (i) edges.push([Math.floor((i - 1) / 2), i]);
-  }
-  return { nodes, edges };
-}
+const { rng, accept, unsat, gsatStep, isNarrow, key, leg, flag, hbar, vbar, num, sci, sciH, col, CHARTS, LINES, place, chart, lab, stepBar, wireSteps, lineGeo, lineSVG, line, wireLines, vbars, mountCharts, nodeSVG, binTree } = APSSViz;
 
 // ---------------- Lecture 1: introduction ----------------
 // The "three sons" puzzle: the eight ways to factor 36 into three ages, filtered by each clue.
@@ -620,6 +512,269 @@ function lecture2() {
     <p class="muted">Next: Local search, stochastic hill climbing and simulated annealing (<a href="advanced-problem-solving/lecture.html?n=3">lecture 3</a>). Slides: OPAL → Lectures → Lesson 2 (trad search); the three extra PDFs there are scanned textbook chapters (Russell &amp; Norvig 3.4 and 3.5, Michalewicz &amp; Fogel 4.3 on dynamic programming and the stagecoach problem) for reading, not slides.</p>`;
 }
 
+// ---------------- Lecture 3: local search, stochastic hill-climbing, simulated annealing ----------------
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+// A one-dimensional energy landscape (eval to maximise) over 61 positions: piecewise linear through fixed keypoints,
+// with a local optimum next to the start, a plateau and one global optimum far to the right.
+const LAND_K = [[0, 12], [6, 26], [10, 18], [16, 34], [22, 20], [28, 28], [34, 28], [38, 22], [46, 44], [52, 30], [60, 36]];
+const LAND = Array.from({ length: 61 }, (_, x) => { let k = 1; while (LAND_K[k][0] < x) k++; const [x0, y0] = LAND_K[k - 1], [x1, y1] = LAND_K[k]; return Math.round((y0 + (y1 - y0) * (x - x0) / (x1 - x0)) * 10) / 10; });
+const LAND_BEST = LAND.indexOf(Math.max(...LAND));
+const LAND_MODES = [["hc", "hill-climber (T = 0.1)", 0.1], ["t2", "T = 2", 2], ["t8", "T = 8", 8], ["t30", "T = 30", 30], ["sa", "annealing 30 → 0.3", 30, 0.992]];
+// Replays the run from a fixed seed so step k is always the same state, whatever buttons were pressed.
+function landRun(mode, steps) {
+  const [, , T0, alpha] = LAND_MODES.find(m => m[0] === mode), rand = rng(7);
+  let x = 2, T = T0, best = 2, acc = 0, rej = 0, last = null; const trail = Array(61).fill(0); trail[2] = 1;
+  for (let k = 0; k < steps; k++) {
+    const nx = Math.max(0, Math.min(60, x + (rand() < 0.5 ? -1 : 1) * (1 + Math.floor(rand() * 3))));
+    const d = LAND[x] - LAND[nx], p = accept(d, T), r = rand(), ok = r < p;
+    last = { from: x, nx, d, p, r, ok, T };
+    if (ok) { x = nx; acc++; } else rej++;
+    if (LAND[x] > LAND[best]) best = x;
+    trail[x]++;
+    if (alpha) T = Math.max(0.3, T * alpha);
+  }
+  return { x, T, best, acc, rej, trail, last, steps };
+}
+function landOut(s, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 250, L = 36, R = 12, T = 16, B = 28, PW = W - L - R, PH = H - T - B;
+  const X = x => L + x / 60 * PW, Y = v => T + PH - (v - 5) / 45 * PH;
+  const path = "M" + LAND.map((v, x) => `${X(x).toFixed(1)},${Y(v).toFixed(1)}`).join(" L");
+  const yt = [10, 20, 30, 40, 50].map(v => `<line class="${v === 10 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="tick" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = [0, 10, 20, 30, 40, 50].map(x => `<text class="tick" x="${X(x)}" y="${H - 10}" text-anchor="middle">${x}</text>`).join("");
+  const dots = s.trail.map((n, x) => n ? `<circle class="visit" cx="${X(x)}" cy="${Y(LAND[x])}" r="${Math.min(7, 2 + Math.sqrt(n))}"/>` : "").join("");
+  const tries = s.last && !s.last.ok ? `<line class="reject" x1="${X(s.last.from)}" y1="${Y(LAND[s.last.from])}" x2="${X(s.last.nx)}" y2="${Y(LAND[s.last.nx])}"/>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Energy landscape over positions 0 to 60 with the current point, the best point so far and the global optimum at ${LAND_BEST}">${yt}${xt}
+    <text class="note" x="${L - 30}" y="10">eval</text><text class="note" x="${W - R}" y="${H - 10}" text-anchor="end">position</text>
+    <line class="ann dash" x1="${X(LAND_BEST)}" x2="${X(LAND_BEST)}" y1="${T}" y2="${Y(LAND[LAND_BEST])}"/><text class="vl2" x="${X(LAND_BEST) - 5}" y="${T + 10}" text-anchor="end">global optimum</text>
+    <path class="land" d="${path}"/>${dots}${tries}
+    <circle class="bestpt" cx="${X(s.best)}" cy="${Y(LAND[s.best])}" r="9"/>
+    <circle class="curpt" cx="${X(s.x)}" cy="${Y(LAND[s.x])}" r="6"/></svg>`;
+}
+function initLand(body) {
+  const st = { mode: "hc", i: 0, n: 600 };
+  body.innerHTML = `<p class="lab-note">One random neighbour per step (one to three positions left or right), accepted with p = 1 / (1 + e<sup>(eval(v<sub>c</sub>) − eval(v<sub>n</sub>)) / T</sup>). The run starts at position 2, next to a small local optimum; the same random draws are replayed for every T, so the modes differ only in how they treat the same proposals.</p>
+    <div class="presets" role="group" aria-label="Temperature">${LAND_MODES.map(m => `<button class="preset" data-m="${m[0]}" aria-pressed="${m[0] === st.mode}">${m[1]}</button>`).join("")}</div>
+    ${leg([[2, "current point"], [3, "best so far (ring)"], ["g", "visited, bigger = more often"]])}
+    <div class="steps"><button class="preset" data-s="reset">↺ Reset</button><button class="preset" data-s="next">Step →</button><button class="preset" data-s="p25">+25</button><button class="preset" data-s="end">⇥ 600 steps</button><span class="scount">step <output>0</output> of 600</span></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const s = landRun(st.mode, st.i); cnt.value = st.i;
+    const l = s.last, move = l ? `proposed ${l.from} → ${l.nx}: Δ = eval(v<sub>c</sub>) − eval(v<sub>n</sub>) = ${num(l.d, 1)}, T = ${num(l.T, 1)}, p = ${num(l.p, 3)}, r = ${num(l.r, 3)} → ${l.ok ? "<b>accepted</b>" : "rejected"}` : "press Step to propose the first neighbour";
+    out.innerHTML = `${landOut(s, isNarrow())}<dl class="ro"><dt>current</dt><dd>position ${s.x}, eval ${num(LAND[s.x], 1)}</dd><dt>best so far</dt><dd>position ${s.best}, eval ${num(LAND[s.best], 1)}${s.best === LAND_BEST ? " · global optimum found" : ""}</dd><dt>accepted / rejected</dt><dd>${s.acc} / ${s.rej}</dd><dt>last proposal</dt><dd>${move}</dd></dl>`;
+  };
+  body.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { st.mode = b.dataset.m; body.querySelectorAll("[data-m]").forEach(o => o.setAttribute("aria-pressed", o === b)); render(); }));
+  body.querySelectorAll("[data-s]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.s; st.i = k === "reset" ? 0 : k === "next" ? Math.min(st.n, st.i + 1) : k === "p25" ? Math.min(st.n, st.i + 25) : st.n; render(); }));
+  render(); body.dataset.rerender = "land";
+}
+// GSAT on a small formula ψ with a plateau (every flip from (F, F, F) keeps one clause unsatisfied): the tie rule decides
+// between oscillation and success. Pick a start assignment and a tie rule, then flip step by step.
+const GSAT_CL = [[[1, true], [2, true]], [[1, true], [2, false]], [[1, false], [2, true]], [[1, false], [2, false], [3, true]]], GSAT_NAMES = ["x₁ ∨ x₂", "x₁ ∨ ¬x₂", "¬x₁ ∨ x₂", "¬x₁ ∨ ¬x₂ ∨ x₃"];
+const tf = b => b ? "T" : "F", asg = a => `(${a.map(tf).join(", ")})`;
+function gsatTable(clauses, a, tie, prev) {
+  const { flips, pick } = gsatStep(clauses, a, tie, prev);
+  return `<div class="tt-wrap"><table class="tt gsat"><thead><tr><th>flip</th><th>new assignment</th><th>unsatisfied</th><th></th></tr></thead><tbody>${flips.map(f => `<tr class="${f === pick ? "win" : ""}"><td>x<sub>${f.i + 1}</sub> → ${tf(f.a[f.i])}</td><td class="mono">${asg(f.a)}</td><td class="n">${f.u}</td><td>${f === pick ? "chosen" : f.u === pick.u ? "tie" : ""}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function initGsat(body) {
+  const st = { a: [false, false, false], tie: "fresh" };
+  body.innerHTML = `<p class="lab-note">ψ = ${GSAT_NAMES.map(n => `(${n})`).join(" ∧ ")}, whose only model is (T, T, T). Each step evaluates every single-variable flip and takes the one with the fewest unsatisfied clauses, even if that is more than now.</p>
+    <div class="ctl">${[1, 2, 3].map(i => `<label><input type="checkbox" data-v="${i}"> x<sub>${i}</sub> = T at the start</label>`).join("")}
+      <label>ties <select data-tie><option value="fresh">lowest index, never undo the last flip</option><option value="low">lowest index</option><option value="rnd">random</option></select></label></div>
+    ${stepBar(6, "one flip per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output"), stt = { i: 0, n: 6 };
+  const render = () => {
+    const rand = rng(5); let a = st.a.slice(), prev = -1; const hist = [asg(a)]; let u = unsat(GSAT_CL, a), k = 0;
+    for (; k < stt.i && u > 0; k++) { const { pick } = gsatStep(GSAT_CL, a, st.tie, prev, rand); a = pick.a; prev = pick.i; u = pick.u; hist.push(`flip x<sub>${pick.i + 1}</sub> → ${asg(a)}`); }
+    stt.i = k; cnt.value = k;
+    out.innerHTML = `<p class="lab-note"><b>${hist.join(" · ")}</b> · ${u === 0 ? "ψ is satisfied, GSAT returns this assignment." : `${u} clause${u > 1 ? "s" : ""} unsatisfied.`}</p>${u === 0 ? "" : gsatTable(GSAT_CL, a, st.tie, prev)}`;
+  };
+  body.querySelectorAll("[data-v]").forEach(cb => cb.addEventListener("change", () => { st.a[cb.dataset.v - 1] = cb.checked; stt.i = 0; render(); }));
+  body.querySelector("[data-tie]").addEventListener("change", e => { st.tie = e.target.value; stt.i = 0; render(); });
+  wireSteps(body, stt, render); render();
+}
+// 2-opt on eight cities: a deliberately crossing start tour, one 2-interchange per step (first or best improvement).
+const CITY = [["A", 40, 40], ["B", 260, 160], ["C", 60, 170], ["D", 280, 30], ["E", 150, 100], ["F", 220, 90], ["G", 100, 110], ["H", 170, 30]];
+const cd = (i, j) => Math.hypot(CITY[i][1] - CITY[j][1], CITY[i][2] - CITY[j][2]);
+const tourLen = t => t.reduce((s, c, k) => s + cd(c, t[(k + 1) % t.length]), 0);
+function twoOptMoves(t) {
+  const n = t.length, out = [];
+  for (let i = 0; i < n - 1; i++) for (let j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;                      // the two removed edges must not be adjacent
+    const a = t[i], b = t[i + 1], c = t[j], d = t[(j + 1) % n];
+    out.push({ i, j, delta: cd(a, c) + cd(b, d) - cd(a, b) - cd(c, d), removed: [[a, b], [c, d]], added: [[a, c], [b, d]] });
+  }
+  return out;
+}
+function twoOptRun(mode, steps) {
+  let t = [0, 1, 2, 3, 4, 5, 6, 7], last = null, done = false, k = 0;
+  for (; k < steps; k++) {
+    const moves = twoOptMoves(t), imp = moves.filter(m => m.delta < -1e-9);
+    if (!imp.length) { done = true; break; }
+    const m = mode === "best" ? imp.reduce((a, b) => b.delta < a.delta ? b : a) : imp[0];
+    t = t.slice(0, m.i + 1).concat(t.slice(m.i + 1, m.j + 1).reverse(), t.slice(m.j + 1));
+    last = m;
+  }
+  if (!done && !twoOptMoves(t).some(m => m.delta < -1e-9)) done = true;
+  return { t, last, done, k, len: tourLen(t) };
+}
+function tourOut(s, narrow) {
+  const W = narrow ? 340 : 420, sc = W / 320, H = 200 * sc + 10, P = (x, y) => `${(x * sc + 10).toFixed(1)},${(y * sc + 5).toFixed(1)}`;
+  const edges = s.t.map((c, k) => { const d = s.t[(k + 1) % s.t.length], isNew = s.last && s.last.added.some(([a, b]) => (a === c && b === d) || (a === d && b === c));
+    return `<line class="edge ${isNew ? "path" : ""}" x1="${CITY[c][1] * sc + 10}" y1="${CITY[c][2] * sc + 5}" x2="${CITY[d][1] * sc + 10}" y2="${CITY[d][2] * sc + 5}"/>`; }).join("");
+  const removed = s.last ? s.last.removed.map(([a, b]) => `<line class="edge removed" x1="${CITY[a][1] * sc + 10}" y1="${CITY[a][2] * sc + 5}" x2="${CITY[b][1] * sc + 10}" y2="${CITY[b][2] * sc + 5}"/>`).join("") : "";
+  const nodes = CITY.map((c, i) => nodeSVG(c[1] * sc + 10, c[2] * sc + 5, c[0], s.last && s.last.added.flat().includes(i) ? "frontier" : "", 11)).join("");
+  return `<svg viewBox="0 0 ${W + 20} ${H}" role="img" aria-label="Eight cities with the current tour; the last 2-interchange's removed edges are dashed and the added edges highlighted">${removed}${edges}${nodes}</svg>`;
+}
+function initTwoOpt(body) {
+  const st = { i: 0, n: 12, mode: "first" };
+  body.innerHTML = `<p class="lab-note">Start tour A B C D E F G H (it crosses itself). A 2-interchange removes two non-adjacent edges and reconnects the tour the only other way, which reverses the segment between them. The neighbourhood of a tour has n(n − 3)/2 = 20 such moves for 8 cities.</p>
+    <div class="presets" role="group" aria-label="Variant"><button class="preset" data-m="first" aria-pressed="true">first improvement (the slides' 2-opt)</button><button class="preset" data-m="best" aria-pressed="false">best improvement</button></div>
+    ${leg([[3, "edges added by the last move"], [2, "cities touched by it"], ["g", "removed edges (dashed)"]])}${stepBar(12, "one 2-interchange per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const s = twoOptRun(st.mode, st.i); st.i = s.k; cnt.value = s.k;
+    const m = s.last, txt = m ? `removed ${CITY[m.removed[0][0]][0]}–${CITY[m.removed[0][1]][0]} and ${CITY[m.removed[1][0]][0]}–${CITY[m.removed[1][1]][0]}, added ${CITY[m.added[0][0]][0]}–${CITY[m.added[0][1]][0]} and ${CITY[m.added[1][0]][0]}–${CITY[m.added[1][1]][0]}: ${num(m.delta, 1)}` : "no move applied yet";
+    out.innerHTML = `${tourOut(s, isNarrow())}<dl class="ro"><dt>tour</dt><dd class="mono">${s.t.map(c => CITY[c][0]).join(" ")} ${CITY[s.t[0]][0]}</dd><dt>length</dt><dd>${num(s.len, 1)}</dd><dt>last move</dt><dd>${txt}</dd><dt>status</dt><dd>${s.done ? "<b>2-optimal</b>: none of the 20 neighbours is shorter" : `${s.k} move${s.k === 1 ? "" : "s"} applied, improving neighbours remain`}</dd></dl>`;
+  };
+  body.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { st.mode = b.dataset.m; st.i = 0; body.querySelectorAll("[data-m]").forEach(o => o.setAttribute("aria-pressed", o === b)); render(); }));
+  wireSteps(body, st, render); render(); body.dataset.rerender = "twoopt";
+}
+// Acceptance probability p(Δ) for three temperatures (slide 24), the slide-22 table as bars, and the cooling schedules of slide 28.
+line("accept", {
+  x: [-30, 30], y: [0, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], xTicks: [-30, -20, -10, 0, 10, 20, 30], xTicksN: [-30, -15, 0, 15, 30], yTitle: "p", xTitle: "Δ = eval(vc) − eval(vn); Δ > 0 means vn is worse",
+  series: [{ slot: 1, name: "T = 2 (steep: almost a hill-climber)", short: "T = 2", f: d => accept(d, 2), dy: 0 }, { slot: 2, name: "T = 8", short: "T = 8", f: d => accept(d, 8), dy: -9 }, { slot: 3, name: "T = 30 (flat: almost random)", short: "T = 30", f: d => accept(d, 30) }],
+  tipHead: d => `Δ = ${d}`, fmtY: v => num(v, 3), focusAt: 0, labelW: 60,
+  extra: g => `<line class="ann dash" x1="${g.x(0)}" x2="${g.x(0)}" y1="${g.y(1)}" y2="${g.y(0)}"/><line class="ann dash" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(0.5)}" y2="${g.y(0.5)}"/><text class="vl2" x="${g.x(0) + 5}" y="${g.y(0.5) - 6}">Δ = 0: p = 0.5 for every T</text>`,
+  hitLabel: "Read the acceptance probability: arrow keys change Δ", aria: "Three sigmoid curves of the acceptance probability over the merit difference from minus 30 to 30: steep for T = 2, medium for T = 8, flat for T = 30; all pass through 0.5 at Δ = 0.",
+});
+vbars("roleT", {
+  cats: ["1", "5", "10", "20", "50"], y: [0, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "p",
+  series: [{ slot: 3, name: "vn better by 13 (Δ = −13)", vals: [1, 5, 10, 20, 50].map(T => accept(-13, T)) }, { slot: 2, name: "vn worse by 13 (Δ = +13)", vals: [1, 5, 10, 20, 50].map(T => accept(13, T)) }],
+  tipHead: c => `T = ${c}`, fmtY: v => num(v, 3), aria: "Bars of the acceptance probability for T = 1, 5, 10, 20 and 50: for a 13-point improvement it falls from 1 towards 0.5, for a 13-point deterioration it rises from 0 towards 0.5.",
+});
+line("cool", {
+  x: [0, 100], y: [0, 10], yTicks: [0, 2, 4, 6, 8, 10], xTicks: [0, 20, 40, 60, 80, 100], xTicksN: [0, 50, 100], yTitle: "T", xTitle: "iteration t",
+  series: [{ slot: 1, name: "geometric: 10 · 0.95ᵗ", short: "geometric", f: t => 10 * 0.95 ** t, dy: -6 }, { slot: 2, name: "linear: 10 − 0.1 t", short: "linear", f: t => Math.max(0, 10 - 0.1 * t), dy: 10 }, { slot: 3, name: "logarithmic: 10 / ln(1 + t)", short: "logarithmic", f: t => t < 1 ? 10 : 10 / Math.log(1 + t), dash: true }],
+  tipHead: t => `t = ${t}`, fmtY: v => num(v, 2), focusAt: 20, labelW: 80,
+  hitLabel: "Read the three cooling schedules: arrow keys change t", aria: "Temperature over 100 iterations for three schedules starting near 10: geometric decays to about 0.06, linear reaches 0 at t = 100, logarithmic is still above 2 at the end.",
+});
+function lecture3() {
+  const pT = (d, T) => accept(d, T);
+  return `${head(l)}
+    <p class="lead">Lecture 2 searched through partial solutions with a frontier. This lecture switches to the other family from lecture 1: algorithms that hold one <em>complete</em> candidate and move to a neighbour. The simplest version, hill climbing, stops at the first local optimum. The rest of the lecture is about getting out again: GSAT for SAT, 2-opt for the TSP, then a temperature parameter that makes worse moves acceptable with a probability (the stochastic hill-climber) and finally lets that probability fall over the run (simulated annealing). All of it comes from the Michalewicz &amp; Fogel textbook, chapter 5.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">1 / (1 + e<sup>Δ/T</sup>)</div><div class="l">acceptance probability of the stochastic hill-climber, Δ = eval(v<sub>c</sub>) − eval(v<sub>n</sub>) when eval is maximised</div></div>
+      <div class="tile"><div class="v">0.5</div><div class="l">p for an equally good neighbour, at every T; T → ∞ makes every move a coin flip</div></div>
+      <div class="tile"><div class="v">T ← α T</div><div class="l">geometric cooling, the usual schedule; α between 0.8 and 0.99, start with 0.95</div></div>
+      <div class="tile"><div class="v">n(n − 3)/2</div><div class="l">2-opt neighbours of an n-city tour; k-opt neighbourhoods grow exponentially in k</div></div>
+    </div>
+
+    <h2>Hill climbing and where it stops <small>(slides 4–7)</small></h2>
+    <p>A hill-climbing method keeps a single current point and iteratively improves it: look at the neighbourhood of v<sub>c</sub>, take the best neighbour v<sub>n</sub>, and if it beats v<sub>c</sub> make it the new current point; otherwise stop. The <b>iterated hill-climber</b> of slide 5 wraps that in an outer loop of MAX random restarts and remembers the best local optimum seen. Four weaknesses, all on slide 6: it usually ends in a local optimum; it tells you nothing about how far that is from the global optimum or from other local optima; the result depends on the start point; and there is no useful bound on the running time. What makes it attractive anyway is how little it needs: a representation, an evaluation function and a neighbourhood.</p>
+    ${lab("land", "walk a hill-climber and its stochastic cousins over one landscape")}
+    <p>The energy-landscape slide (7) names the three shapes that matter: a <b>local optimum</b> (better than all neighbours, not globally best), the <b>global optimum</b>, and a <b>plateau</b>, where no neighbour is better but the current point is not optimal either. With T = 0.1 the explorer climbs the first hill, reaches position 6 and never leaves: every downhill proposal has p ≈ 0. With T = 2 it escapes to the second hill at 16 and gets stuck there; with T = 8 it crosses the plateau at 28 to 34 and finds the global optimum at ${LAND_BEST}; with T = 30 it finds it as well but accepts nearly everything, so it does not stay. Annealing starts hot, finds the optimum, and is cold enough at the end to stay there, which is the whole idea of the second half.</p>
+
+    <h2>Exploration against exploitation <small>(slide 8)</small></h2>
+    <ul class="cmp two">
+      <li><b>Hill climbing: all exploitation</b><span class="v"><span class="sw t"></span>Squeezes the best solution found so far for improvements and never looks at most of the search space.</span></li>
+      <li><b>Random search: all exploration</b><span class="v"><span class="sw v"></span>Samples every point with equal probability, so it covers the space but never builds on a promising region.</span></li>
+    </ul>
+    <p>Every effective method has some mechanism for balancing the two, and the slide is explicit that no single method serves well in every case (the no-free-lunch idea, in plain words).</p>
+
+    <h2>Local search and the size of the neighbourhood <small>(slides 9–10)</small></h2>
+    <p>The generic loop: pick a solution, apply a transformation to get a new one, keep it if it is better, repeat until no transformation improves the current solution. Everything hinges on the transformation. Two extremes bracket the design space: returning a uniformly random point ignores the current solution entirely (the search degenerates to enumeration, possibly resampling old points), and returning the current solution itself gets you nowhere. Searching a <em>local neighbourhood</em> is the compromise: the current solution biases where you look next and improvements are retained.</p>
+    <ul class="cmp two">
+      <li><b>Small neighbourhood</b><span class="v"><span class="sw t"></span>Quick to scan, but easy to get trapped in a local optimum.</span></li>
+      <li><b>Large neighbourhood</b><span class="v"><span class="sw v"></span>Fewer traps, but scanning it costs so much that efficiency suffers.</span></li>
+    </ul>
+    <p>Two variants recur in every later algorithm: <b>best improvement</b> scans the whole neighbourhood and takes the best neighbour; <b>first improvement</b> moves as soon as any better neighbour turns up. The 2-opt explorer below has both.</p>
+
+    <h2>GSAT: local search for SAT <small>(slides 11–12)</small></h2>
+    <p>GSAT starts from a random truth assignment and, for MAX-FLIPS rounds, flips one variable; after MAX-FLIPS without success it restarts with a new random assignment, MAX-TRIES times. The flip is chosen greedily: try every single-variable flip, count the unsatisfied clauses, take the largest decrease. Note what the evaluation function is: for SAT the lecture-1 problem of “true or false tells you nothing” is solved by counting unsatisfied clauses, which turns SAT into an optimisation problem with a gradient to follow.</p>
+    ${lab("gsat", "run GSAT on a four-clause formula with a plateau")}
+    <p>The feature worth remembering (slide 12): the best available flip may <em>increase</em> the number of unsatisfied clauses, because the choice is made only among the one-flip neighbours. GSAT therefore takes the least bad move when every neighbour is worse, and so it can escape a local optimum, but only one backward step at a time (a backward move implies the reverse flip is an improving move, so two backward moves in a row cannot happen). On plateaus it may oscillate between points forever. One remedy on the slide: give each clause a weight and raise the weights of clauses that stay unsatisfied, so the landscape itself changes under the search.</p>
+    ${why("Context, not on the slides", `<p>From (F, F, F) every flip leaves exactly one clause of ψ unsatisfied, a three-way tie at a decrease of 0, and the slides do not say how to break ties. With the plain “lowest index” rule the explorer bounces between (F, F, F) and (T, F, F) forever, which is the oscillation the slide warns about; refusing to undo the last flip walks (F, F, F) → (T, F, F) → (T, T, F) → (T, T, T) and satisfies ψ in three flips. The “never undo the last flip” rule is the simplest of the tabu ideas of lecture 4, and “random” is what the original GSAT paper does. Tutorial 2 asks for exactly this kind of trace on a four-clause formula, with the tie-break left to you.</p>`)}
+
+    <h2>2-opt: local search for the TSP <small>(slides 13–14)</small></h2>
+    <p>Start from a random permutation of the cities, tour T. A <b>2-interchange</b> removes two non-adjacent edges and reconnects the two pieces the only other possible way, which reverses one segment. The neighbourhood of T is every tour reachable by one 2-interchange; 2-opt replaces T by the first better neighbour it finds (first improvement, as the slide stresses), and stops when no neighbour is better: T is then <b>2-optimal</b>. Like GSAT it is restarted from several random permutations.</p>
+    ${lab("twoopt", "untangle a crossing tour one 2-interchange at a time")}
+    <p>Generalising to <b>k-opt</b> (change k, or up to k, edges) is the same trade-off as above: small k scans fast but accepts worse tours, and the neighbourhood size grows exponentially in k, so k &gt; 3 is seldom used. A geometric fact that is not on the slides but explains the explorer: in the plane, a tour that crosses itself is never 2-optimal, because uncrossing two edges always shortens it (triangle inequality).</p>
+
+    <h2>Escaping local optima <small>(slides 15–18)</small></h2>
+    <p>Traditional strategies either guarantee the global optimum and are too expensive, or get stuck. Since the problems are NP-hard there is no realistic hope of speeding up the exact methods, so the remaining option is to design algorithms that can leave a local optimum. The lecture names the two mechanisms it will treat: <b>simulated annealing</b> adds a temperature that changes the probability of moving between points, <b>tabu search</b> (lecture 4) adds memory that forces the search into new areas.</p>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>local search</th><th>simulated annealing</th></tr></thead><tbody>
+      <tr><td class="rl">loop</td><td>while improve(x) ≠ “no”: x = improve(x)</td><td>while not termination-condition: x = improve?(x, T); update(T)</td></tr>
+      <tr><td class="rl">halts when</td><td>no neighbour improves x (x is a local optimum)</td><td>an external termination condition is met</td></tr>
+      <tr><td class="rl">improve returns</td><td>a better y ∈ N(x), or “no”</td><td>an <em>accepted</em> y ∈ N(x), acceptance depending on T; y need not be better</td></tr>
+      <tr><td class="rl">parameter</td><td>none</td><td>T, updated periodically; its value shapes what improve? accepts</td></tr>
+    </tbody></table></div>
+
+    <h2>The stochastic hill-climber <small>(slides 19–25)</small></h2>
+    <p>Two changes turn the iterated hill-climber into the stochastic one (slide 20, highlighted): sample <b>one random neighbour</b> per step instead of scanning the whole neighbourhood, and <b>accept it with a probability</b> instead of only when it is better. There is one loop and no restarts; T stays constant during the run. With eval to be maximised and Δ = eval(v<sub>c</sub>) − eval(v<sub>n</sub>):</p>
+    <p class="formula">p = 1 / (1 + e<sup>Δ / T</sup>)</p>
+    ${ex("Worked example: the slide-22 table, recomputed", `<p>eval(v<sub>c</sub>) = 107, eval(v<sub>n</sub>) = 120, so Δ = −13 and v<sub>n</sub> is better. For T = 5: e<sup>−13/5</sup> = e<sup>−2.6</sup> = ${num(Math.exp(-2.6), 4)}, p = 1 / (1 + ${num(Math.exp(-2.6), 4)}) = ${num(pT(-13, 5), 3)}. The same for the other rows: T = 1 → ${num(pT(-13, 1), 3)}, T = 10 → ${num(pT(-13, 10), 2)}, T = 20 → ${num(pT(-13, 20), 2)}, T = 50 → ${num(pT(-13, 50), 2)}, T = 10<sup>10</sup> → 0.5. The better the temperature hides the difference, the closer p sits to a coin flip.</p>`)}
+    ${chart("roleT", leg([[3, "vn better by 13 (Δ = −13)"], [2, "vn worse by 13 (Δ = +13)"]]))}
+      <figcaption>The role of T (slide 22) with its mirror image: p(−Δ) = 1 − p(Δ). Huge T accepts a 13-point improvement and a 13-point deterioration equally often; tiny T is an ordinary hill-climber.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>T</th><th>e<sup>−13/T</sup></th><th>p, Δ = −13</th><th>p, Δ = +13</th></tr>${[1, 5, 10, 20, 50].map(T => `<tr><td class="n">${T}</td><td class="n">${num(Math.exp(-13 / T), 4)}</td><td class="n">${num(pT(-13, T), 3)}</td><td class="n">${num(pT(13, T), 3)}</td></tr>`).join("")}</table></details>
+    <p>Slide 23 fixes T = 10 and eval(v<sub>c</sub>) = 107 and varies the new string instead: eval(v<sub>n</sub>) = 80 gives Δ = 27 and p = ${num(pT(27, 10), 2)}; 100 gives ${num(pT(7, 10), 2)}; 107 gives exactly 0.5; 120 gives ${num(pT(-13, 10), 2)}; 150 gives ${num(pT(-43, 10), 2)}. Three rules fall out: an equal neighbour is accepted with probability one half, a better one with more than one half, and p grows with the (negative) difference.</p>
+    ${chart("accept", leg([[1, "T = 2 (steep: almost a hill-climber)"], [2, "T = 8"], [3, "T = 30 (flat: almost random)"]]))}
+      <figcaption>Acceptance probability as a function of Δ (slide 24). T controls the steepness of the sigmoid; every curve passes through p = 0.5 at Δ = 0. Hover or focus the plot and use the arrow keys.</figcaption>
+    </figure>
+    <ul class="cmp two">
+      <li><b>Small T, steep curve</b><span class="v"><span class="sw t"></span>Only clearly better moves pass, worsening moves are rejected almost surely: a hill-climber that gets trapped.</span></li>
+      <li><b>Large T, flat curve</b><span class="v"><span class="sw v"></span>Almost any neighbour passes with p ≈ 0.5, quality barely matters: random search with no exploitation.</span></li>
+    </ul>
+
+    <h2>Simulated annealing <small>(slides 26–32)</small></h2>
+    <p>Simulated annealing is the stochastic hill-climber with one change: <b>T decreases during the run</b>. It starts hot (nearly random search), cools gradually, and ends cold (an ordinary hill-climber fine-tuning the best region found). In addition, better points are always accepted; a worse point is accepted if a random number is below e<sup>−Δ/T</sup> (slide 27 writes the test as rand &lt; e<sup>(eval(v<sub>c</sub>) − eval(v<sub>n</sub>))/T</sup> for a maximisation with Δ ≥ 0, which is the Metropolis rule rather than the sigmoid of the stochastic hill-climber). The temperature schedule therefore trades exploration against exploitation <em>within one run</em> instead of choosing one of them, and under a sufficiently slow cooling schedule the method provably converges to the global optimum.</p>
+    ${chart("cool", leg([[1, "geometric: T ← α T"], [2, "linear: T ← T − c"], [3, "logarithmic: T ← T₀ / ln(1 + t)"]]))}
+      <figcaption>The three cooling schedules of slide 28 from T₀ = 10 (α = 0.95, c = 0.1). Geometric is what practice uses; linear cools too fast at low T; logarithmic is the schedule of the convergence theorem and far too slow to use.</figcaption>
+    </figure>
+    <h3>Choosing the parameters (slide 29)</h3>
+    <ul>
+      <li><b>T<sub>max</sub></b>: run a short pilot, measure the average cost increase Δ̄ of worsening moves, and choose T<sub>max</sub> ≈ −Δ̄ / ln 0.8, so that about 80 % of bad moves are accepted at the start.</li>
+      <li><b>T<sub>min</sub></b> close to 0: there the algorithm is a hill-climber and is ready to stop.</li>
+      <li><b>α</b> = 0.95 to start, down to 0.80 for a faster, coarser search; the number of steps per temperature level matters too (longer means better equilibration at higher cost).</li>
+      <li>Rule of thumb for a new problem: α = 0.95, run until T &lt; 0.01 · T<sub>max</sub>, then tune on solution quality against runtime.</li>
+    </ul>
+    ${ex("Worked example: a starting temperature from a pilot run", `<p>Suppose the pilot run shows that worsening moves cost 4 points on average. Then T<sub>max</sub> ≈ −4 / ln 0.8 = 4 / 0.2231 = ${num(-4 / Math.log(0.8), 1)}. Check: a typical bad move is then accepted with e<sup>−4/${num(-4 / Math.log(0.8), 1)}</sup> = 0.80. With α = 0.95 and the stop rule T &lt; 0.01 · T<sub>max</sub>, the run needs ln(0.01) / ln(0.95) = ${num(Math.log(0.01) / Math.log(0.95), 0)} temperature levels.</p>`)}
+    <h3>The physical analogy (slides 30–31)</h3>
+    <p>The name comes from growing crystals: melt the raw material, then lower the temperature slowly until the structure freezes in; cool too quickly and irregularities get locked in. The same method goes by Monte Carlo annealing, statistical cooling, probabilistic hill-climbing, stochastic relaxation and probabilistic exchange algorithm.</p>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th>physical system</th><th>optimisation problem</th></tr></thead><tbody>
+      <tr><td>state</td><td>feasible solution</td></tr><tr><td>energy</td><td>evaluation function</td></tr><tr><td>ground state</td><td>optimal solution</td></tr><tr><td>rapid quenching</td><td>local search</td></tr><tr><td>temperature</td><td>control parameter T</td></tr><tr><td>careful annealing</td><td>simulated annealing</td></tr>
+    </tbody></table></div>
+    <h3>The questions every SA design must answer (slide 32)</h3>
+    <ol>
+      <li>What is a solution? (the representation, hence the search space)</li>
+      <li>What are the neighbours of a solution? (the neighbourhood)</li>
+      <li>What is the cost of a solution? (the evaluation function)</li>
+      <li>How is the initial solution determined?</li>
+    </ol>
+    <p>And then the annealing-specific ones: the initial temperature, the cooling ratio g(T, t), the termination condition of the inner loop and the halting criterion of the outer one. Tutorial 2 asks the first four for the maze; keep this list as the template for any “design an SA for …” question.</p>
+
+    <h2>SA for SAT <small>(slides 33–35)</small></h2>
+    <p>SA-SAT runs MAX-TRIES independent attempts. Each starts from a random assignment with T = T<sub>max</sub> and j = 0; in the inner loop, if the assignment satisfies the formula it is returned, otherwise the temperature is set to T = T<sub>max</sub> · e<sup>−j·r</sup>, every variable is considered in turn, the gain δ in satisfied clauses of flipping it is computed, and the flip is made with probability (1 + e<sup>−δ/T</sup>)<sup>−1</sup>; then j is incremented, which is what lowers T. The attempt ends when T drops below T<sub>min</sub>; r is the decay rate from T<sub>max</sub> to T<sub>min</sub>. A flip that would hurt (δ &lt; 0) is unlikely but possible, a flip that helps is likely.</p>
+    <ul class="cmp two">
+      <li><b>GSAT</b><span class="v"><span class="sw t"></span>Picks the best flip deterministically; can make one backward move when nothing improves, never two in a row; weights or restarts needed for plateaus.</span></li>
+      <li><b>SA-SAT</b><span class="v"><span class="sw v"></span>Flips each variable probabilistically; can make an arbitrary sequence of backward moves and so escape local optima. On the slides' comparison it satisfied at least as many formulas as GSAT with less work.</span></li>
+    </ul>
+    <p>Applications named on slide 35: the TSP, production scheduling, timetabling, image processing.</p>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Hill climbing</b> (best neighbour, stop when none is better) ends in local optima, depends on the start and needs restarts; it works on complete solutions and needs only a representation, an evaluation function and a neighbourhood.</li>
+      <li><b>Local search can make one backward move</b> (GSAT); the size of the neighbourhood trades speed against the risk of getting trapped (2-opt vs k-opt).</li>
+      <li><b>Stochastic hill-climber:</b> one random neighbour per step, accepted with p = 1/(1 + e<sup>Δ/T</sup>); T constant; Δ = 0 gives 0.5, small T is a hill-climber, huge T is random search.</li>
+      <li><b>Simulated annealing:</b> the same with T falling over the run (geometric cooling, α ≈ 0.95), better moves always accepted; it can make uphill moves at any time and converges to the global optimum if cooled slowly enough, at the price of many parameters.</li>
+      <li><b>Designing an SA</b> means answering: solution, neighbours, cost, initial solution, plus T<sub>max</sub>, cooling, termination and halting.</li>
+    </ul>
+    <h2>Tutorial 2 and exam relevance</h2>
+    <p>Sheet 2 (in OPAL since 30 Oct, your group on <b>Fri 6 Nov</b>) is this lecture turned into tasks: design a simulated annealing algorithm for the maze of sheet 1 and compare it with A*, trace three GSAT steps on a four-clause formula, then compute acceptance probabilities for Δ = 3 at T = 5 and at T = 1, 10, 100. See <a href="advanced-problem-solving/exercise.html?n=2">tutorial 2</a>.</p>
+    ${why("Context, not on the slides", `<p>The hand computations this lecture makes possible are exactly the ones on the sheet: evaluate p for given Δ and T (watch the sign convention: Δ = eval(v<sub>c</sub>) − eval(v<sub>n</sub>) with eval maximised, so a worse neighbour has Δ &gt; 0 and p &lt; 0.5), decide a move from a random draw r (accept if r &lt; p), run GSAT by listing all flips with their unsatisfied counts, and argue the four design questions for a given problem. For a written exam, also be able to state the three differences between local search and simulated annealing and the one difference between the stochastic hill-climber and simulated annealing.</p>`)}
+    <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=4">lecture 4</a>, tabu search. Previous: <a href="advanced-problem-solving/lecture.html?n=2">lecture 2</a>. Slides: OPAL → Lectures → Lesson 3 (local search); the page numbers above are the slide numbers of the 37-slide deck (the PDF has 56 pages because of overlays).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -629,8 +784,8 @@ function placeholder() {
       <p class="muted">${l.planned ? `Planned topic in last year's order; the date is the next free Tuesday, not announced: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.` : `This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.`}<br>Topic from the course overview: ${esc(l.blurb)}<br>The write-up appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2 };
-const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
+const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins, land: initLand, gsat: initGsat, twoopt: initTwoOpt };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;

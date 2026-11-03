@@ -464,3 +464,72 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .apss .cmp.two li { grid-template-columns: 170px 1fr; }
 .apss .cmp.two li b { font-size: 12px; }
 @media (max-width: 760px) { .apss .cmp.two li { grid-template-columns: 1fr; } }
+
+/* ---- Lecture 3 and the tutorial pages: landscape and tour explorers, task sections, maze grids ---- */
+.apss .lab .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.apss .lab .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.apss .lab .ann { stroke: var(--ink-3); stroke-width: 1; }
+.apss .lab .ann.dash { stroke-dasharray: 3 3; }
+.apss .lab .note { fill: var(--ink-2); font-size: 11px; }
+.apss .lab .vl2 { fill: var(--ink); font-size: 11.5px; font-weight: 500; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.apss .lab .land { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linejoin: round; }
+.apss .lab .visit { fill: var(--vz-gray); opacity: .35; }
+.apss .lab .curpt { fill: var(--vz-s2); stroke: var(--surface-2); stroke-width: 2; }
+.apss .lab .bestpt { fill: none; stroke: var(--vz-s3); stroke-width: 2.5; }
+.apss .lab .reject { stroke: var(--vz-s2); stroke-width: 2; stroke-dasharray: 3 3; }
+.apss .lab .edge.removed { stroke: var(--vz-gray); stroke-dasharray: 4 3; stroke-width: 1.5; opacity: .8; }
+.apss .lab .edge.path { stroke: var(--vz-s3); }
+.apss .lab select { font: inherit; font-size: 13px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.apss .ro dd.mono { font-family: ui-monospace, "IBM Plex Mono", monospace; letter-spacing: .06em; }
+.apss table.tt.gsat td:first-child { white-space: nowrap; }
+.apss .detail h2 small { font-size: 0.75em; font-weight: 500; color: var(--ink-3); margin-left: 6px; }
+/* Tasks on a tutorial page: number, question, worked answer behind a toggle, answer tiles. */
+.apss .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.apss .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.apss .task-h h2 { margin: 0; font-size: 1.25rem; }
+.apss .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.apss .pts { font-size: 12px; color: var(--ink-3); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px dashed var(--line); }
+.apss .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.apss .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.apss .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.apss .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.apss details.sol { margin: 0.4rem 0 0.6rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.apss details.sol summary { cursor: pointer; padding: 9px 14px; font-weight: 600; color: var(--c-trk); }
+.apss details.sol[open] summary { border-bottom: 1px solid var(--line); }
+.apss details.sol .sol-body { padding: 10px 14px 4px; }
+.apss .own { font-size: 12px; color: var(--ink-3); border: 1px dashed var(--line); border-radius: 999px; padding: 2px 9px; display: inline-block; margin: 0 0 8px; }
+/* Maze grids (tutorials 1 and 2): one SVG cell per maze cell, state by class + legend. */
+.apss .maze .wall { fill: var(--ink-2); }
+.apss .maze .free { fill: var(--surface); stroke: var(--vz-grid); stroke-width: 1; }
+.apss .maze .exp { fill: color-mix(in srgb, var(--vz-s1) 28%, var(--surface)); stroke: var(--vz-grid); }
+.apss .maze .fr { fill: color-mix(in srgb, var(--vz-s4) 40%, var(--surface)); stroke: var(--vz-grid); }
+.apss .maze .onpath { fill: color-mix(in srgb, var(--vz-s3) 45%, var(--surface)); stroke: var(--vz-grid); }
+.apss .maze .cur { stroke: var(--vz-s2); stroke-width: 2.5; fill: color-mix(in srgb, var(--vz-s2) 30%, var(--surface)); }
+.apss .maze .fv { fill: var(--ink); font-size: 8.5px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.apss .maze .fv.sm { fill: var(--ink-3); font-size: 7px; }
+.apss .maze .mark { font-size: 14px; pointer-events: none; }
+.apss .maze .trail { fill: none; stroke: var(--vz-s2); stroke-width: 2.5; opacity: .8; stroke-linejoin: round; stroke-linecap: round; }
+.apss .maze .trail.best { stroke: var(--vz-s3); }
+.apss .spark { fill: none; stroke: var(--vz-s1); stroke-width: 1.5; }
+.apss .spark.best { stroke: var(--vz-s3); stroke-width: 2; }
+/* Bridge-crossing timeline: one row per strategy, one block per crossing. */
+.apss .bridge { display: grid; gap: 10px; margin: 0.6rem 0 1rem; }
+.apss .bridge .row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; }
+.apss .bridge .rl { font-size: 0.85rem; color: var(--ink-2); }
+.apss .bridge .track { display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+.apss .bridge .seg { display: grid; place-items: center; font-size: 11.5px; color: var(--ink); border-right: 2px solid var(--surface-2); background: color-mix(in srgb, var(--vz-s1) 35%, var(--surface)); white-space: nowrap; overflow: hidden; }
+.apss .bridge .seg.back { background: color-mix(in srgb, var(--vz-s2) 30%, var(--surface)); }
+.apss .bridge .sum { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: 8px; }
+.apss .banks { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; margin: 8px 0; }
+.apss .bank { min-height: 56px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--surface); }
+.apss .bank .kicker { margin-bottom: 4px; }
+.apss .bank .p { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; margin: 2px; font-weight: 700; background: color-mix(in srgb, var(--vz-s1) 25%, var(--surface)); }
+.apss .bank .p.torch { box-shadow: 0 0 0 2px var(--vz-s4); }
+.apss .banks .arrow { font-size: 1.4rem; color: var(--ink-3); }
+@media (max-width: 600px) {
+  .apss .task-h { grid-template-columns: auto 1fr; }
+  .apss .task-h .pts { grid-column: 2; justify-self: start; }
+  .apss .bridge .row { grid-template-columns: 1fr; gap: 4px; }
+  .apss .banks { grid-template-columns: 1fr; }
+  .apss .banks .arrow { text-align: center; transform: rotate(90deg); }
+}
