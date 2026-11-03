@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Scientific Software Engineering · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="design-patterns/dpf.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="design-patterns/dpf.js"></script>
+<script src="design-patterns/dpf-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="dpf">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today, EX } = DPF;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow, dgm, seq } = DPFViz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="design-patterns.html">← All lectures and exercises</a>`;
+const title = e => `${EX} ${e.n}${e.title ? ` – ${esc(e.title)}` : ""}`;
+function head(e) {
+  const meta = `${e.published ? `Sheet in OPAL since ${fmt(e.published)} · ` : ""}discussed ${fmt(e.date)}${exe ? ` · ${exe.start}–${exe.end} · ${esc(exe.room)} · ${esc(exe.who || "")}` : ""}${e.points ? ` · ${e.points} points` : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// A task of the sheet (its number and points on the left, the question restated in our own words, then the worked
+// answer), the answer tiles, and the context / worked-example boxes.
+const task = (id, pts, t, body) => `<section class="task" id="t${String(id).replace(/\W/g, "")}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2>${pts ? `<span class="pts">${pts} pt</span>` : `<span class="pts open">discussed in the session</span>`}</div>${body}</section>`;
+const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const qbox = (t, items) => `<div class="q"><div class="kicker">${t}</div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+
+// ---------------- Write-ups: one function per exercise, registered in WRITEUPS below ----------------
+// function exercise1() { return `${head(e)}<p class="lead">…</p>${task("1", 4, "…", `<p>…</p>${ans([["42", "answer"]])}`)}<h2>Before the session</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(e.date), prev = e.lecture != null ? c.lectures.find(x => x.n === e.lecture) : null;
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.published ? "Sheet online, write-up pending" : "Not published yet"}</h2>
+      <p class="muted">This session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}${exe ? `, ${exe.start}–${exe.end}, ${esc(exe.room)}` : ""}.<br>${esc(e.blurb)}${prev ? ` <a href="design-patterns/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it draws on.` : ""}<br>The write-up appears here once the sheet is available.</p>
+    </div>`;
+}
+// ======================= Exercise 1: Variability Patterns (held 28 Oct; sheet and official solution read) =======================
+const ROLES = leg([[1, "template role"], [2, "hook role"]]);
+// Task 1a: Composite file system with add() as template and canAdd() as hook.
+CHARTS.fs = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 84 : 90 });
+  const res = D.box(narrow ? 0.5 : 1.3, 0, { name: "Resource", role: "g", abstract: true, h: 24, span: narrow ? 1 : 1.4 });
+  const file = D.box(0, narrow ? 1.2 : 1.1, { name: "File", role: "g", h: 24, dy: narrow ? 0 : 10 });
+  const fold = D.box(narrow ? 1 : 2, narrow ? 1.2 : 1.1, { name: "Folder", ops: ["add(Resource r)   ◂ template", "canAdd(Resource r) ◂ hook"], role: "t", abstract: true, span: narrow ? 1 : 1.6 });
+  const unt = D.box(narrow ? 0 : 1.6, narrow ? 2.5 : 2.3, { name: "UntypedFolder", ops: ["canAdd(r): true"], role: "h", span: narrow ? 1 : 1.1 });
+  const col = D.box(narrow ? 1 : 2.8, narrow ? 2.5 : 2.3, { name: "CollectionFolder", ops: ["containedClass: Class", "canAdd(r)"], role: "h", span: narrow ? 1 : 1.2 });
+  D.inh(file, res); D.inh(fold, res); D.inh(unt, fold); D.inh(col, fold);
+  if (!narrow) { const img = D.box(0, 2.1, { name: "ImageFile", role: "g", h: 22 }), doc = D.box(0, 2.5, { name: "DocumentFile", role: "g", h: 22 }), mus = D.box(0, 2.9, { name: "MusicFile", role: "g", h: 22 }); D.inh(img, file); D.inh(doc, file); D.inh(mus, file); }
+  D.ref(fold, res, { kind: "agg", label: "res *" });
+  if (!narrow) D.note(2.1, 3.35, ["canAdd(r) { return r instanceof File", "  && r.getClass() == containedClass; }"], col, { span: 1.9 });
+  if (!narrow) D.note(0, 3.35, ["add(r) {", "  if (canAdd(r)) res.add(r); }"], fold, { span: 1.8 });
+  return D.svg("Class diagram of the file system: Resource is the Composite root with File and Folder below it; Folder owns resources and has the template method add(r) that calls the hook canAdd(r); UntypedFolder always accepts, CollectionFolder accepts only files of its containedClass; ImageFile, DocumentFile and MusicFile are the file types.");
+};
+// Task 1b: render() as template, renderChildren() as hook.
+CHARTS.render = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 96 });
+  const res = D.box(narrow ? 0.5 : 1.3, 0, { name: "Resource", ops: ["name: String", "render()        ◂ template"], role: "t", abstract: true, span: narrow ? 1 : 1.4 });
+  const file = D.box(0, narrow ? 1.3 : 1.2, { name: "File", ops: ["render(): show content"], role: "h", span: narrow ? 1 : 1.2 });
+  const fold = D.box(narrow ? 1 : 2, narrow ? 1.3 : 1.2, { name: "Folder", ops: ["render(): name +", "  renderChildren()", "renderChildren() ◂ hook"], role: "t", abstract: true, span: narrow ? 1 : 1.9 });
+  const unt = D.box(narrow ? 0 : 1.6, narrow ? 2.6 : 2.4, { name: "UntypedFolder", ops: ["renderChildren():", "  list, recurse"], role: "h", span: narrow ? 1 : 1.3 });
+  const col = D.box(narrow ? 1 : 3, narrow ? 2.6 : 2.4, { name: "CollectionFolder", ops: ["renderChildren(): player /", "slideshow / viewer by class"], role: "h", span: narrow ? 1 : 1 });
+  D.inh(file, res); D.inh(fold, res); D.inh(unt, fold); D.inh(col, fold);
+  return D.svg("Class diagram of rendering: Resource declares render(); File shows its content; Folder's render() prints the name and calls the hook renderChildren(); UntypedFolder lists and recurses into its children, CollectionFolder opens a player, slideshow or viewer depending on its contained class.");
+};
+// Task 1c: hooks zipped out into a ResourceRenderer hierarchy (Template Class / Strategy).
+CHARTS.renderer = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 96 });
+  const res = D.box(0, 0, { name: "Resource", ops: ["render()   ◂ template", "  renderer.render(this)"], role: "t", abstract: true, span: narrow ? 1 : 1.3 });
+  const rr = D.box(narrow ? 1 : 2.4, 0, { name: "ResourceRenderer", ops: ["render(Resource r) ◂ hook"], role: "h", abstract: true, span: narrow ? 1 : 1.5 });
+  const a = D.box(0, 1.25, { name: "FileRenderer", ops: ["render(r)"], role: "h", span: narrow ? 1 : 1.3 });
+  const b = D.box(narrow ? 1 : 1.35, 1.25, { name: "UntypedFolderRenderer", ops: ["render(r)"], role: "h", span: narrow ? 1 : 1.3 });
+  const c = D.box(narrow ? 0.5 : 2.7, narrow ? 2.4 : 1.25, { name: "CollectionFolderRenderer", ops: ["render(r)"], role: "h", span: narrow ? 1 : 1.3 });
+  D.ref(res, rr, { label: "renderer" }); D.inh(a, rr); D.inh(b, rr); D.inh(c, rr);
+  return D.svg("Class diagram with the hooks reified: Resource keeps a renderer reference to the abstract ResourceRenderer; FileRenderer, UntypedFolderRenderer and CollectionFolderRenderer implement render(Resource), one per kind of resource.");
+};
+// Task 2a: transmitData reified into a DataTransmitter hierarchy.
+CHARTS.sensor = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 100 });
+  const su = D.box(narrow ? 0.5 : 0, 0, { name: "SensorUnit", ops: ["dataSinkAddress: String", "samplingIntervalInMs: int", "transmitData()  → transmitter", "sampleData()"], role: "t", abstract: true, span: narrow ? 1 : 1.4 });
+  const dt = D.box(narrow ? 0.5 : 2.4, narrow ? 2.3 : 0, { name: "DataTransmitter", ops: ["transmitData(SensorUnit u)"], role: "h", abstract: true, span: narrow ? 1 : 1.5 });
+  const tx = ["Raw", "Preprocessed", "Encrypted", "Unencrypted"].map((n, i) => narrow ? D.box(0, 3.3, { name: n, role: "h", h: 22, w: 76, dx: i * 82, sm: true }) : D.box(1.5 + i * 0.6, 1.3, { name: n, role: "h", h: 22, w: 86 }));
+  const th = D.box(0, narrow ? 1.4 : 2.1, { name: "ThermalSensor", role: "g", h: 22, span: narrow ? 1 : 0.8 });
+  const me = D.box(narrow ? 1 : 0.85, narrow ? 1.4 : 2.1, { name: "MechanicalSensor", role: "g", h: 22, span: narrow ? 1 : 0.9 });
+  D.ref(su, dt, { label: narrow ? "" : "transmitter" }); tx.forEach(t => D.inh(t, dt)); D.inh(th, su); D.inh(me, su);
+  return D.svg("Class diagram: SensorUnit keeps a transmitter reference to the abstract DataTransmitter with transmitData(SensorUnit); the four concrete transmitters Raw, Preprocessed, Encrypted and Unencrypted (each a …Transmitter) sit side by side, which is the smell task 2c asks about; the sensor subclasses stay below SensorUnit.");
+};
+// Task 2d/2e: the facets split into bridges around the SensorUnit core.
+CHARTS.multi = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 3, rowH: narrow ? 92 : 96 });
+  const su = D.box(narrow ? 0.5 : 1, 0, { name: "SensorUnit (core)", ops: ["sampleData()  → sensor", "transmitData() → transmitter"], role: "t", span: 1 });
+  const se = D.box(0, 1.3, { name: "Sensor", ops: ["sampleData()"], role: "h", abstract: true });
+  const tr = D.box(1, 1.3, { name: "DataTransmitter", ops: ["transmitData(u)"], role: "h", abstract: true });
+  const dh = D.box(narrow ? 0.5 : 2, narrow ? 2.9 : 1.3, { name: "DataHandler", ops: ["handleData(u)"], role: "h", abstract: true });
+  const s1 = D.box(0, 2.2, { name: "ThermalSensor …", role: "g", h: 22 });
+  const t1 = D.box(1, 2.2, { name: "Raw / Preprocessed", role: "g", h: 22 });
+  const d1 = D.box(narrow ? 0.5 : 2, narrow ? 3.8 : 2.2, { name: "Encrypted / Plain", role: "g", h: 22 });
+  D.ref(su, se, { label: "sensor" }); D.ref(su, tr, { label: "transmitter" }); D.ref(su, dh, { label: "dataHandler" });
+  D.inh(s1, se); D.inh(t1, tr); D.inh(d1, dh);
+  return D.svg("Multi-bridge with SensorUnit as the core: the core delegates sampleData() to a Sensor facet and transmitData() to a DataTransmitter facet (raw or preprocessed) which in turn uses a DataHandler facet (encrypted or plain); no facet is primary.");
+};
+// Leaf classes for the sensor unit: one hierarchy versus facets with bridges, with the sheet's numbers.
+CHARTS.leaves = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 110 : 190, R = narrow ? 40 : 60, T = 8, RH = 40, rows = [["one hierarchy", 16, "gray", "4 sensor types × 2 payloads × 2 channels"], ["bridges (2e)", 8, "s1", "4 sensors + 2 transmitters + 2 handlers"]];
+  const H = T + rows.length * RH + 24, max = 16, x = v => L + v / max * (W - L - R);
+  const ticks = [0, 4, 8, 12, 16].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 8}" text-anchor="middle">${v}</text>`).join("");
+  const bars = rows.map(([k, v, s, d], i) => { const y0 = T + i * RH + 6; return `<g class="pt row" tabindex="0" data-tip="<b>${k}: ${v} leaf classes</b>${d}"><text class="cat" x="${L - 8}" y="${y0 + 18}" text-anchor="end">${k}</text><path class="bar ${s}" d="${hbar(x(0), x(v), y0, 26)}"/><text class="val" x="${x(v) + 6}" y="${y0 + 18}">${v}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: concrete classes for the sensor unit with four sensor types, two payload kinds and two channel kinds. One combined hierarchy needs 16 leaf classes; the bridges of task 2e need 8.">${ticks}${bars}</svg>`;
+};
+function exercise1() {
+  return `${head(e)}
+    <p class="lead">The first sheet makes you draw the variability patterns of <a href="design-patterns/lecture.html?n=2">lecture 2</a>: Template Method and Composite on a small file system, Objectifier and Bridge on a family of sensors, then the comparisons the lecture keeps coming back to, and a homework on a real search framework. The session on 28 Oct discussed the solutions; the official solution has been published in OPAL since. Below each task is restated in our own words, followed by the worked answer (our drawing, checked against the published solution where it exists) and what the task trains. The sheet carries no points.</p>
+    <div class="box status"><p style="margin:0"><b>Status:</b> session held on ${fmt(e.date)}; task 4 is homework for the next exercise (<a href="design-patterns/exercise.html?n=2">exercise 2</a>, 4 Nov) and is not optional for DSE submissions.</p></div>
+
+    ${task("1", 0, "Template Method versus Template Class on a file system", `
+      <p>A file system has resources; a resource is a file or a folder, and folders hold resources. There are several file types (text, image, music). Untyped folders accept anything; collection folders (like the Pictures or Music folder of a home directory) accept exactly one file type and no subfolders.</p>
+      <h3>a) Structure with Composite, constraints with Template Method</h3>
+      <p>The structure is a Composite: Resource is the component, File the leaf, Folder the composite that aggregates resources. The constraint sits in Folder: <code>add(r)</code> is the <b>template method</b> and calls the <b>hook</b> <code>canAdd(r)</code> before it stores anything; the hook is what the two folder kinds bind differently. A collection folder records the one class it may contain in a field and tests the candidate against it; an untyped folder answers true.</p>
+      ${chart("fs", ROLES)}<figcaption>Our class diagram of the solution. The pseudo-code notes carry the template and the hook; only Folder subclasses may bind canAdd, nobody overrides add.</figcaption></figure>
+      ${ans([["add() / canAdd()", "template / hook pair in Folder"], ["containedClass", "encodes the allowed file type of a collection folder"], ["Composite", "Resource, File, Folder with res *"]])}
+      <h3>b) Rendering with Template Method</h3>
+      <p>Rendering a resource on screen: a file on its own shows its content; a folder prints its name and renders its children; an untyped folder just lists them; a collection folder renders according to its contents (a music folder as a player, an image folder as a slideshow, a document folder in a viewer).</p>
+      <p>Same technique, one level up: <code>render()</code> in Folder is the template (print the name, then call the hook), <code>renderChildren()</code> is the hook. UntypedFolder's hook iterates the children and calls their render(), which is the recursion of the Composite; CollectionFolder's hook branches on its contained class to build the player, slideshow or viewer and adds the children to it.</p>
+      ${chart("render", ROLES)}<figcaption>Our class diagram of the rendering solution: render() is the template in Resource and Folder, renderChildren() the hook bound by the two folder kinds.</figcaption></figure>
+      <h3>c) Turn it into a Template Class (or Strategy)</h3>
+      <p>Zip every hook out of the resource classes into a separate hierarchy: Resource keeps a reference to an abstract ResourceRenderer and its render() simply delegates <code>renderer.render(this)</code>; FileRenderer, UntypedFolderRenderer and CollectionFolderRenderer are the hook values, one per kind of resource.</p>
+      ${chart("renderer", ROLES)}<figcaption>Our class diagram of the Template Class version: the Objectifier applied to renderChildren, which makes Resource the template class and ResourceRenderer the hook class.</figcaption></figure>
+      <ul class="cmp">
+        <li><b>advantages</b><span class="v">renderers can be exchanged at run time (a folder can switch from list to slideshow without becoming another object)</span><span class="v">rendering code is separate from the data structure and can be reused and tested on its own</span></li>
+        <li><b>disadvantages</b><span class="v">two objects per rendered resource: more allocation time and memory</span><span class="v">two polymorphic dispatches when both template and hook vary, so slower; and nothing stops a FileRenderer being attached to a folder, so type safety must be secured, for which the creational patterns of lecture 3 (Abstract Factory) help</span></li>
+      </ul>
+      ${why("What the task trains", "<p>Recognising that “the constraint must hold on every add” is a template method with the check as hook, and that “render differently per folder kind” is the same shape one level up. Part c is the lecture's slide 24 to 29 in your own hands: the mechanical move from Template Method to Template Class, and its costs. In the oral exam this is the kind of design you may be asked to sketch and defend.</p>")}`)}
+
+    ${task("2", 0, "Objectifier: reifying methods on a sensor unit", `
+      <p>A SensorUnit (with a data sink address and a sampling interval, and the methods sampleData() and transmitData()) has subclasses ThermalSensor (temperature, heat flux) and MechanicalSensor (velocity, acceleration). Units buffer data and transmit it to a sink on demand.</p>
+      <h3>a) Reify transmitData into an Objectifier</h3>
+      <p>SensorUnit gets a reference <code>transmitter</code> to a new abstract class DataTransmitter with the reified method <code>transmitData(SensorUnit u)</code>; the unit's own transmitData() delegates to it. Four concrete transmitters are asked for: raw data, compressed and preprocessed data, unencrypted, encrypted.</p>
+      ${chart("sensor", leg([[1, "template: the sensor unit"], [2, "hook: the reified transmit method"], ["g", "sensor subclasses, unchanged"]]))}<figcaption>Our class diagram of 2a (the four boxes are RawTransmitter, PreprocessedTransmitter and so on). Four siblings under one abstract class is what the sheet wants here; it is also the smell that part c names.</figcaption></figure>
+      <h3>b) How the wording changes</h3>
+      <p>A verb becomes a noun: the method <i>transmit data</i> turns into the reference <i>transmitter</i> (the object that transmits). That is the general tell of an Objectifier or Strategy: LearningStyle for learn(), Exporter for export(), Renderer for render().</p>
+      ${ans([["verb → noun", "transmitData() becomes a transmitter object"]])}
+      <h3>c) What is wrong with one hierarchy of four transmitters</h3>
+      <p>The four classes do not partition DataTransmitter: whether data goes out encrypted or in the clear is independent of whether it is raw or preprocessed. They are two <b>facets</b> (lecture 2, slide 71: a class whose heirs do not partition it is a facet model in disguise), so "EncryptedTransmitter" and "RawTransmitter" are not comparable alternatives, and a unit that needs encrypted preprocessed transmission has no class to pick.</p>
+      <h3>d) Split with a simple Bridge</h3>
+      <p>Keep DataTransmitter with the payload facet (RawTransmitter, PreprocessedTransmitter) and bridge it to a second hierarchy DataHandler with the channel facet (EncryptedTransfer, UnencryptedTransfer): the transmitter first asks its handler to prepare the data (<code>dataToTransmit = dataHandler.handleData(u)</code>) and then sends it. The published solution calls this a sequenced double bridge, since the unit bridges to the transmitter and the transmitter bridges on to the handler; in the lecture's terms it is a 2-chain bridge, a layered object (slide 82).</p>
+      <h3>e) All facets as bridges around SensorUnit</h3>
+      <p>Now the sensor kind becomes a facet too: SensorUnit stops being the root of the sensor hierarchy and instead aggregates a Sensor object (ThermalSensor, MechanicalSensor and their subclasses move under Sensor), a DataTransmitter and a DataHandler, all directly referenced by the core. Every call is delegated to the facet object.</p>
+      ${chart("multi", leg([[1, "core"], [2, "facet hook classes"], ["g", "facet values"]]))}<figcaption>Our drawing of 2e, a multi-bridge with core (lecture 2, slide 69). The inheritance hierarchy of the sensor unit has been reified into aggregation.</figcaption></figure>
+      ${chart("leaves", leg([["g", "one combined hierarchy"], [1, "facets with bridges"]]))}<figcaption>Our count of concrete classes for the sheet's sensor unit: four sensor types times two payload kinds times two channel kinds in one hierarchy against the sum of the facets with bridges. Hover a bar.</figcaption></figure>
+      ${tbl(["Design", "Leaf classes", "How counted"], [["one hierarchy", 16, "4 × 2 × 2"], ["bridges", 8, "4 + 2 + 2"]])}
+      <p><b>Implications</b> of reifying the inheritance hierarchy: no facet gets special attention as the primary one, all can be varied independently and at run time (a unit can switch to encryption without being recreated), and the sensor types no longer multiply with the transmission options. The price is the lecture's slide 73 list: no type check on the combinations, object schizophrenia (one logical unit is four objects), memory and dispatch costs. The published solution adds a pragmatic note: for performance it may be useful to make one facet primary, but that is an implementation decision based on measured usage, not a design decision taken for no reason.</p>
+      ${why("What the task trains", "<p>The move from a method to an object (a), the vocabulary that signals it (b), recognising non-partitioning subclasses as hidden facets (c), and the two ways of wiring facets, chained and around a core (d, e). Lectures 6 to 8 return to this with roles, which are the course's answer to the object schizophrenia the multi-bridge causes.</p>")}`)}
+
+    ${task("3", 0, "Comparing the variability patterns", `
+      <ul class="cmp">
+        <li><b>a) Bridge vs Template Method</b><span class="v"><b>Common:</b> both declare abstract methods in a superclass that subclasses implement; both are template-and-hook.</span><span class="v"><b>Different:</b> in a Template Method the subclass of the same class implements the hook, so interface and implementation stay in one hierarchy; a Bridge hides how the abstract methods are implemented behind a second hierarchy, so abstraction and implementation can be refined separately and exchanged at run time, which a Template Method cannot do.</span></li>
+        <li><b>b) Template Method vs Strategy</b><span class="v"><b>Common:</b> both vary behaviour behind an abstract method; Strategy has the Objectifier structure, Template Method the single-class structure.</span><span class="v"><b>Different:</b> Template Method varies <i>parts</i> of an algorithm, Strategy exchanges the <i>whole</i> algorithm. Template Method is checked by the compiler, which finds inconsistencies in the inheritance and the typing statically; with Strategy, problems (a missing or wrong strategy object) show up at run time only.</span></li>
+        <li><b>c) Template Class vs Generic Template Class</b><span class="v"><b>Common:</b> template and hook in separate classes, hook values as subclasses of the hook class.</span><span class="v"><b>Different:</b> Template Class dispatches polymorphically to the hook object at run time; the generic version expands the binding at compile time, so there is more type safety and no dispatch, but no run-time exchange. Generic expansion also flattens the hook hierarchy: deep inheritance structures can be flattened in parts by generics.</span></li>
+      </ul>
+      ${why("What the task trains", "<p>Slide 31 of lecture 2 in three instances: same structure or similar structure, different incentive and different guarantees. The exam-grade answer always names what is common, what differs, and when you would choose which; the compile-time versus run-time axis appears in all three.</p>")}`)}
+
+    ${task("4", 0, "Homework: variability patterns in the Search framework", `
+      <p>Study the small open-source framework <i>Search</i> (a collection of search algorithms, public on GitHub under the account named on the sheet), find three variability patterns in its code and describe their intent, and draw a class diagram for each that highlights the pattern. Due for the exercise on 4 Nov; not optional for DSE submissions.</p>
+      <p><b>Plan, not yet done:</b> read the repository's class structure, starting at the abstract search algorithm and the problem or state abstraction; the lecture's candidates to look for are Template Method (an abstract search loop with hook methods for expanding and testing nodes), Strategy or Objectifier (an exchangeable heuristic or comparator object), Factory Method (creation of successor states or nodes by the problem class) and Bridge (algorithm hierarchy separate from problem hierarchy). Whatever the code actually shows goes into the three diagrams; nothing here is a finding yet.</p>
+      ${qbox("Before the session on 4 Nov", ["Draw the three diagrams with the dgm helper's conventions: template role blue, hook role orange, pseudo-code notes for the template methods.", "For each pattern, one sentence of intent in the GOF form (problem, solution, consequence).", "Bring the open question from task 1c: how would an Abstract Factory secure the type safety of the renderers?"])}`)}
+
+    <h2>Before and after the session</h2>
+    <ul>
+      <li>Reread <a href="design-patterns/lecture.html?n=2">lecture 2</a>, slides 14 to 31 (Template Method, Objectifier, Template Class, Strategy) for task 1 and slides 61 to 73 (facets) for task 2.</li>
+      <li>The published solution in OPAL confirms the structures drawn here; where the sheet left naming free (RawTransmitter versus RawDataTransmitter), the names are ours.</li>
+      <li>Task 4's diagrams are due with <a href="design-patterns/exercise.html?n=2">exercise 2</a>.</li>
+    </ul>`;
+}
+// ======================= Exercise 2: Creational Patterns (sheet since 30 Oct, discussed 4 Nov; no official solution yet) =======================
+const CROLES = leg([[1, "creator / director"], [2, "factory or builder (hook)"], [4, "products"], [3, "client / game"]]);
+// Task 1a: Abstract Factory for the maze game.
+CHARTS.mazeAF = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 100 });
+  const g = D.box(0, 0, { name: "MazeGame", ops: ["createMaze(MazeFactory f)"], role: "c", span: narrow ? 1 : 1.1 });
+  const f = D.box(narrow ? 1 : 1.4, 0, { name: "MazeFactory", ops: ["makeMaze()", "makeRoom(n)", "makeWall()", "makeDoor(r1, r2)"], role: "h", abstract: true, span: narrow ? 1 : 1.1 });
+  const f1 = D.box(narrow ? 0 : 0.5, 1.35, { name: "StandardMazeFactory", ops: ["makeRoom(n): Room", "makeDoor(…): DoorWall"], role: "h", span: narrow ? 1 : 1.2 });
+  const f2 = D.box(narrow ? 1 : 1.8, 1.35, { name: "EnchantedMazeFactory", ops: ["makeRoom(n): MagicRoom", "makeDoor(…): SpellDoorWall"], role: "h", span: narrow ? 1 : 1.25 });
+  const room = D.box(narrow ? 0 : 3.1, narrow ? 2.5 : 0, { name: "Room", role: "p", h: 24, span: narrow ? 1 : 0.9 });
+  const mroom = D.box(narrow ? 0 : 3.1, narrow ? 3.1 : 0.55, { name: "MagicRoom", ops: ["spell: Spell"], role: "p", span: narrow ? 1 : 0.9 });
+  const door = D.box(narrow ? 1 : 3.1, narrow ? 2.5 : 1.5, { name: "DoorWall", role: "p", h: 24, span: narrow ? 1 : 0.9 });
+  const sdoor = D.box(narrow ? 1 : 3.1, narrow ? 3.1 : 2.05, { name: "SpellDoorWall", ops: ["spell: Spell", "enter(): needs spell"], role: "p", span: narrow ? 1 : 0.9 });
+  D.inh(f1, f); D.inh(f2, f); D.inh(mroom, room); D.inh(sdoor, door);
+  D.ref(g, f, { kind: "dep", label: "uses" });
+  if (!narrow) D.note(0, 2.45, ["createMaze(f) {", " m = f.makeMaze();", " r1 = f.makeRoom(1); r2 = f.makeRoom(2);", " d = f.makeDoor(r1, r2);", " r1.setSide(NORTH, d);", " r1.setSide(EAST, f.makeWall()); …", "}"], g, { span: 1.7 });
+  return D.svg("Abstract Factory for the maze: MazeGame.createMaze takes a MazeFactory with makeMaze, makeRoom, makeWall and makeDoor; StandardMazeFactory returns Room and DoorWall, EnchantedMazeFactory returns MagicRoom and SpellDoorWall, subclasses of the standard products.");
+};
+// Task 1b: Factory Method variant.
+CHARTS.mazeFM = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 104 });
+  const g = D.box(0, 0, { name: "MazeGame", ops: ["createMaze()   ◂ template", "makeRoom(n)    ◂ factory methods", "makeWall()", "makeDoor(r1, r2)"], role: "t", span: narrow ? 2 : 1.6 });
+  const s = D.box(0, 1.3, { name: "StandardGame", ops: ["(inherits the defaults)"], role: "h", span: narrow ? 1 : 1.1 });
+  const m = D.box(narrow ? 1 : 1.3, 1.3, { name: "EnchantedGame", ops: ["makeRoom(n): MagicRoom", "makeDoor(…): SpellDoorWall"], role: "h", span: narrow ? 1 : 1.3 });
+  const room = D.box(narrow ? 0 : 3, narrow ? 2.4 : 0, { name: "Room", role: "p", h: 24 });
+  const mroom = D.box(narrow ? 0 : 3, narrow ? 3.0 : 0.6, { name: "MagicRoom", role: "p", h: 24 });
+  const door = D.box(narrow ? 1 : 3, narrow ? 2.4 : 1.3, { name: "DoorWall", role: "p", h: 24 });
+  const sdoor = D.box(narrow ? 1 : 3, narrow ? 3.0 : 1.9, { name: "SpellDoorWall", role: "p", h: 24 });
+  D.inh(s, g); D.inh(m, g); D.inh(mroom, room); D.inh(sdoor, door);
+  if (!narrow) D.note(1.75, 0.05, ["createMaze() {", " r1 = makeRoom(1);", " r2 = makeRoom(2);", " d = makeDoor(r1, r2); …", "} // hooks pick the class"], g, { span: 1.1 });
+  return D.svg("Factory Method variant: MazeGame itself owns createMaze as the template method and the factory methods makeRoom, makeWall and makeDoor with standard defaults; EnchantedGame overrides makeRoom and makeDoor to return MagicRoom and SpellDoorWall.");
+};
+// Task 1c: one concrete factory with prototypes.
+CHARTS.mazeProto = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 104 });
+  const f = D.box(0, 0, { name: "MazeFactory", ops: ["protoRoom: Room", "protoWall: Wall", "protoDoor: DoorWall", "makeRoom(n): protoRoom.clone(n)", "makeDoor(a, b): protoDoor.clone(a, b)"], role: "h", span: narrow ? 2 : 1.9 });
+  const room = D.box(narrow ? 0 : 2.2, narrow ? 1.4 : 0, { name: "Room", ops: ["clone(n): Room"], role: "p", stereo: "Prototype", span: narrow ? 1 : 0.85 });
+  const door = D.box(narrow ? 1 : 3.1, narrow ? 1.4 : 0, { name: "DoorWall", ops: ["clone(a, b): DoorWall"], role: "p", stereo: "Prototype", span: narrow ? 1 : 0.9 });
+  const mroom = D.box(narrow ? 0 : 2.2, narrow ? 2.6 : 1.3, { name: "MagicRoom", ops: ["clone(n): MagicRoom"], role: "p", span: narrow ? 1 : 0.85 });
+  const sdoor = D.box(narrow ? 1 : 3.1, narrow ? 2.6 : 1.3, { name: "SpellDoorWall", ops: ["clone(a, b)"], role: "p", span: narrow ? 1 : 0.9 });
+  D.inh(mroom, room); D.inh(sdoor, door); D.ref(f, room, { label: narrow ? "" : "protoRoom" });
+  if (!narrow) D.note(0, 1.4, ["standard  = new MazeFactory(Room, Wall, DoorWall)", "enchanted = new MazeFactory(MagicRoom(spell), Wall,", "                            SpellDoorWall(spell))"], f, { span: 2 });
+  return D.svg("Prototype variant: a single concrete MazeFactory holds a prototype room, wall and door and implements makeRoom and makeDoor by cloning them; the standard and the enchanted game are two instances of the same factory configured with different prototypes.");
+};
+// Task 2a: Builder for mazes.
+CHARTS.mazeBuilder = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 104 : 108 });
+  const dir = D.box(0, 0, { name: "MazeGame", ops: ["createMaze(MazeBuilder b)", "  ◂ director"], role: "t", span: narrow ? 1 : 1.2 });
+  const b = D.box(narrow ? 1 : 1.6, 0, { name: "MazeBuilder", ops: ["newMaze()", "addRoom(n)", "addDoor(from, to, dir)", "getMaze(): Maze"], role: "h", abstract: true, span: narrow ? 1 : 1.2 });
+  const b1 = D.box(narrow ? 0 : 1, 1.35, { name: "StandardMazeBuilder", ops: ["rooms: Map<int, Room>", "addRoom(n): Room, 4 Walls"], role: "h", span: narrow ? 1 : 1.2 });
+  const b2 = D.box(narrow ? 1 : 2.3, 1.35, { name: "EnchantedMazeBuilder", ops: ["spell: Spell", "addRoom(n): MagicRoom", "addDoor(…): SpellDoorWall"], role: "h", span: narrow ? 1 : 1.3 });
+  const maze = D.box(narrow ? 0.5 : 3.1, narrow ? 2.6 : 0, { name: "Maze", ops: ["rooms *"], role: "p", span: narrow ? 1 : 0.9, dx: narrow ? 0 : 14 });
+  D.ref(dir, b, { label: "builder" }); D.inh(b1, b); D.inh(b2, b); if (!narrow) D.ref(b, maze, { kind: "dep", label: "builds" });
+  if (!narrow) D.note(0, 1.35, ["createMaze(b) {", " b.newMaze();", " b.addRoom(1); b.addRoom(2);", " b.addDoor(1, 2, NORTH);", " return b.getMaze();", "}"], dir, { span: 0.95 });
+  return D.svg("Builder for mazes: MazeGame.createMaze is the director and calls newMaze, addRoom and addDoor on an abstract MazeBuilder; StandardMazeBuilder and EnchantedMazeBuilder create the matching rooms and doors and keep the rooms in a map; getMaze returns the finished Maze.");
+};
+// Task 3b/3c: read-only and mutable views as parallel hierarchies with factory methods.
+CHARTS.views = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 88 : 92 });
+  const ro = D.box(narrow ? 0.5 : 0, 0, { name: "ReadOnlyElement", ops: ["draw()", "createManipulator() ◂ FM"], role: "t", abstract: true, span: narrow ? 1 : 1.3 });
+  const mu = D.box(narrow ? 0.5 : 2.5, narrow ? 2.5 : 0, { name: "Manipulator", ops: ["element: ReadOnlyElement", "move(), edit()"], role: "p", abstract: true, span: narrow ? 1 : 1.3 });
+  const c1 = D.box(0, 1.25, { name: "ClassElement", ops: ["createManipulator():", " new ClassManipulator(this)"], role: "h", span: narrow ? 1 : 1 });
+  const c2 = D.box(narrow ? 1 : 1.05, 1.25, { name: "StateElement", ops: ["createManipulator():", " new StateManipulator(this)"], role: "h", span: narrow ? 1 : 0.9 });
+  const m1 = D.box(narrow ? 0 : 1.95, narrow ? 3.75 : 1.25, { name: "ClassManipulator", ops: ["edit(): rename, attrs"], role: "p", span: narrow ? 1 : 1 });
+  const m2 = D.box(narrow ? 1 : 3, narrow ? 3.75 : 1.25, { name: "StateManipulator", ops: ["edit(): rename, actions"], role: "p", span: narrow ? 1 : 1 });
+  D.inh(c1, ro); D.inh(c2, ro); D.inh(m1, mu); D.inh(m2, mu);
+  D.ref(ro, mu, { label: narrow ? "" : "manipulator 0..1" });
+  return D.svg("Parallel hierarchies for diagram editors: the read-only facet ReadOnlyElement with ClassElement and StateElement, and the mutable facet Manipulator with ClassManipulator and StateManipulator; each read-only class has a factory method createManipulator that returns the manipulator at the same level, which is the parallelism constraint.");
+};
+// Explorer: a maze builder that enforces the structural rules; the director's calls become buttons.
+function initMazeLab(body) {
+  const S = { rooms: [], doors: [], log: [], built: null, enchanted: false };
+  const act = (k) => {
+    if (k === "room") { if (S.rooms.length >= 5) return S.log.push(`<span class="bad">✗ addRoom(${S.rooms.length + 1})</span> this little maze stops at 5 rooms`); const n = S.rooms.length + 1; S.rooms.push(n); S.log.push(`<span class="ok">✓ addRoom(${n})</span> ${S.enchanted ? "MagicRoom" : "Room"} ${n} created with 4 ${S.enchanted ? "" : ""}walls`); }
+    if (k === "door") { const n = S.rooms.length; if (n < 2) return S.log.push(`<span class="bad">✗ addDoor(${n}, ${n + 1})</span> rejected: both rooms must exist first`); const a = n - 1, b = n;
+      if (S.doors.some(d => d[0] === a && d[1] === b)) return S.log.push(`<span class="bad">✗ addDoor(${a}, ${b})</span> rejected: these rooms already share a door`);
+      S.doors.push([a, b]); S.log.push(`<span class="ok">✓ addDoor(${a}, ${b}, EAST)</span> one ${S.enchanted ? "SpellDoorWall" : "DoorWall"} replaces room ${a}'s east wall and room ${b}'s west wall`); }
+    if (k === "get") { if (!S.rooms.length) return S.log.push(`<span class="bad">✗ getMaze()</span> rejected: a maze needs at least one room`); S.built = { rooms: S.rooms.length, doors: S.doors.length }; S.log.push(`<span class="ok">✓ getMaze()</span> Maze with ${S.rooms.length} room${S.rooms.length > 1 ? "s" : ""}, ${S.doors.length} door${S.doors.length === 1 ? "" : "s"}, ${S.rooms.length * 4 - S.doors.length * 2} plain walls; every room has exactly 4 sides`); }
+  };
+  const render = () => {
+    const n = S.rooms.length, W = 340, rw = 56, svg = `<svg viewBox="0 0 ${W} 70" role="img" aria-label="${n} rooms in a row with ${S.doors.length} doors between neighbours">${S.rooms.map((r, i) => `<g class="cls ${S.enchanted ? "h" : "p"}"><rect x="${10 + i * 66}" y="10" width="${rw}" height="${rw}" rx="4"/><text class="cn" x="${10 + i * 66 + rw / 2}" y="42" text-anchor="middle">${r}</text></g>`).join("")}${S.doors.map(([a, b]) => `<rect x="${10 + (a - 1) * 66 + rw - 3}" y="26" width="16" height="24" rx="3" fill="var(--vz-s3)"/>`).join("")}</svg>`;
+    body.innerHTML = `<p class="lab-note">The director's three calls as buttons. The builder refuses what the structural rules forbid (a door before its rooms exist, a second door between the same rooms, a maze without rooms) and does the bookkeeping the hand-written createMaze of the sheet gets wrong easily: every room gets four sides, a door is set on both rooms at once.</p>
+      <div class="ctl"><label><input type="checkbox" data-k="ench" ${S.enchanted ? "checked" : ""}> EnchantedMazeBuilder (magic rooms, spell doors)</label></div>
+      <div class="proto"><button data-k="room">addRoom(${n + 1})</button><button data-k="door">addDoor(${Math.max(1, n - 1)}, ${Math.max(2, n)})</button><button data-k="get">getMaze()</button><button data-k="reset">reset</button></div>
+      <figure class="viz" style="margin-top:0;max-width:420px">${svg}</figure>
+      <div class="trace">${S.log.slice(-4).map(l => `<div>${l}</div>`).join("") || "<span class='muted'>start with addRoom(1)</span>"}</div>`;
+    body.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { if (b.dataset.k === "reset") Object.assign(S, { rooms: [], doors: [], log: [], built: null }); else act(b.dataset.k); render(); }));
+    body.querySelector("[data-k=ench]").addEventListener("change", e => { S.enchanted = e.target.checked; S.rooms = []; S.doors = []; S.log = [`builder exchanged: ${S.enchanted ? "EnchantedMazeBuilder" : "StandardMazeBuilder"}, same director code`]; render(); });
+  };
+  render();
+}
+function exercise2() {
+  return `${head(e)}
+    <p class="lead">The second sheet applies the three creational patterns of <a href="design-patterns/lecture.html?n=3">lecture 3</a> to the maze game the lecture itself uses: Abstract Factory, Factory Method and Prototype to get a standard and an enchanted game from one construction routine, Builder to make that routine safe, and factory methods in parallel hierarchies for read-only and editable views of UML diagrams. The sheet has been in OPAL since 30 Oct and is discussed on 4 Nov; <b>no official solution exists yet</b>, so every answer below is our own worked solution, to be checked against the session. The sheet carries no points.</p>
+    <div class="box status"><p style="margin:0"><b>Status:</b> own solutions drafted; session on ${fmt(e.date)}, ${exe.start}, ${esc(exe.room)}. The homework of <a href="design-patterns/exercise.html?n=1">exercise 1, task 4</a> (three patterns in the Search framework) is due in the same session.</p></div>
+
+    ${task("1", 0, "Amazing creation: two games from one plan of rooms", `
+      <p>The sheet gives a maze game: a Maze holds Rooms by number; a Room has four sides, each a Wall or a DoorWall that joins two rooms and can be open; MazeGame.createMaze() builds two rooms, one door between them and plain walls elsewhere, all with explicit <code>new</code> calls. Now a second game needs the same plan of rooms but <b>magic rooms</b> (with booby traps survivable only with a spell) and <b>spell doors</b> that open only while the right spell, invoked in the player's room, is in effect. The construction code must not be duplicated: one program creates both games.</p>
+      <h3>a) Abstract Factory</h3>
+      <p>Take every <code>new</code> out of createMaze and put it behind a factory interface with one factory method per product: makeMaze, makeRoom(n), makeWall, makeDoor(r1, r2). createMaze receives a MazeFactory and only ever calls it. StandardMazeFactory returns the old classes; EnchantedMazeFactory returns MagicRoom and SpellDoorWall, both subclasses of the standard products so the rest of the game keeps working on Room and Wall. A Spell object is handed to the enchanted factory once and copied into every magic room and spell door it makes.</p>
+      ${chart("mazeAF", CROLES)}<figcaption>Our class diagram for 1a with the factory pseudo-code of createMaze. Choosing the factory object at start-up chooses the whole family: rooms and doors always match.</figcaption></figure>
+      <h3>b) Factory Method</h3>
+      <p>Alternatively keep the construction inside MazeGame and make the <code>new</code> calls into overridable methods of the game itself: makeRoom(n), makeWall(), makeDoor(r1, r2) with the standard products as default implementations, called from the template method createMaze(). EnchantedGame subclasses MazeGame and overrides the two factory methods that differ. The factory method's job is to decide <i>which class</i> is allocated while createMaze decides <i>when</i> and how the parts are wired (lecture 3, slide 11).</p>
+      ${chart("mazeFM", CROLES)}<figcaption>Our class diagram for 1b: lecture 3's slide 6 with the maze of the sheet. No factory object exists; the game subclass is the variation point.</figcaption></figure>
+      <h3>c) One concrete factory with Prototype</h3>
+      <p>The two factories of (a) differ only in which class they allocate. Replace them by one MazeFactory that holds a prototype room, wall and door and implements each makeX by cloning the prototype (with the arguments applied after the copy: the room number, the two rooms of a door). The standard game configures the factory with a Room, a Wall and a DoorWall; the enchanted game with a MagicRoom and a SpellDoorWall carrying the spell. Products must implement a proper <code>clone()</code>; a door's clone must not copy the room references of the prototype but take fresh ones.</p>
+      ${chart("mazeProto", leg([[2, "the single factory"], [4, "products as prototypes"]]))}<figcaption>Our class diagram for 1c, the prototyping factory of lecture 3, slide 21. A third game is a third configuration line, not a third class.</figcaption></figure>
+      <h3>d) Which solution for which context</h3>
+      <ul class="cmp">
+        <li><b>Abstract Factory</b><span class="v">best when the products form a family that must stay consistent and the family is chosen once (game type at start-up); adding a game is one factory class, adding a product type touches every factory</span><span class="v">cost: one more hierarchy to maintain in parallel with the products</span></li>
+        <li><b>Factory Method</b><span class="v">best when there is one natural creator class already (the game) and few products vary; the smallest change to the sheet's code and checked by the compiler</span><span class="v">cost: variation is tied to subclassing the game, so a game cannot switch families at run time and combinations of variations multiply subclasses</span></li>
+        <li><b>Prototype factory</b><span class="v">best when products have complex default state (a spell, trap settings) or many near-identical variants, and when families should be assembled at run time or from configuration</span><span class="v">cost: clone semantics (deep versus shallow) must be right for every product; no compile-time check that a configuration is a sensible family</span></li>
+      </ul>
+      ${why("What the task trains", "<p>The three structures of lecture 3 on one example, and the two change axes of the context box there: new family versus new product type. In the session the question to settle is whether the chair prefers the factory passed into createMaze (as drawn) or held in a field of the game; both are Abstract Factory.</p>")}`)}
+
+    ${task("2", 0, "Building mazes", `
+      <p>Exchanging classes is solved, but createMaze is still long and error-prone: nothing stops a room with three sides or a door set on only one of its two rooms. The task: hide the construction behind a Builder, for the original game and the extension, and explain how the builder enforces the structural rules.</p>
+      <h3>a) A MazeBuilder</h3>
+      <p>The director is createMaze(builder); its protocol is newMaze, then addRoom(n) for every room, then addDoor(from, to, direction) for every connection, then getMaze. The abstract MazeBuilder declares those four calls; StandardMazeBuilder implements them with Room, Wall and DoorWall and keeps the rooms in a map by number; EnchantedMazeBuilder, configured with a spell, creates MagicRoom and SpellDoorWall instead. The director never sees a Wall: the builder fills all four sides of a new room with plain walls and replaces two of them, consistently, when a door is added.</p>
+      ${chart("mazeBuilder", CROLES)}<figcaption>Our class diagram for 2a. Compared with 1a the interface is no longer "make me a part" but "add this to the structure", which is where the rules can live.</figcaption></figure>
+      ${lab("maze", "a MazeBuilder that enforces the rules")}
+      <h3>b) How the Builder enforces structural rules</h3>
+      <ul>
+        <li><b>Invariants in the part methods:</b> addRoom always creates a room with four walls, so no room is ever half-built; addDoor sets the door on both rooms (east of one, west of the other) in one step, so a door is never one-sided.</li>
+        <li><b>The protocol as a state machine:</b> addDoor before both rooms exist, a second door between the same two rooms, or getMaze on an empty maze are refused, exactly as lecture 3's slide 30 says: the builder keeps the state of the construction and accepts only calls the protocol allows at that point.</li>
+        <li><b>Information hiding:</b> the director cannot reach walls or sides at all (slide 31), so the only way to produce a maze is through the checked calls; the hand-written createMaze of the sheet could call setSide in any order.</li>
+      </ul>
+      ${why("What the task trains", "<p>The difference between a factory (which part?) and a builder (which structure?), and the lecture's claim that a structure defined by a grammar yields a builder: rooms*, doors* over existing rooms is a tiny grammar, and the lab above is its acceptor.</p>")}`)}
+
+    ${task("3", 0, "Creation in parallel hierarchies: views of UML models", `
+      <p>A company builds graphical UML editors. A model can be shown in several views (class diagrams, statecharts, activity diagrams), and views differ in what manipulation they allow, above all read-only versus mutable. Class hierarchies are wanted for classes and inheritance arrows, states and transitions, activities and their transitions.</p>
+      <h3>a) Which pattern fits</h3>
+      <p>Several views on one data structure is Observer in the MVC sense (lecture 1): views register at the model and are updated. The read-only versus mutable split of each view is a second dimension of the same elements, which is a <b>dimensional class hierarchy</b> (Bridge) whose two sides are not independent: every element kind needs its own manipulator kind, so they are <b>parallel class hierarchies</b> with a parallelism constraint, created by factory methods (lecture 3, slide 10).</p>
+      <h3>b) The two facets and their link</h3>
+      <p>One hierarchy ReadOnlyElement with ClassElement, InheritanceArrow, StateElement, TransitionArrow, ActivityElement, ActivityTransition (and the diagrams above them), all able to draw themselves; a parallel hierarchy Manipulator with one subclass per element kind, holding a reference to the read-only element it edits (move, rename, change attributes). The facets are linked by that reference, optionally in both directions (a read-only element may hold its manipulator, 0..1, so a read-only view simply never creates one). The constraint to enforce: the hierarchies are <b>isomorphic</b>, same classes at the same height, and an element is only ever paired with the manipulator of its own kind.</p>
+      ${chart("views", leg([[1, "read-only facet (template side)"], [2, "its factory methods"], [4, "mutable facet (manipulators)"]]))}<figcaption>Our class diagram for 3b and 3c: two parallel hierarchies, linked by the manipulator reference and the factory method that keeps the pairing right.</figcaption></figure>
+      <h3>c) Factory methods for the writable side</h3>
+      <p>Each read-only class gets <code>createManipulator()</code>, implemented at every level by the class at the same level: ClassElement returns <code>new ClassManipulator(this)</code>, StateElement a StateManipulator, and a ClassDiagram's createManipulator builds a ClassDiagramManipulator that in turn asks each element for its manipulator. A mutable view is then "the read-only view plus, for every element, the manipulator its factory method returns"; the parallelism constraint is enforced by construction because no other code allocates manipulators.</p>
+      <h3>d) An Abstract Factory for manipulators</h3>
+      <p>Alternatively collect the factory methods into a ManipulatorFactory with createClassManipulator(e), createStateManipulator(e) and so on, and give the view one factory object. Concrete factories are families of manipulation behaviour: a FullEditFactory, a ReviewFactory that only allows comments, a ReadOnlyFactory that returns null manipulators.</p>
+      <ul class="cmp">
+        <li><b>advantages</b><span class="v">the manipulation policy is one exchangeable object, chosen per view or per user role at run time; the element classes no longer know about manipulators at all</span><span class="v">new families (review mode) cost one factory class, no element changes</span></li>
+        <li><b>disadvantages</b><span class="v">the factory must know every element kind, so a new element type touches the abstract factory and every concrete factory (the interpretive variant of lecture 3 trades that for a string)</span><span class="v">the pairing is now checked by the factory's method names rather than by the element's own class, and the dispatch on the element kind has to happen somewhere (a Visitor over elements, or a type switch), which the factory-method version got for free</span></li>
+      </ul>
+      ${why("What the task trains", "<p>The parallel hierarchies of lecture 2 meeting the creational patterns of lecture 3, and the recurring trade-off: a factory method per class keeps the pairing local and compile-checked, an abstract factory makes the family a run-time choice. Exercise 1's task 1c ended with exactly this hint, that an Abstract Factory can secure the type safety of reified hooks.</p>")}`)}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the four diagrams of tasks 1 and 2 by hand or in PlantUML and compare them with the ones above; the names of the classes are free, the roles are not.</li>
+      <li>Reread <a href="design-patterns/lecture.html?n=3">lecture 3</a>, slides 5 to 11 (Factory Method), 15 to 24 (Factory Class and its variants) and 26 to 31 (Builder).</li>
+      <li>Finish the Search-framework homework from <a href="design-patterns/exercise.html?n=1">exercise 1</a>.</li>
+      <li>Open questions for the tutor: whether the factory in 1a should be passed in or held; whether 2a expects the builder to also build the Maze object itself or to receive one.</li>
+    </ul>`;
+}
+
+const WRITEUPS = { 1: exercise1, 2: exercise2 };
+const LABS = { maze: initMazeLab };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!e) {
+  page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

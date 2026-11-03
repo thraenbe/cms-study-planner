@@ -1125,6 +1125,325 @@ window.CMS = {
    "status": {
     "opal": true,
     "selma": false
+   },
+   "course": {
+    "page": "design-patterns.html",
+    "rooms": {
+     "lecture": "APB/E023/U (Tue 14:50–16:20, 5th DS), hybrid: in the room and streamed, recording in OPAL",
+     "exercise": "online (Wed 14:50–16:20, 5th DS)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-13",
+      "label": "No lecture in the first week",
+      "kind": "break"
+     },
+     {
+      "date": "2026-10-20",
+      "label": "Lecture 1: Introduction",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-28",
+      "label": "Exercise 1: Variability Patterns (first exercise)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-11-18",
+      "label": "Buß- und Bettag, no exercise",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-09",
+      "label": "No exercise",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-15",
+      "label": "Buffer slot (no lecture planned)",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-20",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-01-19",
+      "label": "Lecture 11: Tools and Materials, summary, exam preparation",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-01-26",
+      "label": "Buffer slot (no lecture planned)",
+      "kind": "break"
+     },
+     {
+      "date": "2027-02-02",
+      "label": "Buffer slot (no lecture planned)",
+      "kind": "break"
+     },
+     {
+      "date": "2027-02-03",
+      "label": "Exercise 10: Tools and Materials (last exercise)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Oral exam weeks in February and March; dates announced around Christmas",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "Online oral exam (BigBlueButton)",
+      "how": "One oral exam, held online, in one of two exam weeks (February or March 2027); the exact weeks are announced around Christmas. The introduction slides say that attending the lectures and solving all exercise sheets is expected before the exam.",
+      "selma": "register for CMS-COR-SSE in Selma, then ask the chair for an appointment by e-mail (preferred time, module, course of study)"
+     }
+    ],
+    "format": "2 SWS lecture, 2 SWS exercise, 5 LP, in English. The lecture is hybrid (APB/E023/U and streamed) with slides and a learning video per lecture; recordings are in OPAL. Exercise sheets appear one or two weeks after the lecture they belong to; you have a week to solve them before the solutions are discussed in the online exercise on Wednesday.",
+    "contact": "Dr. Sebastian Götz (Software Technology Group, chair of Prof. Uwe Aßmann) gives the lecture; the group's tutor runs the exercises. Questions go to the OPAL forum first.",
+    "coursePage": "https://st.inf.tu-dresden.de/teaching/dpf",
+    "opalNote": "course “Design Patterns and Frameworks (WS26/27)”",
+    "selmaNote": "the exam counts as CMS-COR-SSE",
+    "exerciseNote": "Sheets appear after the lecture with one or two weeks' delay; a week to solve, then the solutions are discussed online on Wednesday. Exercise sheets are the exam preparation: the slides say the exam expects them solved.",
+    "materialsNote": "Slides (PDF) and a learning video per lecture, exercise sheets and later their solutions are in OPAL; the chair's course page lists the reading. The GOF book is a prerequisite, not the content: the course follows research papers marked “to be read”.",
+    "reading": [
+     {
+      "t": "Gamma, Helm, Johnson, Vlissides: Design Patterns (GOF), 1995",
+      "note": "prerequisite; Head First Design Patterns (Freeman) is the named alternative"
+     },
+     {
+      "t": "Tesanovic: What is a pattern? (2001)",
+      "note": "to be read for lecture 1"
+     },
+     {
+      "t": "Appleton: Patterns and Software, essential concepts and terminology (2000)",
+      "note": "to be read for lecture 1"
+     },
+     {
+      "t": "Beck et al.: Industrial experience with design patterns, ICSE 1996",
+      "note": "to be read for lecture 1"
+     },
+     {
+      "t": "Riehle, Züllighoven: Understanding and using patterns in software development, 1996",
+      "note": "secondary"
+     },
+     {
+      "t": "Pree: Design Patterns for Object-Oriented Software Development, 1995",
+      "note": "secondary, the template-and-hook source for lecture 2"
+     },
+     {
+      "t": "Zimmer: Relationships between design patterns, PLoP 1995",
+      "note": "secondary, the Objectifier"
+     },
+     {
+      "t": "Batory et al.: The GenVoca model of software-system generation, IEEE Software 1994",
+      "note": "secondary, layered systems"
+     }
+    ],
+    "lectures": [
+     {
+      "n": 1,
+      "title": "Introduction",
+      "date": "2026-10-20",
+      "icon": "🧭",
+      "covered": true,
+      "blurb": "What the course is for (variability, extensibility, gluing; roles; frameworks), the history from Alexander to the GOF book, MVC as a composite of Observer, Composite and Strategy, what a pattern description contains, the kinds of patterns, and how the course and the oral exam run."
+     },
+     {
+      "n": 2,
+      "title": "Simple Patterns for Variability",
+      "date": "2026-10-27",
+      "icon": "🪛",
+      "covered": true,
+      "blurb": "Pree's template and hook; Template Method, Objectifier, Template Class, Strategy and Generic Template Class; dimensional class hierarchies, Bridge, parallel class hierarchies and Visitor; facets as factored class hierarchies implemented by multi-bridges, and layered objects."
+     },
+     {
+      "n": 3,
+      "title": "Creational Variability",
+      "date": "2026-11-03",
+      "icon": "🏭",
+      "covered": true,
+      "blurb": "Factory Method as the polymorphic constructor (with reflection and parallel hierarchies), Factory Class / Abstract Factory with the prototyping and interpretive variants, and Builder as a factory with a protocol, plus the modern fluent builder of the Java appendix."
+     },
+     {
+      "n": 4,
+      "title": "Simple Patterns for Extensibility",
+      "date": "2026-11-10",
+      "icon": "🧱",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: extensibility patterns (ObjectRecursion, Decorator, Proxy, Composite, Chain of Responsibility, Observer), extension of hooks beyond binding."
+     },
+     {
+      "n": 5,
+      "title": "Bridging Architectural Mismatch",
+      "date": "2026-11-17",
+      "icon": "🌉",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: glue patterns that adapt, bridge and connect components not built for each other."
+     },
+     {
+      "n": 6,
+      "title": "Role-based Design",
+      "date": "2026-11-24",
+      "icon": "🎭",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: roles versus objects, role types versus classes, role mapping and implementation."
+     },
+     {
+      "n": 7,
+      "title": "Design Patterns as Role Models",
+      "date": "2026-12-01",
+      "icon": "🎬",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: why design patterns are role models of class diagrams; composing role models into composite patterns."
+     },
+     {
+      "n": 8,
+      "title": "Role-Object Pattern",
+      "date": "2026-12-08",
+      "icon": "🪆",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: the Role Object pattern and layered frameworks built with it."
+     },
+     {
+      "n": 9,
+      "title": "Framework Variability",
+      "date": "2027-01-05",
+      "icon": "🏗️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: types of hooks in frameworks and components, framework variability patterns, whitebox and blackbox frameworks."
+     },
+     {
+      "n": 10,
+      "title": "Framework Extensibility",
+      "date": "2027-01-12",
+      "icon": "🔌",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: extensible framework hook patterns and how patterns document a framework's instantiation."
+     },
+     {
+      "n": 11,
+      "title": "Tools and Materials, summary and exam preparation",
+      "date": "2027-01-19",
+      "icon": "🧰",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic: the Tools-and-Materials pattern language for interactive applications, course summary, what the oral exam asks."
+     }
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "title": "Variability Patterns",
+      "date": "2026-10-28",
+      "published": null,
+      "icon": "📁",
+      "covered": true,
+      "lecture": 2,
+      "points": null,
+      "blurb": "Composite and Template Method on a file system with typed collection folders, then the hooks reified into a renderer hierarchy; Objectifier, facets and bridges on a sensor unit; Bridge vs Template Method vs Strategy vs Generic Template Class; homework on the Search framework."
+     },
+     {
+      "n": 2,
+      "title": "Creational Patterns",
+      "date": "2026-11-04",
+      "published": "2026-10-30",
+      "icon": "🏰",
+      "covered": true,
+      "lecture": 3,
+      "points": null,
+      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions; no official solution yet."
+     },
+     {
+      "n": 3,
+      "title": "Extensibility Patterns",
+      "date": "2026-11-11",
+      "published": null,
+      "icon": "🧩",
+      "covered": false,
+      "lecture": 4,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: the extensibility patterns of lecture 4."
+     },
+     {
+      "n": 4,
+      "title": "Architecture Mismatch",
+      "date": "2026-11-25",
+      "published": null,
+      "icon": "🔗",
+      "covered": false,
+      "lecture": 5,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: glue patterns for architectural mismatch (lecture 5)."
+     },
+     {
+      "n": 5,
+      "title": "Formal Models of Design Patterns 1",
+      "date": "2026-12-02",
+      "published": null,
+      "icon": "📐",
+      "covered": false,
+      "lecture": 6,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: role models as formal models of design patterns, part 1."
+     },
+     {
+      "n": 6,
+      "title": "Formal Models of Design Patterns 2",
+      "date": "2026-12-16",
+      "published": null,
+      "icon": "📏",
+      "covered": false,
+      "lecture": 7,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: role models as formal models of design patterns, part 2."
+     },
+     {
+      "n": 7,
+      "title": "Role Object Pattern",
+      "date": "2027-01-06",
+      "published": null,
+      "icon": "🎲",
+      "covered": false,
+      "lecture": 8,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: the Role Object pattern (lecture 8)."
+     },
+     {
+      "n": 8,
+      "title": "Frameworks",
+      "date": "2027-01-13",
+      "published": null,
+      "icon": "🧮",
+      "covered": false,
+      "lecture": 9,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: framework variability (lecture 9)."
+     },
+     {
+      "n": 9,
+      "title": "Extensibility Patterns – Extension Access",
+      "date": "2027-01-20",
+      "published": null,
+      "icon": "🔧",
+      "covered": false,
+      "lecture": 10,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: extension access in frameworks (lecture 10)."
+     },
+     {
+      "n": 10,
+      "title": "Tools and Materials",
+      "date": "2027-02-03",
+      "published": null,
+      "icon": "🛠️",
+      "covered": false,
+      "lecture": 11,
+      "points": null,
+      "blurb": "Not published yet. Planned topic: the Tools-and-Materials pattern language (lecture 11)."
+     }
+    ]
    }
   },
   "CMS-COR-VIZ": {
