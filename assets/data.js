@@ -2191,6 +2191,16 @@ window.CMS = {
       "kind": "exercise"
      },
      {
+      "date": "2026-11-03",
+      "label": "Lecture 3: Local search",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-11-06",
+      "label": "Tutorial 2 (Local search); sheet in OPAL since 30 Oct",
+      "kind": "exercise"
+     },
+     {
       "date": "2026-12-20",
       "label": "Christmas break until 3 Jan",
       "kind": "break"
@@ -2278,9 +2288,9 @@ window.CMS = {
       "title": "Local search",
       "date": "2026-11-03",
       "icon": "🏔️",
-      "covered": false,
-      "planned": true,
-      "blurb": "Hill climbing and its traps, stochastic hill climbing, simulated annealing: searching in the space of complete solutions instead of paths."
+      "covered": true,
+      "planned": false,
+      "blurb": "Hill climbing and its four weaknesses, local search and the size of the neighbourhood, GSAT for SAT and 2-opt for the TSP, then the stochastic hill-climber with p = 1/(1 + e^(Δ/T)), the role of T, and simulated annealing with cooling schedules, parameter choices and SA-SAT."
      },
      {
       "n": 4,
@@ -2370,19 +2380,20 @@ window.CMS = {
       "title": "Traditional search",
       "date": "2026-10-30",
       "icon": "📝",
-      "covered": false,
+      "covered": true,
       "planned": false,
       "sheet": "2026-10-22",
-      "blurb": "Sheet 1 is in OPAL since 22 Oct: A* in a maze, a coin-change dynamic programme and the bridge-crossing puzzle, all from lecture 2. Your Friday group discusses it in APB/E006/U."
+      "blurb": "Sheet 1, from lecture 2: A* in a 16 × 16 maze (Manhattan heuristic, explored cells, a 30-step path), coin change by dynamic programming for {1, 4, 6} and n = 8 (two coins, greedy needs three) and the bridge-crossing puzzle as a shortest path over 32 states (17 minutes). Our own worked solutions."
      },
      {
       "n": 2,
       "title": "Local search",
       "date": "2026-11-06",
       "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on local search follows lecture 3 of that week. Sheet and date are announced in OPAL."
+      "covered": true,
+      "planned": false,
+      "blurb": "Sheet 2, from lecture 3: design a simulated annealing algorithm for the maze (representation, initial solution, neighbourhood, evaluation) and compare it with A*, then three GSAT steps on a four-clause formula, a local-optimum check and the acceptance probability for Δ = 3 at T = 5, 1, 10 and 100. Our own worked solutions, written before the session.",
+      "sheet": "2026-10-30"
      },
      {
       "n": 3,
@@ -2477,12 +2488,12 @@ window.CMS = {
       ],
       [
        "2026-11-03",
-       "Lecture 3: Local search (planned)",
+       "Lecture 3: Local search",
        "lec"
       ],
       [
        "2026-11-06",
-       "Tutorial 2 (Friday group): Local search (planned)",
+       "Tutorial 2 (Friday group): Local search",
        "exe"
       ],
       [
