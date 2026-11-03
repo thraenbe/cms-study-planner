@@ -317,3 +317,25 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .mgrid .cell.one small { color: var(--ink-2); }
 .dcd .viz .axl { fill: var(--ink-3); font-size: 11px; }
 .dcd .fsm svg { max-width: 400px; margin: 0 auto; }
+/* Lecture 4 and exercise 2: more line/dot slots, dashed don't-care transitions, static 3-variable K-maps, cycle grids */
+.dcd .viz .line.k4 { stroke: var(--vz-s4); }
+.dcd .viz .dot.k2 { fill: var(--vz-s2); }
+.dcd .viz .dot.k3 { fill: var(--vz-s3); }
+.dcd .fsm .tr.dc { stroke: var(--vz-s2); stroke-dasharray: 4 3; }
+.dcd .fsm .tr.x1 { stroke: var(--vz-s1); }
+.dcd .fsm .tr.x0 { stroke: var(--vz-s2); }
+.dcd .fsm .tl.x1 { fill: var(--vz-s1); font-weight: 600; }
+.dcd .fsm .tl.x0 { fill: var(--vz-s2); font-weight: 600; }
+.dcd .fsm .so { fill: var(--ink-2); font-size: 11px; }
+.dcd .kmap .cell.dc { color: var(--ink-3); }
+.dcd .kmap .cell.kc { height: 40px; font-size: 16px; position: relative; }
+.dcd .kmap .cell.kc small { position: absolute; left: 4px; top: 2px; font-size: 9px; color: var(--ink-3); font-weight: 500; }
+.dcd .kmaps { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: start; }
+.dcd .kmaps > div > .muted { margin: 0 0 4px; font-size: 0.85rem; }
+.dcd .cyc .cell { font-size: 12px; height: 28px; }
+.dcd .cyc .cell.on { background: color-mix(in srgb, var(--vz-s1) 20%, var(--surface)); box-shadow: inset 0 -3px var(--vz-s1); color: var(--ink); font-weight: 700; }
+.dcd .cyc .cell.stt { background: color-mix(in srgb, var(--vz-s3) 16%, var(--surface)); font-weight: 600; }
+.dcd .fsmlab { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 10px; }
+.dcd .trail { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.9rem; word-break: break-word; }
+.dcd .trail b { color: var(--vz-s1); }
+.dcd .kmap .h.corner { white-space: nowrap; font-size: 9px; justify-items: start; }

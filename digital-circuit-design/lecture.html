@@ -924,6 +924,295 @@ function lecture3() {
     </ul>
     <p class="muted">Previous: <a href="digital-circuit-design/lecture.html?n=2">lecture 2, Arithmetic circuits 1</a>. Next: Arithmetic circuits 3 (<a href="digital-circuit-design/lecture.html?n=4">lecture 4</a>), which starts again at division and continues with filters, the ALU and floating-point operations. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
 }
+// ───────────── Lecture 4: Arithmetic circuits 3 ─────────────
+// Chart: operations to an n-bit quotient. Restoring division spends one subtract-and-shift cycle per quotient bit
+// (slide 5); Newton-Raphson starts from the 1/17 line (about 4.1 correct bits) and doubles the correct bits every
+// iteration, two multiplications each plus the final x·X (slide 8). The counting is ours, the algorithms are the slides'.
+const DIVN = [8, 16, 24, 32, 53, 64].map(n => { const it = Math.ceil(Math.log2(n / Math.log2(17)) - 1e-9); return { n, rc: n, it, mul: 2 * it + 1 }; });
+CHARTS.divcost = narrow => {
+  const W = narrow ? 340 : 600, H = 220, L = 34, R = 12, T = 18, B = 30, PW = W - L - R, PH = H - T - B;
+  const band = PW / DIVN.length, bw = Math.min(22, band * 0.28), y = v => T + PH - v / 64 * PH;
+  const grid = [0, 16, 32, 48, 64].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = DIVN.map((d, k) => { const cx = L + band * (k + 0.5);
+    return [["rc", 1, `${d.n} subtract-and-shift cycles`, cx - bw - 1], ["mul", 2, `${d.it} iteration${d.it === 1 ? "" : "s"} × 2 multiplications + 1`, cx + 1]].map(([f, slot, note, x0]) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d[f]} operations</b>${d.n}-bit quotient, ${slot === 1 ? "restoring" : "Newton-Raphson"}<br>${note}`)}">
+        <rect class="hit" x="${x0 - 3}" y="${T}" width="${bw + 6}" height="${PH}"/><path class="bar s${slot}" d="${barPath(x0, bw, y(d[f]), y(0))}"/>${!narrow || d.n === 53 ? `<text class="val" x="${x0 + bw / 2}" y="${y(d[f]) - 6}" text-anchor="middle">${d[f]}</text>` : ""}</g>`).join("")
+      + `<text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">${d.n} bit</text>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped columns: sequential operations to an n-bit quotient. Restoring division needs n cycles (8 to 64); Newton-Raphson needs 3, 5, 7, 7, 9 and 9 multiplications for 8, 16, 24, 32, 53 and 64 bits">${grid}${bars}</svg>`;
+};
+
+// Chart: tanh and a piecewise-linear replacement (slide 10 names the tanh activation as a division worth replacing).
+// Chords between the knots 0, 0.5, 1, 1.5, 2.5, 4 (mirrored); the knots are ours.
+const TANH_K = [0, 0.5, 1, 1.5, 2.5, 4];
+const tanhPWL = x => { const s = Math.sign(x) || 1, a = Math.min(Math.abs(x), 4); for (let i = 0; i < TANH_K.length - 1; i++) if (a <= TANH_K[i + 1]) { const t = (a - TANH_K[i]) / (TANH_K[i + 1] - TANH_K[i]); return s * (Math.tanh(TANH_K[i]) * (1 - t) + Math.tanh(TANH_K[i + 1]) * t); } return s * Math.tanh(4); };
+const TANH_ERR = (() => { let m = 0; for (let x = -4; x <= 4; x += 0.001) m = Math.max(m, Math.abs(tanhPWL(x) - Math.tanh(x))); return m; })();
+CHARTS.tanh = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 240, L = 40, R = 14, T = 14, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = v => L + (v + 4) / 8 * PW, y = v => T + (1 - v) / 2 * PH;
+  const grid = [-1, -0.5, 0, 0.5, 1].map(v => `<line class="${v === 0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtv(v)}</text>`).join("")
+    + [-4, -2, 0, 2, 4].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${fmtv(v)}</text>`).join("") + `<line class="axis" x1="${x(0)}" x2="${x(0)}" y1="${T}" y2="${T + PH}"/>`;
+  const pts = []; for (let v = -4; v <= 4.0001; v += 0.05) pts.push(`${x(v).toFixed(1)},${y(Math.tanh(v)).toFixed(1)}`);
+  const knots = [...TANH_K.slice(1).reverse().map(k => -k), ...TANH_K];
+  const pwl = knots.map(k => `${x(k).toFixed(1)},${y(tanhPWL(k)).toFixed(1)}`).join(" L");
+  const dots = knots.map(k => `<g class="pt" tabindex="0" data-tip="${esc(`<b>x = ${fmtv(k)}</b>tanh = ${Math.tanh(k).toFixed(3)} · the line passes through it`)}"><circle class="hit" cx="${x(k)}" cy="${y(tanhPWL(k))}" r="12"/><circle class="dot k2" cx="${x(k)}" cy="${y(tanhPWL(k))}" r="3.5"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of tanh from minus 4 to 4 and a piecewise-linear approximation through the knots 0, 0.5, 1, 1.5, 2.5 and 4 on both sides; the largest gap between them is ${TANH_ERR.toFixed(3)}">${grid}<path class="line" d="M${pts.join(" L")}"/><path class="line k2" d="M${pwl}"/>${dots}</svg>`;
+};
+
+// Chart: the four rounding modes of slide 22 as step functions over −3 … 3, with the ties (x.5) marked.
+const ROUND = { even: v => { const f = Math.floor(v), d = v - f; return d > 0.5 ? f + 1 : d < 0.5 ? f : f % 2 === 0 ? f : f + 1; }, zero: Math.trunc, up: Math.ceil, down: Math.floor };
+const ROUND_NAMES = [["even", 1, "nearest, ties to even"], ["zero", 2, "to zero"], ["up", 3, "to +∞"], ["down", 4, "to −∞"]];
+CHARTS.round = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = 34, R = 14, T = 12, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = v => L + (v + 3) / 6 * PW, y = v => T + (3 - v) / 6 * PH;
+  const grid = [-3, -2, -1, 0, 1, 2, 3].map(v => `<line class="${v === 0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmtv(v)}</text><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${fmtv(v)}</text>`).join("");
+  const steps = ROUND_NAMES.map(([k, s]) => { const f = ROUND[k]; let d = ""; for (let v = -3; v < 3; v += 0.5) { const o = (s - 2.5) * 1.6; d += `M${x(v)},${y(f(v)) + o} H${x(v + 0.5)} `; } return `<path class="line k${s}" d="${d}"/>`; }).join("");
+  const ties = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5].map(v => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${fmtv(v)}</b>${ROUND_NAMES.map(([k, s, name]) => `<span class="trow"><i style="--c:var(--vz-s${s})"></i><strong>${fmtv(ROUND[k](v))}</strong> ${name}</span>`).join("")}`)}"><rect class="hit" x="${x(v) - 10}" y="${T}" width="20" height="${PH}"/><circle class="dot gray" cx="${x(v)}" cy="${y(ROUND.even(v))}" r="4"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Step functions of four rounding modes between minus 3 and 3: nearest with ties to even, toward zero, toward plus infinity and toward minus infinity. The gray dots mark the ties at x.5, where nearest-even picks the even neighbour">${grid}${steps}${ties}</svg>`;
+};
+
+// Chart: magnitude response of the slide-28 IIR low-pass, b = [0.20657, 0.41314, 0.20657], a = [1, −0.36953, 0.19582]
+// at 10 kHz sampling (the slide writes the first numerator term as z^-n; it is z^-2). Computed here from the coefficients.
+const IIR_B = [0.20657, 0.41314, 0.20657], IIR_A = [1, -0.36953, 0.19582], IIR_FS = 10000;
+const iirDb = f => { const w = 2 * Math.PI * f / IIR_FS; const ev = c => c.reduce((acc, ck, k) => [acc[0] + ck * Math.cos(k * w), acc[1] - ck * Math.sin(k * w)], [0, 0]); const n = ev(IIR_B), d = ev(IIR_A); const mag = Math.hypot(...n) / Math.hypot(...d); return mag > 0 ? 20 * Math.log10(mag) : -80; };
+CHARTS.iir = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = 44, R = 14, T = 12, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = f => L + f / 5000 * PW, y = db => T + Math.min(1, -db / 60) * PH;
+  const grid = [0, -10, -20, -30, -40, -50, -60].map(v => `<line class="${v === 0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v} dB</text>`).join("")
+    + [0, 1000, 2000, 3000, 4000, 5000].map(f => `<text class="tick" x="${x(f)}" y="${H - 10}" text-anchor="middle">${f / 1000} kHz</text>`).join("");
+  const pts = []; for (let f = 0; f <= 4990; f += 25) pts.push(`${x(f).toFixed(1)},${y(iirDb(f)).toFixed(1)}`);
+  const refs = [[2000, -3, "3 dB cut-off", -3.01], [4250, -30, "stop band", -30.34]].map(([f, db, t]) => `<line class="ann" x1="${x(f)}" x2="${x(f)}" y1="${T}" y2="${T + PH}" stroke-dasharray="3 3"/><g class="pt" tabindex="0" data-tip="${esc(`<b>${f / 1000} kHz</b>${iirDb(f).toFixed(2)} dB · ${t} of the specification`)}"><circle class="hit" cx="${x(f)}" cy="${y(iirDb(f))}" r="12"/><circle class="dot" cx="${x(f)}" cy="${y(iirDb(f))}" r="4"/></g>${narrow ? "" : `<text class="note" x="${x(f) + 6}" y="${T + 12}">${f / 1000} kHz · ${iirDb(f).toFixed(1)} dB</text>`}`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Magnitude response of the second-order Butterworth low-pass from slide 28, 0 to 5 kilohertz at 10 kilohertz sampling: 0 dB at DC, minus 3 dB at 2 kilohertz, minus 30 dB at 4.25 kilohertz, falling to minus infinity at half the sampling rate">${grid}<path class="line" d="M${pts.join(" L")}"/>${refs}</svg>`;
+};
+
+// Explorer: the 8-bit ALU of slide 14 (VHDL: signed A, B, 3-bit opcode, signed Y). Flags are ours.
+const AL = { a: 37, b: -12, op: 0 };
+const AL_OPS = [["000", "A + B", "add"], ["001", "A − B", "subtract"], ["010", "A − 1", "decrement"], ["011", "A + 1", "increment"], ["100", "A and B", "bitwise and"], ["101", "A or B", "bitwise or"], ["110", "A xor B", "bitwise xor"], ["111", "not A", "bitwise not"]];
+function aluOut() {
+  const w8 = v => ((v % 256) + 256) % 256, a = w8(AL.a), b = w8(AL.b);
+  const raw = [AL.a + AL.b, AL.a - AL.b, AL.a - 1, AL.a + 1, a & b, a | b, a ^ b, ~a][AL.op];
+  const code = w8(raw), yv = tcv(code, 8), arith = AL.op < 4, ovf = arith && raw !== yv;
+  const carry = AL.op === 0 ? a + b >= 256 : AL.op === 1 ? a >= b : AL.op === 2 ? a >= 1 : AL.op === 3 ? a + 1 >= 256 : null;
+  const row = (lbl, v, cls) => cellRow(lbl, bits(v, 8), cls);
+  return `<div class="presets" role="group" aria-label="Opcode">${AL_OPS.map(([c, t], i) => `<button type="button" class="preset" data-op="${i}" aria-pressed="${AL.op === i}"><small style="opacity:.7">${c}</small> ${t}</button>`).join("")}</div>
+    <div class="ctl"><label>A <input type="range" min="-128" max="127" value="${AL.a}" data-k="a"> <output>${fmtv(AL.a)}</output></label>
+      <label>B <input type="range" min="-128" max="127" value="${AL.b}" data-k="b"> <output>${fmtv(AL.b)}</output></label></div>
+    <div class="tt-wrap"><div class="agrid" style="grid-template-columns:minmax(72px,auto) repeat(8, 32px)"><div></div>${[7, 6, 5, 4, 3, 2, 1, 0].map(i => `<div class="h">2<sup>${i}</sup></div>`).join("")}
+      ${row(`A = ${fmtv(AL.a)}`, a, "t1")}${AL.op < 2 || (AL.op >= 4 && AL.op < 7) ? row(`B = ${fmtv(AL.b)}`, b, "t1") : ""}${row(`Y = ${fmtv(yv)}`, code, ovf ? "t2" : "t3")}</div></div>
+    <dl class="ro"><dt>Operation</dt><dd>opcode ${AL_OPS[AL.op][0]}: Y = ${AL_OPS[AL.op][1]} (${AL_OPS[AL.op][2]})${arith ? ` → true result ${fmtv(raw)}` : ""}</dd>
+      <dt>Flags</dt><dd>zero = ${code === 0 ? 1 : 0}, negative = ${code >> 7}${arith ? `, overflow = ${ovf ? 1 : 0}, carry out = ${carry ? 1 : 0}` : " (logic operation: no carry, no overflow)"} ${ovf ? flag("bad", "the 8-bit result has the wrong sign") : flag("ok", "Y fits into 8 bits")}</dd></dl>`;
+}
+function initAlu(body) {
+  const render = () => { body.innerHTML = aluOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { AL[e.target.dataset.k] = +e.target.value; render(); })); };
+  render(); body.addEventListener("click", e => { const b = e.target.closest("[data-op]"); if (!b) return; AL.op = +b.dataset.op; render(); });
+}
+
+// Explorer: floating-point addition in IEEE 754 half precision (5 exponent bits, bias 15, 10 mantissa bits), the
+// slide-20 recipe step by step: sort, align by shifting the smaller mantissa right, add or subtract, normalise, round.
+const roundEven = v => { const f = Math.floor(v), d = v - f; return d > 0.5 ? f + 1 : d < 0.5 ? f : f % 2 === 0 ? f : f + 1; };
+function toHalf(v) {
+  if (!isFinite(v) || v === 0) return { s: v < 0 || Object.is(v, -0) ? 1 : 0, E: isFinite(v) ? 0 : 31, m: 0, val: v };
+  const s = v < 0 ? 1 : 0, a = Math.abs(v); let e = Math.floor(Math.log2(a)); if (2 ** e > a) e--; if (2 ** (e + 1) <= a) e++;
+  if (e < -14) { const m = roundEven(a / 2 ** -24); return m >= 1024 ? { s, E: 1, m: m - 1024, val: (s ? -1 : 1) * 2 ** -14 } : { s, E: 0, m, val: (s ? -1 : 1) * m * 2 ** -24 }; }
+  let m = roundEven((a / 2 ** e - 1) * 1024); if (m === 1024) { m = 0; e++; }
+  if (e > 15) return { s, E: 31, m: 0, val: s ? -Infinity : Infinity };
+  return { s, E: e + 15, m, val: (s ? -1 : 1) * (1 + m / 1024) * 2 ** e };
+}
+const halfBits = h => `${h.s} ${bin(h.E, 5)} ${bin(h.m, 10)}`;
+const FP = { a: "49120", b: "-2.5" };
+const FP_PRESETS = [["49120 + (−2.5)", "49120", "-2.5"], ["1000 + 0.5", "1000", "0.5"], ["1.5 − 1.25", "1.5", "-1.25"], ["3 + 5", "3", "5"], ["60000 + 10000", "60000", "10000"]];
+function fpaddOut() {
+  const pa = parseFloat(FP.a), pb = parseFloat(FP.b);
+  if (isNaN(pa) || isNaN(pb)) return `<p class="muted">Enter two decimal numbers.</p>`;
+  const h1 = toHalf(pa), h2 = toHalf(pb);
+  const ctl = `<div class="presets" role="group" aria-label="Examples">${FP_PRESETS.map(([t, a, b]) => `<button type="button" class="preset" data-a="${a}" data-b="${b}" aria-pressed="${FP.a === a && FP.b === b}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>x <input type="text" value="${esc(FP.a)}" data-k="a" inputmode="decimal"></label><label>y <input type="text" value="${esc(FP.b)}" data-k="b" inputmode="decimal"></label></div>`;
+  if (h1.E === 31 || h2.E === 31 || h1.E === 0 || h2.E === 0) return ctl + `<p class="muted">One operand is zero, subnormal or out of the half-precision range (|x| ≤ 65504): those are the corner cases of slides 18 and 19, not the normal path shown here.</p>`;
+  const [big, small, swapped] = h1.E > h2.E || (h1.E === h2.E && h1.m >= h2.m) ? [h1, h2, false] : [h2, h1, true];
+  const shift = big.E - small.E, M1 = 1024 + big.m, M2 = 1024 + small.m, M2s = M2 / 2 ** shift, kept = Math.floor(M2s), lost = M2s - kept;
+  const sub = big.s !== small.s, Msum = sub ? M1 - M2s : M1 + M2s;
+  let e = big.E - 15, M = Msum, norm = "none";
+  if (M >= 2048) { M /= 2; e++; norm = "right by 1, exponent + 1"; } else if (M > 0 && M < 1024) { let k = 0; while (M < 1024) { M *= 2; k++; } e -= k; norm = `left by ${k}, exponent − ${k}`; }
+  let Mr = M === 0 ? 0 : roundEven(M); if (Mr === 2048) { Mr = 1024; e++; }
+  const res = M === 0 ? 0 : (big.s ? -1 : 1) * Mr / 1024 * 2 ** e, exact = big.val + small.val;
+  const over = e > 15, under = e < -14;
+  const bitsOf = (v, w) => bin(Math.floor(v), w);
+  const rows = [["sort", `|${fmtv(big.val)}| ≥ |${fmtv(small.val)}|${swapped ? " (operands swapped)" : ""}`, `E<sub>1</sub> = ${big.E}, E<sub>2</sub> = ${small.E}`, "result sign and exponent come from the larger operand"],
+    ["mantissas", `M<sub>1</sub> = 1.${bin(big.m, 10)}<br>M<sub>2</sub> = 1.${bin(small.m, 10)}`, `e<sub>1</sub> = ${big.E - 15}, e<sub>2</sub> = ${small.E - 15}`, "hidden 1 restored: 11 bits each"],
+    ["align", `M<sub>2</sub> ≫ ${shift} = ${shift >= 11 ? "0.0000000000" : bitsOf(M2s, 11).replace(/^(\d)/, "$1.")}${lost ? `<span class="muted"> (${lost.toFixed(4)} ulp shifted out)</span>` : ""}`, `shift by ${shift}`, shift === 0 ? "same exponent, nothing shifted" : lost ? `${shift >= 11 ? "every bit" : "the shifted-out bits"} of M₂ ${shift >= 11 ? "falls" : "fall"} below the 10-bit mantissa: precision loss` : "no bits lost"],
+    [sub ? "subtract" : "add", `M = M<sub>1</sub> ${sub ? "−" : "+"} M<sub>2</sub>′ = ${(Msum / 1024).toFixed(6)}`, "", sub ? "signs differ: M₂ is subtracted (two's complement in hardware)" : "signs equal: plain addition, 0 ≤ M < 4"],
+    ["normalise", M === 0 ? "exact zero" : `M = ${(M / 1024).toFixed(6)} · 2<sup>${e}</sup>`, `shift ${norm}`, "bring M back into 1 ≤ M < 2"],
+    ["round", M === 0 ? "0" : `1.${bin(Mr & 1023, 10)}${Mr === 1024 && M !== 0 && roundEven(M) === 2048 ? " (carry out of the rounding: exponent + 1)" : ""}`, "nearest, ties to even", M !== 0 && Mr !== M ? "the dropped fraction of the mantissa is rounded away" : "already exact"]];
+  return ctl + `<div class="tt-wrap"><table class="tt steps"><tr><th>Step</th><th>Mantissa</th><th>Exponent</th><th>Note</th></tr>${rows.map(r => `<tr>${r.map((v, i) => `<td${i === 3 ? ' style="white-space:normal;font-family:inherit;min-width:160px"' : ""}>${v}</td>`).join("")}</tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Operands</dt><dd>${halfBits(h1)} = ${fmtv(h1.val)}${h1.val !== pa ? ` (nearest half to ${FP.a})` : ""} &nbsp;·&nbsp; ${halfBits(h2)} = ${fmtv(h2.val)}${h2.val !== pb ? ` (nearest half to ${FP.b})` : ""}</dd>
+      <dt>Result</dt><dd>${over ? `exponent ${e} &gt; 15: overflow → ${big.s ? "−" : "+"}Infinity ${flag("bad", "slide 20, upper limit")}` : under ? `exponent ${e} &lt; −14: underflow toward a subnormal or 0 ${flag("bad", "slide 20, lower limit")}` : `${halfBits(toHalf(res))} = ${fmtv(res)} ${res === exact ? flag("ok", "exact") : flag("bad", `exact sum ${fmtv(exact)}: error ${fmtv(+(res - exact).toPrecision(3))}`)}`}</dd></dl>`;
+}
+function initFpadd(body) {
+  const render = () => { body.innerHTML = fpaddOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("change", e => { FP[e.target.dataset.k] = e.target.value; render(); })); };
+  render(); body.addEventListener("click", e => { const b = e.target.closest("[data-a]"); if (!b) return; FP.a = b.dataset.a; FP.b = b.dataset.b; render(); });
+}
+
+// Explorer: an FIR filter (slide 26): coefficients, impulse response and the magnitude response up to half the sampling rate.
+const FIR_PRESETS = [["4-tap average", [0.25, 0.25, 0.25, 0.25]], ["8-tap average", Array(8).fill(0.125)], ["triangle 1 2 3 2 1", [1, 2, 3, 2, 1].map(v => v / 9)], ["difference 1 −1", [1, -1]], ["half-band 5 taps", [-0.0625, 0.25, 0.625, 0.25, -0.0625]]];
+const FIR = { p: 0 };
+const firTaps = () => FIR_PRESETS[FIR.p][1];
+const firMag = (b, fn) => Math.hypot(b.reduce((s, bk, k) => s + bk * Math.cos(2 * Math.PI * fn * k), 0), b.reduce((s, bk, k) => s - bk * Math.sin(2 * Math.PI * fn * k), 0));
+CHARTS.fir = narrow => {
+  const b = firTaps(), N = b.length, mag = fn => firMag(b, fn), ymax = Math.max(1, b.reduce((s, v) => s + Math.abs(v), 0));
+  const W = narrow ? 340 : 600, H = 200, L = 40, R = 14, T = 12, B = 30, PW = W - L - R, PH = H - T - B, x = fn => L + fn / 0.5 * PW, y = v => T + (1 - v / ymax) * PH;
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(v => v * ymax).map(v => `<line class="${v === 0 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${+v.toFixed(2)}</text>`).join("")
+    + [0, 0.125, 0.25, 0.375, 0.5].map(fn => `<text class="tick" x="${x(fn)}" y="${H - 10}" text-anchor="middle">${narrow && fn % 0.25 ? "" : fn === 0 ? "0" : `${fn} f<tspan baseline-shift="sub" font-size="8">s</tspan>`}</text>`).join("");
+  const pts = []; for (let fn = 0; fn <= 0.5001; fn += 0.005) pts.push(`${x(fn).toFixed(1)},${y(mag(fn)).toFixed(1)}`);
+  const dots = [0, 0.1, 0.2, 0.3, 0.4, 0.5].map(fn => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${fn === 0 ? "DC" : fn + " f<sub>s</sub>"}</b>|H| = ${mag(fn).toFixed(3)} (${mag(fn) > 1e-9 ? (20 * Math.log10(mag(fn))).toFixed(1) + " dB" : "−∞"})`)}"><circle class="hit" cx="${x(fn)}" cy="${y(mag(fn))}" r="12"/><circle class="dot" cx="${x(fn)}" cy="${y(mag(fn))}" r="3.5"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Magnitude response of the ${N}-tap FIR filter ${FIR_PRESETS[FIR.p][0]} from DC to half the sampling rate">${grid}<path class="line" d="M${pts.join(" L")}"/>${dots}</svg>`;
+};
+function firOut() {
+  const b = firTaps(), N = b.length;
+  const taps = b.map((v, k) => `<div class="tile"><div class="v">${+v.toFixed(4)}</div><div class="l">b<sub>${k}</sub> · x(n − ${k})</div></div>`).join("");
+  return `<div class="presets" role="group" aria-label="Coefficient sets">${FIR_PRESETS.map(([t], i) => `<button type="button" class="preset" data-p="${i}" aria-pressed="${FIR.p === i}">${t}</button>`).join("")}</div>
+    <div class="tiles" style="grid-template-columns:repeat(auto-fit, minmax(84px, 1fr))">${taps}</div>
+    <dl class="ro"><dt>Structure</dt><dd>${N} taps: ${N - 1} delay registers, ${N} multipliers, ${N - 1} adders, all between two clock edges</dd>
+      <dt>DC gain</dt><dd>Σ b<sub>k</sub> = ${+b.reduce((s, v) => s + v, 0).toFixed(4)} (slide 27: the sum of the coefficients)</dd>
+      <dt>Latency</dt><dd>${N - 1} sample${N > 2 ? "s" : ""} until an input has passed every tap${b.every((v, k) => Math.abs(v - b[N - 1 - k]) < 1e-9) ? `; symmetric coefficients, so the group delay is a constant ${(N - 1) / 2} samples (linear phase)` : ""}</dd></dl>`;
+}
+function initFir(body) { const render = () => { body.innerHTML = firOut(); }; render(); body.addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (!b) return; FIR.p = +b.dataset.p; render(); mountCharts(); }); }
+Object.assign(LABS, { alu: initAlu, fpadd: initFpadd, fir: initFir });
+
+function lecture4() {
+  return `${head(l)}
+    <p class="lead">The last arithmetic lecture finishes division and then zooms out twice: to the arithmetic logic unit that packages adders and logic into the heart of every processor, and to what happens around a floating-point operation (alignment, normalisation, rounding, the infinities). It ends with digital filters, the first algorithm in the course that needs sequential and combinational logic together. Four charts and three explorers; written from the chair's 2022/23 deck (30 pages in the file; the footer counts to 31).</p>
+    <p class="muted">The deck's own table of contents (slide 2) lists representations, addition, subtraction, multiplication, division and the advanced blocks. Lecture 3 covered everything up to the division algorithms; this one repeats the division definition and the two algorithm families before the new material, so slides 3–9 can be read as a recap of <a href="digital-circuit-design/lecture.html?n=3">lecture 3</a> (whose explorers for restoring and Newton-Raphson division still apply).</p>
+
+    <h2>Division, concluded (slides 3–10)</h2>
+    <h3>Definition and the two families (slides 3–4)</h3>
+    <ul>
+      <li><b>Definition.</b> x = q·d + rem with |rem| &lt; |d|·ulp and the remainder taking the sign of the dividend; ulp = 1 for an integer quotient, r<sup>−n</sup> for an n-digit fractional one. 1000/7 = 142 rem 6; 446.6/5.5 = 81 rem 1.1. The lecture stays with unsigned integers.</li>
+      <li><b>Slow algorithms</b> produce a fixed number of quotient digits per iteration: restoring and non-restoring division, SRT among the latter. <b>Fast algorithms</b> start from a close approximation and double the number of correct digits every iteration: Newton-Raphson and Goldschmidt.</li>
+    </ul>
+    <h3>Restoring division in hardware (slides 5–7)</h3>
+    <ul>
+      <li><b>Algorithm</b> (slide 5): n cycles for n-bit numbers, written for any base B but practical only for B = 2. Registers hold the partial remainder r and the quotient q. Per cycle: shift r left by one digit, subtract B<sup>n</sup>·d as long as r stays non-negative and count the subtractions k, restore once (add B<sup>n</sup>·d back), append k − 1 to q. The restore is what gives the method its name.</li>
+      <li><b>Circuit</b> (slide 6): a multiplexer loads x into the r register at the start and the shifted r afterwards; one subtractor forms r − 2<sup>n</sup>·d; its sign bit drives a second multiplexer that writes either the difference or the unchanged r back, and the inverted sign is shifted into the q register, one flip-flop per quotient bit, all on the same clock. The slide asks "optimisation possible?"</li>
+      <li><b>Optimisation</b> (slide 7): for B = 2 the inner loop runs at most once, so the explicit restore (subtract, test, add back) is never needed: the multiplexer that chooses between the difference and the old value <em>is</em> the restore. The adder that put B<sup>n</sup>·d back is gone, which is the only difference between the two schematics.</li>
+    </ul>
+    <div class="ex"><div class="kicker">Worked example: 13 / 3 through the optimised circuit, n = 4</div>
+      <p>d is aligned at 2<sup>4</sup>·3 = 48; r starts at 13 (8-bit register 0000 1101), q empty. Cycle 1: shift → 26; 26 − 48 &lt; 0, the mux keeps 26, q = 0. Cycle 2: 52; 52 − 48 = 4 ≥ 0, the mux takes 4, q = 01. Cycle 3: 8; 8 − 48 &lt; 0, keep 8, q = 010. Cycle 4: 16; 16 − 48 &lt; 0, keep 16, q = 0100. So q = 4 and the upper half of r is 16/16 = 1: 13 = 4·3 + 1. No cycle ever added 48 back, the sign bit alone chose the next value. The restoring-division explorer in lecture 3 runs the same steps for 5-bit operands.</p></div>
+    <h3>Newton-Raphson, recapped (slides 8–9)</h3>
+    <ul>
+      <li>Find the reciprocal of d with Newton's method on f(X) = 1/X − d, which gives X<sub>i+1</sub> = X<sub>i</sub>·(2 − d·X<sub>i</sub>) = X<sub>i</sub> + X<sub>i</sub>·(1 − d·X<sub>i</sub>): only multiplications and a subtraction, or two multiply-accumulates; then q = x·X<sub>n</sub>.</li>
+      <li>Scale d into 0.5 ≤ d ≤ 1 (shifting x the same way) and start from the straight line X<sub>0</sub> = 48/17 − 32/17·d, the unique minimax choice by the equioscillation argument, with |ε<sub>0</sub>| ≤ 1/17 ≈ 0.059. The derivation is on slide 9 and was worked through in lecture 3.</li>
+    </ul>
+    ${chart("divcost", leg([[1, "Restoring: subtract-and-shift cycles"], [2, "Newton-Raphson: multiplications"]]))}
+      <figcaption>Sequential operations to an n-bit quotient. Restoring division is one cycle per bit; Newton-Raphson from the 1/17 start has about 4.1 correct bits, doubles them per iteration and spends two multiplications per iteration plus the final x·X. Operation counts are ours, derived from slides 5 and 8; a multiplication is of course a much larger circuit than a subtractor, which is the trade-off of slide 10.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Quotient bits</th><th>Restoring cycles</th><th>NR iterations</th><th>NR multiplications</th></tr>${DIVN.map(d => `<tr><td class="n">${d.n}</td><td class="n">${d.rc}</td><td class="n">${d.it}</td><td class="n">${d.mul}</td></tr>`).join("")}</table></details>
+    <h3>Interim conclusion: when to divide, and how to avoid it (slide 10)</h3>
+    <ul class="cmp" aria-label="Fast versus slow division">
+      <li><b>Fast (Newton-Raphson)</b><span class="v"><span class="sw t"></span>for performance-critical paths where an approximate result is acceptable: several quotient digits per iteration</span></li>
+      <li><b>Slow (SRT, non-restoring)</b><span class="v"><span class="sw v"></span>for exact results: simpler, and a correct full-precision quotient is guaranteed, one digit per iteration</span></li>
+    </ul>
+    <p>Division is complicated enough that the slide lists four ways to not do it: a look-up table; a shift when the divisor is a power of two; multiplication by a precomputed inverse when the divisor is a constant (normalisation is the typical case); and a linearised replacement where the division sits inside a function, the example being the tanh activation of a neural network, which becomes piecewise linear.</p>
+    ${chart("tanh", leg([[1, "tanh(x)"], [2, "piecewise linear through 11 knots"]]))}
+      <figcaption>tanh and a chord approximation with knots at 0, ±0.5, ±1, ±1.5, ±2.5 and ±4 (constant beyond). The largest gap is ${TANH_ERR.toFixed(3)}, which an 8-bit activation would not resolve anyway. The slide names the idea; the knots and the error are ours.</figcaption>
+    </figure>
+    <div class="ex"><div class="kicker">Worked example: dividing by the constant 7 without a divider</div>
+      <p>Precompute the inverse in fixed point: ⌈2<sup>16</sup>/7⌉ = 9363. Then x/7 ≈ (x · 9363) ≫ 16. For x = 1000: 1000 · 9363 = 9 363 000, shifted right by 16 gives ⌊142.87⌋ = 142, the correct quotient of slide 3. One multiplier and a wiring shift replace n cycles of subtract-and-shift; the rounding of the inverse is what has to be checked for the whole input range (here it is exact for every 16-bit x).</p></div>
+
+    <h2>The arithmetic logic unit (slides 11–15)</h2>
+    <ul>
+      <li><b>Where it sits</b> (slide 12): the execution unit of a CPU is a set of registers (program counter, temporaries T1 and T2, the register file R0 … Rn) around two internal buses. The ALU takes its operands from bus A and bus B via its input latches, writes the result back onto a bus, and leaves the external address and data buses to the address-output and data-in/out registers.</li>
+      <li><b>Function and I/O</b> (slide 13): usually two operand inputs and one output; the operation is chosen by opcode bits, a configuration input. Carry-in and carry-out let several ALUs be chained to a wider word. Basic functionality is arithmetic (plus, minus, multiplication, division); usually logic functions as well (A and B); and the program-flow helpers: increment and decrement for loops and the program counter, a size comparison of A and B for branch conditions.</li>
+      <li><b>Example code</b> (slide 14): a VHDL entity with 8-bit signed A and B, a 3-bit opcode and an 8-bit signed Y; the architecture is one case statement over the opcode: 000 add, 001 subtract, 010 decrement, 011 increment, 100 and, 101 or, 110 xor, 111 not, everything else undefined. That is a complete ALU description; synthesis turns it into one adder/subtractor plus the logic gates and an output multiplexer.</li>
+      <li><b>Characteristics</b> (slide 15): fully combinational, so fast and single-cycle. Classically fixed-point only, with floating point in a separate co-processor; today the FPU is part of the ALU. It is a core part of the CPU and equally important in a GPU or a DSP; a GPU uses many small ALUs with restricted, very fast, optimised functionality.</li>
+    </ul>
+    ${lab("alu", "the 8-bit ALU of slide 14")}
+    <p class="muted">Pick an opcode and move A and B. Arithmetic results that leave −128 … 127 show up orange, with the overflow flag of lecture 2 set; the logic operations work bit by bit and never overflow.</p>
+    <div class="why"><div class="kicker">Context, not on the slides: flags and chaining</div>
+      <p>An ALU normally also outputs status flags (zero, negative, carry, overflow), which the comparison "A &lt; B" of slide 13 is built on: compute A − B and look at the sign and overflow flags. The carry-in/carry-out pins of slide 13 are the same carry chain as in lecture 2: two 4-bit ALUs with the carry passed along form an 8-bit one, at the cost of a ripple between them, which is exactly where a carry-lookahead block would go. The tiles in a GPU streaming multiprocessor are this kind of narrow, specialised ALU replicated hundreds of times.</p></div>
+
+    <h2>Floating-point operations (slides 16–22)</h2>
+    <h3>Multiplication and division (slides 17–18)</h3>
+    <ul>
+      <li><b>Sign.</b> Arithmetically s = s<sub>1</sub>·s<sub>2</sub>; in the sign-bit representation S = S<sub>1</sub> xor S<sub>2</sub>.</li>
+      <li><b>Mantissa.</b> Work in the normalised 1.m form (restore the hidden 1). Multiply: 1.m = 1.m<sub>1</sub> · 1.m<sub>2</sub> lies in 1 ≤ 1.m &lt; 4. Divide: 1.m<sub>1</sub> / 1.m<sub>2</sub> lies in 0.5 &lt; 1.m &lt; 2. Either way the post-processing is a correction by at most one digit, which bounds the number of result bits the multiplier or divider has to produce.</li>
+      <li><b>Exponent</b> in biased form E = e + B: multiply E = E<sub>1</sub> + E<sub>2</sub> − B, divide E = E<sub>1</sub> − E<sub>2</sub> + B (the bias must be added or removed once).</li>
+      <li><b>Out of range.</b> Above the upper limit: infinity. Below the lower limit: fall back to the 0.m (subnormal) mantissa to stretch the exponent, and the result may become 0.</li>
+      <li><b>Exceptions</b> (slide 18): x·∞ and ∞/x and x/0 give ∞; x·0 and x/∞ give 0; ∞·0, 0/0, ∞/∞ and anything involving an undefined operand are undefined (NaN in IEEE 754 terms).</li>
+    </ul>
+    <div class="ex"><div class="kicker">Worked example: 2.5 × 1.5 in half precision</div>
+      <p>2.5 = 1.01<sub>2</sub> · 2<sup>1</sup> (E = 16), 1.5 = 1.1<sub>2</sub> · 2<sup>0</sup> (E = 15), bias 15. Sign 0 xor 0 = 0. Mantissa 1.01 × 1.1 = 1.111<sub>2</sub> = 1.875, already in 1 ≤ m &lt; 2, no correction. Exponent E = 16 + 15 − 15 = 16, so the result is 1.875 · 2<sup>1</sup> = 3.75. Had the mantissa product been ≥ 2 (say 1.5 × 1.5 = 2.25), it would be shifted right once and E raised by one.</p></div>
+    <h3>Addition and subtraction (slides 19–21)</h3>
+    <ul>
+      <li>Subtraction is addition with the sign of the second operand inverted, so one circuit does both. Corner cases: x + 0 = x, x + ∞ = ∞, +∞ + (−∞) undefined, x + undefined undefined.</li>
+      <li><b>Recipe</b> (slide 20). Sort the operands by absolute value (e<sub>1</sub> ≥ e<sub>2</sub>, and m<sub>1</sub> ≥ m<sub>2</sub> if the exponents tie); the result takes sign and exponent of the larger one. Shift M<sub>2</sub> right by e<sub>1</sub> − e<sub>2</sub> so both mantissas have the same weight: <em>this is where precision is lost</em>, up to all bits of M<sub>2</sub> can be shifted out. If the signs differ, invert M<sub>2</sub> (two's complement: invert and add 1 during the addition). M = M<sub>1</sub> + M<sub>2</sub> lies in 0 ≤ M &lt; 4; normalise back to 1.m and adapt the exponent. The same two range limits as for multiplication apply.</li>
+      <li><b>Block diagram</b> (slide 21): the three fields of each operand enter at the top; a comparator sorts by absolute value and sets the subtract flag; the exponent difference feeds a right shifter on the smaller mantissa; an inverter and the adder follow; then "round M, normalise to 1.m, overflow to ∞, underflow to non-normalised 0.m". A corner-case checker on the side bypasses the whole path for the slide-19 table.</li>
+    </ul>
+    ${lab("fpadd", "floating-point addition in half precision, step by step")}
+    <p class="muted">Half precision (1 + 5 + 10 bits, bias 15) keeps the bit strings readable; single precision works identically with 8 + 23 bits. The first preset is the pair from exercise sheet 2: the small operand is shifted out completely, so 49120 + (−2.5) returns 49120.</p>
+    <div class="ex"><div class="kicker">Worked example: 1000 + 0.5 loses the 0.5</div>
+      <p>1000 = 1.1111010000<sub>2</sub> · 2<sup>9</sup>, 0.5 = 1.0 · 2<sup>−1</sup>: the exponent difference is 10. Shifting M<sub>2</sub> = 1.0000000000 right by 10 places gives 0.0000000001 (its leading 1 lands exactly in the last mantissa bit), and the sum 1.1111010001 · 2<sup>9</sup> = 1000.5 is still representable. Change the small operand to 0.25 (shift by 11) and the 1 falls off the end: the result is 1000, and with round-to-nearest-even 0.25 is below half an ulp (ulp = 2<sup>9−10</sup> = 0.5), so rounding does not bring it back either.</p></div>
+    <h3>Rounding (slide 22)</h3>
+    <ul>
+      <li><b>Default: round to nearest, ties to even.</b> Normal rounding, except that an exact half goes to the neighbour whose last bit is 0: X0.1000… → X0, X1.1000… → (X+1)0. Over many operations the ties then cancel instead of drifting upward, and a trailing 0 slightly reduces the loss in later right shifts.</li>
+      <li><b>Other modes:</b> round to zero (truncate), round to +∞ (up), round to −∞ (down); for the last two the direction of the mantissa rounding depends on the sign.</li>
+    </ul>
+    ${chart("round", leg([[1, "nearest, ties to even"], [2, "to zero"], [3, "to +∞"], [4, "to −∞"]]))}
+      <figcaption>The four modes as step functions; the lines are nudged apart where they coincide. Hover a tie: at 0.5 and 2.5 nearest-even rounds down, at 1.5 it rounds up, because 0, 2 and 2 are the even neighbours. To zero and to −∞ agree for positive values, to zero and to +∞ for negative ones.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>x</th>${ROUND_NAMES.map(([, , n]) => `<th>${n}</th>`).join("")}</tr>${[-2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 1.25, -1.75].map(v => `<tr><td class="n">${fmtv(v)}</td>${ROUND_NAMES.map(([k]) => `<td class="n">${fmtv(ROUND[k](v))}</td>`).join("")}</tr>`).join("")}</table></details>
+    <div class="tiles">
+      <div class="tile"><div class="v">E<sub>1</sub> + E<sub>2</sub> − B</div><div class="l">exponent of a product in biased form</div></div>
+      <div class="tile"><div class="v">e<sub>1</sub> − e<sub>2</sub></div><div class="l">right shift of the smaller mantissa before an addition: the precision loss</div></div>
+      <div class="tile"><div class="v">[1, 4)</div><div class="l">range of a mantissa product; [0, 4) of a sum; (0.5, 2) of a quotient</div></div>
+      <div class="tile"><div class="v">ties → even</div><div class="l">default IEEE rounding: the half-way case goes to the even neighbour</div></div>
+    </div>
+    <div class="why"><div class="kicker">Context, not on the slides: why ties-to-even matters</div>
+      <p>Rounding half up (the school rule) is biased: every exact tie moves the result up, and in a long accumulation those nudges add up to a systematic drift. Ties-to-even sends half the ties down and half up, so the expected error is zero. The classic demonstration is summing 0.5 many times in a format that cannot hold the fraction: with round-half-up the sum grows by a full 1 per step, with ties-to-even by 1 per two steps on average, the correct rate. Exercise sheets and exams of this course ask for the rounding mode by name, so the four names on slide 22 are worth memorising.</p></div>
+
+    <h2>Filters (slides 23–29)</h2>
+    <h3>Why filters here (slides 24–25)</h3>
+    <ul>
+      <li><b>Where they appear:</b> digital filters on an ADC output or DAC input (the mixed-signal lectures), digital or analog filters in clock generation, software-defined radio, and communication circuits such as the 1000BASE-T1 example of lecture 1.</li>
+      <li><b>Time series and spectrum</b> (slide 25): a periodic, equidistant time series of N samples over T = N·T<sub>A</sub> has a periodic, discrete spectrum with f<sub>A</sub> = N/T; the spectral representation of the input is defined at discrete frequency points up to half the sample rate, which is also the usable frequency range of the filter. Filters are recursive (infinite impulse response, IIR) or non-recursive (finite impulse response, FIR), and causal (using the current and earlier samples) or acausal.</li>
+    </ul>
+    <h3>FIR filter, canonical form (slides 26–27)</h3>
+    <ul>
+      <li><b>Structure.</b> A delay line of D flip-flop registers (the slide draws a master-slave flip-flop next to the z<sup>−1</sup> box), one multiplier per tap with coefficient b<sub>k</sub>, and a chain of adders: y(n) = b<sub>0</sub>x(n) + b<sub>1</sub>x(n−1) + … + b<sub>N−1</sub>x(n−N+1).</li>
+      <li><b>One clock cycle</b> (slide 26, points 1–4): on the rising edge every register stores its input and presents it at its output; the multipliers accept the register outputs and propagate; the adders accept the multiplier outputs and the preceding adders and propagate; and all of that must be stable before the next clock edge. The registers are the sequential part, multipliers and adders the combinational part: the take-home's "first real digital algorithm involving both".</li>
+      <li><b>Characteristics</b> (slide 27): inherently stable, because it is feed-forward only; essentially a shaped average over a window of input samples, a convolution; DC gain = sum of the coefficients; used in adaptive filters because of that stability; drawback: many taps are needed for high attenuation, especially at low frequencies, because the window must span the time scale of the signal.</li>
+    </ul>
+    ${lab("fir", "an FIR filter: taps and magnitude response")}
+    ${chart("fir")}
+      <figcaption>|H(f)| of the coefficient set chosen above, from DC to f<sub>s</sub>/2, computed from the taps. Hover a dot for the gain in dB.</figcaption>
+    </figure>
+    <p class="muted">The tiles are the taps of the slide-26 structure, the curve is |H(f)| from DC to f<sub>s</sub>/2. The averages are low-passes with nulls at f<sub>s</sub>/N; the 1 −1 pair is the simplest high-pass; the 5-tap half-band filter shows how a few well-chosen coefficients beat a plain average. Coefficient sets are ours.</p>
+    <div class="ex"><div class="kicker">Worked example: the 4-tap average on a step and at the Nyquist rate</div>
+      <p>Coefficients 0.25 each. Input step 0, 0, 1, 1, 1, 1, …: the output climbs 0, 0.25, 0.5, 0.75, 1 over four clocks, the latency of the delay line, and settles at the DC gain Σb = 1. Input alternating +1, −1 (the highest frequency the sample rate can carry): every window holds two +1 and two −1, so y = 0, the null at f<sub>s</sub>/2 in the chart. At f<sub>s</sub>/4 the window holds a full period as well, hence the second null; a 4-tap average attenuates nothing between DC and f<sub>s</sub>/8 by more than 1 dB, which is the "many taps for low-frequency damping" point of slide 27.</p></div>
+    <h3>An IIR example (slide 28)</h3>
+    <p>The slide's example: a low-pass Butterworth filter with a 3 dB cut-off at 2 kHz and at least 30 dB attenuation at 4.25 kHz for a 10 kHz sampling rate. The transfer function has three numerator and three denominator coefficients, a second-order section: G(z) = (0.20657 z<sup>−2</sup> + 0.41314 z<sup>−1</sup> + 0.20657) / (0.19582 z<sup>−2</sup> − 0.36953 z<sup>−1</sup> + 1). Five multipliers and two delay registers do what an FIR would need dozens of taps for; the price is the feedback path, which makes stability and quantisation noise design questions.</p>
+    ${chart("iir")}
+      <figcaption>Magnitude response computed from the slide's coefficients (the slide writes the first numerator term as z<sup>−n</sup>; it is z<sup>−2</sup>). The dashed lines are the specification: −3.0 dB at 2 kHz and −30.3 dB at 4.25 kHz, both met; at 5 kHz the double zero at z = −1 drives the gain to −∞. The slide also plots the phase, which runs from 0 to about −π over the same range; it is left out here so the chart keeps one axis.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Frequency</th><th>Gain</th></tr>${[0, 1000, 2000, 3000, 4000, 4250, 4900].map(f => `<tr><td class="n">${f / 1000} kHz</td><td class="n">${iirDb(f).toFixed(2)} dB</td></tr>`).join("")}</table></details>
+    <h3>Digital filters in one table (slide 29)</h3>
+    <ul class="cmp" aria-label="Characteristics of digital filters">
+      <li><b>Latency</b><span class="v">set by the clock and the number of taps; can be large</span></li>
+      <li><b>Characteristic</b><span class="v">arbitrary (any shape the coefficients can express)</span></li>
+      <li><b>Repeatability</b><span class="v">deterministic, no component tolerances</span></li>
+      <li><b>Frequency range</b><span class="v">up to half the clock or sample rate</span></li>
+      <li><b>Amplitude range</b><span class="v">determined by the bit resolution of the variables</span></li>
+      <li><b>Quantisation</b><span class="v">can produce significant quantiser noise, especially in IIR filters (the error recirculates)</span></li>
+    </ul>
+    <div class="why"><div class="kicker">Context, not on the slides: FIR or IIR</div>
+      <p>The table on slide 29 only has a "digital" column; the implied comparison is with an analog RC or LC filter, whose characteristic is limited by the available component values, whose tolerances drift with temperature, and whose latency is tiny. Between the two digital kinds the usual rule is: FIR when linear phase, guaranteed stability or adaptivity matter (symmetric coefficients give a constant group delay, as the explorer's read-out shows), IIR when a steep characteristic must be cheap in multipliers, with the feedback coefficients checked for stability and the word widths chosen for the recirculating rounding error. Both reduce to the multiply-accumulate unit of lecture 3, which is why DSPs are built around it.</p></div>
+
+    <h2>Take-home message (slide 30)</h2>
+    <ul>
+      <li><b>Division:</b> trade-offs between slow exact and fast approximate algorithms, and the alternatives (look-up table, shift, multiply by a precomputed inverse, linearise).</li>
+      <li><b>ALU:</b> at the heart of every CPU and GPU and decisive for their performance; its characteristics (combinational, single-cycle, opcode-driven) and the VHDL example.</li>
+      <li><b>Floating-point math</b> on the building-block level: sign, exponent and mantissa handled separately, alignment, normalisation, rounding, infinities.</li>
+      <li><b>Filters:</b> the first "real" digital algorithm involving both sequential and combinational logic.</li>
+    </ul>
+    <p class="muted">Exercise: <a href="digital-circuit-design/exercise.html?n=2">exercise 2 on 5 Nov</a> (sheet 2: state machines, codes, fixed and floating point). Previous: <a href="digital-circuit-design/lecture.html?n=3">lecture 3, Arithmetic circuits 2</a>. Next: <a href="digital-circuit-design/lecture.html?n=5">lecture 5</a> on semiconductor technology for digital circuits (9 Nov). Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
+}
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -933,7 +1222,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {
