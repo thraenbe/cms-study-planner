@@ -365,3 +365,26 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .hpc .game-card.exe { border-top: 4px solid var(--c-trk); }
 .hpc .game-card.lec { border-top: 4px solid var(--c-core); }
 .hpc .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+
+/* Lecture 2 and exercise 03: job packings (CPUs × time), precedence networks, schedule bars, a NUMA node, event logs */
+.hpc .viz .slot { fill: var(--surface); stroke: var(--vz-grid); }
+.hpc .viz .job { fill-opacity: .55; stroke: var(--surface-2); stroke-width: 1.5; }
+.hpc .viz .job.late { fill-opacity: .25; stroke: var(--bad); stroke-dasharray: 4 3; }
+.hpc .viz .pt:hover .job, .hpc .viz .pt:focus .job { fill-opacity: .85; }
+.hpc .viz .jl { fill: var(--ink); font-size: 11px; font-weight: 600; pointer-events: none; }
+.hpc .viz .alloc { fill: var(--ink-3); fill-opacity: .1; stroke: var(--ink-3); stroke-dasharray: 3 3; }
+.hpc .viz .ed { fill: none; stroke: var(--ink-3); stroke-width: 1.3; }
+.hpc .viz .ed.dummy { stroke-dasharray: 4 3; }
+.hpc .viz .arr { fill: var(--ink-3); }
+.hpc .viz .nd { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.hpc .viz .nd.sync { fill: var(--ink); }
+.hpc .viz .pt:hover .nd, .hpc .viz .pt:focus .nd { r: 9; }
+.hpc .viz .core { fill: var(--vz-s1); fill-opacity: .5; stroke: var(--surface-2); }
+.hpc .viz .mem { fill: var(--vz-s4); fill-opacity: .45; }
+.hpc .viz .bar.s3 { fill: var(--vz-s3); }
+.hpc .ctl select { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.hpc .fill { font: 13px ui-monospace, "IBM Plex Mono", monospace; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; overflow-x: auto; white-space: pre; line-height: 1.5; }
+.hpc .fill b { color: var(--ink-2); font-weight: 500; }
+.hpc table.tt.log td { text-align: left; font-variant-numeric: tabular-nums; }
+.hpc table.tt.log td.pick { font-weight: 700; }
+.hpc .ov, .hpc .viz .ov { text-decoration: overline; }
