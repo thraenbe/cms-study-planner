@@ -1,0 +1,345 @@
+/* Stochastics and Probability pages: the look of thraenbe.github.io/sml-games (its card and header values copied),
+   colours from the organizer's tokens so light/dark follow the site theme. */
+body.sap { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.45; }
+.sap .wrap { max-width: 960px; padding: 0 1rem 3rem; }
+.sap .crumbs { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.sap .crumbs a { color: var(--ink-2); }
+
+/* Header (SML: header text-align center; padding 2rem 1rem 1rem; h1 1.9rem; subtitle muted) */
+.sap header.hero { text-align: center; padding: 2rem 1rem 1rem; }
+.sap .hero h1 { font-size: 1.9rem; margin: 0; line-height: 1.2; }
+.sap .hero .subtitle { color: var(--ink-2); margin: 0.3rem 0 1rem; }
+
+/* Status bar: OPAL/Selma buttons + key dates */
+.sap .topbar { display: grid; gap: 14px; padding: 1rem 1.2rem; margin: 0 0 1.5rem; border-radius: 14px; }
+.sap .status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.sap .status .lbl { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.sap .st { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 999px; border: 1px solid; }
+.sap .st .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.sap .st.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, var(--line)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.sap .st.off { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.sap .st small { font-weight: 500; color: var(--ink-2); font-size: 13px; }
+.sap .dates { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.sap .kd { flex: 0 0 auto; min-width: 150px; max-width: 200px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); border-top: 3px solid var(--c); background: var(--surface); scroll-snap-align: start; }
+.sap .kd .d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); }
+.sap .kd .l { font-size: 13px; font-weight: 600; line-height: 1.3; margin-top: 2px; }
+.sap .kd .k { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.sap .kd.past { opacity: .55; }
+.sap .kd.next { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+.sap .kd.next .k::after { content: " · next"; color: var(--c); font-weight: 700; }
+
+/* Card grid — copied from sml-games/style.css (.game-cards / .game-card / .game-icon) */
+.game-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.08);
+  transition: transform 0.12s ease;
+}
+.game-card:hover { transform: translateY(-3px); }
+.game-icon { font-size: 2.2rem; }
+.game-card h2 { margin: 0.5rem 0 0.4rem; font-size: 1.5rem; line-height: 1.25; }
+.game-card p { color: var(--ink-2); font-size: 0.95rem; margin: 0; }
+a.game-card { display: block; color: inherit; text-decoration: none; }
+:root[data-theme="dark"] .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .game-card { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } }
+
+/* Detail pages */
+.sap .detail { max-width: 760px; margin: 0 auto; }
+.sap .detail .back { display: inline-block; font-size: 14px; color: var(--ink-2); margin-bottom: 1rem; }
+.sap .detail .big-icon { font-size: 2.6rem; line-height: 1.1; }
+.sap .detail h1 { font-size: 1.9rem; line-height: 1.2; margin: 0.4rem 0 0.3rem; }
+.sap .detail .meta { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 1.4rem; }
+.sap .detail h2 { font-size: 1.25rem; margin: 1.8rem 0 0.5rem; }
+.sap .detail h3 { font-size: 1.02rem; margin: 1.2rem 0 0.4rem; }
+.sap .detail p { margin: 0 0 0.7rem; }
+.sap .detail p.lead { font-size: 1.08rem; }
+.sap .detail ul, .sap .detail ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.sap .detail li { margin: 0.2rem 0; }
+.sap .detail .muted { color: var(--ink-2); }
+.sap .detail .box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.4rem; margin: 0.8rem 0 1.2rem; }
+.sap .detail .placeholder { text-align: center; padding: 2.4rem 1.4rem; }
+.sap .detail .placeholder .big-icon { font-size: 3.2rem; }
+.sap .refs { font-size: 0.9rem; color: var(--ink-3); line-height: 1.5; }
+
+/* Figures */
+.sap .viz { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 6px; margin: 0.6rem 0 1rem; }
+.sap .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 4px 2px 6px; line-height: 1.4; }
+.sap .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.sap .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.sap .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.sap .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.sap .viz .cat { fill: var(--ink); font-size: 13px; font-weight: 500; }
+.sap .viz .val { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.sap .viz .bar.s1 { fill: var(--vz-s1); }
+.sap .viz .bar.gray { fill: var(--vz-gray); }
+.sap .viz .hit { fill: transparent; }
+.sap .viz .row:hover .bar, .sap .viz .row:focus .bar { filter: brightness(1.12); }
+.sap .viz .delta { fill: var(--ink-2); font-size: 12px; }
+.sap .viz .delta-line { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.sap .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0.4rem 0 1rem; }
+.sap .tile { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.sap .tile .v { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+.sap .tile .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.sap .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; margin: 0.4rem 0 1rem; padding: 0; list-style: none; }
+.sap .cmp li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); margin: 0; }
+.sap .cmp b { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.sap .cmp .v { display: flex; align-items: center; gap: 6px; }
+.sap .cmp .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.sap .cmp .sw.t { background: var(--vz-s1); }
+.sap .cmp .sw.v { background: var(--vz-gray); }
+.sap details.tbl { font-size: 0.9rem; margin: 0 0 1rem; }
+.sap details.tbl summary { cursor: pointer; color: var(--ink-2); }
+.sap details.tbl table { border-collapse: collapse; margin-top: 6px; }
+.sap details.tbl td, .sap details.tbl th { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--line); font-weight: 500; }
+.sap details.tbl td.n { font-variant-numeric: tabular-nums; }
+
+/* Orga page */
+.sap .grades { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.sap .grade { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.sap .grade.mine { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 6%, var(--surface)); }
+.sap .grade b { display: block; }
+.sap .grade .s { font-size: 0.85rem; color: var(--ink-2); }
+.sap table.plan { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin-top: 6px; }
+.sap .plan td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sap .plan tr:last-child td { border-bottom: 0; }
+.sap .plan td.d { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.82rem; white-space: nowrap; color: var(--ink-2); width: 84px; }
+.sap .plan td.k { width: 22px; }
+.sap .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
+.sap .plan .sw.lec { background: var(--c-core); }
+.sap .plan .sw.exe { background: var(--c-trk); }
+.sap .plan tr.past td { color: var(--ink-3); }
+.sap .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
+.sap .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
+.sap .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0; }
+.sap .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sap .links { display: grid; gap: 8px; margin: 0.4rem 0 0.8rem; }
+.sap ul.reading { font-size: 0.92rem; }
+.sap ul.reading b { font-weight: 500; }
+.sap .foot { text-align: center; margin: 2rem auto 0; }
+
+@media (max-width: 760px) {
+  .sap .hero h1 { font-size: 1.55rem; }
+  .sap .cmp { grid-template-columns: 1fr; }
+  .sap .plan td.d { width: 70px; }
+}
+
+/* Chart marks: lines, dots, tooltips; truth tables and formulas */
+.sap .viz .line { fill: none; stroke: var(--vz-s1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sap .viz .dot { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.sap .viz .pt:hover .dot, .sap .viz .pt:focus .dot { r: 6; }
+.sap .viz .pt:focus { outline: none; }
+.sap .viz .lbl { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.sap .viz .note { fill: var(--ink-2); font-size: 11px; }
+.sap .viz .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12px; line-height: 1.35; color: var(--ink); box-shadow: 0 4px 14px rgba(20,30,60,.12); white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity .1s; }
+.sap .viz .tip.show { opacity: 1; }
+.sap .viz .tip b { display: block; }
+.sap .viz .chart-wrap { position: relative; }
+.sap table.tt { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0.4rem 0 1rem; }
+.sap table.tt th, .sap table.tt td { padding: 4px 12px; text-align: center; border-bottom: 1px solid var(--line); }
+.sap table.tt th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.sap table.tt td.one { font-weight: 700; }
+.sap .tt-wrap { overflow-x: auto; }
+.sap .tt-wrap table.tt { margin-top: 0; }
+.sap .formula { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.95rem; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; margin: 0.3rem 0 0.8rem; overflow-x: auto; }
+.sap .cmp { grid-template-columns: 1fr; }
+.sap .cmp li { grid-template-columns: 150px 1fr 1fr; align-items: start; column-gap: 12px; }
+.sap .cmp li b { align-self: center; }
+@media (max-width: 760px) { .sap .cmp li { grid-template-columns: 1fr; } }
+.sap .plan .sw.off, .sap .legend .sw.off { background: var(--ink-3); opacity: .5; }
+.sap .plan tr.off td { color: var(--ink-3); font-style: italic; }
+.sap .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.sap .legend .sw.lec { background: var(--c-core); }
+.sap .legend .sw.exe { background: var(--c-trk); }
+.sap .cmp .v { display: block; }
+.sap .cmp .sw { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Categorical series (--vz-s1…s4 from lecture.html), legends, tinted cells, explorers, callouts */
+.sap .viz .f1 { fill: var(--vz-s1); }
+.sap .viz .f2 { fill: var(--vz-s2); }
+.sap .viz .f3 { fill: var(--vz-s3); }
+.sap .viz .f4 { fill: var(--vz-s4); }
+.sap .viz .bar.s2 { fill: var(--vz-s2); }
+.sap .viz .line.k2 { stroke: var(--vz-s2); }
+.sap .viz .dot.gray { fill: var(--vz-gray); }
+.sap .viz .nohit { pointer-events: none; }
+.sap .viz .ann, .sap .viz .xh { stroke: var(--ink-3); stroke-width: 1; }
+.sap .viz .link { fill: none; stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.sap .viz .vl { fill: var(--ink); font-size: 11px; font-weight: 600; opacity: 0; paint-order: stroke; stroke: var(--surface-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.sap .viz .code.on .link, .sap .viz .code.on .vl { opacity: 1; }
+.sap .viz svg.hovering .code:not(.on) .dot { opacity: .3; }
+.sap .viz .code.on .dot { r: 5.5; }
+.sap .viz .pt.on .bar { filter: brightness(1.12); }
+.sap .viz .plot:focus { outline: none; }
+.sap .viz .legend { margin: 0 2px 8px; }
+.sap .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.sap .legend .lt { display: inline; }
+.sap .key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); flex: none; vertical-align: 0; }
+.sap .key.ln { width: 14px; height: 2px; border-radius: 1px; }
+.sap table.tt th .key { margin-right: 5px; }
+.sap .viz .tip .trow { display: flex; align-items: center; gap: 6px; }
+.sap .viz .tip .trow i { width: 12px; height: 2px; background: var(--c); }
+.sap .t1 { --c: var(--vz-s1); } .sap .t2 { --c: var(--vz-s2); } .sap .t3 { --c: var(--vz-s3); } .sap .t4 { --c: var(--vz-s4); }
+.sap table.tt td.t1, .sap table.tt td.t2 { background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+.sap .tg { box-shadow: inset 0 -2px var(--vz-s1); }
+.sap .tp { box-shadow: inset 0 -2px var(--vz-s2); }
+.sap .bf { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .9em; padding: 1px 4px; border-radius: 4px; background: color-mix(in srgb, var(--c) 20%, transparent); box-shadow: inset 0 -2px var(--c); }
+
+.sap .lab { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0.6rem 0 1.1rem; }
+.sap .lab-h { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 8px; }
+.sap .lab-h b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 0.98rem; margin-left: 6px; }
+.sap .lab-note { font-size: 0.9rem; color: var(--ink-2); margin: 0 0 10px; }
+.sap .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.sap .preset { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.sap .preset:hover { border-color: var(--ink-3); }
+.sap .preset[aria-pressed="true"] { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.sap .lab button:focus-visible, .sap .lab input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sap .ctl { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+.sap .ctl label { display: inline-flex; align-items: center; gap: 8px; }
+.sap .ctl input[type="text"] { font: 15px ui-monospace, "IBM Plex Mono", monospace; width: 12em; max-width: 60vw; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.sap .ctl input[type="range"] { accent-color: var(--focus); width: 140px; }
+.sap .ctl output { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.sap .bit { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.sap .bit.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.sap .cell { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: var(--surface); color: var(--ink-2); font-weight: 500; }
+.sap .cell.one { color: var(--ink); font-weight: 700; }
+.sap .cell.t1, .sap .cell.t2, .sap .cell.t3, .sap .cell.t4 { background: color-mix(in srgb, var(--c) 20%, var(--surface)); box-shadow: inset 0 -3px var(--c); }
+.sap button.cell { cursor: pointer; }
+.sap button.cell:hover { filter: brightness(1.06); }
+.sap .agrid { display: grid; justify-content: start; grid-template-columns: minmax(84px, auto) repeat(5, 38px); gap: 5px 6px; align-items: center; margin: 0 0 10px; }
+.sap .agrid .h { font-size: 11px; color: var(--ink-3); text-align: center; }
+.sap .agrid .rl { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.sap .ro { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 0.92rem; margin: 10px 0 0; }
+.sap .ro dt { color: var(--ink-3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.sap .ro dd { margin: 0; font-variant-numeric: tabular-nums; }
+.sap .flag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.sap .flag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.sap .flag.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.sap .fxbits { display: flex; align-items: flex-start; gap: 4px; margin: 0 0 8px; }
+.sap .fxc { display: grid; gap: 3px; justify-items: center; }
+.sap .fxc .cell { width: 34px; }
+.sap .fxc small { font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sap .bp { font: 700 22px ui-monospace, monospace; color: var(--ink); line-height: 30px; margin: 0 -1px; }
+.sap .fbits { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 8px; }
+.sap .fgw { display: grid; gap: 3px; }
+.sap .fgw small { font-size: 11px; color: var(--ink-3); }
+.sap .fg { display: inline-flex; gap: 2px; }
+.sap .cell.fb { width: 19px; height: 30px; font-size: 13px; border-radius: 4px; }
+@media (max-width: 600px) {
+  .sap .cell.fb { width: 12px; font-size: 11px; border-radius: 3px; }
+  .sap .fg { gap: 1px; }
+  .sap .agrid { grid-template-columns: minmax(70px, auto) repeat(5, 34px); gap: 5px 4px; }
+  .sap .agrid .rl { font-size: 12px; }
+  .sap .fxc .cell { width: 30px; }
+  .sap .ro { grid-template-columns: 1fr; gap: 2px; }
+  .sap .ro dd { margin-bottom: 6px; }
+}
+.sap .ex, .sap .why { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.sap .ex { --c: var(--focus); }
+.sap .why { --c: var(--c-team); }
+.sap .ex p, .sap .why p { margin: 0 0 0.4rem; }
+.sap .ex p:last-child, .sap .why p:last-child { margin-bottom: 0; }
+.sap .kicker { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin-bottom: 4px; }
+
+/* Exercise write-ups: one section per task of the sheet, numbered as the sheet numbers them, with the points on the right. */
+.sap .task { margin: 2rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.sap .task-h { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 0 0 0.6rem; }
+.sap .task-h h2 { margin: 0; font-size: 1.25rem; }
+.sap .task-n { font: 700 15px ui-monospace, "IBM Plex Mono", monospace; min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: 9px; color: var(--c-trk); background: color-mix(in srgb, var(--c-trk) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-trk) 40%, transparent); }
+.sap .pts { font-size: 12px; color: var(--ink-2); white-space: nowrap; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); }
+.sap .pts.open { color: var(--ink-3); border-style: dashed; }
+.sap .ans { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0.6rem 0 0.8rem; }
+.sap .ans .a { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--c-trk) 9%, var(--surface)); border-left: 4px solid var(--c-trk); }
+.sap .ans .v { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sap .ans .l { font-size: 0.8rem; color: var(--ink-2); margin-top: 3px; line-height: 1.3; }
+.sap .box.status { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); }
+.sap .detail h3 { font-size: 1.02rem; }
+/* Board: lecture and exercise cards in their own rows; future exercises are quiet placeholders. */
+.sap .board-h { display: flex; align-items: baseline; gap: 12px; margin: 1.8rem 0 0.7rem; }
+.sap .board-h h2 { margin: 0; font-size: 1.15rem; }
+.sap .board-h .muted { font-size: 0.85rem; }
+.sap .board-note { font-size: 0.85rem; margin: -0.3rem 0 0.9rem; max-width: 70ch; }
+.sap .game-card.soon { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: none; border-style: dashed; }
+.sap .game-card.soon h2 { color: var(--ink-2); font-size: 1.2rem; }
+.sap .game-card.exe { border-top: 4px solid var(--c-trk); }
+.sap .game-card.lec { border-top: 4px solid var(--c-core); }
+.sap .game-card .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--c-trk); margin-left: 6px; }
+.sap .game-card p.when { font-size: 0.8rem; color: var(--ink-3); margin: 0 0 0.35rem; }
+.sap .q { background: color-mix(in srgb, var(--warn) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1rem; }
+.sap .q ul { margin: 0; }
+.sap .ctx { display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--c-team); font-weight: 700; margin-left: 6px; }
+.sap .key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.sap .legend .li { display: inline-flex; align-items: center; gap: 6px; }
+.sap .viz .ann { stroke: var(--ink-3); stroke-width: 1; }
+.sap .viz .bar.s2 { fill: var(--vz-s2); } .sap .viz .bar.s3 { fill: var(--vz-s3); } .sap .viz .bar.s4 { fill: var(--vz-s4); }
+.sap .viz .pt.on .bar, .sap .viz .pt:focus .bar { filter: brightness(1.12); }
+.sap .viz .ring { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.sap .viz .band { fill: var(--ink-3); opacity: .08; }
+
+/* ---- Stochastics write-ups: course-specific marks and layouts ---- */
+.sap .viz .line.thin { stroke-width: 1.2; opacity: .45; }
+.sap .viz .line.thick { stroke-width: 2.6; }
+.sap .viz .line.s1 { stroke: var(--vz-s1); }
+.sap .viz .bar.s2 { fill: var(--vz-s2); }
+.sap .cmp.two { grid-template-columns: 1fr 1fr; }
+.sap .cmp.two li, .sap .cmp.three li { grid-template-columns: 1fr; }
+.sap .cmp.three { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 760px) { .sap .cmp.two, .sap .cmp.three { grid-template-columns: 1fr; } }
+.sap .road { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0.4rem 0 1rem; }
+.sap .rd { border: 1px solid var(--line); border-top: 4px solid var(--c-core); border-radius: 10px; padding: 10px 12px; background: var(--surface); font-size: 0.9rem; }
+.sap .rd.ct { border-top-color: var(--c-trk); }
+.sap .rd .rk { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.sap .rd b { display: block; font-size: 1rem; margin-bottom: 4px; }
+.sap .rd p { margin: 0 0 4px; color: var(--ink-2); }
+@media (max-width: 760px) { .sap .road { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 480px) { .sap .road { grid-template-columns: 1fr; } }
+.sap .defchain { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 0.4rem 0 1rem; counter-reset: dc; }
+.sap .dc { position: relative; background: var(--surface-2); border-radius: 10px; padding: 10px 10px 10px 12px; font-size: 0.85rem; display: grid; gap: 3px; }
+.sap .dc::before { counter-increment: dc; content: counter(dc); position: absolute; top: -8px; left: 8px; font: 700 11px ui-monospace, monospace; background: var(--c-core); color: #fff; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; }
+.sap .dc b { font-size: 0.95rem; }
+.sap .dc span { color: var(--ink-2); }
+.sap .dc em { color: var(--ink-3); font-style: normal; font-size: 0.8rem; }
+@media (max-width: 760px) { .sap .defchain { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 480px) { .sap .defchain { grid-template-columns: 1fr 1fr; } }
+.sap .viz .venn-box { fill: var(--surface); stroke: var(--vz-axis); }
+.sap .viz .venn { fill-opacity: .28; stroke-width: 1.5; }
+.sap .viz .venn.a { fill: var(--vz-s1); stroke: var(--vz-s1); }
+.sap .viz .venn.b { fill: var(--vz-s2); stroke: var(--vz-s2); }
+.sap .viz .venn.ab { fill: var(--vz-s3); fill-opacity: .55; stroke: none; }
+.sap .viz .pt.on .venn { fill-opacity: .6; }
+.sap table.tt.fs td { text-align: left; }
+.sap table.tt th:first-child { text-align: left; }
+.sap .pi-wrap { display: grid; grid-template-columns: 240px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 600px) { .sap .pi-wrap { grid-template-columns: 1fr; } }
+.sap .pi-wrap .ro { margin-top: 0; }
+.sap svg.pi { width: 100%; max-width: 240px; height: auto; display: block; }
+.sap svg.pi .pi-box { fill: var(--surface); stroke: var(--vz-axis); }
+.sap svg.pi .pi-arc { fill: none; stroke: var(--vz-s2); stroke-width: 2; }
+.sap svg.pi .in { fill: var(--vz-s1); }
+.sap svg.pi .out { fill: var(--vz-gray); opacity: .6; }
+.sap svg.ou { width: 100%; height: auto; display: block; font-family: system-ui, sans-serif; }
+.sap svg.ou .band { fill: var(--vz-s4); fill-opacity: .16; }
+.sap svg.ou .grid { stroke: var(--vz-grid); } .sap svg.ou .axis { stroke: var(--vz-axis); } .sap svg.ou .tick { fill: var(--ink-3); font-size: 11px; } .sap svg.ou .note { fill: var(--ink-2); font-size: 11px; } .sap svg.ou .ann { stroke: var(--ink-3); }
+.sap svg.ou .line { fill: none; stroke: var(--vz-s1); stroke-width: 1.3; opacity: .75; stroke-linejoin: round; }
+.sap .lab select { font: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.sap .lab .preset { font: inherit; font-size: 13px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.sap .lab .preset:hover { border-color: var(--focus); }
+.sap .viz .seg.s1 { fill: var(--vz-s1); } .sap .viz .seg.s2 { fill: var(--vz-s2); } .sap .viz .seg.s3 { fill: var(--vz-s3); } .sap .viz .seg.s4 { fill: var(--vz-s4); }
+.sap .viz .pt.on .seg { filter: brightness(1.12); }
+.sap .viz .step { fill: none; stroke: var(--vz-s2); stroke-width: 2; }
+.sap .viz .area { fill: var(--vz-s1); fill-opacity: .25; }
+.sap .viz .edge { stroke: var(--ink-3); stroke-width: 1.2; fill: none; }
+.sap .viz .leaf { fill: var(--surface); stroke: var(--vz-axis); }
+.sap .viz .pt.on .leaf { stroke: var(--vz-s1); stroke-width: 2; }
+.sap .viz .node { fill: var(--vz-s1); }
+.sap .viz .node.rain { fill: var(--vz-s2); }
+.sap svg.lab-svg { width: 100%; height: auto; display: block; font-family: system-ui, sans-serif; }
+.sap svg.lab-svg .grid { stroke: var(--vz-grid); } .sap svg.lab-svg .axis { stroke: var(--vz-axis); } .sap svg.lab-svg .tick { fill: var(--ink-3); font-size: 11px; } .sap svg.lab-svg .note { fill: var(--ink-2); font-size: 11px; } .sap svg.lab-svg .ann { stroke: var(--ink-3); stroke-width: 1; }
+.sap svg.lab-svg .line { fill: none; stroke: var(--vz-s1); stroke-width: 1.6; stroke-linejoin: round; }
+.sap svg.lab-svg .line.k2 { stroke: var(--vz-s2); stroke-width: 2.2; }
+.sap svg.lab-svg .hbar { fill: var(--vz-s1); fill-opacity: .7; }
+.sap .before { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c-trk); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
+.sap .before ol { margin: 0.2rem 0 0; }
