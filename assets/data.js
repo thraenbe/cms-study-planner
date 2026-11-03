@@ -4725,7 +4725,7 @@ window.CMS = {
    "end": "14:30",
    "room": "SCH/A117/H",
    "who": "Dr. Nandu Gopan",
-   "src": "OPAL (Winter Semester 26/27 notice; first lecture 19 Oct)",
+   "src": "OPAL (“Winter Semester 26/27”: Monday 4th DS, SCH/A117/H; first lecture 19 Oct)",
    "from": "2026-10-19",
    "to": "2027-02-01"
   },
@@ -4736,9 +4736,9 @@ window.CMS = {
    "start": "13:00",
    "end": "14:30",
    "room": "BEY/0E39/U",
-   "who": "Dr. Nandu Gopan",
-   "src": "OPAL (Winter Semester 26/27 notice; first exercise date not announced, assumed 22 Oct)",
-   "from": "2026-10-22",
+   "who": "Student tutor",
+   "src": "OPAL (“Winter Semester 26/27”: Thursday 4th DS, BEY/0E39/U; first tutorial T01 on 29 Oct)",
+   "from": "2026-10-29",
    "to": "2027-02-04"
   },
   {
