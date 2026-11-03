@@ -24,7 +24,7 @@
 <div class="wrap"><div class="detail" id="page"></div></div>
 <script>
 const { m, c, esc, U, fmt, daysUntil, roomOn, today } = TSP;
-const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = TSPViz;
+const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow, gelRender, gelCompass } = TSPViz;
 const n = Number(new URLSearchParams(location.search).get("n"));
 const l = c.lectures.find(x => x.n === n);
 const page = document.getElementById("page");
@@ -270,7 +270,7 @@ function resSVG(narrow, pts) {
   const tv = [0.001, 0.01, 0.1, 1, 10];
   const xt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${T + PH + 16}" text-anchor="middle">${v}</text>`).join("");
   const yt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
-  const dots = pts.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>≈ ${p.f} N force resolution · ≈ ${p.s} mm spatial resolution<br>${p.note}`)}"><circle class="hit" cx="${x(p.f)}" cy="${y(p.s)}" r="14"/><circle class="dot ring" style="fill:${p.slot ? `var(--vz-s${p.slot})` : "var(--vz-gray)"}" cx="${x(p.f)}" cy="${y(p.s)}" r="6"/>
+  const dots = pts.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>≈ ${p.f} N force resolution · ≈ ${p.s} mm spatial resolution<br>${p.note}`)}"><circle class="hit" cx="${x(p.f)}" cy="${y(p.s)}" r="14"/>${p.tri ? `<path class="dot ring" style="fill:var(--vz-s${p.slot})" d="M${x(p.f)} ${y(p.s) - 8} L${x(p.f) + 7.5} ${y(p.s) + 5} L${x(p.f) - 7.5} ${y(p.s) + 5} Z"/>` : `<circle class="dot ring" style="fill:${p.fill || (p.slot ? `var(--vz-s${p.slot})` : "var(--vz-gray)")}" cx="${x(p.f)}" cy="${y(p.s)}" r="6"/>`}
     ${narrow ? "" : `<text class="vl2" x="${x(p.f) + p.lx}" y="${y(p.s) + p.ly}" text-anchor="${p.a}" style="opacity:1">${p.k}</text>`}</g>`).join("");
   const better = `<text class="note" x="${L + 6}" y="${T + PH - 8}">← finer is better, towards the bottom-left</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter chart on log axes: spatial resolution in millimetres against normal-force resolution in newtons. ${pts.map(p => `${p.k} about ${p.f} newtons and ${p.s} millimetres`).join("; ")}.">
@@ -517,6 +517,215 @@ function lecture3() {
     <p class="muted">Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>. The home exercise that builds on this lecture is <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>.</p>`;
 }
 
+// ======================================================================================
+// Lecture 4 – vision-based tactile sensors 1: principle, history, families, design choices, pros and cons
+// ======================================================================================
+// History strip: the sensors the slides walk through (7–11, 12–19, 26–30) plus the years of the cited papers.
+// Years marked * are not on the slides; they are the publication years of the sensors named there.
+const HIST = [
+  { y: 1963, k: "Kappl", r: -1, t: "optical touch sensor: rubber over plexiglass, read out through a fibre bundle", s: 1 },
+  { y: 1984, k: "Tanie et al.", r: 1, t: "light guided inside an acrylic plate, phototransistor array underneath", s: 1 },
+  { y: 1988, k: "Begej", r: -1, t: "planar and finger-shaped optical sensors: micro-textured membrane, fibre bundles", s: 1 },
+  { y: 1993, k: "Maekawa et al.", r: 1, t: "finger-shaped sensor on an optical waveguide", s: 1 },
+  { y: 2004, k: "Kamiyama et al.", r: -1, t: "a camera tracks markers in a transparent elastomer", s: 2 },
+  { y: 2009, k: "GelSight", r: 1, t: "Johnson & Adelson: retrographic sensing, geometry from a coated gel", s: 2 },
+  { y: 2009, k: "TacTip*", r: -2, t: "Bristol: camera watches pins on the inside of a soft skin", s: 2 },
+  { y: 2016, k: "FingerVision*", r: 2, t: "Yamaguchi & Atkeson: transparent skin with markers, the camera also sees the scene", s: 2 },
+  { y: 2020, k: "DIGIT", r: -1, t: "Lambeta et al.: compact, low-cost, mass-manufacturable", s: 3 },
+  { y: 2020, k: "OmniTact", r: -2, t: "Padmanabha et al.: multi-directional, five cameras in one fingertip", s: 3 },
+  { y: 2020, k: "GelTip*", r: 1, t: "Gomes et al.: finger-shaped tube, one camera looks down the finger", s: 3 },
+  { y: 2021, k: "GelSight Wedge*", r: -3, t: "Wang et al.: mirror folds the optical path into a thin finger", s: 3 },
+];
+CHARTS.history = narrow => {
+  if (narrow) return `<ul class="hist-list">${HIST.map(h => `<li><span class="y" style="--c:var(--vz-s${h.s})">${h.y}</span><span><b>${h.k}</b> – ${h.t}</span></li>`).join("")}</ul>`;
+  const W = 600, L = 24, R = 24, T = 26, PW = W - L - R, y0 = 150, H = 258, x = y => L + (y - 1960) / 65 * PW;
+  const ticks = [1960, 1970, 1980, 1990, 2000, 2010, 2020].map(y => `<line class="grid" x1="${x(y)}" x2="${x(y)}" y1="${T}" y2="${H - 30}"/><text class="tick" x="${x(y)}" y="${H - 12}" text-anchor="middle">${y}</text>`).join("");
+  // h.r: label row, negative above the axis, positive below; chosen by hand so that neighbours do not collide.
+  const ev = HIST.map(h => { const r = h.r, yl = y0 + r * 28, X = x(h.y);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${h.k} (${h.y})</b>${h.t}`)}"><rect class="hit" x="${X - 10}" y="${Math.min(yl, y0) - 14}" width="20" height="${Math.abs(yl - y0) + 24}"/>
+      <line class="grid" x1="${X}" x2="${X}" y1="${y0}" y2="${yl}"/><circle class="ev" cx="${X}" cy="${y0}" r="5" style="stroke:var(--vz-s${h.s})"/>
+      <text class="ev-l" x="${X}" y="${yl + (r < 0 ? -2 : 12)}" text-anchor="${h.y > 2015 ? "end" : h.y < 1970 ? "start" : "middle"}" dx="${h.y > 2015 ? 6 : h.y < 1970 ? -6 : 0}">${h.k}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of optical and vision-based tactile sensors from Kappl 1963 to the GelSight Wedge 2021">${ticks}<line class="axis" x1="${L}" x2="${W - R}" y1="${y0}" y2="${y0}"/>${ev}</svg>`;
+};
+
+// Gel-camera lab: what the camera sees for a few contact shapes and indentation depths.
+const GL = { shape: "dome", depth: 0.6 };
+const GEL_SHAPES = [["flat gel", "flat"], ["fingertip (dome)", "dome"], ["edge (ridge)", "ridge"], ["washer (ring)", "ring"], ["screw head", "screw"], ["fabric", "cloth"]];
+LABS.gel = body => {
+  body.innerHTML = `<div class="presets">${GEL_SHAPES.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === GL.shape}">${t}</button>`).join("")}</div>
+    <div class="gel"><canvas aria-label="Simulated tactile image: the pressed gel lit by a red, a green and a blue LED"></canvas>
+    <div class="side">${gelCompass()}<p style="margin:0 0 6px">Three LEDs shine across the gel from three sides. A flat gel reflects all three equally and looks grey; a slope reflects the LED it faces and takes that colour. The picture <i>is</i> the gradient of the surface, which is why the geometry can be recovered later.</p>
+    <div class="ctl"><label>indentation <input type="range" min="0.1" max="1" step="0.05" value="${GL.depth}"><output>${GL.depth}</output></label></div></div></div>`;
+  const cv = body.querySelector("canvas"), rg = body.querySelector("input"), out = body.querySelector("output");
+  const draw = () => gelRender(cv, { shape: GL.shape, depth: GL.depth });
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { GL.shape = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  rg.addEventListener("input", () => { GL.depth = +rg.value; out.value = rg.value; draw(); });
+  draw();
+};
+
+// Data rate of one sensor at camera resolutions and frame rates: pixels × 3 bytes × 8 bit × fps, uncompressed.
+const RATE = (px, fps) => px * 3 * 8 * fps / 1e6;
+const BANDS = [["QVGA 320×240 · 30 fps", RATE(320 * 240, 30), 1], ["QVGA 320×240 · 60 fps", RATE(320 * 240, 60), 1], ["VGA 640×480 · 30 fps", RATE(640 * 480, 30), 2], ["VGA 640×480 · 60 fps", RATE(640 * 480, 60), 2], ["720p 1280×720 · 30 fps", RATE(1280 * 720, 30), 3]];
+CHARTS.band = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 8 : 176, R = 54, T = narrow ? 22 : 10, BH = 18, GAP = narrow ? 30 : 12, PW = W - L - R, mx = 800, x = v => L + Math.min(v, mx) / mx * PW;
+  const H = T + BANDS.length * (BH + GAP) + 28;
+  const grid = [0, 200, 400, 600, 800].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T - 4}" y2="${H - 26}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("");
+  const bars = BANDS.map(([k, v, s], i) => { const y = T + i * (BH + GAP);
+    const label = narrow ? `<text class="cat" x="${L}" y="${y - 6}">${k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${k}</text>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>${num(v, 0)} Mb/s uncompressed = ${num(v / 8, 1)} MB/s per sensor`)}"><rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}<path class="bar" style="fill:var(--vz-s${s})" d="${hbar(L, x(v), y, BH)}"/><text class="val" x="${x(v) + 6}" y="${y + BH / 2 + 4}">${num(v, 0)}</text></g>`; }).join("");
+  const usb = `<line class="ann dash" x1="${x(480)}" x2="${x(480)}" y1="${T - 4}" y2="${H - 26}"/><text class="lbl" x="${x(480) + 4}" y="${T + 6}">USB 2.0 (480)</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of uncompressed data rate per sensor in megabits per second: QVGA 30 fps 55, QVGA 60 fps 111, VGA 30 fps 221, VGA 60 fps 442, 720p 30 fps 664; USB 2.0 carries 480.">${grid}${bars}${usb}<text class="note" x="${L + PW / 2}" y="${H + 2}" text-anchor="middle"></text></svg>`;
+};
+
+// Resolution chart of Lectures 2 and 3 with the vision-based sensors of slide 31 added (triangles).
+const RES4 = [
+  { k: "Human finger", f: 0.058, s: 1.0, slot: 0, fill: "var(--ink)", note: "the reference mark", lx: -10, ly: 4, a: "end" },
+  { k: "ReSkin", f: 0.2, s: 1.0, slot: 0, note: "non-vision (Lecture 3)", lx: 0, ly: 22, a: "middle" },
+  { k: "Epstein et al.", f: 0.65, s: 1.08, slot: 0, note: "non-vision (Lecture 3)", lx: -4, ly: -12, a: "end" },
+  { k: "BioTac", f: 0.85, s: 1.26, slot: 0, note: "non-vision (Lecture 3)", lx: 2, ly: -12, a: "start" },
+  { k: "SaLoutos et al.", f: 1.6, s: 1.2, slot: 0, note: "non-vision (Lecture 3)", lx: 10, ly: 4, a: "start" },
+  { k: "DIGIT", f: 0.006, s: 0.15, slot: 1, tri: true, note: "vision-based, Lambeta et al. 2020", lx: 10, ly: 4, a: "start" },
+  { k: "Insight", f: 0.03, s: 0.4, slot: 2, tri: true, note: "vision-based, thumb-shaped (Sun et al. 2022)", lx: 10, ly: 4, a: "start" },
+  { k: "GelSlim", f: 0.32, s: 0.03, slot: 3, tri: true, note: "vision-based, MIT", lx: -10, ly: 4, a: "end" },
+  { k: "GelSight", f: 0.65, s: 0.03, slot: 4, tri: true, note: "vision-based, Adelson group", lx: 10, ly: 4, a: "start" },
+];
+CHARTS.resVBTS = narrow => resSVG(narrow, RES4);
+
+const FAMILIES = [
+  ["GelSight type", "an opaque, reflective coating on the gel; the camera sees shading from the coloured LEDs", "fine geometry (photometric stereo), texture, with markers also shear", "GelSight, GelSlim, GelSight Wedge, DIGIT, Insight", 1],
+  ["Marker tracking", "pins or dots on the inside of a soft skin; the camera tracks how they move", "displacement field, contact location, shear and slip, force", "TacTip family, Kamiyama et al. 2004", 2],
+  ["Transparent", "clear gel with markers, no coating; the camera also sees through the skin", "markers for force plus a view of the object before and during contact", "FingerVision", 3],
+  ["Finger-shaped", "a rounded or tube-like gel; one wide-angle camera or several cameras look at it from inside", "contact all around the tip, not only on one flat pad", "OmniTact, GelTip, round GelSight tips", 4],
+];
+const DESIGN = [
+  ["Form factor", "flat pad, curved tip, finger-shaped, or a whole skin; sets what the camera can see at all", 1],
+  ["Substrate", "the elastomer: its composition (softness, thickness, coating) and whether it carries markers", 2],
+  ["Lighting", "how many LEDs, which colours, from where; the light is what encodes the geometry", 3],
+  ["Optical subsystem", "camera, lens, field of view, focal distance, mirrors or fibres to fold the path", 4],
+  ["Electronics", "image sensor, interface and bandwidth, on-board processing", 1],
+];
+const DIGIT_PARTS = [["Elastomer", "the replaceable gel, coated or with markers", 1], ["Window and holder", "clear acrylic the gel sits on", 2], ["Bezel", "clamps the gel so it can be swapped", 2], ["PCB with camera and LEDs", "the camera in the middle, three RGB LEDs around it", 3], ["Housing", "a few centimetres long, mounts on a fingertip", 4]];
+
+function lecture4() {
+  return `${head(l)}
+    <p class="lead">Lecture 3 ended with the verdict that no tactile technology is good at everything. This lecture introduces the one the course bets on: a camera films a soft gel from the inside, so touch becomes an image. It covers the basic principle, the history that led to today's sensors, the main families of vision-based tactile sensors (VBTS), the design choices and the advantages and limitations.</p>
+    <h2>Recap and goal (slides 2–3)</h2>
+    <p>Lecture 3 gave the six evaluation criteria, the transduction technologies and a few concrete sensors. Today: how VBTS work, a bit of history, the main families, the design choices, advantages and limitations. Lecture 5 continues with the same technology.</p>
+
+    <h2>The basic principle (slide 4)</h2>
+    <p>An object presses into an <b>elastomer</b> that sits on a transparent <b>support plate</b>. Underneath, <b>LEDs</b> shine across the gel from several sides, often in different colours, and a <b>camera</b> looks up at the gel. Where the object deforms the gel, the surface tilts, so the light bouncing back to the camera changes: the image of the gel is a picture of the contact geometry. The slide's drawing (credit Yuan, Dong &amp; Adelson 2017) is the GelSight layout; every sensor in this lecture is a variation on it.</p>
+    ${lab("gel", "what the camera sees")}
+    ${ex("Worked example · why three colours", `<p>Take LEDs at 32° elevation from three directions, red from the top of the image, green from the lower left, blue from the lower right, and a Lambertian coating. Each channel records the cosine between the surface normal n and that LED's direction. A flat patch, n = (0, 0, 1), returns sin 32° ≈ 0.53 in all three channels: grey. A patch tilted 17° towards the right, n ≈ (0.30, 0, 0.95), returns about 0.51 (red), 0.29 (green) and 0.73 (blue): bluish, because it faces the blue LED. Three channels for the two unknowns of a unit normal is one more equation than needed, which is what makes the inversion (image → gradient → height) well posed; that inversion is the topic of a later lecture ${ctx}.</p>`)}
+    ${why("what the camera does not measure", `<p>The camera sees surface <i>gradients</i> through shading. Absolute force is not in the picture: a soft gel pressed lightly and a stiff gel pressed hard can give the same image. Force is inferred later from how much and how far the gel deforms (and from marker displacement), which is why many sensors add markers and why calibration against a force sensor is part of Practice and Home Exercise 1.</p>`)}
+
+    <h2>Examples of DIGIT measurements (slide 5)</h2>
+    <p>Four objects and their tactile images from a DIGIT: a strip of Velcro becomes a field of hooks, a small circuit board shows its chips and solder pads as raised blocks, a coin shows its relief, a nail file shows its grooves as fine parallel lines. The images are rainbow-coloured for the reason in the lab above: each slope takes the colour of the LED it faces.</p>
+
+    <h2>The important design choices (slide 6)</h2>
+    <div class="levels">${DESIGN.map(([t, d, s]) => `<div class="lv" style="border-top-color:var(--vz-s${s})"><div class="t">${t}</div><div class="d">${d}</div></div>`).join("")}</div>
+    <p>These five axes are the vocabulary for the rest of the lecture: every sensor below is one choice per axis.</p>
+
+    <h2>A bit of history (slides 7–11)</h2>
+    ${chart("history", leg([[1, "optical, before cameras"], [2, "camera-based"], [3, "recent, compact"]]))}<figcaption>Optical and vision-based tactile sensors over time. Hover or focus a dot. Years marked * are the publication years of sensors the slides name without a date ${ctx}.</figcaption></figure>
+    <ul>
+      <li><b>Kappl 1963:</b> a touch sensor on a simple mechanical hand. A sheet of polyurethane rubber with a reflecting side lies under plexiglass; a coherent optical fibre bundle carries the image of the contact away. An air space between rubber and plexiglass lowers the sensitivity but widens the range, so that the hand could handle a three-pound brick as well as an egg.</li>
+      <li><b>Tanie et al. 1984, "A high resolution tactile sensor":</b> silicone rubber on an acrylic plate; light from a lamp enters the plate through a fibre and is trapped inside by total internal reflection; where the rubber is pressed against the plate the light escapes and a photo-transistor array below sees the contact. The experimental setup is a plate the size of a hand with a bundle of electronics beside it.</li>
+      <li><b>Begej 1988:</b> planar and finger-shaped optical tactile sensors: a transducer membrane with a micro-texture under a cover membrane, illuminated through fibre bundles; the "appearance of the imprint" is a grid of dots that brighten under force. The finger-shaped version packs the illuminator and image fibres into a curved tip.</li>
+      <li><b>Maekawa, Tanie &amp; Komoriya 1993:</b> a finger-shaped sensor using an optical waveguide. <b>Kamiyama et al. 2004:</b> "evaluation of a vision-based tactile sensor", a camera watching markers in a transparent elastomer, the direct ancestor of today's marker-based designs.</li>
+      <li><b>Johnson &amp; Adelson 2009:</b> retrographic sensing: a gel with an opaque, reflective coating, lit from several directions, photographed, and turned into surface shape by photometric stereo. The name GelSight comes from this work, and "since 2009" is on every GelSight slide.</li>
+    </ul>
+    ${why("why the camera changed everything", `<p>The early designs needed one light path per sensing point (a fibre or a phototransistor each), so resolution and wiring scaled together, the "ease of manufacture" problem of Lecture 3. A camera gives hundreds of thousands of light paths through one lens and one cable, and consumer phones made small cameras cheap. The price is bulk (the lens needs a focal distance) and bandwidth, which is exactly the limitations column below.</p>`)}
+
+    <h2>The main families (slides 12–19)</h2>
+    <div class="tt-wrap"><table class="tt fam"><tr><th>family</th><th>what the camera sees</th><th>what it measures</th><th>examples</th></tr>${FAMILIES.map(([f, s, m, e, k]) => `<tr><td>${key(k)} ${f}</td><td>${s}</td><td>${m}</td><td>${e}</td></tr>`).join("")}</table></div>
+    <h3>GelSight (Adelson et al., since 2009)</h3>
+    <p>The original use was metrology: press a cookie onto the gel and read off its surface relief at a resolution finer than the eye (slide 12). The robot version (slide 13) is a small box: a camera on a spacer, a support shell, LEDs around the gel, mounted as a fingertip on a gripper; the exploded view shows camera, sensor cover, acrylic window, elastomer gel and coating layer, about 35 mm across. The video on slide 14 shows the live image while objects are pressed in. The <b>GelSight Wedge</b> (slides 15–16) folds the optical path with a mirror so that a 120° camera can look at a 24 × 32 mm gel from the side: a thin, finger-like sensor that can pick up a dish or a mug by its rim and be pushed into a drawer handle; exploded view: pins, elastomer, acrylic and filters, LEDs, mirror, case, camera, camera holder, mounting plate.</p>
+    <h3>TacTip family (Lepora et al.)</h3>
+    <p>A biomimetic design: instead of a reflective coating, the inside of a soft skin carries an array of pins, modelled on the <b>intermediate ridges</b> of the human fingertip where the mechanoreceptors sit (Lecture 2). The camera sees the pins as white dots (slide 18); contact moves them, and the displacement field gives contact location, shear and slip. Slide 17 shows the family: cylindrical and round tips, flat pads, a wide one for a gripper jaw, all 3D-printed around the same camera module.</p>
+    <h3>FingerVision</h3>
+    <p>A transparent skin with embedded markers and no coating. The camera sees the markers move <i>and</i> sees through the skin, so the sensor also knows what is in front of it before and during contact (slide 19: the marker grid with displacement arrows, a hand holding an object between two FingerVision fingers, and a segmented blob of the object seen through the gel).</p>
+    <h3>DIGIT (Lambeta et al. 2020, RA-L)</h3>
+    <p>The sensor of this course and of the practices: compact, low-cost, designed for manufacture, with the files public ("fork me on GitHub"). The exploded view (slides 20–22) reads from the fingertip inwards:</p>
+    <div class="exploded">${DIGIT_PARTS.map(([t, d, s], i) => `${i ? `<span class="arrow">→</span>` : ""}<div class="part" style="--c:var(--vz-s${s})"><b>${t}</b>${d}</div>`).join("")}</div>
+    <p><b>Replaceable elastomer</b> (slide 23): the gel is a consumable and comes in three kinds: <i>reflective</i> (the GelSight recipe, best for geometry), <i>reflective with markers</i> (adds a dot grid for shear and force), and <i>transparent with markers</i> (FingerVision-like). The PCB carries the camera in the middle and the LEDs around it; the sample image on the slide shows a circuit board pressed into the gel, lit red, green and blue from three sides.</p>
+
+    <h2>Advantages and limitations (slide 24)</h2>
+    <div class="procon">
+      <div class="col" style="--c:var(--vz-s3)"><h4>Advantages</h4><ul>
+        <li>High spatial resolution<small>a camera pixel per "taxel"; GelSight resolves tens of micrometres</small></li>
+        <li>High reliability, reasonable durability<small>no wires in the skin; the gel is the only part that wears, and it is replaceable</small></li>
+        <li>Easy and cheap to manufacture<small>a camera module, LEDs, a cast gel and a printed housing</small></li>
+        <li>Tunable sensitivity<small>softer or thicker gel, different coating, different lighting</small></li>
+        <li>Easy to process<small>it is an image: computer-vision tools apply, and humans can read it by eye</small></li></ul></div>
+      <div class="col" style="--c:var(--vz-s2)"><h4>Limitations</h4><ul>
+        <li>Form factor<small>bulky: the lens needs a focal distance, and the electronics need room</small></li>
+        <li>Temporal resolution<small>cameras are relatively slow (tens of frames per second) against the hundreds of hertz of vibration</small></li>
+        <li>Data bandwidth<small>a hand full of sensors generates hundreds of Mb/s</small></li>
+        <li>No multi-modality<small>human skin has very heterogeneous receptors; a camera sees shape only, not temperature or vibration</small></li></ul></div>
+    </div>
+    ${ex("Worked example · how much data a hand produces", `<p>A DIGIT streams QVGA frames, 320 × 240 pixels, in colour at 60 fps (the OpenTouch default in Practice 3). Uncompressed that is 320 · 240 · 3 bytes = 230,400 bytes per frame, times 60 = 13.8 MB/s, or about 111 Mb/s, per sensor. Five fingertips give 553 Mb/s, more than one USB 2.0 bus (480 Mb/s) can carry; at VGA the same hand needs 2.2 Gb/s. That is the "hundreds of Mb/s" of the slide, and the reason the open challenges list bandwidth and latency ${ctx}.</p>`)}
+    ${chart("band", leg([[1, "QVGA"], [2, "VGA"], [3, "720p"]]))}<figcaption>Uncompressed data rate of one sensor in Mb/s for common camera modes, with the USB 2.0 ceiling as a reference. The slide gives the order of magnitude; the numbers are computed here from pixels × 3 bytes × fps.</figcaption></figure>
+    ${tbl(["Camera mode", "Mb/s per sensor", "MB per minute"], BANDS.map(([k, v]) => [k, num(v, 0), num(v / 8 * 60, 0)]))}
+
+    <h2>Finger-like sensors (slides 25–30)</h2>
+    <p>A flat pad only senses on one face. Three ways to wrap the sensing around a fingertip:</p>
+    <ul>
+      <li><b>OmniTact</b> (Padmanabha, Ebert, Tian, Calandra, Finn &amp; Levine, ICRA 2020): a multi-directional, high-resolution sensor: a rounded gel the size of a thumb tip with <b>five</b> micro-cameras on a flexible printed circuit folded inside (slide 27: the flex PCB flat, bent, in the CAD model and assembled). Slide 26 shows it next to a fingertip and a coin; slide 28 the images of a screw, a bolt, a padlock, a circuit board and a USB plug pressed into its side.</li>
+      <li><b>Round GelSight tip</b> (slide 29): a GelSight-style gel cast as a hemisphere on a multi-fingered hand, holding a bolt against the palm.</li>
+      <li><b>GelTip</b> (slide 30): a finger-shaped transparent tube coated on the outside, one camera at the base looks down the whole finger, so contact anywhere on the tip is seen. The slide shows the prototype next to a one-pound coin.</li>
+    </ul>
+
+    <h2>Spatial resolution, now with VBTS (slide 31)</h2>
+    <p>The resolution chart of Lectures 2 and 3 with the vision-based sensors added as triangles. GelSight and GelSlim sit two orders of magnitude below the human finger in spatial resolution (about 0.03 mm), DIGIT is the most force-sensitive point on the chart, and Insight sits between. The non-vision sensors cluster near a millimetre.</p>
+    ${chart("resVBTS", leg([["g", "non-vision sensors and the finger"], [1, "DIGIT"], [2, "Insight"], [3, "GelSlim"], [4, "GelSight"]]))}<figcaption>Spatial resolution against normal-force resolution, log-log, as on the slide; values read off the slide chart and rounded. The slide's legend also lists OmniTact, but its marker is not visible on the chart. Hover or focus a mark.</figcaption></figure>
+    ${tbl(["Sensor", "≈ force resolution", "≈ spatial resolution"], RES4.map(r => [r.k + (r.tri ? " (VBTS)" : ""), `${r.f} N`, `${r.s} mm`]))}
+    ${why("reading the chart honestly", `<p>Both axes are "resolution" in the sense of the smallest difference the sensor can report, so bottom-left is better. VBTS win on the vertical axis because a camera pixel is tiny; their force resolution depends on the gel and the calibration, not on the camera, which is why the triangles spread over two decades horizontally. The chart says nothing about speed, the axis on which VBTS lose.</p>`)}
+
+    <h2>Open challenges (slide 32)</h2>
+    <div class="levels">
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="t">Miniaturisation</div><div class="d">the focal distance and the electronics set a floor on size</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s2)"><div class="t">Commercialisation</div><div class="d">research prototypes, few products, no standard</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s3)"><div class="t">Skin-like sensors</div><div class="d">covering a whole hand or arm, not only fingertips</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s4)"><div class="t">Durability</div><div class="d">the gel wears, tears and is cut; coatings rub off</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="t">Communication, bandwidth, latency</div><div class="d">images are big and cameras add delay</div></div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="v">1963</div><div class="l">Kappl's optical touch sensor, the earliest ancestor on the slides</div></div>
+      <div class="tile"><div class="v">2009</div><div class="l">GelSight: retrographic sensing, geometry from a coated gel</div></div>
+      <div class="tile"><div class="v">≈ 0.03 mm</div><div class="l">spatial resolution of GelSight and GelSlim on the slide chart</div></div>
+      <div class="tile"><div class="v">111 Mb/s</div><div class="l">one DIGIT at QVGA and 60 fps, uncompressed</div></div>
+    </div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>How does a VBTS work?</b> A camera films a soft gel from inside; LEDs light it from the sides; deformation changes the shading or moves markers, and the image encodes the contact geometry.</li>
+      <li><b>What are the design axes?</b> Form factor, substrate (composition, markers), lighting, optical subsystem, electronics.</li>
+      <li><b>Which families?</b> Coated gels read by shading (GelSight, DIGIT), marker tracking (TacTip, Kamiyama), transparent skins (FingerVision), finger-shaped designs (OmniTact, GelTip).</li>
+      <li><b>Why are they popular?</b> Spatial resolution, reliability, cheap manufacture, tunable sensitivity, easy processing.</li>
+      <li><b>Why not everywhere?</b> Bulk, slow cameras, bandwidth, no temperature or vibration.</li>
+      <li><b>Where did they come from?</b> Optical sensors with fibres and phototransistors (1963–1993), then cameras with markers (2004) and coated gels (2009).</li>
+    </ul>
+    <h2>Summary (slide 33)</h2>
+    <ul><li>Basic principle of VBTS.</li><li>Brief history of VBTS.</li><li>Several design decisions.</li><li>Several existing sensors studied.</li></ul>
+    ${ex("Likely exam questions", `<p>Draw and label the basic VBTS layout. Name the five design choices and give one option for each. Explain the difference between a coated gel and a marker-based skin, with one sensor each. Give three advantages and three limitations of VBTS and relate them to the criteria of Lecture 3. Estimate the data rate of a sensor from its resolution and frame rate. This list is a guess from the slide structure ${ctx}.</p>`)}
+    <h2>References named in the lecture</h2>
+    <ul class="refs">
+      <li>Tanie, Komoriya, Kaneko, Tachi &amp; Fujikawa (1984). A high resolution tactile sensor. Int. Conf. on Robot Vision and Sensory Controls.</li>
+      <li>Begej (1988). Planar and finger-shaped optical tactile sensors for robotic applications. IEEE J. Robotics and Automation 4.</li>
+      <li>Maekawa, Tanie &amp; Komoriya (1993). A finger-shaped tactile sensor using an optical waveguide. IEEE SMC.</li>
+      <li>Kamiyama, Kajimoto, Kawakami &amp; Tachi (2004). Evaluation of a vision-based tactile sensor. ICRA.</li>
+      <li>Johnson &amp; Adelson (2009). Retrographic sensing for the measurement of surface texture and shape. CVPR.</li>
+      <li>Yuan, Dong &amp; Adelson (2017). GelSight: high-resolution robot tactile sensors for estimating geometry and force. Sensors.</li>
+      <li>Abad &amp; Ranasinghe (2020). Visuotactile sensors with emphasis on GelSight sensor: a review. IEEE Sensors Journal 20.</li>
+      <li>Shimonomura (2019). Tactile image sensors employing camera: a review. Sensors 19.</li>
+      <li>Lambeta et al. (2020). DIGIT: a novel design for a low-cost compact high-resolution tactile sensor with application to in-hand manipulation. RA-L 5.</li>
+      <li>Padmanabha, Ebert, Tian, Calandra, Finn &amp; Levine (2020). OmniTact: a multi-directional high-resolution touch sensor. ICRA.</li>
+      <li>Li et al. (2025). Classification of vision-based tactile sensors: a review. IEEE Sensors Journal.</li>
+    </ul>
+    <p class="muted">Next: <a href="touch-sensing/lecture.html?n=5">Lecture 5, Vision-based Tactile Sensors 2</a> (9 Nov). The hands-on session with the DIGIT and OpenTouch is <a href="touch-sensing/exercise.html?n=3">Practice 3</a>. Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -526,7 +735,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, 09:20–10:50, ${esc(roomOn(l.date))}.<br>The summary appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3 };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
