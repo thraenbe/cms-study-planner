@@ -1752,8 +1752,8 @@ window.CMS = {
       "title": "Arithmetic circuits 3",
       "date": "2026-11-02",
       "icon": "➗",
-      "covered": false,
-      "blurb": "Division circuits, then the advanced blocks: filters, the ALU and floating-point operations."
+      "covered": true,
+      "blurb": "Division concluded (restoring division in hardware and its optimisation, Newton-Raphson, when to avoid dividing), the arithmetic logic unit in the execution unit with a VHDL example, floating-point multiplication, division, addition with alignment and normalisation, rounding modes, and digital FIR and IIR filters."
      },
      {
       "n": 5,
@@ -1848,12 +1848,12 @@ window.CMS = {
      },
      {
       "n": 2,
-      "title": null,
+      "title": "State machines, codes and number formats",
       "date": "2026-11-05",
-      "published": null,
+      "published": "2026-10-28",
       "icon": "✏️",
-      "covered": false,
-      "blurb": "Expected to cover lectures 3–4 (multipliers, division, ALU and floating point); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+      "covered": true,
+      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions; the chair has not posted theirs yet."
      },
      {
       "n": 3,

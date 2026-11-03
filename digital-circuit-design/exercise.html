@@ -35,7 +35,7 @@ function head(x) {
     <p class="meta">${fmt(x.date)} · ${exe.start}–${exe.end} · ${esc(exe.room)} · Thursday group (German) · ${x.published ? `sheet in OPAL since ${fmt(x.published)}` : "sheet not published yet"}</p>`;
 }
 // A task: number, title, the question, then the solution behind a toggle.
-const task = (id, t, body, sol) => `<section class="task" id="t${id}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2><span class="pts open">practice task</span></div>${body}
+const task = (id, t, body, sol, tag = "practice task") => `<section class="task" id="t${id}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2><span class="pts open">${tag}</span></div>${body}
   <details class="sol"><summary>Solution</summary><div class="sol-body">${sol}</div></details></section>`;
 const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
 const cellRow = (label, arr, cls = {}) => `<div class="rl">${label}</div>${arr.map((v, i) => `<div class="cell ${v === 1 ? "one" : ""} ${cls[i] || ""}">${v}</div>`).join("")}`;
@@ -197,6 +197,205 @@ function exercise1() {
     </ul>
     <p class="muted">Next exercise: <a href="digital-circuit-design/exercise.html?n=2">exercise 2 on 5 Nov</a>, expected to cover lectures 3 and 4. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=1">lecture 1</a> and <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a>.</p>`;
 }
+// ---------------- Sheet 2 (28 Oct): helpers ----------------
+// A truth table whose last nOut columns are outputs (1s in bold).
+const tt1 = (hdr, rows, nOut = 1) => `<div class="tt-wrap"><table class="tt"><tr>${hdr.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i >= hdr.length - nOut && v === 1 ? "one" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></div>`;
+// A static 3-variable Karnaugh map: rows = first variable, columns = the other two in Gray order; f[minterm] is 0, 1 or "–";
+// groups = [{ cells: [minterms], slot }] tint the covered cells.
+const G4 = ["00", "01", "11", "10"], G4V = [0, 1, 3, 2];
+function kmap3(title, rv, cv, f, groups, expr) {
+  const cls = mt => { const g = groups.find(g => g.cells.includes(mt)); return g ? `hl t${g.slot}` : ""; };
+  const cells = [0, 1].map(r => `<div class="h row">${rv} = ${r}</div>` + G4V.map(c => { const mt = r * 4 + c, v = f[mt];
+    return `<div class="cell kc ${v === 1 ? "one" : ""} ${v === "–" ? "dc" : ""} ${v !== 0 ? cls(mt) : ""}"><small>${mt}</small>${v}</div>`; }).join("")).join("");
+  return `<div><p class="muted">${title}</p><div class="kmap"><div class="h corner">${rv} \\ ${cv}</div>${G4.map(h => `<div class="h">${h}</div>`).join("")}${cells}</div><div class="formula">${expr}</div></div>`;
+}
+// A state diagram: states as rounded boxes (reset in orange), edges as curves with a label, dashed for don't cares.
+function fsmDiagram(id, spec, aria, caption) {
+  const S = Object.fromEntries(spec.states.map(s => [s.k, s])), R = 34;
+  const st = spec.states.map(s => `<rect class="st ${s.reset ? "reset" : ""}" x="${s.x - 30}" y="${s.y - 18}" width="60" height="36" rx="9"${s.dc ? ' stroke-dasharray="4 3"' : ""}/><text class="sl" x="${s.x}" y="${s.y + 5}" text-anchor="middle">${s.label}</text>${s.out ? `<text class="so" x="${s.x}" y="${s.y + 32}" text-anchor="middle">${s.out}</text>` : ""}`).join("");
+  const ed = spec.edges.map(e => {
+    const a = S[e.from], b = S[e.to], cls = `tr ${e.cls || ""} ${e.dc ? "dc" : ""}`, mk = `style="marker-end:url(#${id}-arr)"`;
+    if (a === b) { const sx = e.bend < 0 ? -1 : 1; return `<path class="${cls}" ${mk} d="M${a.x + sx * 12},${a.y - 18} C${a.x + sx * 46},${a.y - 60} ${a.x - sx * 30},${a.y - 60} ${a.x - sx * 8},${a.y - 19}"/><text class="tl ${e.cls || ""}" x="${a.x + sx * 10}" y="${a.y - 50}" text-anchor="middle">${e.label}</text>`; }
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, bend = e.bend || 0;
+    const cx = (a.x + b.x) / 2 + nx * bend, cy = (a.y + b.y) / 2 + ny * bend;
+    const tr = (p, q) => { const vx = q.x - p.x, vy = q.y - p.y, l = Math.hypot(vx, vy); return [p.x + vx / l * R, p.y + vy / l * R]; };
+    const [x0, y0] = tr(a, { x: cx, y: cy }), [x1, y1] = tr(b, { x: cx, y: cy });
+    const lx = e.lx ?? (x0 + 2 * cx + x1) / 4 + nx * 11 * Math.sign(bend || 1), ly = e.ly ?? (y0 + 2 * cy + y1) / 4 + ny * 11 * Math.sign(bend || 1) + 4;
+    return `<path class="${cls}" ${mk} d="M${x0},${y0} Q${cx},${cy} ${x1},${y1}"/>${e.label ? `<text class="tl ${e.cls || ""}" x="${lx}" y="${ly}" text-anchor="middle">${e.label}</text>` : ""}`;
+  }).join("");
+  return `<figure class="viz fsm"><svg viewBox="0 0 ${spec.w || 340} ${spec.h || 240}" role="img" aria-label="${aria}"><defs><marker id="${id}-arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0,0 L8,4 L0,8 Z"/></marker></defs>${ed}${st}</svg><figcaption>${caption}</figcaption></figure>`;
+}
+// A clocked state-machine explorer: toggle the inputs, press the clock, follow the trail.
+function fsmLab(spec) {
+  return body => {
+    const st = { s: spec.reset, in: Object.fromEntries(spec.inputs.map(i => [i, 0])), trail: [spec.reset] };
+    const render = () => { body.innerHTML = `<div class="presets" role="group" aria-label="Inputs and clock">${spec.inputs.map(i => `<button type="button" class="preset" data-in="${i}" aria-pressed="${st.in[i] === 1}">${i} = ${st.in[i]}</button>`).join("")}<button type="button" class="preset" data-act="clk">Clock ↑</button><button type="button" class="preset" data-act="rst">Reset</button></div>
+      <dl class="ro"><dt>State</dt><dd><b>${st.s}</b>${spec.out ? ` · outputs ${spec.out(st.s)}` : ""}</dd><dt>Next</dt><dd>${spec.next(st.s, st.in)} on the next rising edge with ${spec.inputs.map(i => `${i} = ${st.in[i]}`).join(", ")}</dd><dt>Trail</dt><dd class="trail">${st.trail.map((s, i) => i === st.trail.length - 1 ? `<b>${s}</b>` : s).join(" → ")}</dd></dl>`; };
+    body.addEventListener("click", e => { const b = e.target.closest("[data-in],[data-act]"); if (!b) return;
+      if (b.dataset.in) st.in[b.dataset.in] ^= 1; else if (b.dataset.act === "clk") { st.s = spec.next(st.s, st.in); st.trail.push(st.s); if (st.trail.length > 12) st.trail.shift(); } else { st.s = spec.reset; st.trail = [spec.reset]; }
+      render(); });
+    render();
+  };
+}
+const FSM1_NEXT = (s, i) => ({ "00": "01", "01": "11", "11": i.X ? "00" : "10", "10": i.X ? "00" : "01" })[s];
+const FSM2_NEXT = (s, i) => ({ "00": i.A ? "10" : "01", "01": i.A ? "00" : "10", "10": i.A ? "01" : "00", "11": "00" })[s];
+const FSM2_OUT = s => `Z = ${s.replace(/[01]/g, b => b === "1" ? "0" : "1")}`;
+const ALU_NEXT = (s, i) => ({ IDLE: i.start_i ? "LOAD" : "IDLE", LOAD: i.addsub_i ? "ADD" : "SUB", ADD: "STORE", SUB: "STORE", STORE: "IDLE" })[s];
+const ALU_OUT = s => ({ IDLE: "all 0", LOAD: "read_o = 1", ADD: "mode_o = 1, enable_o = 1", SUB: "mode_o = 0, enable_o = 1", STORE: "write_o = 1" })[s];
+Object.assign(LABS, { fsm1: fsmLab({ reset: "00", inputs: ["X"], next: FSM1_NEXT, out: s => `Z = ${s}` }), fsm2: fsmLab({ reset: "00", inputs: ["A"], next: FSM2_NEXT, out: FSM2_OUT }), alufsm: fsmLab({ reset: "IDLE", inputs: ["start_i", "addsub_i"], next: ALU_NEXT, out: ALU_OUT }) });
+
+// Cycle-by-cycle run of the ALU control unit (task 2.3), rendered as a cell grid.
+function aluRun() {
+  const start = [0, 1, 0, 0, 0, 0, 0], addsub = [1, 1, 1, 0, 0, 0, 0], states = ["IDLE"];
+  for (let i = 0; i < 6; i++) states.push(ALU_NEXT(states[i], { start_i: start[i], addsub_i: addsub[i] }));
+  const outs = { read_o: s => s === "LOAD" ? 1 : 0, mode_o: s => s === "ADD" ? 1 : 0, enable_o: s => s === "ADD" || s === "SUB" ? 1 : 0, write_o: s => s === "STORE" ? 1 : 0 };
+  const row = (lbl, vals, cls = v => v === 1 ? "on" : "") => `<div class="rl">${lbl}</div>${vals.map(v => `<div class="cell ${cls(v)}">${v}</div>`).join("")}`;
+  return `<div class="tt-wrap"><div class="agrid cyc" style="grid-template-columns:minmax(80px,auto) repeat(7, 54px)"><div></div>${[0, 1, 2, 3, 4, 5, 6].map(i => `<div class="h">cycle ${i}</div>`).join("")}
+    ${row("start_i", start)}${row("addsub_i", addsub)}${row("state", states, () => "stt")}${Object.entries(outs).map(([k, f]) => row(k, states.map(f))).join("")}</div></div>`;
+}
+
+// Task 3.1: binary, Gray and two's complement side by side; the 4-bit Gray code by reflection.
+const grayOf = n => n ^ n >> 1;
+const CODES7 = Array.from({ length: 8 }, (_, n) => [n, bin(n, 3), bin(grayOf(n), 3), `−${n}`, bin((16 - n) % 16, 4)]);
+function grayReflect() {
+  const g3 = Array.from({ length: 8 }, (_, n) => bin(grayOf(n), 3)), top = g3.map(g => "0" + g), bottom = [...g3].reverse().map(g => "1" + g);
+  const col = (arr, cls) => arr.map(g => `<div class="cell ${cls}"><span style="opacity:.55">${g[0]}</span>${g.slice(1)}</div>`).join("");
+  return `<div class="tt-wrap"><div class="agrid" style="grid-template-columns:minmax(110px,auto) repeat(8, 44px)"><div class="rl">3-bit Gray</div>${g3.map(g => `<div class="cell">${g}</div>`).join("")}
+    <div class="rl">prefix 0</div>${col(top, "t1")}<div class="rl">mirrored, prefix 1</div>${col(bottom, "t2")}</div></div>`;
+}
+
+// Task 3.2: the formats of A, B and the results of the four operations, aligned at the binary point.
+CHARTS.fmt = narrow => {
+  const rows = [["A", 5, 6, "s5.6"], ["B", 7, 4, "s7.4"], ["B aligned", 7, 6, "s7.6"], ["A + B", 8, 6, "s8.6"], ["A × B", 13, 10, "s13.10"], ["A / B, 12-bit integer divider", 9, 2, "s9.2"]];
+  const cw = narrow ? 9 : 15, LBL = narrow ? 96 : 180, maxL = 14, RH = 30, W = narrow ? 340 : 600, H = rows.length * RH + 26, P = LBL + maxL * cw;
+  const seg = (x0, n, cls) => n ? `<rect class="${cls}" x="${x0 + 1}" y="6" width="${n * cw - 2}" height="18" rx="3"/>` : "";
+  const body = rows.map(([lbl, m, n, fmt], i) => `<g class="pt" tabindex="0" transform="translate(0, ${i * RH})" data-tip="${esc(`<b>${lbl}: ${fmt}</b>1 + ${m} + ${n} = ${1 + m + n} bits`)}"><rect class="hit" x="0" y="0" width="${W}" height="${RH}"/><text class="cat" x="${LBL - 8}" y="19" text-anchor="end">${narrow ? lbl.replace(", 12-bit integer divider", "") : lbl}</text>${seg(P - (m + 1) * cw, 1, "f2")}${seg(P - m * cw, m, "f1")}${seg(P, n, "f3")}<text class="note" x="${P + n * cw + 6}" y="19">${narrow ? fmt.split(" ")[0] : fmt}</text></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bit fields of A in s5.6, B in s7.4, B aligned to s7.6, the sum in s8.6, the product in s13.10 and the quotient of a 12-bit integer divider in s9.2, aligned at the binary point"><line class="axis" x1="${P}" x2="${P}" y1="0" y2="${rows.length * RH}" stroke-dasharray="3 3"/><text class="tick" x="${P}" y="${rows.length * RH + 16}" text-anchor="middle">binary point</text>${body}</svg>`;
+};
+const A32 = 13.640625, B32 = -37.25;
+
+// Task 3.3: IEEE 754 half precision (1 + 5 + 10 bits, bias 15).
+function halfRow(bitsStr) {
+  const s = +bitsStr[0], E = parseInt(bitsStr.slice(1, 6), 2), mant = parseInt(bitsStr.slice(6), 2), m = mant / 1024;
+  const val = E === 0 ? (s ? -1 : 1) * mant * 2 ** -24 : E === 31 ? (mant ? "NaN" : s ? "−∞" : "∞") : (s ? -1 : 1) * (1 + m) * 2 ** (E - 15);
+  return `<div class="fbits"><div class="fgw"><small>sign</small><div class="fg"><span class="cell fb t1 ${s ? "one" : ""}">${s}</span></div></div>
+      <div class="fgw"><small>exponent E = ${E} → e = ${E - 15}</small><div class="fg">${bits(E, 5).map(b => `<span class="cell fb t2 ${b ? "one" : ""}">${b}</span>`).join("")}</div></div>
+      <div class="fgw"><small>mantissa m = ${m}</small><div class="fg">${bits(mant, 10).map(b => `<span class="cell fb t3 ${b ? "one" : ""}">${b}</span>`).join("")}</div></div></div>
+    <p class="muted" style="margin:0 0 .6rem">${bitsStr.slice(0, 4)} ${bitsStr.slice(4, 8)} ${bitsStr.slice(8, 12)} ${bitsStr.slice(12)} = (−1)<sup>${s}</sup> · (1 + ${m}) · 2<sup>${E - 15}</sup> = <b>${val}</b></p>`;
+}
+
+function exercise2() {
+  return `${head(x)}
+    <p class="lead">Sheet 2 of the chair's exercise collection, posted in OPAL on 28 Oct (the English version; the German one for this Thursday group is listed under 4 Nov). Eight tasks in three blocks: two combinational cells (full adder, multiplexer), three state machines (two from a state graph, one from Verilog), and three number-format tasks (Gray and two's complement, fixed-point formats, IEEE 754). The chair has not posted solutions yet: <b>every solution below is our own</b>, worked through and cross-checked with the explorers on this page, so treat a disagreement with the official solution as a reason to look twice at both.</p>
+    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (9 pages) in the OPAL exercise folder since 28 Oct; the tasks are numbered 1.7 to 3.3 because the collection numbers through the whole semester (1.1 to 1.6 were sheet 1). No solution sheet yet; the chair usually posts it around the session.</p>
+      <p style="margin:0"><b>Session.</b> Thursday 5 Nov, 2nd DS, ${esc(exe.room)}, German group. The sheet is worked through at the board; bring the state graphs drawn and the K-maps filled in, the discussion is usually about the don't cares and the formats.</p></div>
+
+    <h2>Block 1: combinational cells</h2>
+    ${task("1.7", "Full adder", `<p>Give the truth table, the Karnaugh maps and the logic functions of a one-bit full adder (sum S and carry C<sub>out</sub> as functions of A, B and C<sub>in</sub>), and rewrite the functions with the intermediate terms propagate P and generate G.</p>
+      ${tt1(["A", "B", "C<sub>in</sub>", "S", "C<sub>out</sub>"], [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const a = i >> 2 & 1, b = i >> 1 & 1, c = i & 1; return [a, b, c, a ^ b ^ c, a & b | c & (a ^ b)]; }), 2)}
+      <div class="kmaps">${kmap3("S: the odd-parity checkerboard, no group larger than 1", "A", "BC<sub>in</sub>", [0, 1, 1, 0, 1, 0, 0, 1], [{ cells: [1, 2, 4, 7], slot: 1 }], "S = A ⊕ B ⊕ C<sub>in</sub>")}
+      ${kmap3("C<sub>out</sub>: three pairs, each a majority of two inputs", "A", "BC<sub>in</sub>", [0, 0, 0, 1, 0, 1, 1, 1], [{ cells: [3, 7], slot: 1 }, { cells: [5, 7], slot: 2 }, { cells: [6, 7], slot: 3 }], "C<sub>out</sub> = AB + AC<sub>in</sub> + BC<sub>in</sub>")}</div>`,
+      `<p>The sum is 1 for an odd number of ones, which no rectangle in the map can simplify: four isolated cells, so S stays the XOR of the three inputs. The carry is the majority function: the three overlapping pairs in the map (BC<sub>in</sub> in cells 3 and 7, AC<sub>in</sub> in 5 and 7, AB in 6 and 7) are its prime implicants, all essential.</p>
+      ${ans([["S = A ⊕ B ⊕ C<sub>in</sub>", "sum of products: A̅B̅C + A̅BC̅ + AB̅C̅ + ABC"], ["C<sub>out</sub> = AB + AC<sub>in</sub> + BC<sub>in</sub>", "majority of the three inputs"], ["P = A ⊕ B, G = AB", "S = P ⊕ C<sub>in</sub>, C<sub>out</sub> = G + P·C<sub>in</sub>"]])}
+      <p>With propagate and generate the carry reads "generated here, or propagated from the stage before", which is exactly the form the carry-lookahead adder of lecture 2 (slides 27–32) builds its group logic on: g<sub>i</sub> and p<sub>i</sub> come out of one gate level, and c<sub>i+1</sub> = g<sub>i</sub> + p<sub>i</sub>c<sub>i</sub> is expanded instead of rippled. Note that AB + (A ⊕ B)C<sub>in</sub> and AB + AC<sub>in</sub> + BC<sub>in</sub> are the same function: when A = B = 1 the carry is generated whatever C<sub>in</sub> is, so the XOR may be replaced by an OR in the propagate term.</p>`, "sheet task")}
+
+    ${task("1.8", "Multiplexer", `<p>Give the truth table, the Karnaugh map and the logic function of a one-bit multiplexer: the output Z equals input A<sub>1</sub> or A<sub>2</sub> depending on the select signal S.</p>
+      ${tt1(["S", "A<sub>1</sub>", "A<sub>2</sub>", "Z"], [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const s = i >> 2 & 1, a1 = i >> 1 & 1, a2 = i & 1; return [s, a1, a2, s ? a2 : a1]; }), 1)}
+      ${kmap3("Z with S = 0 → A<sub>1</sub>, S = 1 → A<sub>2</sub>", "S", "A<sub>1</sub>A<sub>2</sub>", [0, 0, 1, 1, 0, 1, 1, 0], [{ cells: [2, 3], slot: 1 }, { cells: [5, 7], slot: 2 }], "Z = S̅·A<sub>1</sub> + S·A<sub>2</sub>")}`,
+      `<p>Which input S = 0 selects is a convention; the sheet does not fix it, so state it ("S = 0 selects A<sub>1</sub>"). The map has two pairs: S̅A<sub>1</sub> in the top row (cells 2 and 3, the right half) and SA<sub>2</sub> in the bottom row (cells 5 and 7). The cells 3 and 7 could also be grouped as A<sub>1</sub>A<sub>2</sub>, but that pair is not essential, it is already covered; including it only costs a gate (it is the consensus term that removes a static hazard, which this course has not discussed).</p>
+      ${ans([["Z = S̅A<sub>1</sub> + SA<sub>2</sub>", "two AND gates, one OR, one inverter"], ["2 prime implicants", "plus the redundant consensus term A<sub>1</sub>A<sub>2</sub>"], ["4 gates", "or one transmission-gate pair in CMOS (lecture 6)"]])}`, "sheet task")}
+
+    <h2>Block 2: state machines</h2>
+    ${task("2.1", "FSM I: a Moore machine from a state graph", `<p>Four states 00, 01, 11, 10 with reset into 00 and one input X; the output is the state itself (Z = S). From 00 the machine always goes to 01, from 01 always to 11; from 11 it returns to 00 if X = 1 and goes to 10 if X = 0; from 10 it returns to 00 if X = 1 and goes to 01 if X = 0. Determine (a) the state transition table and (b) the Karnaugh maps and equations of the next-state functions, for D flip-flops and basic gates.</p>
+      ${fsmDiagram("f1", { w: 340, h: 230, states: [{ k: "00", x: 170, y: 36, label: "00", reset: true }, { k: "01", x: 290, y: 120, label: "01" }, { k: "11", x: 170, y: 200, label: "11" }, { k: "10", x: 50, y: 120, label: "10" }],
+        edges: [{ from: "00", to: "01", bend: -18, label: "" }, { from: "01", to: "11", bend: -18, label: "" }, { from: "11", to: "00", bend: 0, label: "X = 1", cls: "x1", lx: 198, ly: 124 }, { from: "11", to: "10", bend: -18, label: "X = 0", cls: "x0" }, { from: "10", to: "00", bend: -18, label: "X = 1", cls: "x1" }, { from: "10", to: "01", bend: -46, label: "X = 0", cls: "x0", lx: 110, ly: 92 }] },
+        "State graph of task 2.1 redrawn: 00 to 01 and 01 to 11 unconditionally, 11 to 00 on X = 1 and to 10 on X = 0, 10 to 00 on X = 1 and to 01 on X = 0", "The sheet's graph redrawn. Blue arrows are taken when X = 1, orange when X = 0, gray always. The output needs no logic: Z is the state register.")}
+      ${lab("fsm1", "clock the machine of task 2.1")}`,
+      `<p>(a) With state bits s<sub>1</sub>s<sub>0</sub> and input X, the transition table has eight rows (four states × two inputs); the unconditional edges give the same next state in both rows.</p>
+      ${tt1(["s<sub>1</sub>", "s<sub>0</sub>", "X", "s<sub>1</sub>′", "s<sub>0</sub>′"], [[0, 0, 0, 0, 1], [0, 0, 1, 0, 1], [0, 1, 0, 1, 1], [0, 1, 1, 1, 1], [1, 1, 0, 1, 0], [1, 1, 1, 0, 0], [1, 0, 0, 0, 1], [1, 0, 1, 0, 0]], 2)}
+      <p>(b) One map per next-state bit over (s<sub>1</sub>, s<sub>0</sub>, X); minterm numbers are s<sub>1</sub>s<sub>0</sub>X read as a binary number.</p>
+      <div class="kmaps">${kmap3("s₁′ is 1 in 010, 011 and 110", "s<sub>1</sub>", "s<sub>0</sub>X", [0, 0, 1, 1, 0, 0, 1, 0], [{ cells: [2, 3], slot: 1 }, { cells: [2, 6], slot: 2 }], "s<sub>1</sub>′ = s̅<sub>1</sub>s<sub>0</sub> + s<sub>0</sub>X̅")}
+      ${kmap3("s₀′ is 1 in 000, 001, 010, 011 and 100", "s<sub>1</sub>", "s<sub>0</sub>X", [1, 1, 1, 1, 1, 0, 0, 0], [{ cells: [0, 1, 2, 3], slot: 1 }, { cells: [0, 4], slot: 2 }], "s<sub>0</sub>′ = s̅<sub>1</sub> + s̅<sub>0</sub>X̅")}</div>
+      ${ans([["s<sub>1</sub>′ = s̅<sub>1</sub>s<sub>0</sub> + s<sub>0</sub>X̅", "= s<sub>0</sub>·(s̅<sub>1</sub> + X̅)"], ["s<sub>0</sub>′ = s̅<sub>1</sub> + s̅<sub>0</sub>X̅", "two 2-input gates and an OR"], ["Z = s<sub>1</sub>s<sub>0</sub>", "Moore output straight from the flip-flops"]])}
+      <p>Check with the explorer: holding X = 0 cycles 00 → 01 → 11 → 10 → 01 → 11 → 10 …, holding X = 1 gives 00 → 01 → 11 → 00 → …; both sequences follow from the equations (for X = 0: s<sub>1</sub>′ = s<sub>0</sub>, s<sub>0</sub>′ = s̅<sub>1</sub> + s̅<sub>0</sub>). Circuit: two D flip-flops with the reset input tied to the asynchronous clear, the equations in front of their D inputs.</p>`, "sheet task")}
+
+    ${task("2.2", "FSM II: outputs and don't cares", `<p>Three states 00 (reset, Z = 11), 01 (Z = 10) and 10 (Z = 01) and one input A. From 00: A = 0 → 01, A = 1 → 10. From 01: A = 0 → 10, A = 1 → 00. From 10: A = 0 → 00, A = 1 → 01. The fourth state 11 (Z = 00) is drawn with a solid edge to 00 and dotted "don't care" edges, which are to be used only in part (c). Determine (a) the transition and output tables, (b) the Karnaugh maps and equations for next state and output, (c) the simplifications the don't cares allow.</p>
+      ${fsmDiagram("f2", { w: 340, h: 240, states: [{ k: "00", x: 170, y: 36, label: "00", out: "Z = 11", reset: true }, { k: "01", x: 290, y: 120, label: "01", out: "Z = 10" }, { k: "10", x: 50, y: 120, label: "10", out: "Z = 01" }, { k: "11", x: 170, y: 196, label: "11", out: "Z = 00", dc: true }],
+        edges: [{ from: "00", to: "01", bend: 22, label: "A = 0", cls: "x0" }, { from: "01", to: "00", bend: 22, label: "A = 1", cls: "x1" }, { from: "00", to: "10", bend: -22, label: "A = 1", cls: "x1" }, { from: "10", to: "00", bend: -22, label: "A = 0", cls: "x0" }, { from: "01", to: "10", bend: -22, label: "A = 0", cls: "x0", lx: 230, ly: 147 }, { from: "10", to: "01", bend: -22, label: "A = 1", cls: "x1", lx: 162, ly: 99 }, { from: "11", to: "00", bend: 30, label: "", dc: true }] },
+        "State graph of task 2.2 redrawn: a three-state ring that counts up on A = 0 and down on A = 1, plus the unused state 11 with a dashed edge back to reset", "Our reading of the sheet's graph: the labels sit next to the source state, as in task 2.1. The dashed state and edge are the don't cares of part (c); without them 11 simply returns to 00.")}
+      ${lab("fsm2", "clock the machine of task 2.2")}`,
+      `<p>(a) Transition table over (s<sub>1</sub>, s<sub>0</sub>, A), with 11 → 00 for both inputs as drawn; output table over the state alone (Moore).</p>
+      ${tt1(["s<sub>1</sub>", "s<sub>0</sub>", "A", "s<sub>1</sub>′", "s<sub>0</sub>′"], [[0, 0, 0, 0, 1], [0, 0, 1, 1, 0], [0, 1, 0, 1, 0], [0, 1, 1, 0, 0], [1, 0, 0, 0, 0], [1, 0, 1, 0, 1], [1, 1, 0, 0, 0], [1, 1, 1, 0, 0]], 2)}
+      ${tt1(["s<sub>1</sub>", "s<sub>0</sub>", "Z<sub>1</sub>", "Z<sub>0</sub>"], [[0, 0, 1, 1], [0, 1, 1, 0], [1, 0, 0, 1], [1, 1, 0, 0]], 2)}
+      <p>(b) Without don't cares every 1 is isolated: two three-literal terms per next-state bit.</p>
+      <div class="kmaps">${kmap3("s₁′ without don't cares", "s<sub>1</sub>", "s<sub>0</sub>A", [0, 1, 1, 0, 0, 0, 0, 0], [{ cells: [1], slot: 1 }, { cells: [2], slot: 2 }], "s<sub>1</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A + s̅<sub>1</sub>s<sub>0</sub>A̅")}
+      ${kmap3("s₀′ without don't cares", "s<sub>1</sub>", "s<sub>0</sub>A", [1, 0, 0, 0, 0, 1, 0, 0], [{ cells: [0], slot: 1 }, { cells: [5], slot: 2 }], "s<sub>0</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>s̅<sub>0</sub>A")}</div>
+      <p>The output table is the bitwise inverse of the state code, and that even holds for the unused state: Z<sub>1</sub> = s̅<sub>1</sub>, Z<sub>0</sub> = s̅<sub>0</sub>, two inverters.</p>
+      <p>(c) With s<sub>1</sub>s<sub>0</sub> = 11 as don't care (minterms 6 and 7), each map gains one neighbour: cell 2 pairs with 6, cell 5 pairs with 7.</p>
+      <div class="kmaps">${kmap3("s₁′ with don't cares", "s<sub>1</sub>", "s<sub>0</sub>A", [0, 1, 1, 0, 0, 0, "–", "–"], [{ cells: [1], slot: 1 }, { cells: [2, 6], slot: 2 }], "s<sub>1</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A + s<sub>0</sub>A̅")}
+      ${kmap3("s₀′ with don't cares", "s<sub>1</sub>", "s<sub>0</sub>A", [1, 0, 0, 0, 0, 1, "–", "–"], [{ cells: [0], slot: 1 }, { cells: [5, 7], slot: 2 }], "s<sub>0</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>A")}</div>
+      ${ans([["s<sub>1</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A + s<sub>0</sub>A̅", "(c): one literal fewer than s̅<sub>1</sub>s̅<sub>0</sub>A + s̅<sub>1</sub>s<sub>0</sub>A̅"], ["s<sub>0</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>A", "(c): one literal fewer than s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>s̅<sub>0</sub>A"], ["Z = s̅<sub>1</sub> s̅<sub>0</sub>", "two inverters, with or without don't cares"]])}
+      <p>The price of the simplification: if the machine ever lands in 11 (power-up without reset, a glitch), the don't-care equations send it to s<sub>1</sub>′ = A̅, s<sub>0</sub>′ = A, so it recovers into 10 or 01 on the next clock rather than into the reset state; it does not lock up, which is the question to ask whenever unused codes are declared don't care. The sheet draws the dotted edges from 11 to 00, 01 and 10, which is exactly this set of possible exits.</p>
+      <p class="muted">If the official solution has s<sub>1</sub> and s<sub>0</sub> swapped (A = 0 → 10 from reset), the graph's labels were meant next to the arrowheads; the structure (a mod-3 up/down counter) and the gate count are the same, only the roles of 01 and 10 change.</p>`, "sheet task")}
+
+    ${task("2.3", "FSM III: the control unit of a small ALU, from Verilog", `<p>The listing describes a Moore machine with five states IDLE = 000, LOAD = 001, ADD = 010, SUB = 011, STORE = 100, two inputs start_i and addsub_i, four outputs read_o, write_o, mode_o, enable_o, a synchronous next-state register with asynchronous reset into IDLE, a combinational next-state block (case over the state, the default branch goes to IDLE) and a combinational output block. Draw the state diagram and derive the equations for the transitions and outputs.</p>
+      ${fsmDiagram("f3", { w: 400, h: 270, states: [{ k: "IDLE", x: 50, y: 70, label: "IDLE 000", reset: true, out: "all 0" }, { k: "LOAD", x: 200, y: 70, label: "LOAD 001", out: "read_o" }, { k: "ADD", x: 330, y: 150, label: "ADD 010", out: "mode, enable" }, { k: "SUB", x: 120, y: 150, label: "SUB 011", out: "enable" }, { k: "STORE", x: 200, y: 230, label: "STORE 100", out: "write_o" }],
+        edges: [{ from: "IDLE", to: "IDLE", bend: -1, label: "start_i = 0" }, { from: "IDLE", to: "LOAD", bend: 0, label: "start_i = 1", cls: "x1" }, { from: "LOAD", to: "ADD", bend: 0, label: "addsub_i = 1", cls: "x1", lx: 300, ly: 100 }, { from: "LOAD", to: "SUB", bend: 0, label: "addsub_i = 0", cls: "x0", lx: 200, ly: 125 }, { from: "ADD", to: "STORE", bend: 0, label: "" }, { from: "SUB", to: "STORE", bend: 0, label: "" }, { from: "STORE", to: "IDLE", bend: -95, label: "" }] },
+        "State diagram derived from the Verilog: IDLE waits for start, LOAD branches on addsub into ADD or SUB, both continue to STORE, which returns to IDLE", "Drawn from the listing: the case statement is the edges, the output block the text under each state. Unlabelled edges are unconditional; the three unused codes 101, 110, 111 fall into the default branch and go to IDLE.")}
+      ${lab("alufsm", "clock the ALU control unit")}
+      <p class="muted">A full run: start_i high for one cycle while in IDLE, addsub_i = 1 at the LOAD cycle.</p>
+      ${aluRun()}`,
+      `<p>Reading the listing: the first always block is the state transition function (next_state from state and the inputs), the second the output function (outputs from the state only, so Moore), the third the state register (posedge clock, asynchronous reset). With state bits s<sub>2</sub>s<sub>1</sub>s<sub>0</sub>:</p>
+      ${tt1(["State", "s<sub>2</sub>s<sub>1</sub>s<sub>0</sub>", "Next", "read", "write", "mode", "enable"], [["IDLE", "000", "LOAD if start_i, else IDLE", 0, 0, 0, 0], ["LOAD", "001", "ADD if addsub_i, else SUB", 1, 0, 0, 0], ["ADD", "010", "STORE", 0, 0, 1, 1], ["SUB", "011", "STORE", 0, 0, 0, 1], ["STORE", "100", "IDLE", 0, 1, 0, 0], ["101, 110, 111", "unused", "IDLE (default)", 0, 0, 0, 0]], 4)}
+      <p>Next-state equations, read off the table: a bit is 1 exactly in the rows whose next state has it set.</p>
+      <div class="formula">s<sub>0</sub>′ = s̅<sub>2</sub>s̅<sub>1</sub>s̅<sub>0</sub>·start_i + s̅<sub>2</sub>s̅<sub>1</sub>s<sub>0</sub>·addsub_i̅ &nbsp;&nbsp; (LOAD or SUB next)<br>s<sub>1</sub>′ = s̅<sub>2</sub>s̅<sub>1</sub>s<sub>0</sub> &nbsp;&nbsp; (ADD or SUB next: from LOAD, whatever addsub_i)<br>s<sub>2</sub>′ = s̅<sub>2</sub>s<sub>1</sub> &nbsp;&nbsp; (STORE next: from ADD or SUB)</div>
+      <div class="formula">read_o = s̅<sub>2</sub>s̅<sub>1</sub>s<sub>0</sub> &nbsp;&nbsp; mode_o = s̅<sub>2</sub>s<sub>1</sub>s̅<sub>0</sub> &nbsp;&nbsp; enable_o = s̅<sub>2</sub>s<sub>1</sub> &nbsp;&nbsp; write_o = s<sub>2</sub>s̅<sub>1</sub>s̅<sub>0</sub></div>
+      ${ans([["5 states, 3 flip-flops", "binary coding as in the parameters; one-hot would use 5"], ["4 cycles per operation", "LOAD → ADD or SUB → STORE → IDLE after start_i"], ["write_o = s<sub>2</sub>", "if the unused codes are treated as don't cares; the listing's default branch keeps them out of STORE anyway"]])}
+      <p>The default branch of the case statement is what makes the unused codes safe: 101, 110 and 111 go to IDLE in one clock, and with s<sub>2</sub>′ = s̅<sub>2</sub>s<sub>1</sub> and the other two equations above they do (every next-state term contains s̅<sub>2</sub>, so with s<sub>2</sub> = 1 all three D inputs are 0 whatever s<sub>1</sub>s<sub>0</sub> are). Treating them as don't cares instead shortens write_o to s<sub>2</sub> and enable_o stays s̅<sub>2</sub>s<sub>1</sub> = s<sub>1</sub> if 11x is also don't care. In the lecture's terms (lecture 4, slide 14) this machine is the sequencer that would drive the ALU's opcode: mode_o selects add or subtract, enable_o clocks the result register, read_o and write_o talk to the memory.</p>`, "sheet task")}
+
+    <h2>Block 3: number formats</h2>
+    ${task("3.1", "Binary, Gray and two's complement", `<p>(a) Encode 0 … 7 in binary and in Gray code, and the negative values −0 … −7 in two's complement. (b) Derive the 4-bit Gray code from the 3-bit one.</p>`,
+      `${tt1(["n", "binary", "Gray", "−n", "two's complement (4 bits)"], CODES7, 0)}
+      <p>Gray code: g = b ⊕ (b ≫ 1), so neighbouring values differ in one bit (3 → 4 is 010 → 110). Two's complement of −n in 4 bits is 16 − n: invert the bits of n and add 1 (3 = 0011 → 1100 + 1 = 1101). −0 is 0000, the same code as +0: two's complement has only one zero, the asymmetric range −8 … 7 is the consequence (lecture 2, slides 9–10). Three bits would only reach −4, so the negative column needs the fourth bit.</p>
+      <p>(b) Reflection (lecture 2, slide 6): write the eight 3-bit codes, append them again in reverse order, prefix the first half with 0 and the mirrored half with 1. Inside each half the one-bit property is inherited; at the seam the two codes are 0100 and 1100, which differ only in the new bit.</p>
+      ${grayReflect()}
+      ${ans([["0000 0001 0011 0010 0110 0111 0101 0100", "4-bit Gray code, first half (prefix 0)"], ["1100 1101 1111 1110 1010 1011 1001 1000", "second half (mirrored, prefix 1)"], ["1000 → 0000", "the wrap-around also changes one bit, so the code is cyclic"]])}`, "sheet task")}
+
+    ${task("3.2", "Fixed-point formats", `<p>A is given in s5.6 (sign, 5 integer bits, 6 fractional bits), B in s7.4. (a) Show the encoding. (b) What must be considered when adding A and B, and which format does Z = A + B have? (c) Which format does the product Z = A × B have? (d) Which format results from a 12-bit integer divider computing Z = A / B, and how can the number of fractional bits be increased?</p>
+      <p class="muted">The sheet gives the formats but no values; we use A = 13.640625 and B = −37.25 to make the bit fields concrete.</p>
+      ${fxRow("A = 13.640625", A32, 5, 6)}${fxRow("B = −37.25", B32, 7, 4)}
+      ${chart("fmt", leg([[2, "sign"], [1, "integer bits"], [3, "fractional bits"]]))}
+        <figcaption>The six formats of this task aligned at the binary point. The adder works on the widest common format (s7.6) and produces one more integer bit; the multiplier adds integer bits and fractional bits; the integer divider only keeps the difference of the fractional bits.</figcaption>
+      </figure>`,
+      `<p>(a) The code is the value times 2<sup>frac</sup>: A → 13.640625 · 64 = 873 = 0 01101 101001; B → −37.25 · 16 = −596, in 12-bit two's complement 4096 − 596 = 3500 = 1 1011010 1100 (check: −128 + 90 + 0.75 = −37.25).</p>
+      <p>(b) The binary points must line up: shift B left by two positions (append two fractional zeros, s7.6) and sign-extend A by two integer bits (s7.6). Both are 14-bit words; a 14-bit adder can overflow (|A + B| may reach 2<sup>7</sup>), so the result gets one more integer bit: Z = A + B in s8.6, a 15-bit adder with sign-extended operands, or a 14-bit adder plus the overflow rule c<sub>n−1</sub> ⊕ c<sub>n</sub> of lecture 2. Here A + B = −23.609375 = 1 11101000 011001 in s8.6.</p>
+      ${fxRow("A + B = −23.609375", A32 + B32, 8, 6)}
+      <p>(c) A product carries both scales: 2<sup>−6</sup> · 2<sup>−4</sup> = 2<sup>−10</sup>, so 10 fractional bits, and the integer part grows to 5 + 7 + 1 = 13 bits (the 12 × 12 two's-complement multiplier of lecture 3 delivers 24 bits): Z = A × B in s13.10. A × B = −508.11328125 fits.</p>
+      ${fxRow("A × B = −508.11328125", A32 * B32, 13, 10)}
+      <p>(d) An integer divider sees only the codes: 873 / (−596) = −1.46 → −1 (toward zero). The code of the quotient carries the scale 2<sup>−6</sup>/2<sup>−4</sup> = 2<sup>−2</sup>, so the 12-bit result is in s9.2: here −1 · 2<sup>−2</sup> = −0.25, while A/B = −0.366. Two fractional bits are all that survive. To get more, scale the dividend up before dividing: shifting A left by k bits (a wider dividend register or a 12+k-bit divider) gives k extra fractional bits; with k = 8, 873 · 256 / (−596) = −374 → −374 / 2<sup>10</sup> = −0.3652. Shifting the divisor right instead would throw away its low bits and is not an option.</p>
+      ${ans([["s7.6 → s8.6", "(b) align to the finer fraction, one more integer bit for the sum"], ["s13.10 · 24 bits", "(c) integer bits add, fractional bits add"], ["s9.2 · 12 bits", "(d) fractional bits subtract; pre-shift the dividend for more"]])}`, "sheet task")}
+
+    ${task("3.3", "IEEE 754: half and single precision", `<p>(a) Decode the two 16-bit IEEE 754 words 1100 0001 0000 0000 and 0111 1001 1111 1111 (1 sign bit, 5 exponent bits with bias 15, 10 mantissa bits). (b) Encode 1.0, 0.0 and −5.0 in 32-bit single precision. (c) Using the two values from (a), describe the steps of a floating-point addition and multiplication.</p>
+      ${halfRow("1100000100000000")}${halfRow("0111100111111111")}`,
+      `<p>(a) The first word: sign 1, E = 10000 = 16 → e = 1, mantissa 0100000000 → 1.25; value −1.25 · 2 = <b>−2.5</b>. The second: sign 0, E = 11110 = 30 → e = 15 (the largest normal exponent; 31 is reserved), mantissa 0111111111 = 511/1024; value 1.4990234375 · 32768 = <b>49120</b>. The largest half-precision number is 65504 (E = 30, all mantissa bits 1).</p>
+      <p>(b) Single precision has bias 127 and 23 mantissa bits.</p>
+      ${ieeeRow(1)}${ieeeRow(0)}${ieeeRow(-5)}
+      <p>0.0 is the special case: E = 0 with mantissa 0 means zero (the formula line above is not meant literally); −0.0 would set the sign bit. −5 = −1.01<sub>2</sub> · 2<sup>2</sup>: sign 1, E = 129, mantissa 01 followed by zeros.</p>
+      ${ans([["0x3F800000", "1.0: E = 127, mantissa 0"], ["0x00000000", "0.0: everything 0"], ["0xC0A00000", "−5.0: sign 1, E = 129, mantissa 0.25"]])}
+      <p>(c) <b>Addition</b> 49120 + (−2.5), the lecture-4 recipe (slide 20): sort by magnitude (49120 first; result sign 0, exponent e = 15); restore the hidden ones, M<sub>1</sub> = 1.0111111111, M<sub>2</sub> = 1.0100000000; align M<sub>2</sub> by shifting right by e<sub>1</sub> − e<sub>2</sub> = 14 positions, which pushes every one of its bits below the 10-bit mantissa (precision loss); the signs differ, so subtract: M = 1.0111111111 − 0.00000000000001010 = 1.01111111101011…; normalise (nothing to do, 1 ≤ M &lt; 2); round to nearest even at 10 bits: the dropped part 0.1011… of an ulp is above one half, so round up to 1.0111111111. Result 49120: the −2.5 is smaller than half an ulp (ulp = 2<sup>15−10</sup> = 32) and vanishes. The lecture page's addition explorer runs exactly this pair.</p>
+      <p><b>Multiplication</b> 49120 × (−2.5): sign 0 xor 1 = 1; mantissas 1.4990234375 × 1.25 = 1.873779296875, within 1 ≤ m &lt; 4 and below 2, so no shift; exponent E = 30 + 16 − 15 = 31, which is the reserved code: overflow, the result is <b>−∞</b> (the true product −122 800 exceeds 65504). Slide 17's "upper limit: infinity" case.</p>
+      ${ans([["49120", "sum: the small operand is shifted out entirely"], ["−∞", "product: E = 31 is out of range"], ["14 and 1", "bits of right shift in the addition; multiplications never shift more than one"]])}`, "sheet task")}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the three state diagrams and fill in the K-maps by hand once; the explorers only confirm, the board work is the drawing.</li>
+      <li>Reread <a href="digital-circuit-design/lecture.html?n=1">lecture 1</a> (K-maps, Moore machines, state coding) for block 2, <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a> (Gray code, two's complement, fixed point, IEEE 754) for block 3, and the floating-point section of <a href="digital-circuit-design/lecture.html?n=4">lecture 4</a> for 3.3 (c).</li>
+      <li>Questions to settle in the session: the arrow-label convention of the graph in 2.2; whether a 12-bit integer divider in 3.2 (d) is meant to take 12-bit operands or deliver a 12-bit quotient; which rounding mode the chair assumes in 3.3 (c).</li>
+    </ul>
+    <div class="why"><div class="kicker">Context, not on the sheet: what these tasks train</div>
+      <p>Blocks 1 and 2 are the written-exam staples of a digital design course: a truth table to a minimal equation, a graph to a transition table to D-flip-flop equations, and the don't-care question. Block 3 is the arithmetic chapter in exam form: format bookkeeping (where does the binary point go, how wide must the adder be) and the IEEE 754 decode/encode with the alignment-and-rounding story. The Verilog task also previews the hardware description languages of the later lectures: the three always blocks are the canonical way to write a Moore machine.</p></div>
+    <p class="muted">Previous exercise: <a href="digital-circuit-design/exercise.html?n=1">exercise 1</a>. Next: <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a>, expected to cover lectures 5 and 6. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=1">1</a>, <a href="digital-circuit-design/lecture.html?n=2">2</a> and <a href="digital-circuit-design/lecture.html?n=4">4</a>.</p>`;
+}
 function placeholder() {
   const d = daysUntil(x.date);
   return `${head(x)}
@@ -206,7 +405,7 @@ function placeholder() {
       <p class="muted">This exercise is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(x.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(x.blurb)}<br>The write-up appears here once the sheet is available and the session has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: exercise1 };
+const WRITEUPS = { 1: exercise1, 2: exercise2 };
 if (!x) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(n)}.</p>`;
 } else {
