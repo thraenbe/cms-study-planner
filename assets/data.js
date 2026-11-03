@@ -756,7 +756,346 @@ window.CMS = {
     "opal": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/32365445134"
    },
    "opalText": "This course enable the students to master the basics of stochastic modelling and simulation. The course first discusses discrete-time models, followed by two classic examples, and then goes on to discuss continuous-time models.",
-   "note": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan); the faculty catalogue lists it under CMS-COR-SAP. First lecture 19 October 2026; per the catalogue, lecture Mondays (SCH/A117/H) and exercise Thursdays (BEY/0E39/U), times not yet published. Register for the exam in Selma."
+   "note": "Taught this winter as “Stochastic Modeling and Simulation” (Dr. Nandu Gopan); the faculty catalogue lists it under CMS-COR-SAP. First lecture 19 October 2026; per the catalogue, lecture Mondays (SCH/A117/H) and exercise Thursdays (BEY/0E39/U), times not yet published. Register for the exam in Selma.",
+   "course": {
+    "page": "stochastics.html",
+    "rooms": {
+     "lecture": "SCH/A117/H (Mon 13:00–14:30, 4th DS)",
+     "exercise": "BEY/0E39/U (Thu 13:00–14:30, 4th DS)"
+    },
+    "keyDates": [
+     {
+      "date": "2026-10-19",
+      "label": "First lecture (course introduction)",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-10-29",
+      "label": "First tutorial (Pluto notebook T01)",
+      "kind": "exercise"
+     },
+     {
+      "date": "2026-11-18",
+      "label": "Buß- und Bettag (no sessions)",
+      "kind": "break"
+     },
+     {
+      "date": "2026-12-21",
+      "label": "Christmas break until 3 Jan",
+      "kind": "break"
+     },
+     {
+      "date": "2027-02-01",
+      "label": "Last lecture slot",
+      "kind": "lecture"
+     },
+     {
+      "date": "2027-02-04",
+      "label": "Last tutorial slot",
+      "kind": "exercise"
+     },
+     {
+      "date": "2027-02-08",
+      "label": "Exam period starts (8 Feb – 6 Mar); exam date not announced",
+      "kind": "deadline"
+     }
+    ],
+    "grading": [
+     {
+      "variant": "CMS-COR-SAP (CMS, basic professional training)",
+      "how": "Written in-person exam, 90 min, English; the module grade is the exam grade. Allowed: four hand-written A4 sheets (8 pages) and a non-programmable calculator. Absolute scale: 80 % of the points is a 1.0, 40 % passes, linear in between; one point per exam minute.",
+      "selma": "exam registration opens in December; course enrolment is not exam registration"
+     }
+    ],
+    "format": "5 credits, 150 h, 2/2/0/0 (lecture / exercise / tutorial / self-study), 12 lectures + 12 exercise sessions. Lecture Mondays 13:00–14:30 (SCH/A117/H), exercises Thursdays 13:00–14:30 (BEY/0E39/U). Taught in English.",
+    "contact": "Lectures: Dr. Nandu Gopan (Chair of Scientific Computing for Systems Biology). Questions about a lecture go by e-mail in advance with the subject line “SMS 26 Lec#”. The exercises are run by a student tutor of the CMS programme.",
+    "lectures": [
+     {
+      "n": 0,
+      "title": "Course introduction",
+      "date": "2026-10-19",
+      "icon": "🎲",
+      "covered": true,
+      "blurb": "What a stochastic model predicts (probabilities of states, not states), the four hurdles of stochastic simulation and the toolkits that meet them, the roadmap of the course from Markov chains and Monte Carlo to Brownian motion and numerical SDEs, and the organisation: 5 credits, 12+12 sessions, a 90-minute written exam."
+     },
+     {
+      "n": 1,
+      "title": "Probability refresher",
+      "date": "2026-10-26",
+      "icon": "🃏",
+      "covered": true,
+      "blurb": "From population and sample to events and P(A); the three Kolmogorov axioms and the Boolean rules that follow; permutations and combinations; conditional probability as renormalisation; independence; Bayes' theorem; the law of total probability, the chain rule and the birthday problem; binary, discrete and continuous random variables."
+     },
+     {
+      "n": 2,
+      "title": "Random variate generation",
+      "date": "2026-11-02",
+      "icon": "🔀",
+      "covered": false,
+      "blurb": "Held on 2 Nov; slides not in OPAL yet. Planned topic (OPAL course overview): Transformation of random variables, pseudo- and quasi-random numbers, low-discrepancy sequences, and the transformation algorithms: inversion, Box–Muller, accept–reject and composition–rejection.",
+      "planned": true
+     },
+     {
+      "n": 3,
+      "title": "Discrete-time Markov chains",
+      "date": "2026-11-09",
+      "icon": "⛓️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Discrete-time stochastic processes, Markov chains and their transition matrix.",
+      "planned": true
+     },
+     {
+      "n": 4,
+      "title": "Law of large numbers and Monte Carlo",
+      "date": "2026-11-16",
+      "icon": "🎯",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Law of large numbers, Monte Carlo methods, Monte Carlo integration as the example, importance sampling.",
+      "planned": true
+     },
+     {
+      "n": 5,
+      "title": "Variance and variance reduction",
+      "date": "2026-11-23",
+      "icon": "📉",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Monitoring the variance of a Monte Carlo estimate and the techniques that reduce it.",
+      "planned": true
+     },
+     {
+      "n": 6,
+      "title": "Rao–Blackwell and Markov chain Monte Carlo",
+      "date": "2026-11-30",
+      "icon": "🔗",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Rao–Blackwellisation, Markov chain Monte Carlo, detailed balance, convergence criteria and acceleration methods.",
+      "planned": true
+     },
+     {
+      "n": 7,
+      "title": "Classic MCMC samplers 1: Gibbs",
+      "date": "2026-12-07",
+      "icon": "🧮",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Gibbs sampling: one coordinate at a time from its full conditional.",
+      "planned": true
+     },
+     {
+      "n": 8,
+      "title": "Classic MCMC samplers 2: Metropolis–Hastings",
+      "date": "2026-12-14",
+      "icon": "🚶",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Metropolis–Hastings, convergence diagnostics and stopping conditions.",
+      "planned": true
+     },
+     {
+      "n": 9,
+      "title": "Monte Carlo optimisation",
+      "date": "2027-01-04",
+      "icon": "🧗",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Stochastic gradient descent, simulated annealing, evolution strategies and CMA-ES.",
+      "planned": true
+     },
+     {
+      "n": 10,
+      "title": "Random walks and Brownian motion",
+      "date": "2027-01-11",
+      "icon": "🌫️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Random walks, Brownian motion in 1, 2, 3 and n dimensions, the connection to diffusion, the continuum limit of a random walk.",
+      "planned": true
+     },
+     {
+      "n": 11,
+      "title": "Stochastic calculus",
+      "date": "2027-01-18",
+      "icon": "∫",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Itô calculus and the analytically solvable Ornstein–Uhlenbeck process.",
+      "planned": true
+     },
+     {
+      "n": 12,
+      "title": "Numerical methods for SDEs",
+      "date": "2027-01-25",
+      "icon": "🧭",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Euler–Maruyama and Milstein schemes, strong and weak convergence.",
+      "planned": true
+     },
+     {
+      "n": 13,
+      "title": "Master equation and Fokker–Planck",
+      "date": "2027-02-01",
+      "icon": "⚗️",
+      "covered": false,
+      "blurb": "Not held yet. Planned topic (OPAL course overview): Master equation, Fokker–Planck and Kolmogorov forward equations, chemical kinetics as the example.",
+      "planned": true
+     }
+    ],
+    "exercises": [
+     {
+      "n": 1,
+      "title": "Probability refresher 2: random variables and distributions",
+      "date": "2026-10-29",
+      "published": "2026-11-01",
+      "icon": "📓",
+      "covered": true,
+      "lecture": 1,
+      "points": null,
+      "blurb": "A Pluto notebook (Julia): the screening-test table, sequences and the chain rule, memory, the birthday problem, binary/discrete/continuous random variables, PMF and CDF of two dice, joint tables, densities and the inverse CDF, moments and covariance, the common distributions and the central limit theorem, plus nine exercises."
+     },
+     {
+      "n": 2,
+      "title": null,
+      "date": "2026-11-05",
+      "icon": "🧪",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 3,
+      "title": null,
+      "date": "2026-11-12",
+      "icon": "🎛️",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 4,
+      "title": null,
+      "date": "2026-11-19",
+      "icon": "🧩",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 5,
+      "title": null,
+      "date": "2026-11-26",
+      "icon": "📐",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 6,
+      "title": null,
+      "date": "2026-12-03",
+      "icon": "🔬",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 7,
+      "title": null,
+      "date": "2026-12-10",
+      "icon": "🪜",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 8,
+      "title": null,
+      "date": "2026-12-17",
+      "icon": "🎚️",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 9,
+      "title": null,
+      "date": "2027-01-07",
+      "icon": "🧷",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 10,
+      "title": null,
+      "date": "2027-01-14",
+      "icon": "🧲",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 11,
+      "title": null,
+      "date": "2027-01-21",
+      "icon": "🪄",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 12,
+      "title": null,
+      "date": "2027-01-28",
+      "icon": "🗜️",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     },
+     {
+      "n": 13,
+      "title": null,
+      "date": "2027-02-04",
+      "icon": "🧰",
+      "covered": false,
+      "lecture": null,
+      "points": null,
+      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+     }
+    ],
+    "opalNote": "course page with lecture decks (Lecture2026) and Pluto notebooks (Exercises2026)",
+    "selmaNote": "registration is expected to open in December",
+    "exerciseNote": "The exercises are Pluto.jl notebooks (Julia): install Julia and Pluto once, open the notebook of the week, work through the interactive figures, quick checks and the exercise block at the end. No points, no hand-in; the first tutorial was on 29 Oct (no session on 22 Oct).",
+    "materialsNote": "Lecture decks and tutorial notebooks are in the OPAL course (Lecture2026, Exercises2026); the course also links its own lecture notes (Sbalzarini & Zechner, TU Dresden) and a script and sample questions. Exercise setup: Julia + Pluto; a Python route (Anaconda with jupyter, numpy, scipy, matplotlib) is described on the OPAL page too.",
+    "planNote": "The OPAL course overview lists lectures 0–14 for 14 Monday slots; lectures from 2 on carry the planned topic in that order until the deck appears.",
+    "reading": [
+     {
+      "t": "Sbalzarini & Zechner – Stochastic Modeling and Simulation (lecture notes, TU Dresden)",
+      "note": "the course text; lecture 1 covers sections 1.1–1.3, sections 1.4–1.5 are self-study"
+     },
+     {
+      "t": "Feller – An Introduction to Probability Theory and Its Applications (Wiley, 1957)",
+      "note": "suggested in the OPAL overview"
+     },
+     {
+      "t": "Robert & Casella – Monte Carlo Statistical Methods (Springer, 2004)",
+      "note": "suggested in the OPAL overview"
+     },
+     {
+      "t": "Blitzstein & Hwang – Introduction to Probability (CRC, 2019); Seeing Theory (Brown)",
+      "note": "further reading named in tutorial 1"
+     }
+    ]
+   },
+   "status": {
+    "opal": true,
+    "selma": false
+   }
   },
   "CMS-COR-SSE": {
    "code": "CMS-COR-SSE",

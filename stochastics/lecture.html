@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Stochastics and Probability · Lecture</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="stochastics/sap.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="stochastics/sap.js"></script>
+<script src="stochastics/sap-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="sap">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today } = SAP;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = SAPViz;
+const q = new URLSearchParams(location.search).get("n");
+const l = q === null ? null : c.lectures.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="stochastics.html">← All lectures and exercises</a>`;
+// Write-up building blocks: a context box (what a lecturer says aloud, not on the slides), a worked example,
+// a question box, a table view for a chart (accessibility), and the lecture header.
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const qbox = (t, items) => `<div class="q"><div class="kicker">${t}</div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+function head(l) {
+  const meta = `${l.date ? fmt(l.date) : "no fixed date"}${lec ? ` · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who || "")}` : ""}`;
+  return `${back}<div class="big-icon">${l.icon}</div><h1>Lecture ${l.n} – ${esc(l.title)}</h1><p class="meta">${meta}</p>`;
+}
+
+// ---------------- Write-ups: one function per lecture, registered in WRITEUPS below ----------------
+// Pattern (see .claude/skills/study-dashboard/references/page-pattern.md):
+//   CHARTS.name = narrow => `<svg viewBox="0 0 ${narrow ? 340 : 600} …" role="img" aria-label="…">…</svg>`;
+//   function lecture1() { return `${head(l)}<p class="lead">…</p><h2>…</h2>${chart("name", leg([[1, "series"]]))}<figcaption>…</figcaption></figure>${why("Context, not on the slides: …", "<p>…</p>")}${ex("Worked example: …", "<p>…</p>")}<h2>Take-home</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(l.date);
+  return `${head(l)}
+    <div class="box placeholder">
+      <div class="big-icon">${l.icon}</div>
+      <h2 style="margin-top:.4rem">Material not yet covered</h2>
+      <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}${lec ? `, ${lec.start}–${lec.end}, ${esc(lec.room)}` : ""}.<br>Planned topic: ${esc(l.blurb)}<br>The summary appears here once the lecture has taken place and its slides are available.</p>
+    </div>`;
+}
+// ---------------- Shared helpers of the write-ups ----------------
+const mulberry = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const gauss = r => { let u = 0, v = 0; while (!u) u = r(); v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const tiles = items => `<div class="tiles">${items.map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const cap = t => `<figcaption>${t}</figcaption></figure>`;
+const lecLink = (n, t) => { const x = c.lectures.find(y => y.n === n); return x ? `<a href="stochastics/lecture.html?n=${n}">${t || `lecture ${n}`}</a>` : t || `lecture ${n}`; };
+const exeLink = (n, t) => `<a href="stochastics/exercise.html?n=${n}">${t || `tutorial ${n}`}</a>`;
+// Birthday problem: P(at least two of n share a birthday), 365 equally likely days.
+const bday = n => { let p = 1; for (let i = 0; i < n; i++) p *= (365 - i) / 365; return 1 - p; };
+// Continuous versions for drawing: linear interpolation between whole people / whole days.
+const smooth = f => n => { const a = Math.floor(n), t = n - a; return t ? (1 - t) * f(a) + t * f(a + 1) : f(a); };
+const bdayS = smooth(bday);
+// Weather chain of the introduction (rows: from Sunny, Cloudy, Rainy; columns: to Sunny, Cloudy, Rainy).
+const WP = [[0.6, 0.3, 0.1], [0.3, 0.4, 0.3], [0.2, 0.4, 0.4]], WN = ["Sunny", "Cloudy", "Rainy"];
+const matmul = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
+const WPOW = [[[1, 0, 0], [0, 1, 0], [0, 0, 1]]]; for (let n = 1; n <= 12; n++) WPOW.push(matmul(WPOW[n - 1], WP));
+const WPI = [0.3934, 0.3607, 0.2459];
+
+// ================= Lecture 0 · Course introduction (SMS0, 20 slides) =================
+// Birthday problem: P(shared) and P(all different) over the room size, with the 50 % level (slide 7).
+line("bday", {
+  xlin: true, step: 1, x: [1, 60], y: [0, 1], xTicks: [1, 10, 20, 30, 40, 50, 60], xTicksN: [1, 20, 40, 60], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "probability",
+  series: [{ slot: 1, name: "at least two share a birthday", short: "shared", f: bdayS }, { slot: 2, name: "all birthdays different", short: "all different", f: n => 1 - bdayS(n) }],
+  tipHead: v => `${v} people in the room`, fmtY: v => pct(v), focusAt: 23, labelW: 84,
+  extra: (g, narrow) => `<line class="ann" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(0.5)}" y2="${g.y(0.5)}" stroke-dasharray="4 3"/><line class="ann" x1="${g.x(23)}" x2="${g.x(23)}" y1="${g.y(0.507)}" y2="${g.T + g.PH}" stroke-dasharray="4 3"/><text class="note" x="${g.x(23) + 4}" y="${g.T + g.PH - 6}">n = 23</text>`,
+  hitLabel: "Read the birthday probabilities: arrow keys change the room size by one person",
+  aria: "Line chart: probability that at least two of n people share a birthday, rising from 0 at n = 1 through 50.7 % at n = 23 to 97 % at n = 50; the complementary curve falls from 1 to 3 %.",
+});
+// Deterministic logistic growth against stochastic realisations of the same model (slide 8); paths generated here.
+CHARTS.logistic = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 260, L = narrow ? 34 : 44, R = narrow ? 16 : 24, T = 14, B = 30, PW = W - L - R, PH = H - T - B;
+  const K = 100, r = 1, x0 = 5, tmax = 10, dt = 0.05, nT = tmax / dt;
+  const x = t => L + t / tmax * PW, y = v => T + PH - Math.min(v, 135) / 135 * PH;
+  const det = Array.from({ length: nT + 1 }, (_, k) => { const t = k * dt; return [t, K / (1 + (K / x0 - 1) * Math.exp(-r * t))]; });
+  const paths = []; const rng = mulberry(7);
+  for (let p = 0; p < 14; p++) { let v = x0; const pts = [[0, v]]; for (let k = 1; k <= nT; k++) { v = Math.max(0.5, v + r * v * (1 - v / K) * dt + 0.9 * Math.sqrt(v) * Math.sqrt(dt) * gauss(rng)); pts.push([k * dt, v]); } paths.push(pts); }
+  const d = pts => "M" + pts.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(" L");
+  const ends = paths.map(p => p[nT][1]), lo = Math.min(...ends), hi = Math.max(...ends);
+  const yt = [0, 50, 100].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = [0, 2, 4, 6, 8, 10].map(t => `<text class="tick" x="${x(t)}" y="${H - 10}" text-anchor="middle">${t}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart: logistic population growth from 5 towards the capacity 100 over 10 time units. One smooth deterministic curve and 14 noisy stochastic realisations that scatter around it; at t = 10 the realisations end between ${num(lo, 0)} and ${num(hi, 0)}.">
+    ${yt}${xt}<text class="note" x="${L - 30}" y="10">population over time</text>
+    ${paths.map(p => `<path class="line thin s1" d="${d(p)}"/>`).join("")}
+    <path class="line k2 thick" d="${d(det)}"/>
+    <g class="pt" tabindex="0" data-tip="${esc(`<b>States at t = 10</b>deterministic model: ${num(det[nT][1], 1)}<br>14 realisations: ${num(lo, 0)} to ${num(hi, 0)}`)}"><rect class="hit" x="${x(9.4)}" y="${T}" width="${x(10) - x(9.4) + R}" height="${PH}"/><line class="ann" x1="${x(10)}" x2="${x(10)}" y1="${y(hi)}" y2="${y(lo)}"/></g></svg>`;
+};
+// Convergence of the weather chain: P(sunny on day n) for each starting weather (slide 12).
+line("mix", {
+  xlin: true, step: 1, x: [0, 10], y: [0, 1], xTicks: [0, 2, 4, 6, 8, 10], xTicksN: [0, 5, 10], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "P(sunny on day n)",
+  series: WN.map((w, i) => ({ slot: i + 1, name: `start ${w.toLowerCase()}`, short: w.toLowerCase(), f: smooth(n => WPOW[n][i][0]), labelAt: [1, 2, 1][i], dy: [-6, 14, 14][i] })),
+  tipHead: v => `day ${v}`, fmtY: v => pct(v), focusAt: 3, labelW: 70,
+  extra: g => `<line class="ann" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(WPI[0])}" y2="${g.y(WPI[0])}" stroke-dasharray="4 3"/><text class="note" x="${g.W - g.R - 4}" y="${g.y(WPI[0]) - 6}" text-anchor="end">stationary π(sunny) = 39.3 %</text>`,
+  hitLabel: "Read the sunny probabilities: arrow keys move one day",
+  aria: "Line chart: probability of a sunny day n days ahead, for a start on a sunny, cloudy or rainy day. The three curves start at 100 %, 0 % and 0 % and meet at the stationary value 39.3 % after about six days.",
+});
+// Monte Carlo π: the typical error 1.64/√N for N points on a log axis (slide 13); the slide's one-run estimates in the tooltips.
+const MCPI = [[100, 3.28, 0.16], [1000, 3.12, 0.052], [10000, 3.1324, 0.016], [100000, 3.147, 0.0052], [1000000, 3.1416, 0.0016]];
+CHARTS.mcerr = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 76 : 100, R = narrow ? 50 : 64, T = 8, RH = 36, H = T + MCPI.length * RH + 26, PW = W - L - R;
+  const x = v => L + (Math.log10(v) + 3) / 3 * PW;
+  const ticks = [0.001, 0.01, 0.1, 1].map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = MCPI.map(([N, est, err], i) => { const y0 = T + i * RH + 9, bh = 18;
+    const tip = `<b>N = ${N.toLocaleString("en-GB")} points</b>typical error 1.64/√N ≈ ${err}<br>one run on the slide: π ≈ ${est} (off by ${num(Math.abs(est - Math.PI), 4)})`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - 9}" width="${W}" height="${RH}"/><path class="bar s1" d="${hbar(x(0.001), x(err), y0, bh)}"/>
+      <text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${narrow ? "10" : "N = 10"}<tspan baseline-shift="super" font-size="9">${Math.log10(N)}</tspan></text><text class="val" x="${x(err) + 6}" y="${y0 + 13}">${err}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart on a logarithmic axis: typical error of the Monte Carlo estimate of π, 0.16 for 100 points, 0.052 for a thousand, 0.016 for ten thousand, 0.0052 for a hundred thousand and 0.0016 for a million: ten times more points, about three times less error.">${ticks}${rows}</svg>`;
+};
+// Mean squared displacement over time: Brownian motion (linear) against sub- and superdiffusion (slide 16).
+line("msd", {
+  xlin: true, step: 0.5, x: [0, 10], y: [0, 40], xTicks: [0, 2, 4, 6, 8, 10], xTicksN: [0, 5, 10], yTicks: [0, 10, 20, 30, 40], yTitle: "MSD = E[|x(t)|²]",
+  series: [{ slot: 1, name: "Brownian: 2 D t (α = 1)", short: "α = 1", f: t => 2 * t }, { slot: 2, name: "subdiffusion: 2 t^0.5", short: "α = 0.5", f: t => 2 * Math.sqrt(t) }, { slot: 3, name: "superdiffusion: 2 t^1.5", short: "α = 1.5", f: t => 2 * t ** 1.5, labelAt: 6.5, dy: -8 }],
+  tipHead: v => `t = ${v}`, fmtY: v => num(v, 1), focusAt: 4, labelW: 60,
+  hitLabel: "Read the mean squared displacement: arrow keys move half a time unit",
+  aria: "Line chart: mean squared displacement against time in one dimension with D = 1. Brownian motion grows linearly, 2 t; subdiffusion with exponent 0.5 bends down; superdiffusion with exponent 1.5 bends up and leaves the chart after t ≈ 7.",
+});
+// Strong error of the SDE schemes against the step size (slide 18): order ½ for Euler–Maruyama, 1 for Milstein.
+line("order", {
+  x: [1, 1024], y: [0, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "strong error (relative to Δt = 1)",
+  series: [{ slot: 1, name: "Euler–Maruyama: ∝ Δt^½", short: "EM, order ½", f: v => v ** -0.5, labelAt: 128, dy: -8 }, { slot: 2, name: "Milstein: ∝ Δt", short: "Milstein, order 1", f: v => 1 / v, labelAt: 8, dy: -8 }],
+  tipHead: v => `Δt = 1/${v}`, fmtY: v => num(v, 3), focusAt: 16, labelW: 110,
+  hitLabel: "Read the error levels: arrow keys halve or double the step",
+  aria: "Line chart: strong error against the number of steps per unit time, on a log axis. Halving the step divides the Euler–Maruyama error by about 1.4 and the Milstein error by 2.",
+});
+// Explorer: estimate π by throwing N uniform points into the unit square (slide 13).
+const PI = { N: 1000, seed: 1 };
+function piOut() {
+  const rng = mulberry(PI.seed * 7919), S = 240, pts = []; let inside = 0;
+  for (let i = 0; i < PI.N; i++) { const u = rng(), v = rng(), inn = u * u + v * v <= 1; inside += inn; if (PI.N <= 4000 || i % Math.ceil(PI.N / 4000) === 0) pts.push([u, v, inn]); }
+  const est = 4 * inside / PI.N, typ = 1.64 / Math.sqrt(PI.N);
+  return `<div class="pi-wrap"><svg viewBox="0 0 ${S} ${S}" class="pi" role="img" aria-label="${PI.N} random points in the unit square; ${inside} fall inside the quarter circle.">
+      <rect x="0" y="0" width="${S}" height="${S}" class="pi-box"/><path class="pi-arc" d="M0,${S} A${S},${S} 0 0 1 ${S},0"/>
+      ${pts.map(([u, v, inn]) => `<circle cx="${(u * S).toFixed(1)}" cy="${(S - v * S).toFixed(1)}" r="${PI.N > 2000 ? 1.1 : 1.8}" class="${inn ? "in" : "out"}"/>`).join("")}</svg>
+    <dl class="ro">
+      <dt>Inside</dt><dd>${inside.toLocaleString("en-GB")} of ${PI.N.toLocaleString("en-GB")} points, a fraction of ${num(inside / PI.N, 4)}</dd>
+      <dt>Estimate</dt><dd>π ≈ 4 · ${num(inside / PI.N, 4)} = <b>${num(est, 4)}</b></dd>
+      <dt>Error</dt><dd>${num(Math.abs(est - Math.PI), 4)} this run · typical 1.64/√N = ${num(typ, 4)} ${flag(Math.abs(est - Math.PI) <= 2 * typ ? "ok" : "bad", Math.abs(est - Math.PI) <= 2 * typ ? "within two typical errors" : "an unlucky run (outside two typical errors)")}</dd>
+    </dl></div>`;
+}
+function initPi(body) {
+  body.innerHTML = `<div class="ctl"><label>Points N <select>${[100, 1000, 10000, 100000].map(n => `<option value="${n}"${n === PI.N ? " selected" : ""}>${n.toLocaleString("en-GB")}</option>`).join("")}</select></label><button class="preset" type="button">Throw again</button></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), btn = body.querySelector("button"), out = body.querySelector(".out"), draw = () => { out.innerHTML = piOut(); };
+  sel.addEventListener("change", () => { PI.N = +sel.value; draw(); }); btn.addEventListener("click", () => { PI.seed++; draw(); }); draw();
+}
+// Explorer: Euler–Maruyama paths of an Ornstein–Uhlenbeck process relaxing into the stationary band (slides 17–18).
+const OU = { th: 1.5, sg: 1, dt: 0.05 };
+function ouOut() {
+  const { th, sg, dt } = OU, Tm = 4, n = Math.round(Tm / dt), sd = sg / Math.sqrt(2 * th), W = 560, H = 230, L = 30, R = 10, T = 10, B = 24, PW = W - L - R, PH = H - T - B;
+  const x = t => L + t / Tm * PW, y = v => T + PH / 2 - Math.max(-3.6, Math.min(3.6, v)) / 3.6 * PH / 2, rng = mulberry(11);
+  const paths = [-3, -1.5, 1.5, 3, -3, 3].map(x0 => { let v = x0; const p = [[0, v]]; for (let k = 1; k <= n; k++) { v = v + th * (0 - v) * dt + sg * Math.sqrt(dt) * gauss(rng); p.push([k * dt, v]); } return p; });
+  const d = p => "M" + p.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(" L");
+  const stable = th * dt < 2;
+  return `<svg viewBox="0 0 ${W} ${H}" class="ou" role="img" aria-label="Six Ornstein–Uhlenbeck paths started at ±1.5 and ±3 relax towards 0 and then fluctuate inside the band ±${num(2 * sd, 2)}.">
+      <rect class="band" x="${L}" y="${y(2 * sd)}" width="${PW}" height="${y(-2 * sd) - y(2 * sd)}"/>
+      ${[-3, -2, -1, 0, 1, 2, 3].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+      ${[0, 1, 2, 3, 4].map(t => `<text class="tick" x="${x(t)}" y="${H - 8}" text-anchor="middle">${t}</text>`).join("")}
+      <line class="ann" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke-dasharray="4 3"/>
+      ${paths.map(p => `<path class="line thin s1" d="${d(p)}"/>`).join("")}<text class="note" x="${W - R - 4}" y="${y(2 * sd) - 4}" text-anchor="end">stationary ±2σ band</text></svg>
+    <dl class="ro">
+      <dt>Stationary sd</dt><dd>σ / √(2θ) = ${num(sg, 2)} / √(2 · ${num(th, 2)}) = ${num(sd, 3)}, so the band is ±${num(2 * sd, 2)}</dd>
+      <dt>Relaxation time</dt><dd>1/θ = ${num(1 / th, 2)} time units: the start is forgotten after a few of these</dd>
+      <dt>Step</dt><dd>Δt = ${dt}, ${n} steps to t = 4 ${flag(stable ? "ok" : "bad", stable ? "θ·Δt < 2: the explicit scheme stays stable" : "θ·Δt ≥ 2: Euler–Maruyama overshoots and blows up")}</dd>
+    </dl>`;
+}
+function initOu(body) {
+  body.innerHTML = `<div class="ctl"><label>θ (pull to the mean) <input type="range" min="0.2" max="3" step="0.1" value="${OU.th}"> <output>${OU.th}</output></label>
+      <label>σ (noise) <input type="range" min="0.2" max="2" step="0.1" value="${OU.sg}"> <output>${OU.sg}</output></label>
+      <label>Δt <input type="range" min="0.01" max="1.5" step="0.01" value="${OU.dt}"> <output>${OU.dt}</output></label></div><div class="out"></div>`;
+  const [rt, rs, rd] = body.querySelectorAll("input"), [ot, os, od] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { ot.textContent = OU.th; os.textContent = OU.sg; od.textContent = OU.dt; out.innerHTML = ouOut(); };
+  rt.addEventListener("input", () => { OU.th = +rt.value; draw(); }); rs.addEventListener("input", () => { OU.sg = +rs.value; draw(); }); rd.addEventListener("input", () => { OU.dt = +rd.value; draw(); }); draw();
+}
+
+function lecture0() {
+  const road = [[1, "Probability refresher", "conditional probabilities; normal and scale-free distributions", 1], [2, "Markov chains", "transition matrices, mixing times, Perron–Frobenius, PageRank", 3], [3, "Monte Carlo", "law of large numbers, variance reduction, importance sampling", 4], [4, "MCMC", "Metropolis–Hastings and Gibbs samplers", 6],
+    [5, "Random processes", "Brownian motion in 2, 3 and more dimensions; diffusion equation; Lévy processes", 10], [6, "SDEs", "Itô calculus, Ornstein–Uhlenbeck, examples from biology", 11], [7, "Numerical SDEs", "strong and weak error; Euler–Maruyama and Milstein", 12]];
+  const roadHTML = `<div class="road">${road.map(([k, t, b, n], i) => `<div class="rd ${i < 4 ? "dt" : "ct"}"><div class="rk">${i < 4 ? "discrete time" : "continuous time"} · ${k}</div><b>${t}</b><p>${b}</p><p class="muted">${lecLink(n, `from lecture ${n}`)}</p></div>`).join("")}</div>`;
+  return `${head(l)}
+    <p class="lead">The first session says what the course is about and why it is hard: a stochastic model does not predict the state of a system but the probability of every state, and a stochastic simulation draws trajectories that follow that probability. Everything that follows, from Markov chains to numerical schemes for stochastic differential equations, is a way around one of four hurdles that stand between the model and the trajectories. The deck is the "SMS0" file in the OPAL folder Lecture2026; the course overview in OPAL counts this session as lecture 0.</p>
+
+    <h2>Who, what, how much (slides 2–5)</h2>
+    <p>Dr. Nandu Gopan (Chair of Scientific Computing for Systems Biology) gives the lectures; the exercises are run by a student tutor of the CMS programme. The course is the module CMS-COR-SAP of the M.Sc. Computational Modeling and Simulation. Registration for the exam goes through Selma and opens in December; course enrolment is not exam registration.</p>
+    ${tiles([["5", "credits"], ["150 h", "workload"], ["2/2/0/0", "lecture / exercise / tutorial / self-study"], ["12 + 12", "lectures + exercises"], ["90 min", "written exam, English"]])}
+    <p>The text for the course is the lecture notes by Ivo Sbalzarini and Christoph Zechner (TU Dresden), which run from probability basics through Markov chains, Monte Carlo and MCMC to random walks, stochastic calculus, numerical SDEs and stochastic reaction networks. Slides, handouts and exam information live in the OPAL course. What to bring: working knowledge of any programming language, basic classical physics, and solid undergraduate calculus, probability and statistics. Slide 5 ends with a self-check: the mean and variance of a fair die, Bayes' theorem, and whether you have ever written a loop that draws random numbers.</p>
+    ${ex("Worked example: the self-check for a fair die", `<p>Each face has probability 1/6. The mean is E[X] = (1 + 2 + 3 + 4 + 5 + 6) / 6 = 21/6 = <b>3.5</b>. The second moment is E[X²] = (1 + 4 + 9 + 16 + 25 + 36) / 6 = 91/6 ≈ 15.17, so the variance is Var(X) = E[X²] − E[X]² = 91/6 − 49/4 = (182 − 147) / 12 = <b>35/12 ≈ 2.92</b>, and the standard deviation is √(35/12) ≈ 1.71. The same computation reappears in ${exeLink(1, "tutorial 1")} (questions 5.3 to 5.5).</p>`)}
+
+    <h2>Warm-up: the birthday problem (slides 6–7)</h2>
+    <p>How many people must be in a room before the chance that two of them share a birthday reaches one half? Most people guess far too high. The trick is to compute the complement: the probability that <em>all</em> n birthdays differ is a product of conditional probabilities, one per person, each one conditioned on all earlier people having distinct birthdays. With 365 equally likely days (no 29 February, no twins),</p>
+    <div class="formula">P(shared) = 1 − ∏<sub>i=1</sub><sup>n−1</sup> (365 − i) / 365</div>
+    ${chart("bday", leg([[1, "at least two share a birthday"], [2, "all birthdays different"]]))}${cap("The curve crosses 50 % at n = 23 (50.7 %); with 50 people the chance is 97 %. Values computed here from the product formula; the slide shows the same curve. The chain rule behind the product is lecture 1's topic.")}
+    ${tiles([["23", "people for a 50 % chance"], ["50.7 %", "exactly at n = 23"], ["97 %", "with 50 people"], ["≈ 1 − e^{−n²/730}", "handy approximation (context, not on the slides)"]])}
+    ${why("Context, not on the slides: why the intuition fails", "<p>People compare n with 365 and expect a number near 180. But the event is about <em>pairs</em>, and 23 people form 23 · 22 / 2 = 253 pairs, each sharing a birthday with probability 1/365. The expected number of sharing pairs is 253/365 ≈ 0.69, which already makes a shared birthday more likely than not. The product formula makes this exact; the pair count makes it believable.</p>")}
+
+    <h2>Deterministic versus stochastic (slide 8)</h2>
+    <p>A deterministic model takes today's state and returns exactly one future curve. A stochastic model returns, for every time, the probability of every possible state, and a simulation then draws individual trajectories from it. The slide's phrase: not "it will rain tomorrow" but "a 60 % chance of rain". A 60 % forecast is neither right nor wrong on a single day; if tomorrow could be repeated many times, it would rain in 60 % of them. The slide illustrates this with logistic population growth: one deterministic curve and forty stochastic realisations that fan out around it, with the spread of end states at t = 10 drawn as a histogram.</p>
+    ${chart("logistic", leg([[2, "deterministic model"], [1, "stochastic realisations"]]))}${cap("Logistic growth dx = r x (1 − x/K) dt plus demographic noise, K = 100, r = 1, from x₀ = 5. The fourteen realisations are generated on this page with a simple noise model, so they resemble but do not reproduce the slide's forty; hover the right edge for the spread at t = 10.")}
+
+    <h2>Four hurdles, four toolkits (slide 9)</h2>
+    <p>The goal is to predict how the probability over system states evolves in time, x<sub>t</sub> ~ P(X, t | X₀, t₀), and to generate trajectories x₀, x₁, x₂, … that follow it. Each of four obstacles has a part of the course devoted to it.</p>
+    <ul class="cmp two">
+      <li><b>Hurdle 1</b><span class="v">P is rarely known in closed form: it is the solution of a governing equation, often a PDE.</span><span class="muted">→ master equations</span></li>
+      <li><b>Hurdle 2</b><span class="v">Samples from P cannot be drawn directly: uniform numbers are easy, Gumbel or exponential ones need an algorithm.</span><span class="muted">→ sampling algorithms</span></li>
+      <li><b>Hurdle 3</b><span class="v">Time is continuous: there is no natural list x₁, x₂, …, only a function x(t) known in probability.</span><span class="muted">→ stochastic calculus and SDEs</span></li>
+      <li><b>Hurdle 4</b><span class="v">P may depend on the whole history of the system, not only on its current state.</span><span class="muted">→ non-Markovian processes</span></li>
+    </ul>
+
+    <h2>Roadmap of the course (slides 10–11, 15)</h2>
+    <p>Part I works in discrete time, part II in continuous time. The lecture numbers below follow the topic list on the OPAL course overview; the dates come from the Monday slots on the ${lecLink(0, "board")}.</p>
+    ${roadHTML}
+
+    <h2>Markov chains: one step of memory (slide 12)</h2>
+    <p>A Markov chain is the simplest process with memory: the next state depends on the current one and on nothing before it, P(X<sub>n+1</sub> = x<sub>j</sub> | X<sub>n</sub> = x<sub>i</sub>, …, X₀) = P(X<sub>n+1</sub> = x<sub>j</sub> | X<sub>n</sub> = x<sub>i</sub>) = P<sub>ij</sub>. The numbers P<sub>ij</sub> form the transition matrix P; its rows sum to one, and n steps ahead are given by the matrix power P<sup>n</sup>. The slide's weather chain has three states. From a sunny day: 60 % sunny again, 30 % cloudy, 10 % rainy. From a cloudy day: 30 % sunny, 40 % cloudy, 30 % rainy. From a rainy day: 20 % sunny, 40 % cloudy, 40 % rainy.</p>
+    <div class="tt-wrap"><table class="tt"><tr><th>from \\ to</th><th>Sunny</th><th>Cloudy</th><th>Rainy</th></tr>${WP.map((r, i) => `<tr><th>${WN[i]}</th>${r.map(v => `<td>${v.toFixed(1)}</td>`).join("")}</tr>`).join("")}</table></div>
+    ${chart("mix", leg(WN.map((w, i) => [i + 1, `start ${w.toLowerCase()}`])))}${cap("Rows of P<sup>n</sup>, computed here. Whatever today's weather, after about a week the chance of a sunny day is 39 %: the chain has mixed and forgotten its start.")}
+    ${ex("Worked example: the stationary distribution π = πP", `<p>A distribution π over the three states is stationary if one more step leaves it unchanged, π = πP. Writing π = (s, c, r) and using the columns of the table: s = 0.6 s + 0.3 c + 0.2 r, c = 0.3 s + 0.4 c + 0.4 r, r = 0.1 s + 0.3 c + 0.4 r, with s + c + r = 1. The first equation gives 0.4 s = 0.3 c + 0.2 r, the third 0.6 r = 0.1 s + 0.3 c. Eliminating step by step: from the third, s = 6 r − 3 c; into the first, 2.4 r − 1.2 c = 0.3 c + 0.2 r, so 2.2 r = 1.5 c, c = 22 r / 15 ≈ 1.467 r, and s = 6 r − 4.4 r = 1.6 r. Normalising, r (1.6 + 1.467 + 1) = 1 gives r = 0.246, c = 0.361, s = 0.393: <b>sunny 39 %, cloudy 36 %, rainy 25 %</b>, as on the slide. The powers in the chart above converge to exactly this row.</p>`)}
+    ${tiles([["π = πP", "stationary distribution"], ["unique", "for an ergodic chain (Perron–Frobenius)"], ["mixing time", "how fast the start is forgotten"], ["PageRank", "stationary distribution of a random web surfer"]])}
+
+    <h2>Monte Carlo: integrate by sampling (slide 13)</h2>
+    <p>Throw N uniform random points into the unit square and count the fraction that lands inside the quarter circle of radius 1. That fraction estimates the area π/4, so π ≈ 4 · (points inside) / N. The slide's run with 1,500 points had 1,178 inside, giving π ≈ 3.14. The estimate is a random variable: its typical error shrinks like 1/√N, and the constant in front is about 1.64 for this problem. Ten times more points buy only a factor √10 ≈ 3.2 in accuracy. The 1/√N law holds in any dimension, which is why Monte Carlo beats grid-based integration in high dimensions; variance reduction and importance sampling shrink the constant, not the exponent.</p>
+    ${chart("mcerr")}${cap("Typical error 1.64/√N of the π estimate; the tooltips carry the slide's single-run estimates for each N. The 1.64 is 4·√(p(1 − p)) with p = π/4, the standard deviation of a binomial fraction scaled by 4 (derivation added here).")}
+    ${lab("pi", "throw points into the square and estimate π")}
+    ${why("Context, not on the slides: where the 1.64 comes from", "<p>Each point is inside with probability p = π/4 ≈ 0.785, so the count of insiders is binomial with variance N p (1 − p). The fraction has standard deviation √(p (1 − p) / N), and the estimate 4 · fraction has 4 · √(0.785 · 0.215) / √N ≈ 1.64 / √N. This is the law of large numbers and the central limit theorem at work; lecture 4 makes both precise.</p>")}
+
+    <h2>Markov chain Monte Carlo (slide 14)</h2>
+    <p>The problem: draw samples from a complicated, high-dimensional target π that is known only up to a constant, as posteriors in Bayesian inference typically are. The idea: build a Markov chain whose stationary distribution is exactly π, run it, and use its states as samples. Metropolis–Hastings proposes a move y ~ q(y | x) from the current state x and accepts it with probability</p>
+    <div class="formula">ρ = min { 1, f(y) q(x | y) / ( f(x) q(y | x) ) }</div>
+    <p>otherwise the chain stays at x. Gibbs sampling instead updates one coordinate at a time from its full conditional distribution. The slide shows a random-walk Metropolis chain on a two-peaked target: the first 150 steps wander from the start into one peak, later samples fill both.</p>
+    ${why("Context, not on the slides: why 'up to a constant' is enough", "<p>If f(x) = π(x) · Z with an unknown normalising constant Z, the ratio f(y)/f(x) = π(y)/π(x) does not contain Z. Metropolis–Hastings only ever evaluates ratios, so it never needs the constant, which is exactly the quantity that is intractable for a posterior: Z = ∫ P(data | θ) P(θ) dθ.</p>")}
+
+    <h2>Brownian motion and diffusion (slide 16)</h2>
+    <p>Part II leaves the discrete clock. Brownian motion is the continuum limit of a random walk with ever smaller steps. Its mean squared displacement in d dimensions grows linearly in time, MSD(t) = E[|x(t)|²] = 2 d D t, and the probability density of the position obeys the diffusion equation ∂p/∂t = D Δp (Δ the Laplacian). Lévy processes break the linear law: E[|x(t)|²] ∝ t<sup>α</sup> with α ≠ 1, called anomalous diffusion. The slide contrasts a Brownian path (Gaussian increments, compact and tangled) with a Lévy flight (heavy-tailed jumps, long straight excursions) of the same number of steps.</p>
+    ${chart("msd", leg([[1, "Brownian, α = 1"], [2, "subdiffusion, α = 0.5"], [3, "superdiffusion, α = 1.5"]]))}${cap("Mean squared displacement in one dimension with D = 1; the curves are the formulas, drawn here. Only the Brownian case is a straight line through the origin.")}
+    ${ex("Worked example: how far does a molecule diffuse?", "<p>A small protein in water has D ≈ 100 µm²/s. In three dimensions after t = 1 s, E[r²] = 2 · 3 · 100 · 1 = 600 µm², so the root-mean-square distance is √600 ≈ 24.5 µm. After 100 s it is √60,000 ≈ 245 µm: a hundred times longer takes it only ten times farther. That square-root growth is why diffusion works across a cell (10 µm in a fraction of a second) but not along a metre of nerve.</p>")}
+
+    <h2>Stochastic differential equations (slide 17)</h2>
+    <p>An SDE adds noise to an ordinary differential equation: dX<sub>t</sub> = a(X<sub>t</sub>, t) dt + b(X<sub>t</sub>, t) dW<sub>t</sub>, where a is the drift (the deterministic tendency), b the noise strength and W a Brownian motion. Noise changes the chain rule: Itô's lemma for a function f of the solution reads df(X<sub>t</sub>) = (a f′ + ½ b² f″) dt + b f′ dW<sub>t</sub>, with an extra second-derivative term that ordinary calculus does not have. The Ornstein–Uhlenbeck process dX<sub>t</sub> = θ (μ − X<sub>t</sub>) dt + σ dW<sub>t</sub> is solvable and mean-reverting: paths from any start relax to the same stationary band around μ. Examples in the course: population dynamics, genetics, protein kinetics.</p>
+    ${lab("ou", "Ornstein–Uhlenbeck paths, simulated with Euler–Maruyama")}
+    ${ex("Worked example: Itô's lemma on f(W) = W²", "<p>Take X<sub>t</sub> = W<sub>t</sub> itself (a = 0, b = 1) and f(x) = x², so f′ = 2x and f″ = 2. Itô's lemma gives d(W²) = (0 · 2W + ½ · 1 · 2) dt + 2W dW = <b>dt + 2W dW</b>. Ordinary calculus would say d(W²) = 2W dW and miss the dt. Taking expectations, E[W<sub>t</sub>²] = t, which is exactly the mean squared displacement E[x²] = 2Dt with D = ½: the extra term is the diffusion.</p>")}
+
+    <h2>Simulating SDEs numerically (slide 18)</h2>
+    <p>Euler–Maruyama is the Euler method with a random increment: X<sub>n+1</sub> = X<sub>n</sub> + a(X<sub>n</sub>) Δt + b(X<sub>n</sub>) ΔW<sub>n</sub>, where ΔW<sub>n</sub> ~ N(0, Δt). Milstein adds a correction term ½ b b′ (ΔW<sub>n</sub>² − Δt). Two kinds of error are distinguished. The strong error measures how closely a simulated path follows the exact path driven by the same Brownian motion; the weak error measures how well averages and moments are reproduced. Euler–Maruyama has strong order ½ and weak order 1; Milstein has strong order 1 and weak order 1. The slide shows geometric Brownian motion on one Brownian path: with Δt = 1/64 the Euler–Maruyama path hugs the exact solution much better than with Δt = 1/16.</p>
+    ${chart("order", leg([[1, "Euler–Maruyama, strong order ½"], [2, "Milstein, strong order 1"]]))}${cap("The convergence rates as curves: strong error against steps per unit time, relative to the error at Δt = 1. Halving Δt gains a factor √2 for Euler–Maruyama and a factor 2 for Milstein.")}
+    <div class="tt-wrap"><table class="tt"><tr><th>Scheme</th><th>Update</th><th>Strong order</th><th>Weak order</th></tr><tr><th>Euler–Maruyama</th><td>X + a Δt + b ΔW</td><td>½</td><td>1</td></tr><tr><th>Milstein</th><td>X + a Δt + b ΔW + ½ b b′ (ΔW² − Δt)</td><td>1</td><td>1</td></tr></table></div>
+    ${why("Context, not on the slides: which error matters", "<p>If you want a histogram of end states, a mean first-passage time or any expectation, the weak error is what counts, and Euler–Maruyama is already first order. Only when the individual path matters, for instance when a simulated path is compared with a measured one driven by the same noise, does strong convergence pay for Milstein's extra derivative. The strong-order-½ result is exactly the √Δt scaling of the Brownian increment itself.</p>")}
+
+    <h2>Where these models show up (slide 19)</h2>
+    <ul>
+      <li><b>Population dynamics</b>: birth, death and extinction in small populations, where the deterministic curve can be badly wrong.</li>
+      <li><b>Genetics</b>: random drift of gene frequencies.</li>
+      <li><b>Protein kinetics</b>: reactions among a handful of molecules inside a cell.</li>
+      <li><b>Web search</b>: PageRank as the long-run visit frequency of a random surfer.</li>
+      <li><b>Bayesian inference</b>: MCMC samples posteriors that are known only up to a constant.</li>
+      <li><b>Diffusion and transport</b>: molecules spreading by Brownian motion.</li>
+    </ul>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What does a stochastic model predict?</b> The probability of every state at every time, not the state. A simulation draws trajectories from it and is correct only if its values follow P at every step.</li>
+      <li><b>Why is stochastic simulation hard?</b> P is rarely known in closed form, it is hard to sample from, time is continuous, and P may depend on history: master equations, sampling algorithms, stochastic calculus and non-Markovian processes answer these in turn.</li>
+      <li><b>How many people for a shared birthday?</b> 23, by the chain rule of conditional probabilities.</li>
+      <li><b>What does a Markov chain forget?</b> Its start: the rows of P<sup>n</sup> converge to the stationary distribution π = πP.</li>
+      <li><b>How fast does Monte Carlo converge?</b> Like 1/√N, in any dimension.</li>
+      <li><b>What makes an SDE different from an ODE?</b> The Brownian increment of size √Δt, the extra ½ b² f″ term in Itô's lemma, and the distinction between strong and weak error.</li>
+    </ul>
+    <p class="muted">Next: ${lecLink(1, "lecture 1")} (26 Oct), the probability refresher the final slide announces: events, conditional probabilities, Bayes' theorem and common distributions. First tutorial: ${exeLink(1, "tutorial 1")} on 29 Oct (Pluto notebook). Slides: OPAL → Lecture2026 → SMS0 (they may not be republished).</p>`;
+}
+
+// ================= Lecture 1 · Probability refresher (SMS1, 18 pages, eight parts) =================
+// Venn diagram of two events on a fair die: A = even, B = at least 4 (slide 7).
+CHARTS.venn = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, cx = W / 2, cy = H / 2 - 4, r = narrow ? 78 : 92, off = narrow ? 46 : 54;
+  const tip = (t, faces, p) => esc(`<b>${t}</b>faces ${faces}<br>probability ${p}`);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Venn diagram of two events on a fair die. A, even numbers, holds 2, 4 and 6; B, at least four, holds 4, 5 and 6. The overlap holds 4 and 6; 1 and 3 lie outside both. P(A or B) is 3/6 plus 3/6 minus 2/6 = 4/6; exactly one of the two has probability 2/6.">
+    <defs><clipPath id="vA"><circle cx="${cx - off}" cy="${cy}" r="${r}"/></clipPath></defs>
+    <rect x="${narrow ? 10 : 60}" y="14" width="${W - (narrow ? 20 : 120)}" height="${H - 40}" rx="12" class="venn-box"/>
+    <g class="pt" tabindex="0" data-tip="${tip("Neither A nor B", "1, 3", "2/6")}"><rect class="hit" x="${narrow ? 10 : 60}" y="14" width="${W - (narrow ? 20 : 120)}" height="${H - 40}" rx="12"/><text class="cat" x="${narrow ? 30 : 84}" y="${H - 40}">1</text><text class="cat" x="${W - (narrow ? 30 : 84)}" y="${H - 40}" text-anchor="end">3</text></g>
+    <g class="pt" tabindex="0" data-tip="${tip("A only: even but below 4", "2", "1/6")}"><circle class="venn a" cx="${cx - off}" cy="${cy}" r="${r}"/><text class="cat" x="${cx - off - r / 2 - 6}" y="${cy + 5}" text-anchor="middle">2</text></g>
+    <g class="pt" tabindex="0" data-tip="${tip("B only: at least 4 but odd", "5", "1/6")}"><circle class="venn b" cx="${cx + off}" cy="${cy}" r="${r}"/><text class="cat" x="${cx + off + r / 2 + 6}" y="${cy + 5}" text-anchor="middle">5</text></g>
+    <g class="pt" tabindex="0" data-tip="${tip("A and B: even and at least 4", "4, 6", "2/6")}"><circle class="venn ab" cx="${cx + off}" cy="${cy}" r="${r}" clip-path="url(#vA)"/><text class="cat" x="${cx}" y="${cy - 8}" text-anchor="middle">4</text><text class="cat" x="${cx}" y="${cy + 16}" text-anchor="middle">6</text></g>
+    <text class="lbl" x="${cx - off - r + 8}" y="${cy - r - 4}">A: even</text><text class="lbl" x="${cx + off + r - 8}" y="${cy - r - 4}" text-anchor="end">B: ≥ 4</text>
+    <text class="note" x="${cx}" y="${H - 8}" text-anchor="middle">P(A ∪ B) = 3/6 + 3/6 − 2/6 = 4/6 · exactly one: 3/6 + 3/6 − 2 · 2/6 = 2/6</text></svg>`;
+};
+// Combinations C(5, r): the number of five-toss sequences with r heads (slide 8).
+const C = (n, r) => { let v = 1; for (let i = 1; i <= r; i++) v = v * (n - r + i) / i; return Math.round(v); };
+const Pn = (n, r) => { let v = 1; for (let i = 0; i < r; i++) v *= n - i; return v; };
+CHARTS.comb = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 200 : 220, L = narrow ? 30 : 40, R = 10, T = 22, B = 34, PW = W - L - R, PH = H - T - B, n = 5, cols = n + 1, bw = PW / cols;
+  const y = v => T + PH - v / 10 * PH;
+  const bars = Array.from({ length: cols }, (_, r) => { const v = C(n, r), x0 = L + r * bw + bw * 0.2, w = bw * 0.6;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${r} head${r === 1 ? "" : "s"} in 5 tosses</b>C(5, ${r}) = ${v} sequences of 32<br>probability ${v}/32 = ${pct(v / 32)}`)}"><rect class="hit" x="${L + r * bw}" y="${T}" width="${bw}" height="${PH}"/><path class="bar s1" d="${vbar(x0, w, y(v), T + PH)}"/><text class="val" x="${x0 + w / 2}" y="${y(v) - 5}" text-anchor="middle">${v}</text><text class="cat" x="${x0 + w / 2}" y="${H - 14}" text-anchor="middle">${r}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: number of five-toss sequences with r heads, for r from 0 to 5: 1, 5, 10, 10, 5, 1. They sum to 32, the number of all sequences.">${[0, 5, 10].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}${bars}<text class="note" x="${W - R}" y="${H - 2}" text-anchor="end">heads r</text></svg>`;
+};
+// Conditioning on "red" with a 52-card deck: two events, before and after the condition (slide 10).
+CHARTS.cards = narrow => {
+  const rows = [["Ace of hearts", 1 / 52, 1 / 26, "1/52", "1/26"], ["A king", 4 / 52, 2 / 26, "4/52 = 1/13", "2/26 = 1/13"]];
+  const W = narrow ? 340 : 600, L = narrow ? 96 : 130, R = narrow ? 60 : 80, T = 8, RH = 54, H = T + rows.length * RH + 24, PW = W - L - R, x = v => L + v / 0.1 * PW;
+  const ticks = [0, 0.025, 0.05, 0.075, 0.1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 20}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${pct(v)}</text>`).join("");
+  const bars = rows.map(([k, a, b, ta, tb], i) => { const y0 = T + i * RH + 6;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>no condition: ${ta} = ${pct(a)}<br>given the card is red: ${tb} = ${pct(b)}`)}"><rect class="hit" x="0" y="${y0 - 6}" width="${W}" height="${RH}"/>
+      <text class="cat" x="${L - 8}" y="${y0 + 20}" text-anchor="end">${k}</text>
+      <path class="bar s1" d="${hbar(x(0), x(a), y0, 16)}"/><text class="val" x="${x(a) + 5}" y="${y0 + 12}">${ta}</text>
+      <path class="bar s2" d="${hbar(x(0), x(b), y0 + 20, 16)}"/><text class="val" x="${x(b) + 5}" y="${y0 + 32}">${tb}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paired bar chart: the probability of the ace of hearts doubles from 1/52 to 1/26 once the card is known to be red, while the probability of a king stays at 1/13 with and without that condition.">${ticks}${bars}</svg>`;
+};
+// Birthday chain rule: the per-person factor and the running product (slide 14).
+line("chain", {
+  xlin: true, step: 1, x: [1, 60], y: [0, 1], xTicks: [1, 10, 20, 30, 40, 50, 60], xTicksN: [1, 20, 40, 60], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "probability",
+  series: [{ slot: 2, name: "factor for person n: (366 − n)/365", short: "factor", f: n => (366 - n) / 365 }, { slot: 1, name: "product so far: P(all n different)", short: "product", f: n => 1 - bdayS(n) }],
+  tipHead: v => `person ${v}`, fmtY: v => num(v, 3), focusAt: 23, labelW: 64,
+  extra: g => `<line class="ann" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(0.5)}" y2="${g.y(0.5)}" stroke-dasharray="4 3"/>`,
+  hitLabel: "Read the factors and the product: arrow keys move one person",
+  aria: "Line chart: each new person's probability of avoiding all earlier birthdays falls slowly from 1 towards 0.84 at n = 60, while the product of these factors, the probability that all birthdays differ, falls from 1 below one half at n = 23 and to 0.006 at n = 60.",
+});
+// John Snow's 1854 data: cholera deaths per thousand houses by water supplier (slide 17).
+const SNOW = [["Southwark & Vauxhall", 40046, 1263], ["Lambeth", 26107, 98], ["Rest of London", 256423, 1422]];
+CHARTS.snow = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 108 : 150, R = narrow ? 56 : 80, T = 8, RH = 38, H = T + SNOW.length * RH + 26, PW = W - L - R, x = v => L + v / 35 * PW;
+  const ticks = [0, 10, 20, 30].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v} ‰</text>`).join("");
+  const bars = SNOW.map(([k, h, d], i) => { const y0 = T + i * RH + 9, v = d / h * 1000;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>${d.toLocaleString("en-GB")} deaths in ${h.toLocaleString("en-GB")} houses<br>P(death | supplier) = ${num(d / h, 5)} = ${num(v, 2)} per thousand`)}"><rect class="hit" x="0" y="${y0 - 9}" width="${W}" height="${RH}"/><path class="bar s1" d="${hbar(x(0), x(v), y0, 18)}"/><text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${narrow ? k.replace("Southwark & Vauxhall", "S & V") : k}</text><text class="val" x="${x(v) + 6}" y="${y0 + 13}">${num(v, 1)} ‰</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: cholera deaths per thousand houses in 1854 by water supplier. Southwark and Vauxhall 31.5, Lambeth 3.8, the rest of London 5.5.">${ticks}${bars}</svg>`;
+};
+// Explorer: permutations, combinations and sequences with repetition for n and r (slide 8).
+const CNT = { n: 5, r: 3 };
+function initCount(body) {
+  body.innerHTML = `<div class="ctl"><label>n objects <input type="range" min="1" max="12" step="1" value="${CNT.n}"> <output>${CNT.n}</output></label><label>r chosen <input type="range" min="0" max="12" step="1" value="${CNT.r}"> <output>${CNT.r}</output></label></div><div class="out"></div>`;
+  const [rn, rr] = body.querySelectorAll("input"), [on, or] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { CNT.r = Math.min(CNT.r, CNT.n); rr.max = CNT.n; rr.value = CNT.r; on.textContent = CNT.n; or.textContent = CNT.r; const { n, r } = CNT;
+    out.innerHTML = `<dl class="ro"><dt>Permutations</dt><dd>P(${n}, ${r}) = ${n}! / (${n} − ${r})! = <b>${Pn(n, r).toLocaleString("en-GB")}</b> ordered arrangements of ${r} out of ${n} distinct objects</dd>
+      <dt>Combinations</dt><dd>C(${n}, ${r}) = P(${n}, ${r}) / ${r}! = <b>${C(n, r).toLocaleString("en-GB")}</b> groups of ${r}: the ${r}! orderings of one group are counted once</dd>
+      <dt>With repetition</dt><dd>${n}<sup>${r}</sup> = <b>${(n ** r).toLocaleString("en-GB")}</b> sequences of length ${r} from ${n} symbols (coin tosses reuse heads and tails)</dd></dl>`; };
+  rn.addEventListener("input", () => { CNT.n = +rn.value; draw(); }); rr.addEventListener("input", () => { CNT.r = +rr.value; draw(); }); draw();
+}
+// Explorer: Bayes' theorem on a screening test, as natural frequencies per 1000 people (slide 12; numbers of tutorial 1).
+const BY = { p: 5, se: 90, sp: 90 };
+function initBayes(body) {
+  body.innerHTML = `<div class="ctl"><label>Prevalence P(ill) <input type="range" min="0.1" max="50" step="0.1" value="${BY.p}"> <output>${BY.p} %</output></label>
+      <label>Sensitivity P(+ | ill) <input type="range" min="50" max="100" step="1" value="${BY.se}"> <output>${BY.se} %</output></label>
+      <label>Specificity P(− | healthy) <input type="range" min="50" max="100" step="1" value="${BY.sp}"> <output>${BY.sp} %</output></label></div><div class="out"></div>`;
+  const [rp, rs, rq] = body.querySelectorAll("input"), [op, os, oq] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { const p = BY.p / 100, se = BY.se / 100, sp = BY.sp / 100; op.textContent = `${BY.p} %`; os.textContent = `${BY.se} %`; oq.textContent = `${BY.sp} %`;
+    const ill = 1000 * p, tp = ill * se, fn = ill - tp, hea = 1000 - ill, fp = hea * (1 - sp), tn = hea - fp, pos = tp + fp, post = tp / pos;
+    const f = v => v.toLocaleString("en-GB", { maximumFractionDigits: 1 });
+    out.innerHTML = `<div class="tt-wrap"><table class="tt"><tr><th>per 1000 people</th><th>test positive</th><th>test negative</th><th>total</th></tr><tr><th>ill</th><td class="t1">${f(tp)}</td><td>${f(fn)}</td><td>${f(ill)}</td></tr><tr><th>healthy</th><td class="t2">${f(fp)}</td><td>${f(tn)}</td><td>${f(hea)}</td></tr><tr><th>total</th><td>${f(pos)}</td><td>${f(1000 - pos)}</td><td>1000</td></tr></table></div>
+      <dl class="ro"><dt>P(positive)</dt><dd>total probability: ${num(se, 2)} · ${num(p, 3)} + ${num(1 - sp, 2)} · ${num(1 - p, 3)} = ${num(pos / 1000, 4)}</dd>
+      <dt>P(ill | positive)</dt><dd>Bayes: ${num(se, 2)} · ${num(p, 3)} / ${num(pos / 1000, 4)} = <b>${pct(post)}</b> (${f(tp)} true positives among ${f(pos)} positives)</dd>
+      <dt>P(healthy | negative)</dt><dd>${pct(tn / (1000 - pos))}</dd></dl>`; };
+  rp.addEventListener("input", () => { BY.p = +rp.value; draw(); }); rs.addEventListener("input", () => { BY.se = +rs.value; draw(); }); rq.addEventListener("input", () => { BY.sp = +rq.value; draw(); }); draw();
+}
+
+function lecture1() {
+  const chainHTML = `<div class="defchain">${[["Population", "a collection of objects", "80–90 million people in Germany"], ["Sample", "a subset of the population", "100,000 of them"], ["Experiment", "measuring something about the sample", "their average height"], ["Event", "a concrete outcome", "height = 1.8 m, or > 1.6 m"], ["Sample space Ω", "all possible events", "{0, 1} or a continuous range"], ["Probability P(A)", "the likelihood of an event A in Ω", "P(height > 1.6 m)"]].map(([t, d, e]) => `<div class="dc"><b>${t}</b><span>${d}</span><em>${e}</em></div>`).join("")}</div>`;
+  return `${head(l)}
+    <p class="lead">Everything in this course is built from probabilities, so the first real lecture rebuilds the foundations in eight parts: what a stochastic model promises, the chain of definitions from population to probability, the three Kolmogorov axioms and the Boolean and counting rules that follow, conditional probability as a renormalisation, Bayes' theorem, the law of total probability and the chain rule (which settle the birthday problem), and finally random variables, the language of the rest of the course. The deck is "SMS1" in OPAL (Lecture2026), a summary of the lecture in 18 pages; the OPAL page for this lecture maps it to sections 1.1 to 1.3 of the lecture notes, with 1.4 and 1.5 for self-study.</p>
+
+    <h2>Part 1 · A stochastic model predicts probabilities (slides 3–4)</h2>
+    <p>The object of study is the probability that the system is in state x at time t, given that it was in x₀ at t₀. That probability is fed into a stochastic simulation algorithm, which produces one possible trajectory x₀, x₁, x₂, …; the trajectory is not a prediction, and the simulation is correct only if its values follow P at every step. The four hurdles of ${lecLink(0, "lecture 0")} are restated: P known only as the solution of a governing equation (master equations), sampling from P (sampling theory), continuous time (stochastic calculus and SDEs), and history dependence (non-Markovian processes).</p>
+
+    <h2>Part 2 · The chain of definitions (slide 5)</h2>
+    <p>Probability rests on a chain in which each term needs the one before it: no probability without an event, no event without an experiment, no experiment without a sample, no sample without a population.</p>
+    ${chainHTML}
+
+    <h2>Part 3 · Kolmogorov's axioms and the rules that follow (slides 6–7)</h2>
+    <ul class="cmp three">
+      <li><b>Axiom 1 · non-negativity</b><span class="v">P(A) ≥ 0: probabilities are never negative. Undisputed.</span></li>
+      <li><b>Axiom 2 · normalisation</b><span class="v">P(Ω) = 1: some event in the sample space always happens.</span></li>
+      <li><b>Axiom 3 · additivity</b><span class="v">P(A ∪ B) = P(A) + P(B) when A and B never happen together.</span></li>
+    </ul>
+    <p>Axiom 2 is the one that can be questioned: Dempster–Shafer evidence theory drops it and allows that no event happens, or that neither A nor B does. From the three axioms follow the Boolean rules. AND for independent events: P(A ∩ B) = P(A) P(B). OR: P(A ∪ B) = P(A) + P(B) − P(A ∩ B), the overlap subtracted once because additivity counted it twice. NOT: P(not A) = 1 − P(A), from axiom 2. And the counting estimate: when every outcome is equally likely, P(A) is the fraction of the sample space that A covers (a fair die: P(even) = 3/6).</p>
+    ${chart("venn")}${cap("Two events on a fair die, drawn here. The OR rule counts 'A or B or both'. The deck notes that the board called this rule 'XOR'; as written it is the inclusive OR. For 'exactly one of the two' subtract the overlap twice: P(A) + P(B) − 2 P(A ∩ B) = 2/6.")}
+
+    <h2>Part 4 · Combinatorics and the probability space (slides 8–9)</h2>
+    <p>Permutations count orderings: P(n, r) = n! / (n − r)! distinct arrangements of r out of n distinct elements. Combinations count groups: C(n, r) = n! / (r! (n − r)!), read "n choose r", where the r! orderings of one group are counted once. Coin-toss sequences reuse heads and tails, so neither formula counts them; with repetition allowed there are n<sup>r</sup> sequences, 2⁵ = 32 for five tosses. Every sequence with 3 heads and 2 tails is one group of the 5 positions, so there are C(5, 3) = 10 of them.</p>
+    ${chart("comb")}${cap("C(5, r) for r = 0 … 5, computed here: the number of five-toss sequences with r heads. The six values sum to 32 = 2⁵, every sequence counted once.")}
+    ${lab("count", "permutations, combinations and sequences for your own n and r")}
+    ${ex("Worked example: exactly three heads in five tosses", "<p>There are 2⁵ = 32 equally likely sequences. Those with exactly three heads are the C(5, 3) = 5! / (3! 2!) = 120 / (6 · 2) = 10 ways to choose which three of the five positions are heads. So P(3 heads) = 10/32 = <b>31.25 %</b>. The same count read as a permutation, P(5, 3) = 60, would be wrong: HTHHT read as a different arrangement of the same three positions is the same sequence.</p>")}
+    <p>A probability space pairs a sample space Ω with a probability measure P that gives the probability of any event. A fair die is Ω = {1, …, 6} with the uniform measure 1/6 each; a loaded die has the same Ω but a different P, so it is a different probability space. The deck's aside: some books add a σ-algebra, a collection of events closed under union, intersection and complement, and write (Ω, P, Σ). It matters in financial and insurance mathematics and for non-Markovian processes, and is not used in this course.</p>
+
+    <h2>Part 5 · Conditional probability and independence (slides 10–11)</h2>
+    <p>Conditioning on B renormalises everything to B: once B is known, it becomes the whole space, and dividing by P(B) keeps the probabilities summing to one.</p>
+    <div class="formula">P(A | B) = P(A ∩ B) / P(B)        P(A ∩ B) = P(A | B) P(B)</div>
+    <p>With a 52-card deck: P(ace of hearts | red) = (1/52) / (1/2) = 1/26, twice the unconditional 1/52, because knowing the card is red halves the candidates. P(king | red) = (2/52) / (1/2) = 1/13 = P(king): the condition changes nothing, because two of the four kings are red. The deck's weather version: a 60 % forecast, and you wake to cloudless skies, so P(rain | no clouds) is far lower.</p>
+    ${chart("cards", leg([[1, "no condition"], [2, "given the card is red"]]))}${cap("The two card examples of the slides. Conditioning on 'red' doubles the ace of hearts and leaves the king unchanged.")}
+    <p><b>Independence.</b> A and B are independent if knowing B tells you nothing about A: P(A | B) = P(A), equivalently P(A ∩ B) = P(A) P(B). "King" and "red" are independent. In the general, dependent case the joint probability is P(A ∩ B) = P(A | B) P(B): first B happens, then A must happen given B.</p>
+
+    <h2>Part 6 · Bayes' theorem (slide 12)</h2>
+    <p>Writing the joint probability both ways, P(A ∩ B) = P(A | B) P(B) = P(B | A) P(A), and dividing by P(B) gives</p>
+    <div class="formula">P(A | B) = P(B | A) P(A) / P(B)</div>
+    <p>No independence is assumed, so it always holds. Why it matters: in image segmentation, machine learning and inference you want P(model | data), but what you can compute is P(data | model), by running the model many times and counting. Bayes converts one into the other, with P(model) as the prior and P(data) as the normalisation. The deck notes the two schools: frequentists treat the likelihood P(data | model) as the probability of interest; Bayesians work with the posterior, which needs a prior.</p>
+    ${lab("bayes", "Bayes' theorem on a screening test, in people per thousand")}
+    ${ex("Worked example: a positive test (the numbers of tutorial 1)", "<p>A disease has prevalence 5 %; the test catches 90 % of the ill (sensitivity) and wrongly flags 10 % of the healthy. Of 1000 people, 50 are ill and 45 of them test positive; 950 are healthy and 95 of them test positive. Total probability: P(positive) = 0.9 · 0.05 + 0.1 · 0.95 = 0.045 + 0.095 = 0.14. Bayes: P(ill | positive) = 0.9 · 0.05 / 0.14 = <b>0.321</b>. A positive result from a 90 %-accurate test means a one-in-three chance of being ill, because the healthy majority produces more false positives than the sick minority produces true ones.</p>")}
+
+    <h2>Part 7 · Total probability, the chain rule, and the birthday problem (slides 13–14)</h2>
+    <p>The law of total probability sums over all the ways A can happen: P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>), where the cases B₁ … B<sub>n</sub> must not overlap and must cover every possibility. Example: P(rain) = P(rain | clouds) P(clouds) + P(rain | no clouds) P(no clouds). The probability expansion, or chain rule, builds a composite event one step at a time, each factor the probability of the next event given all the earlier ones:</p>
+    <div class="formula">P(A₁ ∩ A₂ ∩ … ∩ A<sub>n</sub>) = P(A₁) P(A₂ | A₁) P(A₃ | A₁ ∩ A₂) ⋯ P(A<sub>n</sub> | A₁ ∩ … ∩ A<sub>n−1</sub>)</div>
+    <p>This is what solves the birthday problem. Let A<sub>i</sub> be the event that person i + 1's birthday differs from everyone before. Given all earlier events, the first i people occupy i days, so P(A<sub>i</sub> | earlier) = (365 − i) / 365. The chain rule multiplies these, and P(shared) = 1 − P(all different).</p>
+    ${chart("chain", leg([[2, "factor for person n"], [1, "product so far"]]))}${cap("Each factor is close to one, yet the product of 23 of them is below one half: the probability that all 23 birthdays differ is 0.493. Computed here from the formula on slide 14.")}
+    ${ex("Worked example: 23 people", "<p>P(all 23 different) = (365/365) · (364/365) · (363/365) ⋯ (343/365). Taking logarithms to multiply 23 factors sanely: Σ ln((365 − i)/365) for i = 0 … 22 ≈ −0.708, so the product is e<sup>−0.708</sup> ≈ 0.493 and P(shared) = 1 − 0.493 = <b>0.507</b>. For n = 22 the product is 0.524, so 23 is the first room size at which a shared birthday is more likely than not. The approximation (365 − i)/365 ≈ e<sup>−i/365</sup> turns the product into e<sup>−n(n−1)/730</sup>, which gives 0.500 at n = 23: the context box in lecture 0.</p>")}
+
+    <h2>Part 8 · Random variables (slide 15)</h2>
+    <p>A random variable is a number attached to an event. Three types: <b>binary</b> (indicator) variables with values in {0, 1}, which turn any event, even one described in words, into a number; <b>discrete</b> variables with values in a countable set S, finite or countably infinite, where the probability of a single value is a sensible question; and <b>continuous</b> variables with values in an interval of the reals, where single points have probability 0 and one asks about intervals instead. Because indicators work for any event, the rest of the course talks only about random variables: sampling them, generating them, and their distributions.</p>
+    ${why("Context, not on the slides: the indicator trick", "<p>If 1<sub>A</sub> is 1 when A happens and 0 otherwise, then E[1<sub>A</sub>] = P(A). Every statement about probabilities of events is therefore a statement about expectations of random variables, which is why the law of large numbers (an average of indicators converging to a probability) is the engine behind Monte Carlo: counting the points inside the quarter circle in lecture 0 was averaging an indicator.</p>")}
+
+    <h2>Formula sheet (slide 16)</h2>
+    <div class="tt-wrap"><table class="tt fs"><tr><th>Rule</th><th>Formula</th></tr>
+      <tr><th>Axioms</th><td>P(A) ≥ 0 · P(Ω) = 1 · P(A ∪ B) = P(A) + P(B) for disjoint A, B</td></tr>
+      <tr><th>Complement, union</th><td>P(Ā) = 1 − P(A) · P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</td></tr>
+      <tr><th>Counting</th><td>P(A) = |A| / |Ω| for equally likely outcomes · P(n, r) = n!/(n − r)! · C(n, r) = n!/(r!(n − r)!)</td></tr>
+      <tr><th>Conditional, joint</th><td>P(A | B) = P(A ∩ B)/P(B) · P(A ∩ B) = P(A | B) P(B)</td></tr>
+      <tr><th>Bayes</th><td>P(A | B) = P(B | A) P(A) / P(B)</td></tr>
+      <tr><th>Total probability</th><td>P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>)</td></tr></table></div>
+
+    <h2>Numerical practice: John Snow's grand experiment (slide 17)</h2>
+    <p>In the 1854 London cholera epidemic two water companies served the same streets. Southwark &amp; Vauxhall drew from the Thames downstream of the city's sewage, Lambeth from upstream. Snow compared the households of each, and the rest of London, in his 1855 book. Choose one of the 322,576 houses at random; let D be "a cholera death in the house" and S be "supplied by Southwark &amp; Vauxhall".</p>
+    <div class="tt-wrap"><table class="tt"><tr><th>Supplier</th><th>Houses</th><th>Cholera deaths</th></tr>${SNOW.map(([k, h, d]) => `<tr><th>${k}</th><td>${h.toLocaleString("en-GB")}</td><td>${d.toLocaleString("en-GB")}</td></tr>`).join("")}</table></div>
+    ${chart("snow")}${cap("Deaths per thousand houses, from the table on the slide: the downstream supplier's customers died at 8.4 times the rate of the upstream supplier's.")}
+    ${ex("Worked answers (a) to (c)", `<p><b>(a)</b> P(D | S) = 1,263 / 40,046 = <b>0.0315</b>; P(D | Lambeth) = 98 / 26,107 = <b>0.00375</b>; P(D | rest) = 1,422 / 256,423 = <b>0.00555</b>.</p>
+      <p><b>(b)</b> P(S) = 40,046 / 322,576 = <b>0.1241</b>. P(D) = (1,263 + 98 + 1,422) / 322,576 = 2,783 / 322,576 = <b>0.00863</b>. By counting, P(S ∩ D) = 1,263 / 322,576 = <b>0.003915</b>; by the product rule, P(D | S) P(S) = 0.03154 · 0.1241 = 0.003915, the same number, as it must be.</p>
+      <p><b>(c)</b> If S and D were independent, P(S ∩ D) would equal P(S) P(D) = 0.1241 · 0.00863 = 0.001071. The observed 0.003915 is <b>3.66 times</b> larger: a house supplied by Southwark &amp; Vauxhall was far more likely to see a cholera death, so the events are not independent. Snow read this as evidence for water-borne transmission, three decades before the bacterium was identified.</p>`)}
+    ${tiles([["3.15 %", "P(death | Southwark & Vauxhall)"], ["0.375 %", "P(death | Lambeth)"], ["× 3.66", "P(S ∩ D) over P(S) P(D)"], ["× 8.4", "death rate, downstream over upstream"]])}
+
+    <h2>Take-home (slide 18)</h2>
+    <ul>
+      <li><b>What does a stochastic model give?</b> The probabilities of states, not the states themselves.</li>
+      <li><b>Where does probability theory come from?</b> Three Kolmogorov axioms; the Boolean rules, counting rules and everything else follow.</li>
+      <li><b>What does conditioning do?</b> It renormalises to what you know: P(A | B) = P(A ∩ B) / P(B).</li>
+      <li><b>What is Bayes' theorem for?</b> Turning P(data | model), which you can simulate, into P(model | data), which you want.</li>
+      <li><b>Why random variables?</b> Indicators express any event, so random variables are the language for the rest of the course.</li>
+    </ul>
+    <p class="muted">Tutorial: ${exeLink(1, "tutorial 1")} (29 Oct) continues exactly here with random variables, PMF, CDF, densities, moments and the common distributions. Next lecture: ${lecLink(2, "lecture 2")} (2 Nov), random variate generation. Previous: ${lecLink(0, "lecture 0")}. Slides: OPAL → Lecture2026 → SMS1 (they may not be republished).</p>`;
+}
+const WRITEUPS = { 0: lecture0, 1: lecture1 };
+const LABS = { pi: initPi, ou: initOu, count: initCount, bayes: initBayes };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!l) {
+  page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
+} else {
+  document.title = `Lecture ${l.n} – ${l.title} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[l.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>

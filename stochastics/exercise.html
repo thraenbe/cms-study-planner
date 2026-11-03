@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Stochastics and Probability · Exercise</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="stochastics/sap.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="stochastics/sap.js"></script>
+<script src="stochastics/sap-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="sap">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U, fmt, daysUntil, lec, exe, today, EX } = SAP;
+const { key, leg, flag, hbar, vbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = SAPViz;
+const q = new URLSearchParams(location.search).get("n");
+const e = q === null ? null : c.exercises.find(x => String(x.n) === q);
+const page = document.getElementById("page");
+const back = `<a class="back" href="stochastics.html">← All lectures and exercises</a>`;
+const title = e => `${EX} ${e.n}${e.title ? ` – ${esc(e.title)}` : ""}`;
+function head(e) {
+  const meta = `${e.published ? `Sheet in OPAL since ${fmt(e.published)} · ` : ""}discussed ${fmt(e.date)}${exe ? ` · ${exe.start}–${exe.end} · ${esc(exe.room)} · ${esc(exe.who || "")}` : ""}${e.points ? ` · ${e.points} points` : ""}`;
+  return `${back}<div class="big-icon">${e.icon}</div><h1>${title(e)}</h1><p class="meta">${meta}</p>`;
+}
+// A task of the sheet (its number and points on the left, the question restated in our own words, then the worked
+// answer), the answer tiles, and the context / worked-example boxes.
+const task = (id, pts, t, body) => `<section class="task" id="t${String(id).replace(/\W/g, "")}"><div class="task-h"><span class="task-n">${id}</span><h2>${t}</h2>${pts ? `<span class="pts">${pts} pt</span>` : `<span class="pts open">discussed in the session</span>`}</div>${body}</section>`;
+const ans = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const why = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
+const ex = (t, body) => `<div class="ex"><div class="kicker">${t}</div>${body}</div>`;
+const tbl = (head, rows) => `<details class="tbl"><summary>Table view of the chart</summary><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? "n" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></details>`;
+
+// ---------------- Write-ups: one function per exercise, registered in WRITEUPS below ----------------
+// function exercise1() { return `${head(e)}<p class="lead">…</p>${task("1", 4, "…", `<p>…</p>${ans([["42", "answer"]])}`)}<h2>Before the session</h2><ul>…</ul>`; }
+
+function placeholder() {
+  const d = daysUntil(e.date), prev = e.lecture != null ? c.lectures.find(x => x.n === e.lecture) : null;
+  return `${head(e)}
+    <div class="box placeholder">
+      <div class="big-icon">${e.icon}</div>
+      <h2 style="margin-top:.4rem">${e.published ? "Sheet online, write-up pending" : "Not published yet"}</h2>
+      <p class="muted">This session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}${exe ? `, ${exe.start}–${exe.end}, ${esc(exe.room)}` : ""}.<br>${esc(e.blurb)}${prev ? ` <a href="stochastics/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it draws on.` : ""}<br>The write-up appears here once the sheet is available.</p>
+    </div>`;
+}
+// ---------------- Shared helpers ----------------
+const mulberry = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const tiles = items => `<div class="tiles">${items.map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+const cap = t => `<figcaption>${t}</figcaption></figure>`;
+const lecLink = (n, t) => `<a href="stochastics/lecture.html?n=${n}">${t || `lecture ${n}`}</a>`;
+const before = (t, items) => `<div class="before"><div class="kicker">${t}</div><ol>${items.map(i => `<li>${i}</li>`).join("")}</ol></div>`;
+const frac36 = k => `${k}/36`;
+
+// ================= Tutorial 1 · Probability refresher 2 (Pluto notebook SMS_T01, 29 Oct) =================
+// Screening test of section 1.1: 1000 people as one segmented bar (ill/healthy × positive/negative).
+const SCR = [["ill, test positive", 45, 1], ["ill, test negative", 5, 3], ["healthy, test positive", 95, 2], ["healthy, test negative", 855, 4]];
+CHARTS.screen = narrow => {
+  const W = narrow ? 340 : 600, H = 76, L = 4, R = 4, PW = W - L - R, gap = 2; let x = L;
+  const segs = SCR.map(([k, n, s]) => { const w = n / 1000 * PW - gap, x0 = x; x += n / 1000 * PW;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>${n} of 1000 people (${pct(n / 1000)})`)}"><rect class="seg s${s}" x="${x0}" y="12" width="${Math.max(w, 1)}" height="34" rx="3"/>${w > 40 ? `<text class="val" x="${x0 + w / 2}" y="${34}" text-anchor="middle" style="fill:#fff">${n}</text>` : ""}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Segmented bar of 1000 people: 45 ill and positive, 5 ill and negative, 95 healthy and positive, 855 healthy and negative. Of the 140 positives only 45 are ill.">${segs}<text class="note" x="${L}" y="${H - 10}">← 140 test positive: 45 ill, 95 healthy</text><text class="note" x="${W - R}" y="${H - 10}" text-anchor="end">860 test negative →</text></svg>`;
+};
+// Weather tree of section 1.2: two days, four sequences.
+CHARTS.tree = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 250 : 240, x0 = narrow ? 24 : 60, x1 = narrow ? 150 : 250, x2 = narrow ? 268 : 440, cy = H / 2;
+  const d1 = [["sun", 0.7, cy - 58], ["rain", 0.3, cy + 58]], leaves = [["sun", "sun", 0.8, cy - 90], ["sun", "rain", 0.2, cy - 30], ["rain", "sun", 0.4, cy + 30], ["rain", "rain", 0.6, cy + 90]];
+  const p1 = Object.fromEntries(d1.map(([w, p]) => [w, p])), y1 = Object.fromEntries(d1.map(([w, , y]) => [w, y]));
+  const nodes = d1.map(([w, p, y]) => `<line class="edge" x1="${x0}" y1="${cy}" x2="${x1}" y2="${y}"/><text class="tick" x="${(x0 + x1) / 2 - 6}" y="${(cy + y) / 2 - 6}" text-anchor="middle">${p}</text><circle class="node ${w}" cx="${x1}" cy="${y}" r="7"/><text class="cat" x="${x1}" y="${y + (w === "sun" ? -12 : 20)}" text-anchor="middle">day 1: ${w}</text>`).join("");
+  const lv = leaves.map(([a, b, p, y]) => { const pr = p1[a] * p;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${a} then ${b}</b>P(X₁ = ${a}) · P(X₂ = ${b} | X₁ = ${a}) = ${p1[a]} · ${p} = ${num(pr, 2)}`)}"><line class="edge" x1="${x1}" y1="${y1[a]}" x2="${x2}" y2="${y}"/><text class="tick" x="${(x1 + x2) / 2}" y="${(y1[a] + y) / 2 - 5}" text-anchor="middle">${p}</text><rect class="leaf" x="${x2 - 4}" y="${y - 13}" width="${narrow ? 72 : 120}" height="26" rx="6"/><circle class="node ${b}" cx="${x2 + 8}" cy="${y}" r="5"/><text class="cat" x="${x2 + 18}" y="${y + 4}">${narrow ? "" : `${a}, ${b}: `}${num(pr, 2)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Probability tree for two days of weather. Day 1 is sun with 0.7 or rain with 0.3; given sun, day 2 is sun with 0.8 or rain with 0.2; given rain, sun with 0.4 or rain with 0.6. The four sequences have probabilities 0.56, 0.14, 0.12 and 0.18, which sum to 1.">
+    <circle class="node" cx="${x0}" cy="${cy}" r="7" style="fill:var(--vz-gray)"/><text class="cat" x="${x0}" y="${cy + 22}" text-anchor="middle">start</text>${nodes}${lv}</svg>`;
+};
+// Sum of two dice (section 3): PMF bars and the CDF as a step line.
+const SP = Array.from({ length: 11 }, (_, i) => 6 - Math.abs(i + 2 - 7)), SF = SP.map((_, i) => SP.slice(0, i + 1).reduce((a, b) => a + b, 0));
+CHARTS.dice = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 250, L = narrow ? 34 : 44, R = narrow ? 34 : 44, T = 16, B = 32, PW = W - L - R, PH = H - T - B, bw = PW / 11;
+  const yp = v => T + PH - v / 36 * PH * 6, yf = v => T + PH - v / 36 * PH;
+  const bars = SP.map((k, i) => { const x0 = L + i * bw + bw * 0.22, w = bw * 0.56, s = i + 2;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>sum ${s}</b>p(${s}) = ${frac36(k)} = ${num(k / 36, 3)}<br>F(${s}) = P(X ≤ ${s}) = ${frac36(SF[i])} = ${num(SF[i] / 36, 3)}`)}"><rect class="hit" x="${L + i * bw}" y="${T}" width="${bw}" height="${PH}"/><path class="bar s1" d="${vbar(x0, w, yp(k), T + PH)}"/><text class="cat" x="${x0 + w / 2}" y="${H - 12}" text-anchor="middle">${s}</text></g>`; }).join("");
+  const step = "M" + SF.map((f, i) => `${L + i * bw},${yf(i ? SF[i - 1] : 0)} L${L + i * bw},${yf(f)} L${L + (i + 1) * bw},${yf(f)}`).join(" L");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of the probability of each sum of two dice, from 1/36 at 2 and 12 to 6/36 at 7, with the cumulative distribution as a staircase from 0 to 1 overlaid.">
+    ${[0, 1, 2, 3, 4, 5, 6].map(k => `<line class="${k ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${yp(k)}" y2="${yp(k)}"/><text class="tick" x="${L - 5}" y="${yp(k) + 4}" text-anchor="end">${k}/36</text>`).join("")}
+    ${[0, 0.5, 1].map(f => `<text class="tick" x="${W - R + 5}" y="${yf(f * 36) + 4}">${f}</text>`).join("")}
+    <text class="note" x="${L - 30}" y="10">p(x)</text><text class="note" x="${W - R + 2}" y="10">F(x)</text>${bars}<path class="step" d="${step}"/></svg>`;
+};
+// Density f(x) = 2x on [0, 1] (section 4): the shaded area is P(0.2 ≤ X ≤ 0.5) = 0.21; the CDF x² beside it.
+CHARTS.dens = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 300 : 200, two = !narrow, pw = two ? (W - 70) / 2 : W - 50, ph = two ? H - 44 : (H - 70) / 2;
+  const panel = (ox, oy, f, fmax, title, area) => { const x = v => ox + 34 + v * (pw - 40), y = v => oy + 14 + (ph - 36) * (1 - v / fmax);
+    const pts = Array.from({ length: 51 }, (_, k) => k / 50), path = "M" + pts.map(v => `${x(v).toFixed(1)},${y(f(v)).toFixed(1)}`).join(" L");
+    const ar = area ? `<path class="area" d="M${x(0.2)},${y(0)} L${x(0.2)},${y(f(0.2))} L${x(0.5)},${y(f(0.5))} L${x(0.5)},${y(0)} Z"/>` : `<line class="ann" x1="${x(0.2)}" x2="${x(0.2)}" y1="${y(0)}" y2="${y(0.04)}" stroke-dasharray="3 2"/><line class="ann" x1="${x(0.5)}" x2="${x(0.5)}" y1="${y(0)}" y2="${y(0.25)}" stroke-dasharray="3 2"/><line class="ann" x1="${x(0)}" x2="${x(0.5)}" y1="${y(0.25)}" y2="${y(0.25)}" stroke-dasharray="3 2"/><line class="ann" x1="${x(0)}" x2="${x(0.2)}" y1="${y(0.04)}" y2="${y(0.04)}" stroke-dasharray="3 2"/>`;
+    return `<text class="note" x="${ox + 34}" y="${oy + 8}">${title}</text><line class="axis" x1="${x(0)}" x2="${x(1)}" y1="${y(0)}" y2="${y(0)}"/><line class="axis" x1="${x(0)}" x2="${x(0)}" y1="${y(0)}" y2="${y(fmax)}"/>
+      ${[0, 0.5, 1].map(v => `<text class="tick" x="${x(v)}" y="${y(0) + 14}" text-anchor="middle">${v}</text>`).join("")}<text class="tick" x="${x(0) - 5}" y="${y(fmax) + 4}" text-anchor="end">${fmax}</text>${ar}<path class="line" d="${path}"/>`; };
+  const tipA = esc("<b>P(0.2 ≤ X ≤ 0.5)</b>area under 2x from 0.2 to 0.5<br>= 0.5² − 0.2² = 0.21"), tipB = esc("<b>Same probability on the CDF</b>F(0.5) − F(0.2) = 0.25 − 0.04 = 0.21");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two panels. Left: the density f(x) = 2x on 0 to 1, a straight line from 0 to 2, with the area between 0.2 and 0.5 shaded, 0.21. Right: the cumulative distribution x squared, where the same probability is the rise from 0.04 to 0.25.">
+    <g class="pt" tabindex="0" data-tip="${tipA}"><rect class="hit" x="0" y="0" width="${two ? W / 2 : W}" height="${two ? H : H / 2}"/>${panel(0, 0, v => 2 * v, 2, "density f(x) = 2x, shaded: P(0.2 ≤ X ≤ 0.5) = 0.21", true)}</g>
+    <g class="pt" tabindex="0" data-tip="${tipB}"><rect class="hit" x="${two ? W / 2 : 0}" y="${two ? 0 : H / 2}" width="${two ? W / 2 : W}" height="${two ? H : H / 2}"/>${panel(two ? W / 2 + 10 : 0, two ? 0 : H / 2, v => v * v, 1, "CDF F(x) = x²: F(0.5) − F(0.2) = 0.21", false)}</g></svg>`;
+};
+// Explorer: running mean of die rolls against E[X] = 3.5 (section 5.5, law of large numbers).
+const LLN = { seed: 1, N: 500 };
+function initLln(body) {
+  body.innerHTML = `<div class="ctl"><label>Rolls <select>${[20, 100, 500, 2000].map(n => `<option value="${n}"${n === LLN.N ? " selected" : ""}>${n}</option>`).join("")}</select></label><button class="preset" type="button">New rolls</button></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), btn = body.querySelector("button"), out = body.querySelector(".out");
+  const draw = () => { const W = 560, H = 200, L = 30, R = 10, T = 10, B = 24, PW = W - L - R, PH = H - T - B, rng = mulberry(LLN.seed * 131);
+    const x = i => L + i / LLN.N * PW, y = v => T + PH - (v - 1) / 5 * PH; let sum = 0; const runs = [];
+    for (let s = 0; s < 4; s++) { sum = 0; const pts = []; for (let i = 1; i <= LLN.N; i++) { sum += 1 + Math.floor(rng() * 6); pts.push([i, sum / i]); } runs.push(pts); }
+    const last = runs.map(p => p[p.length - 1][1]);
+    out.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Running means of four sequences of ${LLN.N} die rolls, converging towards 3.5.">
+        ${[1, 2, 3, 3.5, 4, 5, 6].map(v => `<line class="${v === 3.5 ? "ann" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"${v === 3.5 ? ' stroke-dasharray="4 3"' : ""}/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+        ${[0, 0.25, 0.5, 0.75, 1].map(f => `<text class="tick" x="${x(f * LLN.N)}" y="${H - 8}" text-anchor="middle">${Math.round(f * LLN.N)}</text>`).join("")}
+        ${runs.map(p => `<path class="line" style="opacity:.75" d="M${p.map(([i, v]) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" L")}"/>`).join("")}<text class="note" x="${W - R}" y="${y(3.5) - 5}" text-anchor="end">E[X] = 3.5</text></svg>
+      <dl class="ro"><dt>After ${LLN.N} rolls</dt><dd>means ${last.map(v => num(v, 3)).join(", ")} · the spread of the mean shrinks like σ/√N = 1.71/√${LLN.N} ≈ ${num(Math.sqrt(35 / 12 / LLN.N), 3)}</dd></dl>`; };
+  sel.addEventListener("change", () => { LLN.N = +sel.value; draw(); }); btn.addEventListener("click", () => { LLN.seed++; draw(); }); draw();
+}
+// Explorer: the sum of k uniform numbers, standardised, against the normal density (section 6.1 and exercise 9).
+const CLT = { k: 2, seed: 1 };
+function initClt(body) {
+  body.innerHTML = `<div class="ctl"><label>Terms k <select>${[1, 2, 3, 5, 12].map(k => `<option value="${k}"${k === CLT.k ? " selected" : ""}>${k}</option>`).join("")}</select></label><button class="preset" type="button">New sums</button></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), btn = body.querySelector("button"), out = body.querySelector(".out");
+  const draw = () => { const k = CLT.k, rng = mulberry(CLT.seed * 977 + k), M = 8000, bins = 32, lo = -4, hi = 4, bw = (hi - lo) / bins, cnt = new Array(bins).fill(0), sd = Math.sqrt(k / 12), mu = k / 2;
+    for (let i = 0; i < M; i++) { let s = 0; for (let j = 0; j < k; j++) s += rng(); const z = (s - mu) / sd, b = Math.floor((z - lo) / bw); if (b >= 0 && b < bins) cnt[b]++; }
+    const W = 560, H = 200, L = 30, R = 10, T = 10, B = 24, PW = W - L - R, PH = H - T - B, x = z => L + (z - lo) / (hi - lo) * PW, y = d => T + PH - d / 0.5 * PH;
+    const bars = cnt.map((n, b) => `<rect class="hbar" x="${x(lo + b * bw) + 1}" y="${y(n / M / bw)}" width="${PW / bins - 2}" height="${T + PH - y(n / M / bw)}"/>`).join("");
+    const pdf = "M" + Array.from({ length: 161 }, (_, i) => { const z = lo + i / 160 * (hi - lo); return `${x(z).toFixed(1)},${y(Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI)).toFixed(1)}`; }).join(" L");
+    out.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Histogram of 8000 standardised sums of ${k} uniform numbers against the standard normal density.">
+        ${[0, 0.2, 0.4].map(d => `<line class="${d ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(d)}" y2="${y(d)}"/><text class="tick" x="${L - 5}" y="${y(d) + 4}" text-anchor="end">${d}</text>`).join("")}
+        ${[-4, -2, 0, 2, 4].map(z => `<text class="tick" x="${x(z)}" y="${H - 8}" text-anchor="middle">${z}</text>`).join("")}${bars}<path class="line k2" d="${pdf}"/><text class="note" x="${W - R}" y="${T + 10}" text-anchor="end">N(0, 1) density</text></svg>
+      <dl class="ro"><dt>S<sub>${k}</sub></dt><dd>mean k/2 = ${num(mu, 1)}, variance k/12 = ${num(k / 12, 3)}; plotted is (S − ${num(mu, 1)}) / ${num(sd, 3)}</dd><dt>Shape</dt><dd>${k === 1 ? "flat: one uniform is not normal at all" : k === 2 ? "a triangle: the sum of two uniforms" : k < 5 ? "already bell-shaped, with slightly short tails" : "close to the normal curve; for k = 12 the scaling is exactly exercise 9's Z = ΣU − 6"}</dd></dl>`; };
+  sel.addEventListener("change", () => { CLT.k = +sel.value; draw(); }); btn.addEventListener("click", () => { CLT.seed++; draw(); }); draw();
+}
+
+function exercise1() {
+  const fam = [["Binomial Bin(n, p)", "number of successes in n independent two-outcome trials", "n p", "n p (1 − p)"], ["Uniform U(a, b)", "every value in [a, b] equally likely", "(a + b)/2", "(b − a)²/12"], ["Normal N(μ, σ²)", "symmetric bell curve around μ", "μ", "σ²"], ["Poisson Poiss(λ)", "number of events at a constant rate", "λ", "λ"], ["Exponential Exp(λ)", "waiting time until the next event", "1/λ", "1/λ²"]];
+  return `${head(e)}
+    <p class="lead">The first tutorial is a Pluto notebook (Julia) rather than a sheet: "Probability Refresher 2: Random Variables and Distributions", dated 29 October. It picks up where ${lecLink(1, "lecture 1")} stops, with the formulas from the lecture in a box at the top, and then builds the second half of the refresher out of interactive figures and quick checks: sequences and the chain rule, the three types of random variables, PMF and CDF, densities, joint distributions, moments, the common families and the central limit theorem. A block of nine exercises closes it. The notebook reached OPAL (Exercises2026) on 1 November, after the session; the numbers below follow its own questions and reveal cells, recomputed here.</p>
+    ${before("Before the session: get Pluto running (OPAL guide, 7 pages)", ["Install Julia once: on Windows through the Microsoft Store command in a terminal, on macOS and Linux with the installer script from julialang.org (not the distribution's package, which is outdated). Open a new terminal afterwards.", "In Julia run the package manager once to add Pluto; the first time takes a few minutes.", "Every time: start julia, run <code>import Pluto; Pluto.run()</code>, paste the path of the downloaded notebook into 'Open a notebook' (strip quotes and a leading file://) and click 'Run notebook code'. Stop Pluto with Ctrl+C in the terminal, and keep that terminal open while working.", "The guide's FAQ covers a blocked store, a missing curl, WSL, slow downloads and the 'file not found' path problems."])}
+
+    <h2>1 · Several events: the screening test, sequences, the chain rule</h2>
+    <p>A screening test is applied to 1000 people: 50 are ill, of whom 45 test positive; 950 are healthy, of whom 95 test positive. The notebook lets you condition on "everybody", "ill", "healthy", "positive" or "negative" and watch the table shrink to the condition: that is what P(A | B) means.</p>
+    ${chart("screen", leg([[1, "ill, positive"], [3, "ill, negative"], [2, "healthy, positive"], [4, "healthy, negative"]]))}${cap("The notebook's table as one bar. P(ill ∩ positive) = 45/1000 = 0.045 in whichever order it is written; P(positive | ill) = 45/50 = 0.9, but P(ill | positive) = 45/140 = 0.321; P(positive) = 0.9 · 0.05 + 0.1 · 0.95 = 0.14 by total probability. Ill and positive are not independent, because 0.9 ≠ 0.14.")}
+    <p><b>Sequences.</b> The weather on two days, each sun or rain: P(X₁ = sun) = 0.7, and given sun, day 2 is sun with 0.8; given rain, day 2 is sun with 0.4. A comma lists values in time order, so P(X₁ = rain, X₂ = sun) = 0.3 · 0.4 = 0.12 is not P(X₁ = sun, X₂ = rain) = 0.7 · 0.2 = 0.14. Three things that look alike and are not: P(A ∩ B) = P(B ∩ A) always; P(A | B) ≠ P(B | A) in general; a sequence changes when its values are swapped.</p>
+    ${chart("tree")}${cap("All sequences of two days; hover a leaf for its product. The four probabilities add up to 1. Reading the tree backwards: P(X₁ = rain | X₂ = sun) = 0.12 / (0.56 + 0.12) = 0.176, not the 0.4 of the forward branch.")}
+    <p><b>The chain rule</b> is the tree with more levels: P(A₁ ∩ … ∩ A<sub>n</sub>) = P(A₁) P(A₂ | A₁) ⋯ P(A<sub>n</sub> | A₁ ∩ … ∩ A<sub>n−1</sub>), one factor per event, each conditioned on everything before. With three days the third factor is conditioned on both earlier days (0.7 · 0.8 · 0.15 = 0.084 for sun, sun, rain in the notebook's figure). <b>Memory</b> is how far back the conditioning reaches: no memory means P(X₃), memory of the last day means P(X₃ | X₂), full memory means P(X₃ | X₁, X₂). With memory of the last day a ten-day model needs only three conditional distributions (day 1, and one per possible previous weather); with no memory the chain rule collapses to a product of marginals, which is independence. The birthday problem is section 1.5, with a one-room animation and a many-rooms histogram; its curve is in ${lecLink(1, "lecture 1")}.</p>
+
+    <h2>2 · Random variables</h2>
+    <p>One die roll, three questions: was it a six (an indicator I with values 0 and 1), which number is on top (a discrete X with values 1 … 6), how long did the die roll before stopping (a continuous T in an interval of times). A random variable is a fixed function X: Ω → ℝ, ω ↦ X(ω); the randomness is in the outcome ω. Capital X is the variable, small x one of its values, and {X = x} is an event. The number of cars in a 500-place car park is discrete (501 listable values); a body temperature is continuous even when the thermometer rounds it. Rolling the die many times gives three different pictures of the same rolls, one per variable.</p>
+
+    <h2>3 · Discrete distributions: the sum of two dice</h2>
+    <p>The 36 ordered pairs of faces are equally likely; the sum x occurs in 6 − |x − 7| of them. The probability mass function is p<sub>X</sub>(x) = P(X = x), between 0 and 1 and summing to 1. The cumulative distribution function F<sub>X</sub>(x) = P(X ≤ x) adds the bars up to x: never decreasing, 0 below the smallest value, 1 above the largest, a jump of p<sub>X</sub>(x<sub>i</sub>) at each value and flat in between, so F(4.5) = F(4) = 6/36.</p>
+    ${chart("dice", leg([[1, "PMF p(x), left axis"], [2, "CDF F(x), right axis"]]))}${cap("Figure 3.1 and 3.2 of the notebook in one chart, computed here. Intervals come from differences of the CDF: P(3 < X ≤ 6) = F(6) − F(3) = 15/36 − 3/36 = 12/36; P(3 ≤ X < 6) = F(5) − F(2) = 9/36; P(X > 9) = 1 − F(9) = 6/36; P(4 ≤ X ≤ 7) = F(7) − F(3), not F(7) − F(4).")}
+    <p><b>Two discrete variables</b> of the same roll, the first die X and the sum Y, are described by a joint table P<sub>X,Y</sub>(x, y). Marginals are row and column sums, conditionals are rescaled rows: P<sub>Y|X</sub>(y | x) = P<sub>X,Y</sub>(x, y) / P<sub>X</sub>(x). Given X = 4 the sum is 9 only if the second die shows 5, so P(Y = 9 | X = 4) = 1/6, while the marginal P<sub>Y</sub>(9) = 4/36 = 1/9: the first die and the sum are not independent, although the two dice are.</p>
+
+    <h2>4 · Continuous distributions</h2>
+    <p>Tomorrow's noon temperature takes a different value every day, so values cannot be counted one by one; they are grouped into bins. The notebook's task: with counts the tallest bar changes with the bin width, with relative frequencies it still does, and only "fraction per °C" (count / (N · width)) settles down as the days pile up, towards a curve. That curve is the density: for a narrow bin around x the fraction of days is f<sub>X</sub>(x) Δx. Formally, P(a ≤ X ≤ b) = ∫<sub>a</sub><sup>b</sup> f<sub>X</sub>(x) dx, f ≥ 0, the total area is 1, F<sub>X</sub>(x) = ∫<sub>−∞</sub><sup>x</sup> f, and f = dF/dx.</p>
+    ${chart("dens")}${cap("Question 4.2 and 4.3 of the notebook: f(x) = 2x on [0, 1] has total area 1, P(0.2 ≤ X ≤ 0.5) = 0.5² − 0.2² = 0.21, and the CDF is x². Hover a panel for the computation.")}
+    <p><b>Height or area.</b> For a discrete variable the height of a bar is a probability. For a continuous one the height f(x) is not: f(1) = 2 for this density, and nothing is wrong, because only areas are probabilities. A single value has width 0, so P(X = 0.5) = 0, which does not mean 0.5 is impossible. The CDF is steepest where the density is largest. <b>Reading the CDF backwards</b>, x = F<sub>X</sub><sup>−1</sup>(u), turns a uniform height u into a value with the distribution of X: random heights land densely where the CDF is steep. This inverse-transform idea is the first sampling algorithm of ${lecLink(2, "lecture 2")}.</p>
+    <p><b>Two continuous variables.</b> A penalty kick crosses the goal line at (X, Y); where kicks are dense the joint density f<sub>X,Y</sub> is high, a mountain over the goal. Marginals squash the mountain onto one axis, f<sub>X</sub>(x) = ∫ f<sub>X,Y</sub>(x, y) dy; a conditional density is a slice at height y divided by the slice's area f<sub>Y</sub>(y); the joint CDF F<sub>X,Y</sub>(x, y) is the volume below and to the left of (x, y), and F<sub>X</sub>(x) = F<sub>X,Y</sub>(x, ∞). Independence means f<sub>X,Y</sub> = f<sub>X</sub> f<sub>Y</sub>. For f(x, y) = x + y on the unit square: total volume 1, f<sub>X</sub>(x) = x + ½, and P(X ≤ ½, Y ≤ ½) = 1/8.</p>
+
+    <h2>5 · Moments</h2>
+    <p>To compare two distributions, each is summarised by numbers: location, spread, then shape. The moment of order μ is M<sub>μ</sub>[X] = Σ x<sup>μ</sup> p<sub>X</sub>(x) (discrete) or ∫ x<sup>μ</sup> f<sub>X</sub>(x) dx (continuous). M₀ = 1 is the area; M₁ = E[X] is the centroid, where the distribution balances; Var(X) = M₂ − M₁² = E[(X − E[X])²] is the spread, the moment of inertia in mechanics; order 3 (skewness) measures asymmetry and order 4 (kurtosis) the tails. Two distributions with the same mean and variance can still differ, in asymmetry or in the tails; only for families like the normal do the first two moments fix everything.</p>
+    ${tiles([["3.5", "E[X] of a fair die"], ["91/6 ≈ 15.17", "M₂ of a fair die"], ["35/12 ≈ 2.92", "Var of a fair die"], ["5 · 100/12", "mean · variance of U(0, 10)"]])}
+    <p><b>Covariance</b> Cov(X, Y) = E[(X − E[X])(Y − E[Y])] is positive when X above its mean goes with Y above its mean (temperature and ice-cream sales), negative when one is high while the other is low (temperature and hot-drink sales, sunshine and umbrellas), and zero for two separate dice; independent variables have zero covariance. It enters the variance of a sum: Var(X + Y) = Var(X) + Var(Y) + 2 Cov(X, Y). <b>Distribution versus data:</b> E[X] and Var(X) belong to the distribution and are fixed numbers; x̄ = Σ x<sub>i</sub>/n and s² = Σ (x<sub>i</sub> − x̄)² / (n − 1) are estimates from data. The law of large numbers says the sample mean of i.i.d. variables converges to E[X].</p>
+    ${lab("lln", "running means of die rolls, the law of large numbers")}
+
+    <h2>6 · Common distributions and the central limit theorem</h2>
+    <div class="tt-wrap"><table class="tt fs"><tr><th>Family</th><th>What it counts or measures</th><th>Mean</th><th>Variance</th></tr>${fam.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("")}</table></div>
+    <p>The notebook's quick checks: ten students each choose tea with probability 0.6, so P(exactly 7 tea) = C(10, 7) 0.6⁷ 0.4³ = 0.215 and 6 are expected; four coin tosses give exactly two heads with probability 6/16; five die rolls show no six with probability (5/6)⁵ = 0.402; a machine failing once per 10 hours on average runs more than 20 hours with probability e<sup>−2</sup> = 0.135.</p>
+    <p>A Galton board drops balls through n rows of pins; the slot is the sum of n Bernoulli bounces, Bin(n, p), and the pile looks like a bell. The <b>central limit theorem</b> says why: the sum S<sub>k</sub> of k independent variables with the same distribution, mean μ and finite variance σ², is approximately N(kμ, kσ²) for large k, whatever the distribution of each term. Many measured quantities are sums of many small random parts, hence the normal distribution everywhere.</p>
+    ${lab("clt", "sum of k uniform numbers against the normal curve")}
+    <p><b>Distributions without a scale.</b> Zoom out on a density through the windows [1, 10], [10, 100], [100, 1000], each rescaled to the same axes. A power law f(x) ∝ x<sup>−2.5</sup> looks the same in all three: it has no characteristic scale. The exponential and the normal do not survive the zoom. Scale-free distributions are the last item of ${lecLink(1, "lecture 1")}'s topic list in the OPAL overview.</p>
+
+    <h2>7 and 8 · Why sampling, and a notation check</h2>
+    <p>Section 7 previews the course: uniform numbers pushed through the CDF produce simulated temperatures that follow the model, and a hiker's position known only as a probability landscape is explored by sampling. Section 8 is a card deck of notation: P(A ∩ B) versus P(A | B) versus the sequence P(X₁ = a, X₂ = b); X versus x; p<sub>X</sub>(x), F<sub>X</sub>(x), f<sub>X</sub>(x). Worth a minute before the exercises.</p>
+
+    <h2>Exercises</h2>
+    ${task("1", 0, "Chain rule: three hearts", `<p>Three cards are drawn from 52 without replacement; probability that all are hearts. The chain rule with H<sub>i</sub> = "card i is a heart": P(H₁) P(H₂ | H₁) P(H₃ | H₁ ∩ H₂) = (13/52)(12/51)(11/50) = 1716 / 132,600.</p>${ans([["0.0129", "all three hearts (1.29 %)"]])}`)}
+    ${task("2", 0, "Sequences: the weather backwards", `<p>With the two-day model, P(X₂ = rain) sums the two sequences ending in rain: 0.7 · 0.2 + 0.3 · 0.6 = 0.14 + 0.18 = 0.32. Then P(X₁ = sun | X₂ = rain) = P(sun, rain) / P(X₂ = rain) = 0.14 / 0.32.</p>${ans([["0.32", "P(X₂ = rain)"], ["0.4375", "P(X₁ = sun | X₂ = rain)"]])}`)}
+    ${task("3", 0, "Memory of the last day", `<p>Three sunny days in a row with memory of one day: P(X₁ = sun) P(X₂ = sun | X₁ = sun) P(X₃ = sun | X₂ = sun) = 0.7 · 0.8 · 0.8. The third factor reuses the day-2 rule because only the previous day matters.</p>${ans([["0.448", "P(sun, sun, sun)"]])}`)}
+    ${task("4", 0, "PMF and CDF of a six-valued variable", `<p>Values 0 … 5 with probabilities 0.1, 0.2, 0.3, 0.2, 0.1, 0.1. (a) Running sums give F at 0 … 5. (b) P(2 ≤ X ≤ 4) = F(4) − F(1) and P(2 < X < 4) = P(X = 3) = F(3) − F(2).</p>
+      <div class="tt-wrap"><table class="tt"><tr><th>x</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr><tr><th>p(x)</th><td>0.1</td><td>0.2</td><td>0.3</td><td>0.2</td><td>0.1</td><td>0.1</td></tr><tr><th>F(x)</th><td>0.1</td><td>0.3</td><td>0.6</td><td>0.8</td><td>0.9</td><td>1.0</td></tr></table></div>
+      ${ans([["0.9 − 0.3 = 0.6", "P(2 ≤ X ≤ 4)"], ["0.8 − 0.6 = 0.2", "P(2 < X < 4)"]])}`)}
+    ${task("5", 0, "A joint table of two binary variables", `<p>P(0,0) = 0.3, P(0,1) = 0.2, P(1,0) = 0.1, P(1,1) = 0.4 with X first. Row sums: P<sub>X</sub>(0) = 0.5, P<sub>X</sub>(1) = 0.5. Column sums: P<sub>Y</sub>(0) = 0.4, P<sub>Y</sub>(1) = 0.6. Conditional: P(Y = 1 | X = 1) = 0.4 / 0.5 = 0.8, which differs from P<sub>Y</sub>(1) = 0.6, so X and Y are dependent (equivalently 0.4 ≠ 0.5 · 0.6 = 0.3).</p>${ans([["0.5 / 0.5", "marginal of X"], ["0.4 / 0.6", "marginal of Y"], ["0.8", "P(Y = 1 | X = 1)"], ["no", "independent?"]])}`)}
+    ${task("6", 0, "A density on [0, 3]", `<p>f(x) = c x². (a) ∫₀³ c x² dx = 9c = 1, so c = 1/9. (b) F(x) = ∫₀<sup>x</sup> t²/9 dt = x³/27 on [0, 3], 0 below and 1 above. (c) P(X ≤ 1) = F(1) = 1/27.</p>${ans([["1/9", "c"], ["x³/27", "F(x) on [0, 3]"], ["1/27 ≈ 0.037", "P(X ≤ 1)"]])}`)}
+    ${task("7", 0, "A joint density on the unit square", `<p>f(x, y) = 4xy. Marginals: f<sub>X</sub>(x) = ∫₀¹ 4xy dy = 2x, and by symmetry f<sub>Y</sub>(y) = 2y. Their product 2x · 2y = 4xy equals f, so X and Y are independent. Then P(X ≤ ½, Y ≤ ½) = (∫₀<sup>½</sup> 2x dx)² = (¼)² = 1/16.</p>${ans([["2x, 2y", "marginal densities"], ["yes", "independent"], ["1/16", "P(X ≤ ½, Y ≤ ½)"]])}`)}
+    ${task("8", 0, "Moments of exercise 4's variable, and of Y = 3X − 2", `<p>E[X] = 0 · 0.1 + 1 · 0.2 + 2 · 0.3 + 3 · 0.2 + 4 · 0.1 + 5 · 0.1 = 2.3. M₂ = 0 + 0.2 + 1.2 + 1.8 + 1.6 + 2.5 = 7.3. Var(X) = 7.3 − 2.3² = 7.3 − 5.29 = 2.01. For a linear map, E[aX + b] = aE[X] + b and Var(aX + b) = a² Var(X): E[Y] = 3 · 2.3 − 2 = 4.9 and Var(Y) = 9 · 2.01 = 18.09.</p>${ans([["2.3", "E[X]"], ["7.3", "M₂[X]"], ["2.01", "Var(X)"], ["4.9 · 18.09", "E[Y] · Var(Y)"]])}`)}
+    ${task("9", 0, "A normal number from twelve uniform ones (programming)", `<p>U₁ … U₁₂ independent and uniform on [0, 1]; Z = U₁ + … + U₁₂ − 6. (a) Each U has mean ½ and variance 1/12, so E[Z] = 12 · ½ − 6 = 0 and, variances of independent terms adding, Var(Z) = 12 · 1/12 = 1. (b) The function draws twelve uniforms into <code>u</code>; it should return <code>sum(u) - 6</code>. The notebook's check draws 20,000 values and compares their mean and variance with N(0, 1), then overlays the histogram on the normal density: the central limit theorem with k = 12, as in the explorer above. This is the classic pre-Box–Muller recipe; ${lecLink(2, "lecture 2")} brings the exact transformations.</p>${ans([["0 · 1", "E[Z] · Var(Z)"], ["sum(u) − 6", "one value of Z"]])}`)}
+
+    ${why("Context, not in the notebook: what this tutorial trains", "<p>Every later chapter leans on these moves: reading a conditional as a renormalised table (Bayes, MCMC acceptance ratios), the chain rule as a tree (Markov chains are the one-day-memory case), the CDF read backwards (inverse-transform sampling in lecture 2), areas rather than heights (densities of SDE solutions), moments and their estimates from data (Monte Carlo error bars), and the central limit theorem (why Monte Carlo errors are Gaussian and shrink like 1/√N). The quick checks in the notebook are the kind of short calculation a written exam asks for.</p>")}
+    <p class="muted">Material: OPAL → Exercises2026 → SMS_T01.jl and the Pluto installation guide. Lecture it belongs to: ${lecLink(1, "lecture 1")}. Next tutorial: <a href="stochastics/exercise.html?n=2">tutorial 2</a> (5 Nov).</p>`;
+}
+const WRITEUPS = { 1: exercise1 };
+const LABS = { lln: initLln, clt: initClt };
+const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
+if (!e) {
+  page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
+} else {
+  document.title = `${title(e).replace(/<[^>]+>/g, "")} · ${m.name}`;
+  page.innerHTML = (WRITEUPS[e.n] || placeholder)();
+  mountCharts();
+  mountLabs();
+}
+let narrowNow = isNarrow();
+addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
+</script>
+</body>
+</html>
