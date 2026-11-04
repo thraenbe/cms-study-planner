@@ -343,3 +343,10 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .sap svg.lab-svg .hbar { fill: var(--vz-s1); fill-opacity: .7; }
 .sap .before { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c-trk); border-radius: 8px; padding: 10px 14px; margin: 0.6rem 0 1.1rem; }
 .sap .before ol { margin: 0.2rem 0 0; }
+
+/* several formulas in one box or formula-sheet cell: one per line, so a separator is never read as a product */
+.sap .formula .fl { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 16px; row-gap: 2px; }
+.sap .formula .fl + .fl { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.sap .formula .fn { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.8rem; color: var(--ink-2); }
+.sap table.tt.fs td .f { display: block; }
+.sap table.tt.fs td .f + .f { margin-top: 3px; }

@@ -393,7 +393,7 @@ function lecture1() {
 
     <h2>Part 5 · Conditional probability and independence (slides 10–11)</h2>
     <p>Conditioning on B renormalises everything to B: once B is known, it becomes the whole space, and dividing by P(B) keeps the probabilities summing to one.</p>
-    <div class="formula">P(A | B) = P(A ∩ B) / P(B)        P(A ∩ B) = P(A | B) P(B)</div>
+    <div class="formula"><span class="fl"><span>P(A | B) = P(A ∩ B) / P(B)</span><span class="fn">definition of conditional probability</span></span><span class="fl"><span>P(A ∩ B) = P(A | B) P(B)</span><span class="fn">the same rule times P(B): the product rule for the joint probability</span></span></div>
     <p>With a 52-card deck: P(ace of hearts | red) = (1/52) / (1/2) = 1/26, twice the unconditional 1/52, because knowing the card is red halves the candidates. P(king | red) = (2/52) / (1/2) = 1/13 = P(king): the condition changes nothing, because two of the four kings are red. The deck's weather version: a 60 % forecast, and you wake to cloudless skies, so P(rain | no clouds) is far lower.</p>
     ${chart("cards", leg([[1, "no condition"], [2, "given the card is red"]]))}${cap("The two card examples of the slides. Conditioning on 'red' doubles the ace of hearts and leaves the king unchanged.")}
     <p><b>Independence.</b> A and B are independent if knowing B tells you nothing about A: P(A | B) = P(A), equivalently P(A ∩ B) = P(A) P(B). "King" and "red" are independent. In the general, dependent case the joint probability is P(A ∩ B) = P(A | B) P(B): first B happens, then A must happen given B.</p>
@@ -418,10 +418,10 @@ function lecture1() {
 
     <h2>Formula sheet (slide 16)</h2>
     <div class="tt-wrap"><table class="tt fs"><tr><th>Rule</th><th>Formula</th></tr>
-      <tr><th>Axioms</th><td>P(A) ≥ 0 · P(Ω) = 1 · P(A ∪ B) = P(A) + P(B) for disjoint A, B</td></tr>
-      <tr><th>Complement, union</th><td>P(Ā) = 1 − P(A) · P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</td></tr>
-      <tr><th>Counting</th><td>P(A) = |A| / |Ω| for equally likely outcomes · P(n, r) = n!/(n − r)! · C(n, r) = n!/(r!(n − r)!)</td></tr>
-      <tr><th>Conditional, joint</th><td>P(A | B) = P(A ∩ B)/P(B) · P(A ∩ B) = P(A | B) P(B)</td></tr>
+      <tr><th>Axioms</th><td><span class="f">P(A) ≥ 0</span><span class="f">P(Ω) = 1</span><span class="f">P(A ∪ B) = P(A) + P(B) for disjoint A, B</span></td></tr>
+      <tr><th>Complement, union</th><td><span class="f">P(Ā) = 1 − P(A)</span><span class="f">P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</span></td></tr>
+      <tr><th>Counting</th><td><span class="f">P(A) = |A| / |Ω| for equally likely outcomes</span><span class="f">P(n, r) = n!/(n − r)!</span><span class="f">C(n, r) = n!/(r!(n − r)!)</span></td></tr>
+      <tr><th>Conditional, joint</th><td><span class="f">P(A | B) = P(A ∩ B) / P(B)</span><span class="f">P(A ∩ B) = P(A | B) P(B)</span></td></tr>
       <tr><th>Bayes</th><td>P(A | B) = P(B | A) P(A) / P(B)</td></tr>
       <tr><th>Total probability</th><td>P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>)</td></tr></table></div>
 
