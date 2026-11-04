@@ -350,3 +350,22 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .sap .formula .fn { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.8rem; color: var(--ink-2); }
 .sap table.tt.fs td .f { display: block; }
 .sap table.tt.fs td .f + .f { margin-top: 3px; }
+
+/* KaTeX: display formulas sit left-aligned in the formula box and scroll inside it on narrow screens */
+.sap .formula .katex-display { margin: 0; padding: 3px 0; text-align: left; overflow-x: auto; overflow-y: hidden; }
+.sap .formula .katex-display > .katex { text-align: left; }
+.sap .formula .fl { align-items: center; }
+.sap .formula .fl > .tex { flex: 0 0 auto; min-width: 0; max-width: 100%; }
+.sap .formula .katex-display > .katex { padding-right: 2px; }
+/* inline formulas in prose: a little smaller than KaTeX's default, punctuation kept on the formula's line */
+.sap .tex:not(.formula .tex) .katex { font-size: 1.08em; }
+.sap .nobr { white-space: nowrap; }
+.sap .formula:has(.tex.is-set) { padding: 10px 14px; }
+.sap table.tt.fs td .f { padding: 2px 0; }
+.sap table.tt.fs td .f + .f { margin-top: 4px; }
+.sap .tile .v .katex { font-size: 1em; }
+@media (max-width: 480px) {
+  .sap .formula:has(.tex.is-set) { padding: 8px 10px; }
+  .sap .formula .katex-display > .katex { font-size: 1.04em; }
+  .sap table.tt.compact th, .sap table.tt.compact td { padding: 4px 6px; }
+}

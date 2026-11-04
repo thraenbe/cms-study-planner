@@ -8,6 +8,9 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="stochastics/sap.css">
+<!-- KaTeX typesets the display formulas; without it the Unicode text inside each formula stays visible. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer id="katex-js" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <script src="stochastics/sap.js"></script>
@@ -59,6 +62,15 @@ const mulberry = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t 
 const gauss = r => { let u = 0, v = 0; while (!u) u = r(); v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 const tiles = items => `<div class="tiles">${items.map(([v, l]) => `<div class="tile"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
 const cap = t => `<figcaption>${t}</figcaption></figure>`;
+// Formulas: TeX source in data-tex, typeset by KaTeX after rendering (display style inside .formula boxes,
+// inline style elsewhere); the plain Unicode text is the fallback when KaTeX cannot load.
+const fx = (tex, plain) => `<span class="tex" data-tex="${esc(tex)}">${plain}</span>`;
+function typeset(root) {
+  const run = () => root.querySelectorAll(".tex[data-tex]").forEach(el => {
+    try { katex.render(el.dataset.tex, el, { displayMode: !!el.closest(".formula"), throwOnError: false }); el.classList.add("is-set"); } catch (e) {}
+  });
+  if (window.katex) run(); else document.getElementById("katex-js")?.addEventListener("load", run, { once: true });
+}
 const lecLink = (n, t) => { const x = c.lectures.find(y => y.n === n); return x ? `<a href="stochastics/lecture.html?n=${n}">${t || `lecture ${n}`}</a>` : t || `lecture ${n}`; };
 const exeLink = (n, t) => `<a href="stochastics/exercise.html?n=${n}">${t || `tutorial ${n}`}</a>`;
 // Birthday problem: P(at least two of n share a birthday), 365 equally likely days.
@@ -201,9 +213,9 @@ function lecture0() {
 
     <h2>Warm-up: the birthday problem (slides 6–7)</h2>
     <p>How many people must be in a room before the chance that two of them share a birthday reaches one half? Most people guess far too high. The trick is to compute the complement: the probability that <em>all</em> n birthdays differ is a product of conditional probabilities, one per person, each one conditioned on all earlier people having distinct birthdays. With 365 equally likely days (no 29 February, no twins),</p>
-    <div class="formula">P(shared) = 1 − ∏<sub>i=1</sub><sup>n−1</sup> (365 − i) / 365</div>
+    <div class="formula">${fx(String.raw`P(\text{shared}) = 1 - \prod_{i=1}^{n-1} \frac{365 - i}{365}`, "P(shared) = 1 − ∏<sub>i=1</sub><sup>n−1</sup> (365 − i) / 365")}</div>
     ${chart("bday", leg([[1, "at least two share a birthday"], [2, "all birthdays different"]]))}${cap("The curve crosses 50 % at n = 23 (50.7 %); with 50 people the chance is 97 %. Values computed here from the product formula; the slide shows the same curve. The chain rule behind the product is lecture 1's topic.")}
-    ${tiles([["23", "people for a 50 % chance"], ["50.7 %", "exactly at n = 23"], ["97 %", "with 50 people"], ["≈ 1 − e^{−n²/730}", "handy approximation (context, not on the slides)"]])}
+    ${tiles([["23", "people for a 50 % chance"], ["50.7 %", "exactly at n = 23"], ["97 %", "with 50 people"], [fx(String.raw`\approx 1 - e^{-n^2/730}`, "≈ 1 − e<sup>−n²/730</sup>"), "handy approximation (context, not on the slides)"]])}
     ${why("Context, not on the slides: why the intuition fails", "<p>People compare n with 365 and expect a number near 180. But the event is about <em>pairs</em>, and 23 people form 23 · 22 / 2 = 253 pairs, each sharing a birthday with probability 1/365. The expected number of sharing pairs is 253/365 ≈ 0.69, which already makes a shared birthday more likely than not. The product formula makes this exact; the pair count makes it believable.</p>")}
 
     <h2>Deterministic versus stochastic (slide 8)</h2>
@@ -238,7 +250,7 @@ function lecture0() {
 
     <h2>Markov chain Monte Carlo (slide 14)</h2>
     <p>The problem: draw samples from a complicated, high-dimensional target π that is known only up to a constant, as posteriors in Bayesian inference typically are. The idea: build a Markov chain whose stationary distribution is exactly π, run it, and use its states as samples. Metropolis–Hastings proposes a move y ~ q(y | x) from the current state x and accepts it with probability</p>
-    <div class="formula">ρ = min { 1, f(y) q(x | y) / ( f(x) q(y | x) ) }</div>
+    <div class="formula">${fx(String.raw`\rho = \min\left\{\, 1,\ \frac{f(y)\, q(x \mid y)}{f(x)\, q(y \mid x)} \right\}`, "ρ = min { 1, f(y) q(x | y) / ( f(x) q(y | x) ) }")}</div>
     <p>otherwise the chain stays at x. Gibbs sampling instead updates one coordinate at a time from its full conditional distribution. The slide shows a random-walk Metropolis chain on a two-peaked target: the first 150 steps wander from the start into one peak, later samples fill both.</p>
     ${why("Context, not on the slides: why 'up to a constant' is enough", "<p>If f(x) = π(x) · Z with an unknown normalising constant Z, the ratio f(y)/f(x) = π(y)/π(x) does not contain Z. Metropolis–Hastings only ever evaluates ratios, so it never needs the constant, which is exactly the quantity that is intractable for a posterior: Z = ∫ P(data | θ) P(θ) dθ.</p>")}
 
@@ -393,21 +405,29 @@ function lecture1() {
 
     <h2>Part 5 · Conditional probability and independence (slides 10–11)</h2>
     <p>Conditioning on B renormalises everything to B: once B is known, it becomes the whole space, and dividing by P(B) keeps the probabilities summing to one.</p>
-    <div class="formula"><span class="fl"><span>P(A | B) = P(A ∩ B) / P(B)</span><span class="fn">definition of conditional probability</span></span><span class="fl"><span>P(A ∩ B) = P(A | B) P(B)</span><span class="fn">the same rule times P(B): the product rule for the joint probability</span></span></div>
+    <div class="formula"><span class="fl">${fx(String.raw`P(A \mid B) = \frac{P(A \cap B)}{P(B)}`, "P(A | B) = P(A ∩ B) / P(B)")}<span class="fn">definition of conditional probability</span></span><span class="fl">${fx(String.raw`P(A \cap B) = P(A \mid B)\, P(B)`, "P(A ∩ B) = P(A | B) P(B)")}<span class="fn">the same rule times P(B): the product rule for the joint probability</span></span></div>
     <p>With a 52-card deck: P(ace of hearts | red) = (1/52) / (1/2) = 1/26, twice the unconditional 1/52, because knowing the card is red halves the candidates. P(king | red) = (2/52) / (1/2) = 1/13 = P(king): the condition changes nothing, because two of the four kings are red. The deck's weather version: a 60 % forecast, and you wake to cloudless skies, so P(rain | no clouds) is far lower.</p>
     ${chart("cards", leg([[1, "no condition"], [2, "given the card is red"]]))}${cap("The two card examples of the slides. Conditioning on 'red' doubles the ace of hearts and leaves the king unchanged.")}
     <p><b>Independence.</b> A and B are independent if knowing B tells you nothing about A: P(A | B) = P(A), equivalently P(A ∩ B) = P(A) P(B). "King" and "red" are independent. In the general, dependent case the joint probability is P(A ∩ B) = P(A | B) P(B): first B happens, then A must happen given B.</p>
 
     <h2>Part 6 · Bayes' theorem (slide 12)</h2>
     <p>Writing the joint probability both ways, P(A ∩ B) = P(A | B) P(B) = P(B | A) P(A), and dividing by P(B) gives</p>
-    <div class="formula">P(A | B) = P(B | A) P(A) / P(B)</div>
+    <div class="formula">${fx(String.raw`P(A \mid B) = \frac{P(B \mid A)\, P(A)}{P(B)}`, "P(A | B) = P(B | A) P(A) / P(B)")}</div>
     <p>No independence is assumed, so it always holds. Why it matters: in image segmentation, machine learning and inference you want P(model | data), but what you can compute is P(data | model), by running the model many times and counting. Bayes converts one into the other, with P(model) as the prior and P(data) as the normalisation. The deck notes the two schools: frequentists treat the likelihood P(data | model) as the probability of interest; Bayesians work with the posterior, which needs a prior.</p>
     ${lab("bayes", "Bayes' theorem on a screening test, in people per thousand")}
     ${ex("Worked example: a positive test (the numbers of tutorial 1)", "<p>A disease has prevalence 5 %; the test catches 90 % of the ill (sensitivity) and wrongly flags 10 % of the healthy. Of 1000 people, 50 are ill and 45 of them test positive; 950 are healthy and 95 of them test positive. Total probability: P(positive) = 0.9 · 0.05 + 0.1 · 0.95 = 0.045 + 0.095 = 0.14. Bayes: P(ill | positive) = 0.9 · 0.05 / 0.14 = <b>0.321</b>. A positive result from a 90 %-accurate test means a one-in-three chance of being ill, because the healthy majority produces more false positives than the sick minority produces true ones.</p>")}
 
     <h2>Part 7 · Total probability, the chain rule, and the birthday problem (slides 13–14)</h2>
     <p>The law of total probability sums over all the ways A can happen: P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>), where the cases B₁ … B<sub>n</sub> must not overlap and must cover every possibility. Example: P(rain) = P(rain | clouds) P(clouds) + P(rain | no clouds) P(no clouds). The probability expansion, or chain rule, builds a composite event one step at a time, each factor the probability of the next event given all the earlier ones:</p>
-    <div class="formula">P(A₁ ∩ A₂ ∩ … ∩ A<sub>n</sub>) = P(A₁) P(A₂ | A₁) P(A₃ | A₁ ∩ A₂) ⋯ P(A<sub>n</sub> | A₁ ∩ … ∩ A<sub>n−1</sub>)</div>
+    <div class="formula"><span class="fl">${fx(String.raw`\begin{aligned} &P(A_1 \cap A_2 \cap \dots \cap A_n) \\ &\quad = P(A_1)\; P(A_2 \mid A_1)\; P(A_3 \mid A_1 \cap A_2) \\ &\qquad \cdots\; P(A_n \mid A_1 \cap \dots \cap A_{n-1}) \end{aligned}`, "P(A₁ ∩ A₂ ∩ … ∩ A<sub>n</sub>) = P(A₁) P(A₂ | A₁) P(A₃ | A₁ ∩ A₂) ⋯ P(A<sub>n</sub> | A₁ ∩ … ∩ A<sub>n−1</sub>)")}<span class="fn">chain rule (probability expansion)</span></span><span class="fl">${fx(String.raw`P\Big(\bigcap_{i=1}^{n} A_i\Big) = \prod_{i=1}^{n} P\big(A_i \mid A_1 \cap \dots \cap A_{i-1}\big)`, "P(∩ A<sub>i</sub>) = ∏ P(A<sub>i</sub> | A₁ ∩ … ∩ A<sub>i−1</sub>)")}<span class="fn">the same in product notation; for i = 1 there is no condition, so the factor is P(A₁)</span></span></div>
+    <p><b>How to read it.</b> ${fx(String.raw`A_1, A_2, \dots, A_n`, "A₁, A₂, …, A<sub>n</sub>")} are n events, numbered in the order you think of them happening, and the left side is the probability that <em>all</em> of them happen. The right side builds that up one event at a time: the probability that the first happens, times the probability that the second happens given that the first did, times the probability that the third happens given that the first two did, and so on up to the last event, given all n − 1 before it. The condition ${fx(String.raw`A_1 \cap \dots \cap A_{n-1}`, "A₁ ∩ … ∩ A<sub>n−1</sub>")} in the last factor just means "all the earlier events happened". So every factor is a conditional probability, and the condition grows by one event per step.</p>
+    ${why("Context, not on the slides: it is the product rule used again and again", `<p>Take three events and treat ${fx(String.raw`A_1 \cap A_2`, "A₁ ∩ A₂")} as a single event B. The product rule ${fx(String.raw`{P(A \cap B)} = {P(A \mid B)\, P(B)}`, "P(A ∩ B) = P(A | B) P(B)")} gives ${fx(String.raw`{P(A_1 \cap A_2 \cap A_3)} = {P(A_3 \mid A_1 \cap A_2)\, P(A_1 \cap A_2)}`, "P(A₁ ∩ A₂ ∩ A₃) = P(A₃ | A₁ ∩ A₂) P(A₁ ∩ A₂)")}, and the product rule once more on the last factor gives <span class="nobr">${fx(String.raw`{P(A_1 \cap A_2)} = {P(A_2 \mid A_1)\, P(A_1)}`, "P(A₁ ∩ A₂) = P(A₂ | A₁) P(A₁)")}.</span> Together: <span class="nobr">${fx(String.raw`{P(A_1)\, P(A_2 \mid A_1)\, P(A_3 \mid A_1 \cap A_2)}`, "P(A₁) P(A₂ | A₁) P(A₃ | A₁ ∩ A₂)")}.</span> For n events you peel off the last event n − 1 times. If the events are independent, every condition can be dropped and the chain rule shrinks to <span class="nobr">${fx(String.raw`{P(A_1)\, P(A_2) \cdots P(A_n)}`, "P(A₁) P(A₂) ⋯ P(A<sub>n</sub>)")}.</span></p>`)}
+    ${ex("Worked example: three aces in a row", `<p>Draw three cards from a shuffled 52-card deck without putting them back, and let ${fx(String.raw`A_i`, "A<sub>i</sub>")} be "card i is an ace". The chain rule takes the draws in order:</p>
+      <div class="tt-wrap"><table class="tt compact"><tr><th>Draw</th><th>Factor</th><th>Why</th><th>Product so far</th></tr>
+        <tr><td>1</td><td>${fx(String.raw`P(A_1) = \dfrac{4}{52}`, "P(A₁) = 4/52")}</td><td>4 aces among 52 cards</td><td>0.0769</td></tr>
+        <tr><td>2</td><td>${fx(String.raw`P(A_2 \mid A_1) = \dfrac{3}{51}`, "P(A₂ | A₁) = 3/51")}</td><td>one ace is gone: 3 aces among 51 cards</td><td>0.00452</td></tr>
+        <tr><td>3</td><td>${fx(String.raw`P(A_3 \mid A_1 \cap A_2) = \dfrac{2}{50}`, "P(A₃ | A₁ ∩ A₂) = 2/50")}</td><td>two aces are gone: 2 aces among 50 cards</td><td>0.000181</td></tr></table></div>
+      <p>So P(three aces) = 4/52 · 3/51 · 2/50 = 24/132,600 = <b>1/5525 ≈ 0.018 %</b>. With replacement the draws would be independent and the answer (4/52)³ = 1/2197 ≈ 0.046 %, two and a half times larger: the conditions matter because every ace drawn leaves fewer aces in a smaller deck.</p>`)}
     <p>This is what solves the birthday problem. Let A<sub>i</sub> be the event that person i + 1's birthday differs from everyone before. Given all earlier events, the first i people occupy i days, so P(A<sub>i</sub> | earlier) = (365 − i) / 365. The chain rule multiplies these, and P(shared) = 1 − P(all different).</p>
     ${chart("chain", leg([[2, "factor for person n"], [1, "product so far"]]))}${cap("Each factor is close to one, yet the product of 23 of them is below one half: the probability that all 23 birthdays differ is 0.493. Computed here from the formula on slide 14.")}
     ${ex("Worked example: 23 people", "<p>P(all 23 different) = (365/365) · (364/365) · (363/365) ⋯ (343/365). Taking logarithms to multiply 23 factors sanely: Σ ln((365 − i)/365) for i = 0 … 22 ≈ −0.708, so the product is e<sup>−0.708</sup> ≈ 0.493 and P(shared) = 1 − 0.493 = <b>0.507</b>. For n = 22 the product is 0.524, so 23 is the first room size at which a shared birthday is more likely than not. The approximation (365 − i)/365 ≈ e<sup>−i/365</sup> turns the product into e<sup>−n(n−1)/730</sup>, which gives 0.500 at n = 23: the context box in lecture 0.</p>")}
@@ -418,12 +438,12 @@ function lecture1() {
 
     <h2>Formula sheet (slide 16)</h2>
     <div class="tt-wrap"><table class="tt fs"><tr><th>Rule</th><th>Formula</th></tr>
-      <tr><th>Axioms</th><td><span class="f">P(A) ≥ 0</span><span class="f">P(Ω) = 1</span><span class="f">P(A ∪ B) = P(A) + P(B) for disjoint A, B</span></td></tr>
-      <tr><th>Complement, union</th><td><span class="f">P(Ā) = 1 − P(A)</span><span class="f">P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</span></td></tr>
-      <tr><th>Counting</th><td><span class="f">P(A) = |A| / |Ω| for equally likely outcomes</span><span class="f">P(n, r) = n!/(n − r)!</span><span class="f">C(n, r) = n!/(r!(n − r)!)</span></td></tr>
-      <tr><th>Conditional, joint</th><td><span class="f">P(A | B) = P(A ∩ B) / P(B)</span><span class="f">P(A ∩ B) = P(A | B) P(B)</span></td></tr>
-      <tr><th>Bayes</th><td>P(A | B) = P(B | A) P(A) / P(B)</td></tr>
-      <tr><th>Total probability</th><td>P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>)</td></tr></table></div>
+      <tr><th>Axioms</th><td><span class="f">${fx(String.raw`P(A) \ge 0`, "P(A) ≥ 0")}</span><span class="f">${fx(String.raw`P(\Omega) = 1`, "P(Ω) = 1")}</span><span class="f">${fx(String.raw`P(A \cup B) = P(A) + P(B)`, "P(A ∪ B) = P(A) + P(B)")} for disjoint A, B</span></td></tr>
+      <tr><th>Complement, union</th><td><span class="f">${fx(String.raw`P(\bar A) = 1 - P(A)`, "P(Ā) = 1 − P(A)")}</span><span class="f">${fx(String.raw`P(A \cup B) = P(A) + P(B) - P(A \cap B)`, "P(A ∪ B) = P(A) + P(B) − P(A ∩ B)")}</span></td></tr>
+      <tr><th>Counting</th><td><span class="f">${fx(String.raw`P(A) = \dfrac{|A|}{|\Omega|}`, "P(A) = |A| / |Ω|")} for equally likely outcomes</span><span class="f">${fx(String.raw`P(n, r) = \dfrac{n!}{(n - r)!}`, "P(n, r) = n!/(n − r)!")}</span><span class="f">${fx(String.raw`C(n, r) = \dbinom{n}{r} = \dfrac{n!}{r!\,(n - r)!}`, "C(n, r) = n!/(r!(n − r)!)")}</span></td></tr>
+      <tr><th>Conditional, joint</th><td><span class="f">${fx(String.raw`P(A \mid B) = \dfrac{P(A \cap B)}{P(B)}`, "P(A | B) = P(A ∩ B) / P(B)")}</span><span class="f">${fx(String.raw`P(A \cap B) = P(A \mid B)\, P(B)`, "P(A ∩ B) = P(A | B) P(B)")}</span></td></tr>
+      <tr><th>Bayes</th><td><span class="f">${fx(String.raw`P(A \mid B) = \dfrac{P(B \mid A)\, P(A)}{P(B)}`, "P(A | B) = P(B | A) P(A) / P(B)")}</span></td></tr>
+      <tr><th>Total probability</th><td><span class="f">${fx(String.raw`P(A) = \sum_i P(A \mid B_i)\, P(B_i)`, "P(A) = Σ<sub>i</sub> P(A | B<sub>i</sub>) P(B<sub>i</sub>)")}</span></td></tr></table></div>
 
     <h2>Numerical practice: John Snow's grand experiment (slide 17)</h2>
     <p>In the 1854 London cholera epidemic two water companies served the same streets. Southwark &amp; Vauxhall drew from the Thames downstream of the city's sewage, Lambeth from upstream. Snow compared the households of each, and the rest of London, in his 1855 book. Choose one of the 322,576 houses at random; let D be "a cholera death in the house" and S be "supplied by Southwark &amp; Vauxhall".</p>
@@ -454,6 +474,7 @@ if (!l) {
   page.innerHTML = (WRITEUPS[l.n] || placeholder)();
   mountCharts();
   mountLabs();
+  typeset(page);
 }
 let narrowNow = isNarrow();
 addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
