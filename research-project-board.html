@@ -15,7 +15,7 @@
 <header class="sitebar" data-page="course"></header>
 <div class="wrap" id="page"></div>
 <script>
-// Board: header, status bar, one card per paper (the reading list of the project) and the Orga card.
+// Board: header, status bar, sprints, one card per paper (the reading list of the project), proposals, slide decks and the Orga card.
 const { m, c, esc, U, CODE, fmt, cite, paperUrl } = RP;
 const papers = c.papers.map(p => `<a class="game-card paper ${p.covered ? "" : "soon"}" href="${paperUrl(p)}">
     <div class="game-icon">${p.icon}</div>
@@ -31,6 +31,16 @@ const proposals = (c.proposals || []).map(p => `<a class="game-card paper" href=
     <p>${esc(p.blurb)}</p>
     ${U.doneBox(`${CODE}:proposal:${p.n}`, "discussed")}
   </a>`).join("");
+const decks = (c.decks || []).map(d => `<div class="game-card paper deck">
+    <a class="deck-main" href="research-project/${d.slug}.html">
+      <div class="game-icon">${d.icon}</div>
+      <h2>${esc(d.title)}</h2>
+      <p class="cite">Slides · ${d.slides} slides · ${fmt(d.date)}</p>
+      <p>${esc(d.blurb)}</p>
+    </a>
+    ${d.artifact ? `<p class="deck-alt"><a href="${esc(d.artifact)}" target="_blank" rel="noopener">Slides artifact on claude.ai ↗</a> <span class="muted">(opens only for you until shared)</span></p>` : ""}
+    ${U.doneBox(`${CODE}:deck:${d.n}`, "seen")}
+  </div>`).join("");
 const sprints = (c.sprints || []).map(s => `<section class="game-card sprint">
     <div class="game-icon">${s.icon}</div>
     <h2>${esc(s.title)}</h2>
@@ -64,6 +74,9 @@ document.getElementById("page").innerHTML = `
     ${proposals ? `<div class="board-h"><h2>Proposals</h2><span class="muted">tick “discussed” once it went through a supervisor meeting</span></div>
     <p class="muted board-note">${esc(c.proposalNote)}</p>
     <div class="game-cards">${proposals}</div>` : ""}
+    ${decks ? `<div class="board-h"><h2>Slides</h2><span class="muted">tick “seen” once you have gone through a deck</span></div>
+    <p class="muted board-note">${esc(c.deckNote)}</p>
+    <div class="game-cards">${decks}</div>` : ""}
     <div class="board-h"><h2>Project</h2><span class="muted">no timetabled sessions; meetings and milestones go into Orga</span></div>
     <div class="game-cards">${orga}</div>
   </main>`;

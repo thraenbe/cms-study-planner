@@ -1,0 +1,316 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<!-- Copy of the research-project explainer deck (phases 0 and 1), added 5 Nov 2026; source deck.html in the research-project slides folder, only the back link is new. --><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teaching AI to Write Safe Code</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400..800&display=swap">
+<style>
+html,body{margin:0;height:100%;background:#0b0f14;overflow:hidden}
+*{box-sizing:border-box} p,h1,h2,h3{margin:0}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center}
+section{position:absolute;inset:0;width:1920px;height:1080px;display:none!important}
+section.on{display:flex!important}
+aside{display:none}
+table{border-collapse:collapse} th,td{padding:20px 28px;text-align:left}
+#hint{position:fixed;right:12px;bottom:8px;color:#888;font:14px sans-serif}
+#back{position:fixed;left:12px;top:8px;z-index:5;color:#aab;font:14px system-ui,sans-serif;text-decoration:none;background:rgba(11,15,20,.6);padding:4px 10px;border-radius:8px}#back:hover{color:#fff}
+</style></head><body><a id="back" href="../../research-project-board.html" onclick="event.stopPropagation()">← Research board</a><div id="stage">
+<section id="cover" data-transition="fade" style="background:#14213D;color:#FBF7EF;font-family:'Nunito Sans', Arial, sans-serif;padding:128px;display:flex;flex-direction:column;justify-content:center;gap:40px">
+<svg aria-label="A small metro map with three colored lines and round stations" style="position:absolute;left:1232px;top:128px;width:560px;height:824px" width="560" height="824" viewBox="0 0 560 824">
+<path d="M40 120 L240 120 L400 280 L400 520 L520 640" fill="none" stroke="#F28C28" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M60 700 L240 520 L400 520 L520 400 L520 80" fill="none" stroke="#5B8DEF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M240 40 L240 760" fill="none" stroke="#FBF7EF" stroke-width="22" stroke-linecap="round" opacity="0.55"/>
+<circle cx="40" cy="120" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+<circle cx="240" cy="120" r="30" fill="#14213D" stroke="#FBF7EF" stroke-width="10"/>
+<circle cx="400" cy="280" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+<circle cx="400" cy="520" r="30" fill="#14213D" stroke="#FBF7EF" stroke-width="10"/>
+<circle cx="240" cy="520" r="30" fill="#14213D" stroke="#FBF7EF" stroke-width="10"/>
+<circle cx="520" cy="640" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+<circle cx="60" cy="700" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+<circle cx="520" cy="80" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+<circle cx="240" cy="760" r="22" fill="#14213D" stroke="#FBF7EF" stroke-width="8"/>
+</svg>
+<div style="width:1040px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#F28C28">A research project, explained</p>
+<h1 style="font-family:'Fredoka', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1.05;color:#FBF7EF">Teaching AI to write safe code</h1>
+<p style="font-size:44px;line-height:1.3;color:#D9DEE8">What we built in Phase 0 and Phase 1</p>
+<p style="font-size:24px;color:#D9DEE8">TU Dresden · Research project · 4 November 2026</p>
+</div>
+<aside>This deck explains the first two steps of a research project to an 8th grader. The project asks whether an AI writes better and safer code when we give it a good map of the program. Phase 0 built and fixed the map. Phase 1 found the places where a game leaks a player’s name, fixed them, and built tests that catch those leaks.</aside>
+</section>
+<section id="question" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">The big question</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">If we give an AI a good map of a program, does it write code that works and keeps secrets safe?</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">It builds</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The new code turns into a program that runs.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">It works</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">It does the job and passes the tests.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">It keeps secrets</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">It does not leak the player’s name.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Introduction · 2</p>
+<aside>AI tools write a lot of code today. We want to know two things. First, does the code actually work? Second, is it safe, meaning it does not give away secrets like a player’s name? Our idea is that the AI does better if we hand it a clear map of the program first, the way a new student does better with a map of the school.</aside>
+</section>
+<section id="games" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">The playground</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">One job for the AI</h2>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:32px;line-height:1.4;color:#4A5568"><b>ApoGames</b> is a set of small games written in Java, for example a jump-and-run game like Mario.</p>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The AI gets one job: add a <b>high-score list</b> that saves players’ names and scores.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:32px">
+<div style="display:flex;gap:16px;align-items:center">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">Way 1: from scratch</h3>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The AI writes the high-score list on its own.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:32px">
+<div style="display:flex;gap:16px;align-items:center">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">Way 2: copy and adapt</h3>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The AI gets another game’s high-score code and changes it to fit.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Introduction · 3</p>
+<aside>We test the AI on real code, not on toy examples. ApoGames is a collection of small Java games. The task is always the same: add a high-score list. The AI can do it two ways. It can write everything itself, or it can take the high-score code from another game and adapt it. The second way matters for safety: if the other game has a mistake, the AI might copy the mistake too.</aside>
+</section>
+<section id="map" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Phase 0 · the map</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">First, give the AI a map of the code</h2>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="position:relative;width:760px;height:560px;background:#14213D;border-radius:24px">
+<svg aria-label="A metro map of a game: an orange game line and a blue high-score line that meet at the station add points" style="width:760px;height:560px" width="760" height="560" viewBox="0 0 760 560">
+<path d="M60 120 L300 120 L460 280 L700 280" fill="none" stroke="#F28C28" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M120 460 L280 460 L460 280 L460 100" fill="none" stroke="#5B8DEF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="60" cy="120" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+<circle cx="300" cy="120" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+<circle cx="460" cy="280" r="26" fill="#14213D" stroke="#FBF7EF" stroke-width="9"/>
+<circle cx="700" cy="280" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+<circle cx="120" cy="460" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+<circle cx="280" cy="460" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+<circle cx="460" cy="100" r="16" fill="#14213D" stroke="#FBF7EF" stroke-width="7"/>
+</svg>
+<p style="position:absolute;left:24px;top:150px;width:200px;font-size:24px;font-weight:700;color:#FBF7EF">start game</p>
+<p style="position:absolute;left:220px;top:56px;width:200px;font-size:24px;font-weight:700;color:#FBF7EF">move player</p>
+<p style="position:absolute;left:492px;top:82px;width:220px;font-size:24px;font-weight:700;color:#FBF7EF">show the list</p>
+<p style="position:absolute;left:496px;top:300px;width:180px;font-size:24px;font-weight:700;color:#FBF7EF">add points</p>
+<p style="position:absolute;left:600px;top:216px;width:150px;font-size:24px;font-weight:700;color:#FBF7EF">game over</p>
+<p style="position:absolute;left:40px;top:396px;width:220px;font-size:24px;font-weight:700;color:#FBF7EF">type your name</p>
+<p style="position:absolute;left:220px;top:490px;width:200px;font-size:24px;font-weight:700;color:#FBF7EF">save score</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568"><b>Stations</b> are small pieces of code.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568"><b>Lines</b> show which piece uses which.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568">A program draws the map, <b>not an AI</b>, so it comes out exactly the same every time.</p>
+</div>
+<p style="font-size:24px;color:#6A7280">The map maker is called CoGraph.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Phase 0 · 4</p>
+<aside>A big program is like a city, and a new visitor gets lost. So we draw a metro map of it. Each station is a small piece of code, like the piece that saves a score. Each line shows which pieces call each other. The map is drawn by a normal program called CoGraph, not by an AI. That is important for science: the same code always gives exactly the same map, so the experiment is fair and can be repeated.</aside>
+</section>
+<section id="missing" data-transition="fade" style="background:#14213D;color:#FBF7EF;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#F28C28">Phase 0 · the check</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#FBF7EF">The map was missing roads</h2>
+<p style="font-size:32px;line-height:1.4;color:#D9DEE8">We compared the map with the Java compiler. The compiler knows every connection for sure, so it is our answer key.</p>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#1F2E52;border-radius:24px;padding:48px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:160px;font-weight:600;line-height:1.1;color:#F28C28">6 of 10</p>
+<p style="font-size:32px;line-height:1.4;color:#D9DEE8">connections in the code were on the map</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#1F2E52;border-radius:24px;padding:48px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:160px;font-weight:600;line-height:1.1;color:#F28C28">0 of 67</p>
+<p style="font-size:32px;line-height:1.4;color:#D9DEE8">places where the player’s name leaves the game were on the map</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#AEB8CC">Phase 0 · 5</p>
+<aside>Before trusting the map, we tested it. The Java compiler, the program that turns code into a running game, knows every connection for certain. So we used it as the answer key. The map only had about 6 of every 10 connections. Worse, it showed none of the 67 places where the player’s name is sent out of the game. Those are exactly the places that matter for safety, so the map was not good enough yet.</aside>
+</section>
+<section id="fix" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Phase 0 · the fix</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">We taught the map to check types</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">Before: guess by the name</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">A call to save() could mean any save() in the whole game.</p>
+<p style="font-size:32px;line-height:1.4;font-style:italic;color:#B04A00">Like shouting “Alex!” in a full school.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">After: check the type</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">player.save() means the save() that belongs to a Player.</p>
+<p style="font-size:32px;line-height:1.4;font-style:italic;color:#2457B8">Like asking for “Alex from class 8b.”</p>
+</div>
+</div>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#2457B8">99.9 %</p>
+<p style="font-size:24px;color:#4A5568">of connections found (was 61 %)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#2457B8">100 %</p>
+<p style="font-size:24px;color:#4A5568">of the map’s connections correct (was 51 %)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:4px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#2457B8">67 of 67</p>
+<p style="font-size:24px;color:#4A5568">places where the name leaves the game (was 0)</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Phase 0 · 6</p>
+<aside>The old map guessed. When the code said save, the map linked it to every piece of code called save, anywhere in the game. That is like shouting a first name in a full school: many people turn around. The fixed map first checks what kind of thing is doing the saving, for example a Player, and then links only to the right save. Now it finds almost every connection, and every connection it draws is correct.</aside>
+</section>
+<section id="fair" data-transition="fade" style="background:#F28C28;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#14213D">Phase 0 · fair play</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Did we cheat? We checked three ways.</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FBF7EF;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">No peeking</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The map maker never looks at the answer key.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FBF7EF;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">New games</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">On 4 games it had never seen, it still found 99.9 to 100 % of the connections.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FBF7EF;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">Same every time</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Run it again and the map comes out exactly the same, letter for letter.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#14213D">Phase 0 · 7</p>
+<aside>A good result can also mean you accidentally cheated, so we checked. First, the map maker never reads the compiler’s answers; it only reads the game code. Second, we tried it on four games it had never seen while we were fixing it, and it was just as good there. Third, running it twice gives exactly the same map. After these checks we froze this version, so every later experiment uses the same map maker.</aside>
+</section>
+<section id="secret" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Phase 1 · the secret</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">What are we protecting?</h2>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:640px;display:flex;flex-direction:column;gap:16px;background:#14213D;border-radius:24px;padding:48px">
+
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#FBF7EF">The player’s name</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568">It can be your <b>real name</b>.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568">It can show others <b>who you are</b> and <b>when you play</b>.</p>
+</div>
+<div style="display:flex;gap:24px;align-items:start">
+
+<p style="flex:1;font-size:32px;line-height:1.4;color:#4A5568">So a game must not hand it out without asking.</p>
+</div>
+</div>
+</div>
+<p style="font-size:24px;color:#6A7280">Our topic: mistakes in how programs handle information (the security list calls this group CWE-199).</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Phase 1 · 8</p>
+<aside>In Phase 1 we looked for security problems. Our part of the team studies mistakes in how programs handle information. In these games, the most sensitive information is the name a player types into the high-score list. It can be a real name, and together with the time of play it says something about a person. A safe game keeps it to itself unless the player agrees.</aside>
+</section>
+<section id="leaks" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Phase 1 · the leaks</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">We found real leaks, and fixed them</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">A postcard, not a letter</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Four games send your name over the internet unlocked. Anyone on the same Wi-Fi could read it.</p>
+<p style="font-size:24px;color:#6A7280">CWE-319</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">Telling without asking</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">One game sends your name each time you start or finish, without asking first.</p>
+<p style="font-size:24px;color:#6A7280">CWE-359</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+
+<h3 style="font-family:'Fredoka', Arial, sans-serif;font-size:44px;font-weight:600;color:#14213D">An open diary</h3>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">The save file with your name can be read by anyone who uses the computer.</p>
+<p style="font-size:24px;color:#6A7280">CWE-312</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Phase 1 · 9</p>
+<aside>We read the game code and found three kinds of leaks. Four games upload the name to a website without encryption, which is like writing it on a postcard that every mail carrier can read. One game sends the stored name every time it starts or ends, without asking the player. And the save file is readable by every user of the computer. The numbers are the official names of these mistakes in a public security list. We wrote a fix for each one.</aside>
+</section>
+<section id="tests" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Phase 1 · the tests</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">Tests that catch a leak</h2>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">A fake server on our own computer pretends to be the internet and writes down everything it receives. No real website is ever contacted.</p>
+<table style="font-size:32px;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif">
+<tr style="background:#14213D"><th style="width:40%;color:#FBF7EF">Version of the code</th><th style="width:30%;color:#FBF7EF">Game works (11 tests)</th><th style="width:30%;color:#FBF7EF">Name stays safe (6 tests)</th></tr>
+<tr style="background:#FFFDF8"><td>Leaky version</td><td>11 of 11 pass</td><td style="color:#B04A00">0 of 6 pass</td></tr>
+<tr style="background:#F1ECE2"><td>Fixed version</td><td>11 of 11 pass</td><td style="color:#2457B8">6 of 6 pass</td></tr>
+<tr style="background:#FFFDF8"><td>Broken on purpose (5 versions)</td><td>all work</td><td>each fails only its own test</td></tr>
+</table>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Phase 1 · 10</p>
+<aside>A test is a small program that checks one thing. We built a fake internet server that runs only on our own computer and records whatever a game sends it. The leaky version of the code passes every test about the game itself, but fails every safety test. The fixed version passes everything. Then we broke the fixed version on purpose, one leak at a time. Each time, exactly the matching test failed, which shows each test catches the leak it is meant to catch.</aside>
+</section>
+<section id="surprise" data-transition="fade" style="background:#14213D;color:#FBF7EF;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#F28C28">Phase 1 · a surprise</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#FBF7EF">The old experiment could not show the leak</h2>
+<div style="display:flex;gap:64px;align-items:start">
+<div style="width:720px;display:flex;flex-direction:column;gap:16px;background:#1F2E52;border-radius:24px;padding:48px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:160px;font-weight:600;line-height:1.1;color:#F28C28">0 of 240</p>
+<p style="font-size:32px;line-height:1.4;color:#D9DEE8">AI answers in the earlier study sent anything over the internet</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:32px;line-height:1.4;color:#D9DEE8">The old task only asked to save scores on the computer. So the AI never copied the leaky upload.</p>
+<p style="font-size:32px;line-height:1.4;color:#FBF7EF"><b>Our answer:</b> a new task, an <b>online high-score board</b>. Now a copied leak is possible, and our tests can catch it.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#AEB8CC">Phase 1 · 11</p>
+<aside>Before our project, another study asked the same AI to write the high-score list 240 times. We checked all 240 answers: not one of them sends anything over the internet, because the task only asked to save scores on the computer. That means the internet leak could never show up, even when the AI was copying from a leaky game. So we added a second task, an online high-score board, where copying the leak is possible. Our tests are ready for it.</aside>
+</section>
+<section id="next" data-transition="fade" style="background:#FBF7EF;color:#14213D;font-family:'Nunito Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+<p style="font-size:32px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:#B04A00">Next · Phase 2</p>
+<h2 style="font-family:'Fredoka', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#14213D">The big experiment</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1.1;color:#2457B8">1,200</p>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">tries by the AI</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1.1;color:#2457B8">24</p>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">setups: three kinds of map, safety notes on or off, from scratch or copied, two tasks</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#FFFDF8;border:2px solid #E8E1D3;border-radius:24px;padding:40px">
+<p style="font-family:'Fredoka', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1.1;color:#B04A00">3</p>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">checks for every try: does it build, does it work, is the name safe?</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#4A5568">Everything passed a practice run. The real run starts as soon as the key for the AI account is set up.</p>
+<p style="position:absolute;left:128px;bottom:64px;width:1664px;font-size:24px;color:#6A7280">Next · 12</p>
+<aside>Phase 2 is the real experiment. The AI will try the job 1,200 times in 24 different setups. The setups change three things: what map the AI gets, whether it gets notes about the security mistakes, and whether it starts from scratch or copies another game. Every try is checked three ways. The whole pipeline already passed a practice run that used stored answers instead of the real AI, so nothing is wasted when the real run starts.</aside>
+</section>
+
+</div><div id="hint">arrow keys or click · N shows speaker notes</div>
+<script>
+const s=[...document.querySelectorAll('#stage>section')];let i=0;
+function fit(){const k=Math.min(innerWidth/1920,innerHeight/1080);document.getElementById('stage').style.transform=`translate(-50%,-50%) scale(${k})`}
+function show(n){i=Math.max(0,Math.min(s.length-1,n));s.forEach((x,j)=>x.classList.toggle('on',j===i));location.hash=s[i].id}
+addEventListener('resize',fit);addEventListener('click',e=>show(i+(e.clientX<innerWidth/3?-1:1)));
+addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key))show(i+1);if(['ArrowLeft','PageUp'].includes(e.key))show(i-1);if(e.key==='n'||e.key==='N')console.log(s[i].querySelector('aside')?.textContent)});
+fit();show(Math.max(0,s.findIndex(x=>'#'+x.id===location.hash)));
+</script></body></html>

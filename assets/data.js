@@ -4678,6 +4678,19 @@ window.CMS = {
        "Build a knowledge graph of your weakness category, games and features, for automatic RAG retrieval in the final pipeline."
       ]
      }
+    ],
+    "deckNote": "Slide decks made for the project. Each opens full screen: arrow keys, space or a click move on, a click on the left third goes back.",
+    "decks": [
+     {
+      "n": 1,
+      "slug": "slides/phase0-1-explainer",
+      "title": "Teaching AI to Write Safe Code",
+      "date": "2026-11-04",
+      "icon": "🎞️",
+      "slides": 12,
+      "artifact": "https://claude.ai/artifact/22WeoDyXY6faQcRsGVqKwj",
+      "blurb": "Phases 0 and 1 explained for an 8th grader: the CoGraph code map fixed from 61 % to 99.9 % of the compiler's connections, three kinds of player-name leaks in ApoGames found and fixed, tests with a fake server that catch them, and a preview of the 1,200-run phase 2 experiment. Speaker notes on every slide."
+     }
     ]
    }
   },
