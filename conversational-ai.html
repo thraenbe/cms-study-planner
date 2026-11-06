@@ -25,6 +25,7 @@ const meetings = c.meetings.map(x => `<a class="game-card meet ${kindOf(x)} ${x.
     <h2>Meeting ${x.n} – ${esc(x.title)}</h2>
     <p class="when">${when(x)}${x.date > today ? ` · ${x.date === next?.date ? "next" : "planned"}` : ""}</p>
     <p>${esc(x.blurb)}</p>
+    ${U.files(x, m)}
     ${U.doneBox(`${CODE}:meeting:${x.n}`)}
   </a>`).join("") + `<a class="game-card" href="conversational-ai/orga.html">
     <div class="game-icon">🗂️</div>
