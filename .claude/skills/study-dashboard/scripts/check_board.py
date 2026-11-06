@@ -26,6 +26,8 @@ PRIVACY = [
     (r"meet\.google\.com|zoom\.us/j|teams\.microsoft\.com/l/meetup|webex\.com/meet", "video-meeting link"),
     (r"opal/auth/RepositoryEntry/\d+/CourseNode", "OPAL link into course-internal content (link the course entry only)"),
     (r"bildungsportal\.sachsen\.de/opal/[^\s\"'<>]*\.(pdf|zip|pptx|docx)", "OPAL file link"),
+    (r"slides\.com/[^\s\"'<>]*[?&]token=", "slides.com link with a private token"),
+    (r"/opal/g/mediaCenter|downloadering|/opal/[^\s\"'<>]*/_/", "OPAL media or download link"),
     (r"[Pp]assw(or[dt]|d)\s*[:=]", "password-like string"),
     (r"(TAN|2FA|one-time code)\s*[:=]\s*\d", "2FA-code-like string"),
 ]

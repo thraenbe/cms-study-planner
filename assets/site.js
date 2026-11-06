@@ -84,6 +84,24 @@ window.CMSUtil = {
   doneBox(id, label = "done") {
     return `<label class="done-box" data-done="${this.esc(id)}"><input type="checkbox"${this.isDone(id) ? " checked" : ""}><span>${this.esc(label)}</span></label>`;
   },
+  // "Files" row for board cards: what material belongs to a session and where it lives. Item field
+  // `files`: [{ kind: "slides"|"sheet"|"solution"|"notebook"|"code"|"recording"|"notes"|"other", name, where?, url?, note? }].
+  // `url` is a public link; without one, a `where` starting with "OPAL" links the module's OPAL course entry
+  // (login needed). Never put OPAL node or file links or slides.com tokens here (check_board rejects them).
+  // Cards are <a> elements, so the links are spans with data-href, opened by wireDone().
+  FILE_KIND: { slides: "Slides", sheet: "Sheet", solution: "Solution", notebook: "Notebook", code: "Code", recording: "Recording", notes: "Notes", other: "File" },
+  files(item, m) {
+    const fs = (item && item.files) || []; if (!fs.length) return "";
+    const esc = this.esc, opal = m && m.links && m.links.opal;
+    const li = f => {
+      const href = /^https?:\/\//.test(f.url || "") ? f.url : (/^OPAL/.test(f.where || "") && opal ? opal : "");
+      const login = !f.url && href;
+      const where = f.where || (f.url ? new URL(f.url).hostname.replace(/^www\./, "") : "");
+      const w = where ? (href ? `<span class="fw" role="link" tabindex="0" data-href="${esc(href)}" title="${login ? "Opens the OPAL course (login needed)" : "Opens in a new tab"}">${esc(where)}${login ? " 🔒" : " ↗"}</span>` : `<span class="fw">${esc(where)}</span>`) : "";
+      return `<li><span class="fk">${esc(this.FILE_KIND[f.kind] || "File")}</span> <span class="fn">${esc(f.name)}</span>${w ? ` ${w}` : ""}${f.note ? ` <span class="fnote">${esc(f.note)}</span>` : ""}</li>`;
+    };
+    return `<div class="files"><ul aria-label="Files">${fs.map(li).join("")}</ul></div>`;
+  },
   wireDone(root = document) {
     root.querySelectorAll(".done-box").forEach(box => {
       const id = box.dataset.done, cb = box.querySelector("input");
@@ -100,6 +118,12 @@ window.CMSUtil = {
       });
       cb.addEventListener("change", () => { CMSUtil.setDone(id, cb.checked); apply(); }); // keyboard (space)
       cb.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); cb.checked = !cb.checked; CMSUtil.setDone(id, cb.checked); apply(); } });
+    });
+    // File links inside <a> cards (CMSUtil.files): open in a new tab without following the card.
+    root.querySelectorAll(".files .fw[data-href]").forEach(el => {
+      const go = e => { e.preventDefault(); e.stopPropagation(); window.open(el.dataset.href, "_blank", "noopener"); };
+      el.addEventListener("click", go);
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") go(e); });
     });
   },
   // "enrolled", "register" (still to register) or null

@@ -53,6 +53,7 @@ course entry link (`links.opal`) is fine; links to nodes inside the course or to
 | `icon` | yes | one emoji, different per card |
 | `covered` | yes | `true` once the write-up function exists in the detail page. `scripts/whats_new.py` treats `date <= today && !covered` as work to do. |
 | `blurb` | yes | 1–3 sentences: what the session covers (placeholder text like "Not held yet. Planned topic: …" until covered) |
+| `files` | no | material of the session for the card's Files row (`CMSUtil.files(item, m)`): `[{ "kind": "slides"\|"sheet"\|"solution"\|"notebook"\|"code"\|"recording"\|"notes"\|"other", "name": "HPC_03_Processor_Architecture.pdf", "where": "OPAL · Lecture Slides", "url": "public https link, only if public", "note": "posted 5 Nov" }]`. `where` is plain text (OPAL folder names as text); without `url` an `OPAL…` entry links the course entry (`links.opal`, login). Never OPAL node/file links, slides.com links with tokens, or files with a tutor's or co-student's name in their name. |
 | `published` / `sheet` | exercises | date the sheet or online exercise appeared; a sheet may be written up before its session |
 | `points`, `lecture` | exercises | points of the sheet; `n` of the lecture it belongs to (links the placeholder to the material) |
 | `kind` | TSP exercises, CAI meetings | `practice` / `home`; `kick` / `mid` / `final` |

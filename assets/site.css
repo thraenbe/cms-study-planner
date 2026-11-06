@@ -103,6 +103,18 @@ a.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--in
 .done-box input { margin: 0; width: 15px; height: 15px; accent-color: var(--ok); cursor: pointer; }
 .done-box:hover { border-color: var(--ok); color: var(--ok); }
 .done-box.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+
+/* Files row on board cards (CMSUtil.files): material of a session and where it lives. */
+.files { margin-top: 10px; }
+.files ul { list-style: none; margin: 0; padding: 8px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 4px; }
+.files li { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); overflow-wrap: anywhere; }
+.files .fk { display: inline-block; min-width: 4.6em; font-weight: 600; color: var(--ink); }
+.files .fn { color: var(--ink); }
+.files .fw { white-space: nowrap; color: var(--ink-2); }
+.files .fw[data-href] { text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.files .fw[data-href]:hover { color: var(--ink); }
+.files .fw[data-href]:focus-visible { outline: 2px solid var(--focus, var(--ink)); outline-offset: 1px; border-radius: 3px; }
+.files .fnote { color: var(--ink-3, var(--ink-2)); }
 .game-card.is-done, .card.is-done, [data-card].is-done { background: color-mix(in srgb, var(--ok) 13%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
 .game-card.is-done h2::after, .card.is-done h2::after { content: " ✓"; color: var(--ok); }
 

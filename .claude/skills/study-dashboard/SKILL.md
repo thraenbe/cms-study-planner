@@ -77,7 +77,8 @@ Load the `dataviz` skill before the first chart and `frontend-design:frontend-de
    "Context, not on the slides", stat tiles, take-home, next/exercise links. Register it in `WRITEUPS`.
 3. Update the item in data.js with the round-trip script, inside `modules[CODE]` only:
    `scripts/edit_module.py CODE --set 'course.lectures[i].covered=true' --set 'course.lectures[i].blurb="…"'`
-   (`--upsert course.exercises '{…}'` for a new card). Future items stay placeholders. If the OPAL calendar moved
+   (`--upsert course.exercises '{…}'` for a new card). Fill the item's `files` list (slides, sheet, solution, notebook …, see `references/data-schema.md`) for every
+   session whose material is out, and keep `${U.files(item, m)}` in the board's card templates. Future items stay placeholders. If the OPAL calendar moved
    sessions, fix `keyDates` and item dates in the same module.
 4. The card appears from data.js; make sure the board renders `CMSUtil.doneBox(\`${CODE}:kind:${n}\`)` inside every
    card (lecture, exercise, meeting, paper) and calls `CMSUtil.wireDone()` after rendering.
