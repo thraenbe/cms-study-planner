@@ -8,6 +8,9 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="stochastics/sap.css">
+<!-- KaTeX typesets the display formulas; without it the Unicode text inside each formula stays visible. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer id="katex-js" src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <script src="stochastics/sap.js"></script>
@@ -200,8 +203,304 @@ function exercise1() {
     ${why("Context, not in the notebook: what this tutorial trains", "<p>Every later chapter leans on these moves: reading a conditional as a renormalised table (Bayes, MCMC acceptance ratios), the chain rule as a tree (Markov chains are the one-day-memory case), the CDF read backwards (inverse-transform sampling in lecture 2), areas rather than heights (densities of SDE solutions), moments and their estimates from data (Monte Carlo error bars), and the central limit theorem (why Monte Carlo errors are Gaussian and shrink like 1/√N). The quick checks in the notebook are the kind of short calculation a written exam asks for.</p>")}
     <p class="muted">Material: OPAL → Exercises2026 → SMS_T01.jl and the Pluto installation guide. Lecture it belongs to: ${lecLink(1, "lecture 1")}. Next tutorial: <a href="stochastics/exercise.html?n=2">tutorial 2</a> (5 Nov).</p>`;
 }
-const WRITEUPS = { 1: exercise1 };
-const LABS = { lln: initLln, clt: initClt };
+// ================= Tutorial 2 · Random variate generation (Pluto notebook SMS_T02, 5 Nov) =================
+// Formulas: TeX source in data-tex, typeset by KaTeX after rendering (display style inside .formula boxes, inline
+// elsewhere); the plain Unicode text is the fallback when KaTeX cannot load. Same helpers as stochastics/lecture.html.
+const fx = (tex, plain) => `<span class="tex" data-tex="${esc(tex)}">${plain}</span>`;
+function typeset(root) {
+  const run = () => root.querySelectorAll(".tex[data-tex]").forEach(el => {
+    try { katex.render(el.dataset.tex, el, { displayMode: !!el.closest(".formula"), throwOnError: false }); el.classList.add("is-set"); } catch (err) {}
+  });
+  if (window.katex) run(); else document.getElementById("katex-js")?.addEventListener("load", run, { once: true });
+}
+const exeLink = (n, t) => `<a href="stochastics/exercise.html?n=${n}">${t || `tutorial ${n}`}</a>`;
+const fl = (tex, plain, note) => `<span class="fl">${fx(tex, plain)}${note ? `<span class="fn">${note}</span>` : ""}</span>`;
+const gauss = r => { let u = 0; while (!u) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+const halton = (k, b) => { let f = 1, v = 0; while (k > 0) { f /= b; v += f * (k % b); k = Math.floor(k / b); } return v; };
+// Axis helpers for the fixed-width explorer SVGs (viewBox 560 wide, scaled down on phones).
+const yAxis = (L, W, R, y, vals, f = v => v) => vals.map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${f(v)}</text>`).join("");
+const xTicks = (x, yb, vals, f = v => v) => vals.map(v => `<text class="tick" x="${x(v)}" y="${yb}" text-anchor="middle">${f(v)}</text>`).join("");
+const pathOf = (pts, x, y) => "M" + pts.map(([a, b]) => `${x(a).toFixed(1)},${y(b).toFixed(1)}`).join(" L");
+
+// Explorer: the linear congruential generator as jumps on a clock with m positions (section 1.1, Figure 1.1).
+const LCG = { m: 31, a: 3, c: 0, z0: 1 };
+function lcgRun({ m, a, c, z0 }) {
+  const zs = [z0 % m], seen = new Map([[z0 % m, 0]]);
+  for (;;) { const z = (a * zs[zs.length - 1] + c) % m; if (seen.has(z)) return { zs, start: seen.get(z), T: zs.length - seen.get(z) }; seen.set(z, zs.length); zs.push(z); }
+}
+function lcgOut() {
+  const { m } = LCG, { zs, start, T } = lcgRun(LCG), S = 240, cx = S / 2, cy = S / 2, r = 96;
+  const pos = z => { const t = Math.PI / 2 - 2 * Math.PI * z / m; return [cx + r * Math.cos(t), cy - r * Math.sin(t)]; };
+  const dots = Array.from({ length: m }, (_, z) => { const [px, py] = pos(z), on = zs.includes(z), [lx, ly] = [cx + (r + 14) * (px - cx) / r, cy + (r + 14) * (py - cy) / r];
+    return `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${on ? 3.6 : 2.4}" class="${on ? "on" : "off"}"/>${m <= 16 || z % 5 === 0 ? `<text class="tick" x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="middle">${z}</text>` : ""}`; }).join("");
+  const seg = (i, cls) => { const [x1, y1] = pos(zs[i]), [x2, y2] = pos(i + 1 < zs.length ? zs[i + 1] : zs[start]); return `<line class="${cls}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`; };
+  const jumps = zs.map((_, i) => seg(i, i < start ? "tail" : "cyc")).join("");
+  const [sx, sy] = pos(zs[0]), seq = zs.slice(0, 14).join(", ") + (zs.length > 14 ? ", …" : ""), full = T === m, best0 = LCG.c === 0 && T === m - 1 && !zs.includes(0);
+  return `<div class="pi-wrap"><svg viewBox="0 0 ${S} ${S}" class="pi t2-clock" role="img" aria-label="LCG with m = ${m}, a = ${LCG.a}, c = ${LCG.c}, seed ${LCG.z0}: the states jump around a clock of ${m} positions and repeat after a period of ${T}; ${new Set(zs).size} positions are visited.">
+      ${jumps}${dots}<circle class="start" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="6.5"/></svg>
+    <dl class="ro"><dt>States</dt><dd>z = ${seq}</dd>
+      <dt>Numbers</dt><dd>u = z/${m}: ${zs.slice(0, 5).map(z => num(z / m, 3)).join(", ")}${zs.length > 5 ? ", …" : ""}</dd>
+      <dt>Period</dt><dd><b>T = ${T}</b>${start ? ` after a run-in of ${start} state${start > 1 ? "s" : ""} that never come back` : ""} · ${new Set(zs).size} of ${m} positions visited ${flag(full || best0 ? "ok" : "bad", full ? "full period" : best0 ? "best possible for c = 0" : `only ${T} of ${m} in the cycle`)}</dd></dl></div>`;
+}
+function initLcg(body) {
+  const sl = (k, lab, min, max) => `<label>${lab} <input type="range" data-k="${k}" min="${min}" max="${max}" step="1" value="${LCG[k]}"> <output>${LCG[k]}</output></label>`;
+  const pre = [[31, 3, 0, 1, "task 1: m 31, a 3"], [31, 5, 0, 1, "task 2: a 5"], [32, 5, 1, 1, "task 3: m 32, a 5, c 1"], [32, 4, 0, 1, "a 4 on m 32"]];
+  body.innerHTML = `<div class="presets">${pre.map((p, i) => `<button class="preset" type="button" data-p="${i}">${p[4]}</button>`).join("")}</div>
+    <div class="ctl">${sl("m", "modulus m", 2, 64)}${sl("a", "multiplier a", 0, 64)}${sl("c", "increment c", 0, 63)}${sl("z0", "seed z₀", 0, 63)}</div><div class="out"></div>`;
+  const ins = [...body.querySelectorAll("input")], outs = [...body.querySelectorAll("output")], out = body.querySelector(".out");
+  const draw = () => { ins.forEach((el, i) => { el.value = LCG[el.dataset.k]; outs[i].textContent = LCG[el.dataset.k]; }); out.innerHTML = lcgOut(); };
+  ins.forEach(el => el.addEventListener("input", () => { LCG[el.dataset.k] = +el.value; draw(); }));
+  body.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { const [m, a, c, z0] = pre[+b.dataset.p]; Object.assign(LCG, { m, a, c, z0 }); draw(); })); draw();
+}
+
+// Explorer: pseudo-random against quasi-random points in the unit square, empty cells of a 10 × 10 grid (section 2, Figure 2.1).
+const PQ = { gen: "pseudo", N: 200, seed: 1 };
+function pqPoints(kind, N, seed) {
+  if (kind === "halton") return Array.from({ length: N }, (_, k) => [halton(k + 1, 2), halton(k + 1, 3)]);
+  if (kind === "lcg") { let z = 1 + seed * 37 % 2048; const u = () => (z = (65 * z + 1) % 2048) / 2048; return Array.from({ length: N }, () => [u(), u()]); }
+  const r = mulberry(seed * 101); return Array.from({ length: N }, () => [r(), r()]);
+}
+function pqPanel(ox, title, pts, S) {
+  const occ = new Set(pts.map(([u, v]) => Math.min(9, Math.floor(u * 10)) * 10 + Math.min(9, Math.floor(v * 10)))), empty = 100 - occ.size, c = S / 10;
+  const cells = Array.from({ length: 100 }, (_, i) => occ.has(i) ? "" : `<rect class="hole" x="${ox + Math.floor(i / 10) * c}" y="${24 + S - (i % 10 + 1) * c}" width="${c}" height="${c}"/>`).join("");
+  const grid = Array.from({ length: 11 }, (_, i) => `<line class="grid" x1="${ox + i * c}" x2="${ox + i * c}" y1="24" y2="${24 + S}"/><line class="grid" x1="${ox}" x2="${ox + S}" y1="${24 + i * c}" y2="${24 + i * c}"/>`).join("");
+  return { empty, svg: `<text class="note" x="${ox}" y="14">${title}: ${empty} empty cell${empty === 1 ? "" : "s"}</text>${cells}${grid}<rect class="frame" x="${ox}" y="24" width="${S}" height="${S}"/>${pts.map(([u, v]) => `<circle class="pt-d" cx="${(ox + u * S).toFixed(1)}" cy="${(24 + S - v * S).toFixed(1)}" r="${PQ.N > 500 ? 1.3 : 2}"/>`).join("")}` };
+}
+function pqOut() {
+  const S = 250, names = { pseudo: "pseudo-random", lcg: "small LCG", halton: "Halton" };
+  const a = pqPanel(10, names[PQ.gen], pqPoints(PQ.gen, PQ.N, PQ.seed), S), b = pqPanel(300, "quasi-random (Halton)", pqPoints("halton", PQ.N), S);
+  const exp = 100 * Math.pow(0.99, PQ.N);
+  return `<svg viewBox="0 0 560 ${S + 30}" class="lab-svg t2-pq" role="img" aria-label="Two squares with ${PQ.N} points each on a 10 by 10 grid: ${names[PQ.gen]} points leave ${a.empty} cells empty, Halton points leave ${b.empty}.">${a.svg}${b.svg}</svg>
+    <dl class="ro"><dt>Empty cells</dt><dd>${names[PQ.gen]}: ${a.empty} · Halton: ${b.empty} · for ${PQ.N} independent uniform points the expected number is 100 · 0.99<sup>${PQ.N}</sup> = ${num(exp, 1)}</dd>
+      <dt>New points</dt><dd>${PQ.gen === "halton" ? "" : "the left picture changes, "}the Halton picture never does: it is a fixed sequence, not a random one${PQ.gen === "lcg" ? " · the small LCG's consecutive pairs fall on a few parallel lines, a lattice: with m = 2048 there are only 2048 different pairs" : ""}</dd></dl>`;
+}
+function initPq(body) {
+  body.innerHTML = `<div class="ctl"><label>Left <select data-k="gen"><option value="pseudo">pseudo-random (a 32-bit generator)</option><option value="lcg">pseudo-random: small LCG, m = 2048</option></select></label>
+    <label>Points <select data-k="N">${[50, 200, 1000].map(n => `<option${n === PQ.N ? " selected" : ""}>${n}</option>`).join("")}</select></label><button class="preset" type="button">New points</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = pqOut(); };
+  body.querySelectorAll("select").forEach(s => s.addEventListener("change", () => { PQ[s.dataset.k] = s.dataset.k === "N" ? +s.value : s.value; draw(); }));
+  body.querySelector("button").addEventListener("click", () => { PQ.seed++; draw(); }); draw();
+}
+
+// Explorer: Y = g(X) for a uniform X, histogram of samples against the exact density (sections 3.1–3.2, Figure 3.1).
+const TR = [
+  { k: "x2", name: "Y = X²", g: x => x * x, f: y => 1 / (2 * Math.sqrt(y)), yr: [0, 1], fmax: 3, inv: "x = √y", d: "dx/dy = 1/(2√y)", fy: "f<sub>Y</sub>(y) = 1/(2√y) on (0, 1)", at: 0.25 },
+  { k: "sqrt", name: "Y = √X", g: Math.sqrt, f: y => 2 * y, yr: [0, 1], fmax: 2.4, inv: "x = y²", d: "dx/dy = 2y", fy: "f<sub>Y</sub>(y) = 2y on (0, 1)", at: 0.5 },
+  { k: "2x", name: "Y = 2X", g: x => 2 * x, f: () => 0.5, yr: [0, 2], fmax: 1.3, inv: "x = y/2", d: "dx/dy = 1/2", fy: "f<sub>Y</sub>(y) = 1/2 on (0, 2)", at: 1 },
+  { k: "1mx", name: "Y = 1 − X", g: x => 1 - x, f: () => 1, yr: [0, 1], fmax: 1.6, inv: "x = 1 − y", d: "|dx/dy| = 1 (decreasing g)", fy: "f<sub>Y</sub>(y) = 1 on (0, 1): still uniform", at: 0.5 },
+  { k: "inv", name: "Y = 1/X", g: x => 1 / x, f: y => y > 1 ? 1 / (y * y) : 0, yr: [0, 6], fmax: 1.3, inv: "x = 1/y", d: "|dx/dy| = 1/y² (decreasing g)", fy: "f<sub>Y</sub>(y) = 1/y² for y > 1", at: 2 },
+];
+const TRS = { k: "x2" };
+function trOut() {
+  const t = TR.find(z => z.k === TRS.k), W = 560, H = 220, L = 34, R = 12, T = 12, B = 26, PW = W - L - R, PH = H - T - B, [y0, y1] = t.yr, bins = 40, bw = (y1 - y0) / bins, M = 6000;
+  const x = v => L + (v - y0) / (y1 - y0) * PW, y = d => T + PH - Math.min(d, t.fmax) / t.fmax * PH, rng = mulberry(17), cnt = new Array(bins).fill(0);
+  for (let i = 0; i < M; i++) { const v = t.g(1 - rng()), b = Math.floor((v - y0) / bw); if (b >= 0 && b < bins) cnt[b]++; }
+  const bars = cnt.map((n, b) => `<rect class="hbar" x="${(x(y0 + b * bw) + 0.5).toFixed(1)}" y="${y(n / M / bw).toFixed(1)}" width="${(PW / bins - 1.5).toFixed(1)}" height="${(T + PH - y(n / M / bw)).toFixed(1)}"/>`).join("");
+  const curve = pathOf(Array.from({ length: 241 }, (_, i) => { const v = y0 + (i + 0.5) / 241 * (y1 - y0); return [v, t.f(v)]; }), x, y);
+  const yt = [0, 1, 2, 3].filter(v => v <= t.fmax), xt = t.yr[1] === 6 ? [0, 1, 2, 3, 4, 5, 6] : t.yr[1] === 2 ? [0, 0.5, 1, 1.5, 2] : [0, 0.25, 0.5, 0.75, 1];
+  const fat = t.f(t.at), out = t.k === "inv" ? cnt.reduce((a, b) => a + b, 0) : M;
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Histogram of ${M} values of ${t.name} for a uniform X, with the exact density ${t.fy.replace(/<[^>]+>/g, "")} drawn over it.">
+      ${yAxis(L, W, R, y, yt)}${xTicks(x, H - 8, xt)}${bars}<path class="line k2" d="${curve}"/><text class="note" x="${W - R}" y="${T + 10}" text-anchor="end">bars: ${M} samples · line: exact density</text></svg>
+    <dl class="ro"><dt>Count</dt><dd>${t.k === "inv" || t.k === "1mx" ? "g decreases, so the inequality turns: F<sub>Y</sub>(y) = P(X ≥ g⁻¹(y)) = 1 − F<sub>X</sub>(g⁻¹(y))" : "g increases: F<sub>Y</sub>(y) = P(X ≤ g⁻¹(y)) = F<sub>X</sub>(g⁻¹(y))"}; here ${t.inv}</dd>
+      <dt>Differentiate</dt><dd>${t.d}, so <b>${t.fy}</b>; at y = ${t.at}: f<sub>Y</sub> = ${num(fat, 3)}</dd>
+      ${t.k === "inv" ? `<dt>Off the chart</dt><dd>${M - out} of ${M} values lie beyond 6: P(Y > 6) = P(X < 1/6) = 1/6, a heavy tail</dd>` : ""}</dl>`;
+}
+function initTr(body) {
+  body.innerHTML = `<div class="presets">${TR.map(t => `<button class="preset" type="button" data-k="${t.k}" aria-pressed="${t.k === TRS.k}">${t.name}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), btns = body.querySelectorAll("[data-k]");
+  const draw = () => { btns.forEach(b => b.setAttribute("aria-pressed", b.dataset.k === TRS.k)); out.innerHTML = trOut(); };
+  btns.forEach(b => b.addEventListener("click", () => { TRS.k = b.dataset.k; draw(); })); draw();
+}
+
+// Explorer: inversion, x = F⁻¹(u) read off the CDF, with a histogram of many heights pushed through it (section 3.4, Figure 3.4).
+const INV = [
+  { k: "exp", name: "Exponential(1)", F: x => 1 - Math.exp(-x), Fi: u => -Math.log(1 - u), f: x => Math.exp(-x), xr: [0, 5], fmax: 1.1, fi: "x = −ln(1 − u)" },
+  { k: "tri", name: "f(x) = 2(1 − x), exercise 1", F: x => 1 - (1 - x) ** 2, Fi: u => 1 - Math.sqrt(1 - u), f: x => 2 * (1 - x), xr: [0, 1], fmax: 2.2, fi: "x = 1 − √(1 − u)" },
+  { k: "wei", name: "Weibull(1.5, 1)", F: x => 1 - Math.exp(-(x ** 1.5)), Fi: u => (-Math.log(1 - u)) ** (1 / 1.5), f: x => 1.5 * Math.sqrt(x) * Math.exp(-(x ** 1.5)), xr: [0, 3], fmax: 1.0, fi: "x = (−ln(1 − u))^(1/1.5)" },
+];
+const IV = { k: "exp", u: 0.7, seed: 1 };
+function invOut() {
+  const d = INV.find(z => z.k === IV.k), W = 560, L = 34, R = 12, PW = W - L - R, [x0, x1] = d.xr, x = v => L + (v - x0) / (x1 - x0) * PW;
+  const T1 = 12, H1 = 150, yc = v => T1 + H1 - v * H1, T2 = T1 + H1 + 50, H2 = 110, yd = v => T2 + H2 - Math.min(v, d.fmax) / d.fmax * H2, H = T2 + H2 + 24;
+  const cdf = pathOf(Array.from({ length: 201 }, (_, i) => { const v = x0 + i / 200 * (x1 - x0); return [v, d.F(v)]; }), x, yc);
+  const pdf = pathOf(Array.from({ length: 201 }, (_, i) => { const v = x0 + (i + 0.5) / 201 * (x1 - x0); return [v, d.f(v)]; }), x, yd);
+  const xu = d.Fi(IV.u), rng = mulberry(IV.seed * 313), M = 4000, bins = 40, bw = (x1 - x0) / bins, cnt = new Array(bins).fill(0), rug = [];
+  for (let i = 0; i < M; i++) { const u = rng(), v = d.Fi(u), b = Math.floor((v - x0) / bw); if (b >= 0 && b < bins) cnt[b]++; if (i < 40) rug.push([u, v]); }
+  const bars = cnt.map((n, b) => `<rect class="hbar" x="${(x(x0 + b * bw) + 0.5).toFixed(1)}" y="${yd(n / M / bw).toFixed(1)}" width="${(PW / bins - 1.5).toFixed(1)}" height="${(T2 + H2 - yd(n / M / bw)).toFixed(1)}"/>`).join("");
+  const rugs = rug.map(([u, v]) => `<line class="rug" x1="${L + 1}" x2="${L + 9}" y1="${yc(u).toFixed(1)}" y2="${yc(u).toFixed(1)}"/>${v <= x1 ? `<line class="rug" x1="${x(v).toFixed(1)}" x2="${x(v).toFixed(1)}" y1="${T1 + H1}" y2="${T1 + H1 + 7}"/>` : ""}`).join("");
+  const xt = x1 === 1 ? [0, 0.25, 0.5, 0.75, 1] : Array.from({ length: x1 + 1 }, (_, i) => i);
+  const xs = Math.min(xu, x1);
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Top: the CDF of ${d.name}; the height u = ${IV.u} is carried across to the curve and down to x = ${num(xu, 3)}. Bottom: a histogram of ${M} values F⁻¹(U) against the density.">
+      ${yAxis(L, W, R, yc, [0, 0.5, 1])}<text class="note" x="${W - R}" y="${T1 + H1 - 12}" text-anchor="end">CDF F(x) · left ticks: 40 uniform heights · bottom ticks: where they land</text><path class="line" d="${cdf}"/>${rugs}
+      <line class="read" x1="${L}" x2="${x(xs).toFixed(1)}" y1="${yc(IV.u).toFixed(1)}" y2="${yc(IV.u).toFixed(1)}"/><line class="read" x1="${x(xs).toFixed(1)}" x2="${x(xs).toFixed(1)}" y1="${yc(IV.u).toFixed(1)}" y2="${T1 + H1}"/><circle class="hit-pt" cx="${x(xs).toFixed(1)}" cy="${yc(IV.u).toFixed(1)}" r="5"/>
+      ${xTicks(x, T1 + H1 + 20, xt)}
+      ${yAxis(L, W, R, yd, [0])}<text class="note" x="${L + 4}" y="${T2 - 4}">${M} values of F⁻¹(U) against the density f(x)</text>${bars}<path class="line k2" d="${pdf}"/>${xTicks(x, H - 6, xt)}</svg>
+    <dl class="ro"><dt>Inverse CDF</dt><dd>${d.fi}</dd><dt>At u = ${IV.u}</dt><dd>x = F⁻¹(${IV.u}) = <b>${num(xu, 3)}</b>; check: F(${num(xu, 3)}) = ${num(d.F(xu), 3)}</dd>
+      <dt>Why it works</dt><dd>P(F⁻¹(U) ≤ x) = P(U ≤ F(x)) = F(x): where the CDF is steep, a stretch of heights lands on a short piece of the x axis, so values pile up where the density is high</dd></dl>`;
+}
+function initInv(body) {
+  body.innerHTML = `<div class="ctl"><label>Distribution <select>${INV.map(d => `<option value="${d.k}"${d.k === IV.k ? " selected" : ""}>${d.name}</option>`).join("")}</select></label>
+    <label>height u <input type="range" min="0.02" max="0.98" step="0.02" value="${IV.u}"> <output>${IV.u}</output></label><button class="preset" type="button">New heights</button></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), rg = body.querySelector("input"), o = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { o.textContent = IV.u; out.innerHTML = invOut(); };
+  sel.addEventListener("change", () => { IV.k = sel.value; draw(); }); rg.addEventListener("input", () => { IV.u = +rg.value; draw(); });
+  body.querySelector("button").addEventListener("click", () => { IV.seed++; draw(); }); draw();
+}
+
+// Explorer: Box–Muller, two uniform numbers as a distance and an angle in the plane (section 4.2, Figure 4.2).
+const BM = { u1: 0.6, u2: 0.3 };
+const BMCLOUD = (() => { const r = mulberry(4242); return Array.from({ length: 1500 }, () => { const u1 = 1 - r(), u2 = r(), R = Math.sqrt(-2 * Math.log(u1)); return [R * Math.cos(2 * Math.PI * u2), R * Math.sin(2 * Math.PI * u2)]; }); })();
+function bmOut() {
+  const S = 240, c = S / 2, k = S / 8, R = Math.sqrt(-2 * Math.log(BM.u1)), th = 2 * Math.PI * BM.u2, x1 = R * Math.cos(th), x2 = R * Math.sin(th);
+  const X = v => c + v * k, Y = v => c - v * k, cl = v => Math.max(-3.9, Math.min(3.9, v));
+  return `<div class="pi-wrap"><svg viewBox="0 0 ${S} ${S}" class="pi t2-bm" role="img" aria-label="The plane from −4 to 4 with 1500 Box–Muller points forming a round cloud; u1 = ${BM.u1} gives the distance ${num(R, 2)}, u2 = ${BM.u2} the angle ${num(th * 180 / Math.PI, 0)} degrees, so the point is (${num(x1, 2)}, ${num(x2, 2)}).">
+      <rect class="pi-box" x="0" y="0" width="${S}" height="${S}"/>${[-2, 0, 2].map(v => `<line class="g" x1="${X(v)}" x2="${X(v)}" y1="0" y2="${S}"/><line class="g" x1="0" x2="${S}" y1="${Y(v)}" y2="${Y(v)}"/>`).join("")}
+      ${BMCLOUD.map(([a, b]) => `<circle class="cl" cx="${X(a).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="1"/>`).join("")}
+      <circle class="ring" cx="${c}" cy="${c}" r="${(R * k).toFixed(1)}"/><line class="ray" x1="${c}" y1="${c}" x2="${X(cl(x1)).toFixed(1)}" y2="${Y(cl(x2)).toFixed(1)}"/><circle class="pt-bm" cx="${X(cl(x1)).toFixed(1)}" cy="${Y(cl(x2)).toFixed(1)}" r="5.5"/>
+      <text class="tick" x="${X(2) + 3}" y="${S - 4}">2</text><text class="tick" x="${X(-2) + 3}" y="${S - 4}">−2</text></svg>
+    <dl class="ro"><dt>Distance</dt><dd>R = √(−2 ln u₁) = √(−2 ln ${BM.u1}) = <b>${num(R, 3)}</b>; P(a normal pair lies farther out than R) = e<sup>−R²/2</sup> = u₁ = ${BM.u1}</dd>
+      <dt>Angle</dt><dd>θ = 2π u₂ = ${num(th, 3)} rad = ${num(th * 180 / Math.PI, 1)}°</dd>
+      <dt>Pair</dt><dd>X₁ = R cos θ = <b>${num(x1, 3)}</b>, X₂ = R sin θ = <b>${num(x2, 3)}</b></dd>
+      <dt>Read it</dt><dd>${BM.u1 < 0.05 ? "u₁ near 0 is the rare far-out point: only a fraction u₁ of pairs gets this far" : BM.u1 > 0.9 ? "u₁ near 1 puts the point close to the centre" : "u₂ only turns the point around the circle; u₁ alone sets how far out it lies"}</dd></dl></div>`;
+}
+function initBm(body) {
+  body.innerHTML = `<div class="ctl"><label>u₁ <input type="range" data-k="u1" min="0.01" max="0.99" step="0.01" value="${BM.u1}"> <output>${BM.u1}</output></label><label>u₂ <input type="range" data-k="u2" min="0.01" max="0.99" step="0.01" value="${BM.u2}"> <output>${BM.u2}</output></label></div><div class="out"></div>`;
+  const ins = [...body.querySelectorAll("input")], outs = [...body.querySelectorAll("output")], out = body.querySelector(".out");
+  const draw = () => { ins.forEach((el, i) => outs[i].textContent = BM[el.dataset.k]); out.innerHTML = bmOut(); };
+  ins.forEach(el => el.addEventListener("input", () => { BM[el.dataset.k] = +el.value; draw(); })); draw();
+}
+
+// Darts under Beta(2, 5): box [0, 1] × [0, 2.4576], kept darts below the curve (sections 5.1 and question 5.1).
+const beta25 = x => 30 * x * (1 - x) ** 4;
+CHARTS.darts = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 250, L = narrow ? 30 : 40, R = 12, T = 14, B = 28, PW = W - L - R, PH = H - T - B, fm = 2.4576, top = 2.6;
+  const x = v => L + v * PW, y = v => T + PH - v / top * PH, rng = mulberry(77), n = narrow ? 500 : 800; let kept = 0;
+  const darts = Array.from({ length: n }, () => { const u = rng(), h = rng() * fm, ok = h <= beta25(u); kept += ok; return `<circle class="${ok ? "keep" : "drop"}" cx="${x(u).toFixed(1)}" cy="${y(h).toFixed(1)}" r="${narrow ? 1.6 : 2}"/>`; }).join("");
+  const curve = pathOf(Array.from({ length: 121 }, (_, i) => [i / 120, beta25(i / 120)]), x, y);
+  const tip = esc(`<b>${n} darts in the box</b>kept below the curve: ${kept} (${pct(kept / n)})<br>expected: area 1 / box area ${fm} = 40.7 %<br>about ${num(fm, 2)} darts per kept sample`);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Accept–reject for the Beta(2, 5) density: ${n} uniform darts in the box from 0 to 1 and up to 2.46; ${kept} fall below the curve and are kept, the rest are thrown away.">
+    ${[0, 1, 2].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+    ${[0, 0.2, 0.4, 0.6, 0.8, 1].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`).join("")}
+    <g class="pt" tabindex="0" data-tip="${tip}"><rect class="hit" x="${L}" y="${T}" width="${PW}" height="${PH}"/><rect class="dbox" x="${x(0)}" y="${y(fm)}" width="${PW}" height="${y(0) - y(fm)}"/>${darts}<path class="line k2" d="${curve}"/></g>
+    <text class="note" x="${W - R - 4}" y="${y(fm) - 4}" text-anchor="end">box height = max f = 2.4576</text></svg>`;
+};
+// Fraction of uniform darts in the cube [−1, 1]^d that land in the unit ball, on a log axis (questions 5.7 and 5.8).
+const gammaHalf = z => { if (Number.isInteger(z)) { let p = 1; for (let i = 2; i < z; i++) p *= i; return p; } let p = Math.sqrt(Math.PI), t = 0.5; while (t < z) { p *= t; t++; } return p; };
+const ballFrac = d => Math.PI ** (d / 2) / gammaHalf(d / 2 + 1) / 2 ** d;
+const DIMS = [1, 2, 3, 5, 10, 20, 30];
+const supx = s => s.replace(/\^(−?\d+)/g, (m, x) => x.replace("−", "⁻").replace(/\d/g, c => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c]));
+const expo = v => supx(v.toExponential(1).replace("e+", " · 10^").replace("e-", " · 10^−"));
+CHARTS.dims = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 50 : 64, R = narrow ? 70 : 96, T = 8, RH = 30, H = T + DIMS.length * RH + 24, PW = W - L - R, x = v => L + (Math.log10(v) + 14) / 14 * PW;
+  const ticks = [-14, -10, -6, -2, 0].map(e => `<line class="${e ? "grid" : "axis"}" x1="${x(10 ** e)}" x2="${x(10 ** e)}" y1="${T}" y2="${H - 20}"/><text class="tick" x="${x(10 ** e)}" y="${H - 6}" text-anchor="middle">${e ? `10${String(e).replace("-", "⁻").replace(/\d/g, c => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c])}` : "1"}</text>`).join("");
+  const rows = DIMS.map((d, i) => { const v = ballFrac(d), y0 = T + i * RH + 15, per = 1 / v;
+    const lab = v > 0.01 ? pct(v) : expo(v);
+    const tip = `<b>d = ${d}</b>fraction of the cube inside the ball: ${lab}<br>darts per kept point: ${per < 100 ? num(per, 2) : expo(per)}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - 15}" width="${W}" height="${RH}"/><line class="ann" x1="${L}" x2="${x(v)}" y1="${y0}" y2="${y0}" stroke-dasharray="2 3"/><circle class="dot" cx="${x(v)}" cy="${y0}" r="5"/>
+      <text class="cat" x="${L - 8}" y="${y0 + 4}" text-anchor="end">d = ${d}</text><text class="val" x="${x(v) + 9}" y="${y0 + 4}">${lab}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dot chart on a logarithmic axis: the fraction of the cube that lies inside the ball falls from 100 % in one dimension to 78.5 % in two, 52.4 % in three, 0.25 % in ten, 2.5 times 10 to the minus 8 in twenty and 2 times 10 to the minus 14 in thirty dimensions.">${ticks}${rows}</svg>`;
+};
+
+function exercise2() {
+  const tool = [["Uniform numbers", "a modern pseudo-random generator (<code>rand()</code>); record the seed; one stream per parallel task"], ["Covering a space evenly", "quasi-random points; never for simulating chance"], ["F⁻¹ known or computable", "inversion, X = F⁻¹(U); in Julia <code>quantile.(D, rand(n))</code>"], ["Normal numbers", "Box–Muller; in practice <code>randn()</code>"], ["Only the shape f known, few dimensions", "accept–reject with an envelope that stays above f"], ["Sharp peak, many samples of one density", "composition–rejection"], ["Many dimensions", "Markov chain Monte Carlo, later in the course"]];
+  const fails = [["A", "a very narrow normal peak, Normal(0.4, 0.01), in the box [0, 1] × [0, 40.7]", "correct but wasteful: the box has area ≈ 41 and the curve area 1, so about <b>41 darts per kept sample</b>"], ["B", "f(x) = 1/(1 + x)² on [0, ∞) in a box over [0, 5]", "wrong: no value above 5 can ever come out, although P(X > 5) = 1 − F(5) = 1/(1 + 5) = <b>1/6</b>"], ["C", "Laplace(0, 1) under the envelope 1.6 × Normal(0, 1)", "wrong in the tails: the Laplace density e<sup>−|x|</sup>/2 decays more slowly than any normal, so the envelope drops below f for |x| > 2.22 (computed here), where every proposal is kept and the tails come out too thin"]];
+  return `${head(e)}
+    <p class="lead">The second tutorial is again a Pluto notebook (Julia), "Tutorial 02: Random Variate Generation", dated 5 November and uploaded to OPAL just after midnight on the day of the session. It is the hands-on version of ${lecLink(2, "lecture 2")} (2 Nov), whose deck is not in OPAL yet: how a deterministic computer produces numbers that behave like random ones, why quasi-random points are something else, what a function does to a distribution, and the three ways from uniform numbers to any distribution (inversion, Box–Muller for the normal, accept–reject with its refinement composition–rejection). Six sections of interactive figures and quick questions, seven calculation problems, three programming exercises and two optional bonuses; the reference is chapter 2 of the lecture notes. As before: no sheet, no points, nothing to hand in.</p>
+    ${tiles([["T = 30", "period of the LCG with m = 31, a = 3"], [fx(String.raw`F^{-1}(U)`, "F⁻¹(U)"), "inversion: one uniform per sample"], ["1 : 1", "Box–Muller: uniforms per normal number"], ["2 · 10⁻¹⁴", "darts kept for a ball in 30 dimensions"]])}
+
+    <h2>1 · Random numbers from a deterministic machine</h2>
+    <p>Run <code>rand()</code> twice and you get two different numbers; run <code>Random.seed!(42); rand(3)</code> twice and you get the same three numbers both times; a generator object <code>Xoshiro(7)</code> carries its own state. Computers do not produce randomness, they compute sequences that statistics cannot tell apart from random ones. The notebook contrasts the two sources: <b>measured</b> randomness (electronic noise) is unpredictable, slow and not reproducible, used in cryptography; <b>computed</b> randomness is fast and reproducible. A pseudo-random number generator has a state z, an update rule for the next state and an output map to a number u ∈ [0, 1); the first state is the seed, so the seed fixes the whole sequence (question 1.1).</p>
+    <h3>1.1 The linear congruential generator</h3>
+    <div class="formula">${fl(String.raw`z_i = (a\,z_{i-1} + c) \bmod m, \qquad u_i = \frac{z_i}{m} \in [0, 1)`, "z<sub>i</sub> = (a z<sub>i−1</sub> + c) mod m, u<sub>i</sub> = z<sub>i</sub>/m", "modulus m, multiplier a, increment c, seed z₀")}</div>
+    <p>"mod m" keeps the remainder, so the state walks around a clock with m positions. It can take only m values, so as soon as one comes back the sequence repeats: the number of steps of the cycle is the <b>period</b> T ≤ m. The explorer redraws the notebook's Figure 1.1.</p>
+    ${lab("lcg", "the LCG as jumps on a clock")}
+    ${ex("The three tasks, worked", `<p><b>m = 31, a = 3, c = 0:</b> from z₀ = 1 the states are the powers of 3 modulo 31, and 3 first returns to 1 at the 30th power (3¹⁵ ≡ −1), so <b>T = 30</b>: every position except 0. Position 0 can never be reached with c = 0, because 3 · z ≡ 0 only for z = 0.</p>
+      <p><b>a = 5:</b> 5³ = 125 = 4 · 31 + 1 ≡ 1, so the sequence 1, 5, 25, 1, … has <b>T = 3</b>. Same modulus, same formula, a useless generator.</p>
+      <p><b>m = 32, a = 5, c = 1:</b> 1, 6, 31, 28, 13, 2, 11, 24, … visits all <b>32</b> positions before repeating: the full period.</p>`)}
+    ${why("Context, not in the notebook: when an LCG has the full period", `<p>The Hull–Dobell theorem gives the rule for c ≠ 0: the period is m exactly when c and m share no factor, a − 1 is divisible by every prime factor of m, and a − 1 is divisible by 4 if m is. For m = 32, a = 5, c = 1 all three hold (c odd, 4 divisible by 2 and by 4). With c = 0 (a "multiplicative" generator) 0 is a trap and the best possible is m − 1 for a prime m, reached when a is a primitive root, as 3 is for 31. The preset "a 4 on m 32" shows the other failure: 1, 4, 16, 0, 0, … runs into 0 and stays there.</p>`)}
+    <p>Real generators use the same idea with large numbers: the classic a = 48,271 with m = 2³¹ − 1 has a period of about 2.1 · 10⁹; Julia's default <b>Xoshiro256++</b> has a 256-bit state and the period 2²⁵⁶ − 1 ≈ 10⁷⁷. Question 1.2 is the trap of uniformity: an LCG with period 65,536 used for 10⁶ draws hits every value equally often, but replays the same 65,536 numbers about 15 times in the same order, which is not 10⁶ independent numbers. The period has to be far larger than the number of draws.</p>
+    <h3>1.2 Many processors</h3>
+    <p>Picture one cycle of the generator as a ring of T numbers. A seed picks a starting point, and a processor then uses a stretch of n numbers. Different seeds give different starting points, but stretches can <b>overlap</b>, and then two processors compute with the same numbers. Together, P processors can use at most T numbers, about T/P each. Question 1.3: 1000 cluster jobs, an LCG with period 2³¹ ≈ 2.1 · 10⁹, 10⁷ numbers per job, seeded with the job number. Not safe: 1000 · 10⁷ = 10¹⁰ numbers exceed the period, so overlaps are certain, and consecutive seeds of an LCG can also produce related sequences. Julia mixes the seed thoroughly, so <code>Xoshiro(1)</code>, <code>Xoshiro(2)</code>, … are unrelated streams.</p>
+    ${why("Context, not in the notebook: the birthday problem again", `<p>How likely is an overlap when the stretches are well below the period? Two stretches of length n starting at random on a ring of T overlap with probability about 2n/T, and P processors form P(P − 1)/2 pairs, so the expected number of overlapping pairs is about P(P − 1) n / T. The notebook's default, 100 processors with 10⁷ numbers each on a period of 2³¹: 9900 · 10⁷ / 2.15 · 10⁹ ≈ <b>46 overlapping pairs</b>. With Xoshiro's 2²⁵⁶ the same number is about 10⁻⁶⁶. It is the birthday effect of ${lecLink(1, "lecture 1")}: the danger grows with the number of pairs, P², not with P.</p>`)}
+
+    <h2>2 · Pseudo-random or quasi-random?</h2>
+    <p>Throw 200 random points into a square: they do not cover it evenly. Independent points do not avoid each other, so a new point can land right next to an old one, and random points always form <b>clumps</b> and leave <b>holes</b>. That is a consequence of independence, not a flaw. Quasi-random points are built to cover the space evenly. The simplest is the additive recurrence with an irrational step, each new point landing in one of the largest gaps; Halton and Sobol sequences fill gaps the same way using the digits of the index k in bases 2 and 3.</p>
+    <div class="formula">${fl(String.raw`u_{k+1} = (u_k + \alpha) \bmod 1`, "u<sub>k+1</sub> = (u<sub>k</sub> + α) mod 1", "additive recurrence")}${fl(String.raw`\alpha = \frac{\sqrt 5 - 1}{2} \approx 0.618`, "α = (√5 − 1)/2 ≈ 0.618", "an irrational step")}</div>
+    ${lab("pq", "pseudo-random against Halton points, with the empty cells of a 10 × 10 grid")}
+    <ul class="cmp two">
+      <li><b>Pseudo-random</b><span class="v">behaves like independent uniform draws; clumps and holes; changes with the seed. Use it to <em>simulate chance</em>: arrivals, decays, mutations, moving molecules (question 2.3: customer arrivals).</span></li>
+      <li><b>Quasi-random</b><span class="v">covers the space evenly, but its points are <em>not independent</em>. Use it to <em>cover a space</em>: a parameter scan, points for an integral (question 2.4: 100 test points in a square of parameters).</span></li>
+    </ul>
+    <p>The notebook's firework shows the price of dependence: each spark needs a direction and a speed. With quasi-random numbers the speed is the next number after the direction, u + 0.618 mod 1, so each direction gets exactly one speed and the sparks lie on a spiral instead of a round burst (question 2.2). Question 2.5 is the realistic version: synthetic microscope images with molecules placed quasi-randomly "to cover the cell evenly" look more regular than independent molecules ever are, and a cluster-detection program tested on them reports that molecules avoid each other: a wrong biological conclusion, with no error message.</p>
+
+    <h2>3 · From uniform to any distribution</h2>
+    <h3>3.1 What a function does to a random variable</h3>
+    <p>Square uniform numbers, Y = X²: the values pile up near 0. Count with the CDF and then differentiate, for 0 &lt; y &lt; 1:</p>
+    <div class="formula">${fl(String.raw`F_Y(y) = P(X^2 \le y) = P(X \le \sqrt{y}) = \sqrt{y}`, "F<sub>Y</sub>(y) = P(X² ≤ y) = P(X ≤ √y) = √y", "count")}${fl(String.raw`f_Y(y) = \frac{d}{dy}\sqrt{y} = \frac{1}{2\sqrt{y}}`, "f<sub>Y</sub>(y) = 1/(2√y)", "differentiate")}</div>
+    <p>Question 3.2: f<sub>Y</sub>(0.25) = 1/(2 · 0.5) = 1. Question 3.3: the area ∫₀¹ 1/(2√y) dy = [√y]₀¹ = 1, the quick test for any transformation. Why the values pile up (Figure 3.1): equally likely x values go up to the curve g and across to the y axis; where g is flat they bunch together and the density of Y is high, where g is steep they spread out. For any increasing g the same two steps give the general rule, and the factor dx/dy says how the spacing changes: the probability between two neighbouring lines is the same before and after, f<sub>Y</sub>(y) dy = f<sub>X</sub>(x) dx.</p>
+    <div class="formula">${fl(String.raw`F_Y(y) = F_X\big(g^{-1}(y)\big)`, "F<sub>Y</sub>(y) = F<sub>X</sub>(g⁻¹(y))", "g increasing: count")}${fl(String.raw`f_Y(y) = f_X\big(g^{-1}(y)\big)\,\frac{d}{dy}g^{-1}(y)`, "f<sub>Y</sub>(y) = f<sub>X</sub>(g⁻¹(y)) · d g⁻¹(y)/dy", "differentiate")}</div>
+    <p>Question 3.4: for Y = 2X the density is not 1 on (0, 2), because then the area would be 2; the factor dx/dy = ½ is missing, and Y is uniform with density ½.</p>
+    <h3>3.2 Decreasing functions</h3>
+    <p>For a decreasing g such as Y = 1/X, large x give small y, so the inequality turns around: F<sub>Y</sub>(y) = P(X ≥ 1/y) = 1 − F<sub>X</sub>(1/y). Differentiating brings a minus sign, and since g⁻¹ is decreasing its derivative is negative too; the two cancel. One formula with an absolute value covers both cases:</p>
+    <div class="formula">${fl(String.raw`f_Y(y) = f_X\big(g^{-1}(y)\big)\,\left|\frac{d}{dy}\,g^{-1}(y)\right|`, "f<sub>Y</sub>(y) = f<sub>X</sub>(g⁻¹(y)) · |d g⁻¹(y)/dy|", "g strictly monotone, increasing or decreasing")}</div>
+    <p>Question 3.5: for Y = 1/X, x = 1/y and |d(1/y)/dy| = 1/y², so f<sub>Y</sub>(y) = 1/y² for y &gt; 1 and f<sub>Y</sub>(2) = 0.25. Question 3.6: forgetting the absolute value gives −1/y², and a density can never be negative.</p>
+    ${lab("tr", "five transformations of a uniform X: samples against the formula")}
+    <h3>3.3 The CDF itself, and 3.4 inversion</h3>
+    <p>Take g = F<sub>X</sub>, the CDF of X itself. It is steep exactly where the density is high (F′ = f), so it spreads the crowded values apart and pushes the sparse ones together, and with dy = f<sub>X</sub>(x) dx the transformation rule gives f<sub>Y</sub> = f<sub>X</sub>/f<sub>X</sub> = 1 on (0, 1): <b>the values of the CDF are uniform</b>, for every continuous distribution. Uniform numbers are in this sense the common raw material of all distributions. Going the other way is the first sampling method:</p>
+    <div class="formula">${fl(String.raw`X = F^{-1}(U)`, "X = F⁻¹(U)", "inversion, for a continuous, strictly increasing F")}${fl(String.raw`P\big(F^{-1}(U) \le x\big) = P\big(U \le F(x)\big) = F(x)`, "P(F⁻¹(U) ≤ x) = P(U ≤ F(x)) = F(x)", "why X has the CDF F")}${fl(String.raw`u = 1 - e^{-\lambda x} \;\Rightarrow\; x = F^{-1}(u) = -\frac{\ln(1 - u)}{\lambda}`, "x = −ln(1 − u)/λ", "the exponential distribution")}</div>
+    ${lab("inv", "inversion: carry a uniform height across the CDF")}
+    <p>One uniform number gives one exact exponential number. When F⁻¹ has no formula it can be computed numerically; in Julia <code>quantile(D, u)</code> does that for every distribution of Distributions.jl, and <code>rand(Exponential(2.0), 5)</code> does the whole job. Question 3.8 is a real bug: a simulation computes exponentials as <code>-log(rand())</code> and after 10⁹ samples one value is <code>Inf</code>. <code>rand()</code> returns values in [0, 1), so 0 is possible and −ln 0 = ∞; <code>-log(1 - rand())</code> uses 1 − U ∈ (0, 1], or <code>randexp()</code> avoids the issue.</p>
+    ${ex("Worked example: an exponential waiting time by hand", `<p>Rate λ = 2 per hour, uniform draw u = 0.7. Then x = −ln(1 − 0.7)/2 = −ln(0.3)/2 = 1.204/2 = <b>0.602 hours</b>, about 36 minutes. Check: F(0.602) = 1 − e<sup>−1.204</sup> = 1 − 0.3 = 0.7. With the buggy <code>-log(u)</code> the same u would give −ln(0.7)/2 = 0.178: still a correct exponential sample, because U and 1 − U have the same distribution, but one that breaks at u = 0.</p>`)}
+
+    <h2>4 · Normal random numbers</h2>
+    <p>The normal CDF Φ has no formula, and neither does Φ⁻¹. <b>Adding uniform numbers</b> (section 4.1) uses the central limit theorem, as in ${exeLink(1, "tutorial 1")}'s exercise 9: the histogram of the sum of 12 uniforms looks normal, but on a logarithmic density axis the tails disagree (question 4.1). The sum is less likely than a normal number far from the middle, and it can never leave [0, 12], so after subtracting 6 it never exceeds ±6, while rare extreme values are exactly what the tails describe.</p>
+    <p><b>The Box–Muller transform</b> (section 4.2) inverts after all, in two dimensions. A pair of independent standard normals has the density e<sup>−(x₁² + x₂²)/2</sup>/(2π), which depends only on the distance r from the centre: the cloud is round. So describe the point by an angle and a distance. The angle is uniform, θ = 2πU₂. The distance has the CDF F<sub>R</sub>(r) = 1 − e<sup>−r²/2</sup>, which unlike Φ can be inverted: R = √(−2 ln(1 − U₁)), and since 1 − U₁ is uniform too, √(−2 ln U₁). Back in the plane, X₁ = R cos θ and X₂ = R sin θ.</p>
+    <div class="formula">${fl(String.raw`X_1 = \sqrt{-2\ln U_1}\,\cos(2\pi U_2)`, "X₁ = √(−2 ln U₁) cos(2πU₂)", "U₁, U₂ independent uniform on (0, 1)")}${fl(String.raw`X_2 = \sqrt{-2\ln U_1}\,\sin(2\pi U_2)`, "X₂ = √(−2 ln U₁) sin(2πU₂)", "X₁, X₂ independent standard normal")}</div>
+    ${lab("bm", "Box–Muller: choose the two uniform numbers yourself")}
+    <p>Question 4.4: the angle and the distance may be drawn separately because the density depends only on the distance, so the angle carries no information about it; that turns one two-dimensional problem into two one-dimensional ones, and it works only for a round cloud. Question 4.5: two uniforms give two normals, so 10⁶ normal numbers need <b>10⁶</b> uniform numbers. In practice <code>randn()</code> and <code>rand(Normal(μ, σ))</code>.</p>
+    ${why("Context, not in the notebook: why the distance has that CDF", `<p>The probability that a standard normal pair lies within distance r is the integral of the density over the disc. In polar coordinates the area element is ρ dρ dθ, so</p><div class="formula">${fl(String.raw`\begin{aligned} F_R(r) &= \int_0^{2\pi}\!\!\int_0^r \tfrac{1}{2\pi} e^{-\rho^2/2}\,\rho\,d\rho\,d\theta \\ &= 1 - e^{-r^2/2} \end{aligned}`, "F<sub>R</sub>(r) = ∫∫ e<sup>−ρ²/2</sup> ρ dρ dθ / (2π) = 1 − e<sup>−r²/2</sup>")}</div><p>The extra factor ρ, the circumference growing with the radius, is what makes the integral solvable, and it is missing in one dimension, which is why Φ has no closed form. R² = −2 ln U₁ is an exponential with mean 2, the chi-squared distribution with two degrees of freedom.</p>`)}
+
+    <h2>5 · Accept–reject</h2>
+    <h3>5.1 Darts under a curve</h3>
+    <p>Sometimes only the shape of a density is known: a measured curve, or a formula without a usable F⁻¹. Throw darts uniformly into a box around the curve and keep the darts below it. More darts are kept where the curve is high, so the x values of the kept darts have exactly the density of the curve. Because the darts fill the box evenly, the fraction kept is a ratio of areas, and the area under a density is 1.</p>
+    <div class="formula">${fl(String.raw`\text{fraction kept} = \frac{\text{area under the curve}}{\text{area of the box}}`, "fraction kept = area under the curve / area of the box")}${fl(String.raw`= \frac{1}{\text{area of the box}}`, "= 1 / area of the box", "the area under a density is 1")}</div>
+    ${chart("darts", leg([[1, "kept"], ["g", "thrown away"], [2, "density f"]]))}${cap("Beta(2, 5), f(x) = 30 x (1 − x)⁴, drawn here with a fixed set of darts; hover the box for the count. Question 5.1: the maximum is f(0.2) = 2.4576, so the box has area 2.4576 and 1/2.4576 = 40.7 % of the darts are kept, about 2.46 darts per sample. Question 5.2: the semicircle density (2/π)√(1 − x²) on [−1, 1] in a box of area 2 · 2/π = 4/π keeps π/4 = 78.5 %.")}
+    <h3>5.2 A proposal instead of a box</h3>
+    <p>The notebook's drawing pad lets you sketch any density and fit either a box or a hill μ g(x) built from a normal density over it. The general method:</p>
+    <div class="formula">${fl(String.raw`\mu\,g(x) \ge f(x) \text{ for all } x`, "μ g(x) ≥ f(x) for all x", "envelope: g easy to sample (the proposal), μ a constant")}${fl(String.raw`x \sim g, \quad u \sim U(0, 1)`, "x from g, u uniform on (0, 1)", "draw a proposal and a uniform height")}${fl(String.raw`\text{keep } x \text{ if } u\,\mu\,g(x) \le f(x)`, "keep x if u μ g(x) ≤ f(x)", "on average a fraction 1/μ is kept")}</div>
+    <p>The closer μ g fits f, the less is wasted. Question 5.3: if the envelope dips below the density somewhere, nothing in the algorithm notices; on that interval every dart is kept, so the samples follow the envelope there instead of f. Checking μ g ≥ f is the programmer's job. Section 5.3 tries three harder densities:</p>
+    <div class="tt-wrap"><table class="tt prose"><tr><th>Case</th><th>Density and envelope</th><th>What happens</th></tr>${fails.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("")}</table></div>
+    <p><b>More dimensions.</b> For uniform points in a ball, throw darts into the surrounding cube and keep those inside. The kept fraction is the volume ratio: π/4 = 0.785 in two dimensions, (4π/3)/8 = π/6 = 0.524 in three (question 5.7), and then it collapses.</p>
+    ${chart("dims")}${cap("Volume of the unit ball over the volume of the cube [−1, 1]<sup>d</sup>, π<sup>d/2</sup> / (Γ(d/2 + 1) 2<sup>d</sup>), computed here; hover a row for the number of darts per kept point. Question 5.8: in 30 dimensions only about 2 · 10⁻¹⁴ of the darts land in the ball, about 5 · 10¹³ darts per point, so accept–reject is hopeless there and Markov chain Monte Carlo takes over later in the course.")}
+    <h3>5.4 Composition–rejection</h3>
+    <p>Case A wastes most of the box. Composition–rejection replaces the one big box by small boxes that follow the curve: cut the x axis into blocks, give the block heights from a ladder of levels a, 2a, 4a, …, each block taking the lowest level that still lies above the curve there. To sample, choose a level with probability proportional to its total area, then one block of that level, then throw a dart into that block and accept or reject it as before. Since no block is more than one level step above the curve's highest point in it, far less of the area is empty than in the one big box of case A. The set-up pays off when many samples are drawn from the same density.</p>
+
+    <h2>6 · Which method when</h2>
+    <div class="tt-wrap"><table class="tt fs"><tr><th>Situation</th><th>Method</th></tr>${tool.map(r => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`).join("")}</table></div>
+
+    <h2>Calculation problems</h2>
+    ${task("1", 0, "A linear map", `<p>X uniform on (0, 1), Y = 3X + 2: Y is uniform on (2, 5), the axis is stretched by 3, so the density is 1/3 there.</p>${ans([["1/3", "f<sub>Y</sub>(3)"]])}`)}
+    ${task("2", 0, "Minus the logarithm", `<p>Y = −ln X: x = e<sup>−y</sup> and |dx/dy| = e<sup>−y</sup>, so f<sub>Y</sub>(y) = 1 · e<sup>−y</sup> for y &gt; 0: Y is Exponential(1), the inversion recipe in disguise.</p>${ans([["e⁻¹ ≈ 0.368", "f<sub>Y</sub>(1)"]])}`)}
+    ${task("3", 0, "The cube", `<p>Y = X³ at y = 0.125: x = 0.125<sup>1/3</sup> = 0.5 and g′(0.5) = 3 · 0.25 = 0.75; the density is 1/g′ = 1/0.75. Equivalently, dx/dy = (1/3) y<sup>−2/3</sup> = (1/3) · 4 = 4/3.</p>${ans([["4/3 ≈ 1.333", "f<sub>Y</sub>(0.125)"]])}`)}
+    ${task("4", 0, "Normalising a density", `<p>f(x) = c x on [0, 2]: ∫₀² c x dx = 2c = 1. With c = ½ the CDF is F(x) = x²/4, and inversion would give x = 2√u.</p>${ans([["½", "c"], ["2√u", "F⁻¹(u), for inversion"]])}`)}
+    ${task("6", 0, "Darts for 3x²", `<p>f(x) = 3x² on [0, 1] in the box [0, 1] × [0, 3]: area under f is 1, box area 3.</p>${ans([["1/3", "fraction kept"], ["3", "darts per sample on average"]])}`)}
+    ${task("7", 0, "Which is not uniform?", `<p>1 − U is uniform (a reflection), and F(X) for an exponential X is uniform (section 3.3). U² is not: squaring squeezes the axis near 0, with density 1/(2√y).</p>${ans([["U²", "the odd one out"]])}`)}
+    <p class="muted">The notebook numbers its problems 1–4, 6 and 7; there is no problem 5.</p>
+
+    <h2>Programming exercises</h2>
+    ${task("P1", 0, "Inversion", `<p>Complete <code>tri_inv(u)</code>. Density f(x) = 2(1 − x) on [0, 1], CDF F(x) = 1 − (1 − x)². Solve u = 1 − (1 − x)² for x: (1 − x)² = 1 − u, and the root in [0, 1] is x = 1 − √(1 − u). The notebook checks five values (u = 0, 0.19, 0.36, 0.75, 0.99 give 0, 0.1, 0.2, 0.5, 0.9) and then plots a histogram of 20,000 samples against the density; the explorer above shows the same density under "exercise 1".</p>${ans([["1 − √(1 − u)", "tri_inv(u)"]])}`)}
+    ${task("P2", 0, "Box–Muller", `<p>Complete <code>boxmuller(u1, u2)</code>: return the pair (R cos θ, R sin θ) with R = √(−2 ln u₁) and θ = 2π u₂. The check draws 20,000 pairs and wants mean ≈ 0, variance ≈ 1 and correlation of X₁ and X₂ ≈ 0, plus the exact identity x₁² + x₂² = −2 ln u₁ at (0.3, 0.2), which pins down that u₁ sets the distance.</p>${ans([["(R cos θ, R sin θ)", "R = √(−2 ln u₁), θ = 2πu₂"]])}`)}
+    ${task("P3", 0, "Accept–reject", `<p>Complete <code>accept_reject(f, fmax, n)</code>: repeat until n values are kept: x = <code>rand()</code>, a height y = fmax · <code>rand()</code>, keep x if y ≤ f(x). The check uses f(x) = 6x(1 − x) with fmax = 1.5 and wants exactly 20,000 values in [0, 1] with mean 0.5 and variance 0.05. That needs about 1.5 · 20,000 = 30,000 darts, since the box has area 1.5.</p>${ans([["1/1.5 = 2/3", "fraction kept"], ["0.5 · 0.05", "mean · variance of Beta(2, 2)"]])}`)}
+
+    <h2>Optional bonuses</h2>
+    <p><b>A · A galaxy from <code>rand()</code>.</b> Every star is built from uniform numbers pushed through this tutorial's methods: its distance from the centre is exponential by inversion, its spiral arm a discrete uniform choice among K arms, the scatter around the arm and the round central bulge are normal numbers by Box–Muller, a Bernoulli draw with 15 % sends a star to the bulge, and the brightness follows a Pareto law by inversion. <b>B · Randomness in music.</b> The Karplus–Strong plucked string starts from about a hundred uniform random numbers per period of the tone and repeatedly averages neighbours, which smooths the noise into a string-like sound; the musical dice game printed in 1792 under Mozart's name composes a waltz bar by bar from the sum of two dice, so the bars for 7 are six times as likely as those for 2 (the two-dice PMF of ${exeLink(1, "tutorial 1")}); and a rāga can be recognised from its note probabilities with Bayes' theorem, updating the belief in each rāga after every note.</p>
+
+    ${why("Context, not in the notebook: what this tutorial sets up", `<p>Every later method consumes uniform numbers through one of these doors. Markov chains (${lecLink(3, "lecture 3")}) need a discrete draw per step, which is inversion on a staircase CDF; Monte Carlo integration (${lecLink(4, "lecture 4")}) is where quasi-random points earn their keep and pseudo-random ones give honest error bars; Metropolis–Hastings keeps an accept-or-reject step but moves a chain instead of throwing independent darts, the answer to the 30-dimensional ball; Brownian motion and the SDE schemes eat one normal number per step, Box–Muller's job.</p>`)}
+    <p class="muted">Material: OPAL → Exercises2026 → SMS_T02.jl (notebook dated 5 Nov). Lecture it belongs to: ${lecLink(2, "lecture 2")}, deck not in OPAL yet. Previous: ${exeLink(1, "tutorial 1")}. Next tutorial: ${exeLink(3, "tutorial 3")} (12 Nov).</p>`;
+}
+
+const WRITEUPS = { 1: exercise1, 2: exercise2 };
+const LABS = { lln: initLln, clt: initClt, lcg: initLcg, pq: initPq, tr: initTr, inv: initInv, bm: initBm };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!e) {
   page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
@@ -210,6 +509,7 @@ if (!e) {
   page.innerHTML = (WRITEUPS[e.n] || placeholder)();
   mountCharts();
   mountLabs();
+  typeset(page);
 }
 let narrowNow = isNarrow();
 addEventListener("resize", () => { if (isNarrow() === narrowNow) return; narrowNow = isNarrow(); mountCharts(); });
