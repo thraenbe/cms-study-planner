@@ -4694,6 +4694,16 @@ window.CMS = {
       "artifact": "https://claude.ai/artifact/22WeoDyXY6faQcRsGVqKwj",
       "blurb": "Phases 0 and 1 explained for an 8th grader: the CoGraph code map fixed from 61 % to 99.9 % of the compiler's connections, three kinds of player-name leaks in ApoGames found and fixed, tests with a fake server that catch them, and a preview of the 1,200-run phase 2 experiment. Speaker notes on every slide."
      }
+    ],
+    "explainers": [
+     {
+      "n": 1,
+      "slug": "cwe-199",
+      "title": "CWE-199: Information Management Errors",
+      "date": "2026-11-06",
+      "icon": "🧭",
+      "blurb": "The sprint category explained: how the CWE list is organised, all 17 member weaknesses on one map in four families (sent, stored, told, inferred) with plain explanations, a high-score example, a fix and a test for each, their parents and 29 child entries, and which members matter for ApoGames."
+     }
     ]
    }
   },

@@ -15,7 +15,7 @@
 <header class="sitebar" data-page="course"></header>
 <div class="wrap" id="page"></div>
 <script>
-// Board: header, status bar, sprints, one card per paper (the reading list of the project), proposals, slide decks and the Orga card.
+// Board: header, status bar, sprints, background explainers, one card per paper (the reading list of the project), proposals, slide decks and the Orga card.
 const { m, c, esc, U, CODE, fmt, cite, paperUrl } = RP;
 const papers = c.papers.map(p => `<a class="game-card paper ${p.covered ? "" : "soon"}" href="${paperUrl(p)}">
     <div class="game-icon">${p.icon}</div>
@@ -30,6 +30,13 @@ const proposals = (c.proposals || []).map(p => `<a class="game-card paper" href=
     <p class="cite">Proposal · drafted ${fmt(p.date)}</p>
     <p>${esc(p.blurb)}</p>
     ${U.doneBox(`${CODE}:proposal:${p.n}`, "discussed")}
+  </a>`).join("");
+const explainers = (c.explainers || []).map(e => `<a class="game-card paper" href="research-project/${e.slug}.html">
+    <div class="game-icon">${e.icon}</div>
+    <h2>${esc(e.title)}</h2>
+    <p class="cite">Background · ${fmt(e.date)}</p>
+    <p>${esc(e.blurb)}</p>
+    ${U.doneBox(`${CODE}:explainer:${e.n}`, "read")}
   </a>`).join("");
 const decks = (c.decks || []).map(d => `<div class="game-card paper deck">
     <a class="deck-main" href="research-project/${d.slug}.html">
@@ -68,6 +75,8 @@ document.getElementById("page").innerHTML = `
   <main>
     ${sprints ? `<div class="board-h"><h2>Sprints</h2><span class="muted">your assigned work · tick “done” once the sprint is finished</span></div>
     <div class="game-cards">${sprints}</div>` : ""}
+    ${explainers ? `<div class="board-h"><h2>Background</h2><span class="muted">explainers for the sprint topics · tick “read” once you have worked through one</span></div>
+    <div class="game-cards">${explainers}</div>` : ""}
     <div class="board-h"><h2>Papers</h2><span class="muted">${c.papers.length} ${c.papers.length === 1 ? "paper" : "papers"} so far · tick “read” once you have worked through one</span></div>
     <p class="muted board-note">${esc(c.paperNote)}</p>
     <div class="game-cards">${papers}</div>

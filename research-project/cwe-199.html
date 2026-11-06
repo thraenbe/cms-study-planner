@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Research Project · CWE-199 Information Management Errors</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="research-project/rp.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="research-project/rp.js"></script>
+<script src="research-project/rp-viz.js"></script>
+<style>
+/* Chart and family colours: the four dataviz slots validated for the research pages on 30 Oct 2026 (surfaces #efede7
+   light, #2a2a27 dark). Slots 2 and 3 stay below 3:1 in light mode, so every coloured mark also carries a text label. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #383835; --vz-axis: #4a4a46; }
+
+.cw .viz .ct { margin: 0 2px 8px; font: 600 1.02rem/1.3 var(--rp-serif); }
+.cw .viz .viz-sub { margin: -2px 2px 10px; color: var(--ink-2); font-size: .92rem; }
+.cw .viz .tip { white-space: normal; width: max-content; max-width: min(300px, 86vw); }
+.cw .viz .lab { fill: var(--ink-2); font-size: 12px; }
+.cw .viz .val { fill: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
+.cw .viz .pt:focus-visible .anchor { outline: 2px solid var(--focus); }
+.cw .viz .pt.on .bar, .cw .viz .pt:hover .bar { stroke: var(--ink); stroke-width: 1.2; }
+
+/* The map: four columns, one per family, the 17 member weaknesses as tiles. The page's one loud element. */
+.cw .map { position: relative; left: 50%; transform: translateX(-50%); width: min(1180px, calc(100vw - 2rem)); margin: 1rem 0 .6rem; }
+.cw .root { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; padding: 0 0 .7rem; border-bottom: 3px solid var(--ink); margin-bottom: .9rem; }
+.cw .root b { font: 600 1.6rem/1.1 var(--rp-serif); }
+.cw .root span { color: var(--ink-2); font-size: .95rem; }
+.cw .fams { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.cw .fam { border-top: 5px solid var(--f); padding-top: .55rem; }
+.cw .fam h3 { margin: 0 0 .15rem; font: 600 1.08rem/1.25 var(--rp-serif); }
+.cw .fam p { margin: 0 0 .7rem; color: var(--ink-2); font-size: .86rem; line-height: 1.4; }
+.cw .map .tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; margin: 0; }
+.cw .tile .nm { min-width: 0; overflow-wrap: break-word; }
+.cw .tile { all: unset; box-sizing: border-box; display: grid; grid-template-columns: auto 1fr; column-gap: .65rem; align-items: start; cursor: pointer; padding: .55rem .65rem; border: 1px solid var(--line); border-left: 4px solid var(--f); border-radius: 8px; background: var(--surface); }
+.cw .tile:hover { border-color: var(--ink-3); border-left-color: var(--f); }
+.cw .tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cw .tile[aria-pressed="true"] { background: var(--rp-accent-soft); border-color: var(--ink); border-left-color: var(--f); }
+.cw .tile .id { font: 700 1.05rem/1.2 var(--rp-serif); font-variant-numeric: tabular-nums; min-width: 2.6em; }
+.cw .tile .nm { font-size: .86rem; line-height: 1.3; }
+.cw .tile .kids { grid-column: 2; display: flex; gap: 3px; margin-top: .3rem; align-items: center; }
+.cw .tile .kids i { width: 7px; height: 7px; border-radius: 50%; background: var(--f); opacity: .8; }
+.cw .tile .kids i.v { background: transparent; border: 1.5px solid var(--f); width: 6px; height: 6px; }
+.cw .tile .flag { grid-column: 2; font-size: .75rem; color: var(--ink-2); margin-top: .25rem; }
+.cw .tile .flag.found { color: var(--ink); font-weight: 600; }
+.cw .maplegend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; margin-top: .8rem; font-size: .8rem; color: var(--ink-2); }
+.cw .maplegend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-2); margin-right: 4px; vertical-align: 1px; }
+.cw .maplegend i.v { background: transparent; border: 1.5px solid var(--ink-2); width: 7px; height: 7px; }
+
+/* Detail panel under the map. */
+.cw .detail-panel { border: 1px solid var(--line); border-left: 5px solid var(--f, var(--ink-3)); border-radius: 10px; background: var(--surface); padding: 1rem 1.2rem; margin: .4rem 0 1.4rem; }
+.cw .detail-panel h3 { margin: 0 0 .2rem; font: 600 1.25rem/1.25 var(--rp-serif); }
+.cw .detail-panel .off { margin: 0 0 .7rem; color: var(--ink-2); font-size: .88rem; }
+.cw .detail-panel dl { display: grid; grid-template-columns: 8.5rem 1fr; gap: .45rem 1rem; margin: 0; font-size: .95rem; }
+.cw .detail-panel dt { color: var(--ink-2); font-size: .85rem; padding-top: .1rem; }
+.cw .detail-panel dd { margin: 0; line-height: 1.45; }
+.cw .detail-panel ul { margin: 0; padding-left: 1.1rem; }
+.cw .detail-panel li { margin: 0 0 .15rem; }
+.cw .detail-panel .lvl { font-size: .78rem; color: var(--ink-2); }
+.cw .detail-panel code { font-size: .86em; }
+
+.cw .ladder { list-style: none; padding: 0; margin: .8rem 0 1rem; display: grid; gap: .35rem; max-width: 62ch; }
+.cw .ladder li { display: grid; grid-template-columns: 6.5rem 1fr; gap: .8rem; align-items: baseline; padding: .45rem 0; border-bottom: 1px solid var(--line); }
+.cw .ladder b { font-family: var(--rp-serif); font-weight: 600; }
+.cw .ladder span { font-size: .93rem; }
+.cw .ladder li:nth-child(2) { padding-left: 1rem; } .cw .ladder li:nth-child(3) { padding-left: 2rem; } .cw .ladder li:nth-child(4) { padding-left: 3rem; }
+
+.cw .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cw .plain { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.cw .plain th, .cw .plain td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.cw .plain thead th { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.cw .plain .st { white-space: nowrap; font-weight: 600; }
+.cw .plain .st.found::before, .cw .plain .st.check::before, .cw .plain .st.low::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.cw .plain .st.found::before { background: var(--ink); }
+.cw .plain .st.check::before { border: 1.5px solid var(--ink); width: 7px; height: 7px; }
+.cw .plain .st.low { font-weight: 400; color: var(--ink-2); }
+.cw .plain .st.low::before { background: var(--line); }
+.cw .ctx { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; margin: 1rem 0 1.2rem; font-size: 15px; max-width: 70ch; }
+.cw .ctx b:first-child { display: block; margin-bottom: .2rem; font-family: var(--rp-serif); font-weight: 600; }
+
+@media (max-width: 980px) { .cw .fams { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .cw .fams { grid-template-columns: 1fr; }
+  .cw .detail-panel dl { grid-template-columns: 1fr; gap: .1rem; }
+  .cw .detail-panel dd { margin-bottom: .55rem; }
+  .cw .ladder li { grid-template-columns: 1fr; gap: .1rem; }
+  .cw .ladder li:nth-child(n) { padding-left: 0; }
+}
+</style>
+</head>
+<body class="rp cw">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><article class="paper" id="page"></article></div>
+<script>
+const { c, esc } = RP;
+const { chart, tbl, leg, hbar, CHARTS, mountCharts, watch } = RPViz;
+const READ = "6 Nov 2026";
+const cwe = n => `https://cwe.mitre.org/data/definitions/${n}.html`;
+const L = (n, t) => `<a href="${cwe(n)}" target="_blank" rel="noopener">${t || "CWE-" + n}</a>`;
+const sec = (i, t, id) => `<h2 id="${id}"><span class="sec">§ ${i}</span>${t}</h2>`;
+
+// The four families are our own way of sorting the 17 members by where the data escapes; MITRE lists them flat.
+const FAM = {
+  send:  { n: 1, title: "Sent to the wrong party", sub: "The data leaves the program, over a network or to another person, and someone gets it who should not." },
+  store: { n: 2, title: "Left where others can read it", sub: "The data is written somewhere, a file, cache or folder, and stays readable to others." },
+  tell:  { n: 3, title: "Told by the program itself", sub: "Error messages, debug output, process arguments or system details say more than they should." },
+  infer: { n: 4, title: "Read off the behaviour", sub: "Nothing is handed out directly, but answers, timing or metadata let an outsider work it out." },
+};
+// Phase-1 status in ApoGames: "found" = reported in the phase 0–1 explainer deck; "check" and "low" are our reading.
+// Names are MITRE's (CWE 5.0); plain, game, fix and test are our own words. kids = child entries in the Research
+// Concepts view (1000), [id, level, name]; parents likewise.
+const M = [
+  { id: 201, fam: "send", name: "Insertion of Sensitive Information Into Sent Data",
+    plain: "The program sends a message and puts more into it than the receiver should see.",
+    game: "The score upload sends the whole local high-score list, with every player’s name, when the server only needs the new entry.",
+    fix: "Build outgoing messages from an explicit list of allowed fields.",
+    test: "A fake server records the request; assert it holds only the fields the feature needs.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]],
+    kids: [[598, "Variant", "Use of HTTP Request With Sensitive Query String"], [1431, "Base", "Driving Intermediate Cryptographic State/Results to Hardware Module Outputs"]] },
+  { id: 319, fam: "send", name: "Cleartext Transmission of Sensitive Information",
+    plain: "Sensitive data travels over a channel that anyone on the way can read, for example plain HTTP.",
+    game: "Found in phase 1: four games upload the player’s name to a score server over an http:// address.",
+    fix: "Use HTTPS with certificate checking, or do not upload the name at all.",
+    test: "Route the game’s traffic to a fake server and assert that no request with the name goes out unencrypted.",
+    status: "found", parents: [[311, "Class", "Missing Encryption of Sensitive Data"]],
+    kids: [[5, "Variant", "J2EE Misconfiguration: Data Transmission Without Encryption"], [614, "Variant", "Sensitive Cookie in HTTPS Session Without ‘Secure’ Attribute"], [1428, "Base", "Reliance on HTTP instead of HTTPS"]] },
+  { id: 359, fam: "send", name: "Exposure of Private Personal Information to an Unauthorized Actor",
+    plain: "Personal data about someone reaches people who are not allowed to see it, or reaches them without that person’s consent.",
+    game: "Found in phase 1: one game sends the stored name every time it starts or ends, without asking the player.",
+    fix: "Upload only when the player chooses to, say what is sent, and allow playing without a name.",
+    test: "Start and quit the game without consenting; the fake server must receive nothing.",
+    status: "found", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]], kids: [] },
+  { id: 213, fam: "send", name: "Exposure of Sensitive Information Due to Incompatible Policies",
+    plain: "The developer means to share something, but the users or the administrator consider it private. The two policies disagree.",
+    game: "A public online leaderboard shows each name with the time it was played. That is fine by the developer, but a player may not want their playing times public.",
+    fix: "Decide whose policy counts and publish only what players agreed to, for example a nickname without a timestamp.",
+    test: "Check that the public view leaves out every field marked private.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]], kids: [] },
+
+  { id: 312, fam: "store", name: "Cleartext Storage of Sensitive Information",
+    plain: "Sensitive data is written unencrypted to a place another account or program could read.",
+    game: "Found in phase 1: the save file with the players’ names can be read by anyone who uses the computer.",
+    fix: "Save in the user’s own data folder with owner-only permissions, or do not store the name.",
+    test: "After a save, assert the file lives in the user’s folder and its permissions allow only the owner.",
+    status: "found", parents: [[311, "Class", "Missing Encryption of Sensitive Data"], [922, "Class", "Insecure Storage of Sensitive Information"]],
+    kids: [[313, "Variant", "Cleartext Storage in a File or on Disk"], [314, "Variant", "Cleartext Storage in the Registry"], [315, "Variant", "Cleartext Storage of Sensitive Information in a Cookie"], [316, "Variant", "Cleartext Storage of Sensitive Information in Memory"], [317, "Variant", "Cleartext Storage of Sensitive Information in GUI"], [318, "Variant", "Cleartext Storage of Sensitive Information in Executable"], [526, "Variant", "Cleartext Storage of Sensitive Information in an Environment Variable"]] },
+  { id: 921, fam: "store", name: "Storage of Sensitive Data in a Mechanism without Access Control",
+    plain: "Data is saved to storage that has no access control at all, such as a FAT-formatted memory card or USB stick.",
+    game: "The game writes its high-score file next to itself on a USB stick, where every program and person can read it.",
+    fix: "Store personal data only where the operating system enforces access rights.",
+    test: "Assert that the save path lies inside the user’s home or application-data folder.",
+    status: "low", parents: [[922, "Class", "Insecure Storage of Sensitive Information"]], kids: [] },
+  { id: 538, fam: "store", name: "Insertion of Sensitive Information into Externally-Accessible File or Directory",
+    plain: "Sensitive data is put into a file that others may open for good reasons, such as a log or the source, but they should not see that data.",
+    game: "The game writes player names into a log file in its folder, and that folder gets shared or attached to a bug report.",
+    fix: "Keep personal data out of logs and out of folders that are shared.",
+    test: "Run the feature with a test name and search the logs and the game folder for it.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]],
+    kids: [[532, "Base", "Insertion of Sensitive Information into Log File"], [540, "Base", "Inclusion of Sensitive Information in Source Code"], [651, "Variant", "Exposure of WSDL File Containing Sensitive Information"]] },
+  { id: 524, fam: "store", name: "Use of Cache Containing Sensitive Information",
+    plain: "A cache keeps sensitive data where someone outside the intended circle can read it.",
+    game: "A built-in web view of the online leaderboard keeps the page with all names in a disk cache.",
+    fix: "Mark personal responses as not cacheable and clear caches on exit.",
+    test: "Check the response headers, or look in the cache folder after use.",
+    status: "low", parents: [[668, "Class", "Exposure of Resource to Wrong Sphere"]], kids: [[525, "Variant", "Use of Web Browser Cache Containing Sensitive Information"]] },
+  { id: 212, fam: "store", name: "Improper Removal of Sensitive Information Before Storage or Transfer",
+    plain: "A file or record is stored or passed on without first removing the sensitive parts.",
+    game: "A crash report or a ‘share my scores’ export attaches the whole save file, names included.",
+    fix: "Strip personal fields before anything is exported or reported.",
+    test: "Export, then assert that no test name appears in the exported data.",
+    status: "check", parents: [[669, "Class", "Incorrect Resource Transfer Between Spheres"]],
+    kids: [[226, "Base", "Sensitive Information in Resource Not Removed Before Reuse"], [1266, "Base", "Improper Scrubbing of Sensitive Data from Decommissioned Device"]] },
+
+  { id: 209, fam: "tell", name: "Generation of Error Message Containing Sensitive Information",
+    plain: "An error message reveals details about the environment, the users or their data.",
+    game: "When saving fails, the game shows or prints the exception with the full file path, which contains the account name, or with the name being saved.",
+    fix: "Show a plain message to the player and keep technical details without personal data.",
+    test: "Make the save file read-only to force an error; assert the visible message and console output contain neither path nor name.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"], [755, "Class", "Improper Handling of Exceptional Conditions"]],
+    kids: [[210, "Base", "Self-generated Error Message Containing Sensitive Information"], [211, "Base", "Externally-Generated Error Message Containing Sensitive Information"], [550, "Variant", "Server-generated Error Message Containing Sensitive Information"]] },
+  { id: 215, fam: "tell", name: "Insertion of Sensitive Information Into Debugging Code",
+    plain: "Debug output or a debug feature exposes sensitive data, often because it stayed in the shipped version.",
+    game: "A leftover println that prints the player’s name and score every time the list is saved.",
+    fix: "Remove debug output, or keep it behind a switch that is off in releases and never prints personal data.",
+    test: "Capture the console during a save and assert the test name is not printed.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]],
+    kids: [[1295, "Base", "Debug Messages Revealing Unnecessary Information"]] },
+  { id: 214, fam: "tell", name: "Invocation of Process Using Visible Sensitive Information",
+    plain: "A program starts another process and passes secrets as command-line arguments or environment variables, which other users can see in the process list.",
+    game: "The game starts a helper or the browser with the player’s name or an upload key on the command line.",
+    fix: "Pass such data through standard input or a protected file.",
+    test: "Check the arguments built for the new process in a test seam.",
+    status: "low", parents: [[497, "Base", "Exposure of Sensitive System Information to an Unauthorized Control Sphere"]], kids: [] },
+  { id: 497, fam: "tell", name: "Exposure of Sensitive System Information to an Unauthorized Control Sphere",
+    plain: "Details about the system, such as paths, the account name or versions, reach someone who lacks that level of access.",
+    game: "The upload or an about screen includes the operating-system user name or the home folder path.",
+    fix: "Never send or show system properties that are not needed for the feature.",
+    test: "Assert that the fake server never receives the values of the user-name or home-folder properties.",
+    status: "check", parents: [[200, "Class", "Exposure of Sensitive Information to an Unauthorized Actor"]],
+    kids: [[214, "Base", "Invocation of Process Using Visible Sensitive Information"], [548, "Variant", "Exposure of Information Through Directory Listing"]] },
+
+  { id: 204, fam: "infer", name: "Observable Response Discrepancy",
+    plain: "Different answers to similar requests reveal internal state, as in ‘no such user’ versus ‘wrong password’.",
+    game: "A score server that answers differently for known and unknown names lets anyone test whether a name is registered.",
+    fix: "Give the same answer in both cases.",
+    test: "Send a known and an unknown name and compare the replies.",
+    status: "low", parents: [[203, "Class", "Observable Discrepancy"]], kids: [] },
+  { id: 205, fam: "infer", name: "Observable Behavioral Discrepancy",
+    plain: "Differences in how the program behaves, not in what it answers, reveal its internal state or which product it is.",
+    game: "The game contacts the network only when a name is stored, so watching its traffic tells an observer that someone saved a name.",
+    fix: "Behave the same way whatever the hidden state is.",
+    test: "Compare the network activity with and without a stored name.",
+    status: "low", parents: [[203, "Class", "Observable Discrepancy"]],
+    kids: [[206, "Variant", "Observable Internal Behavioral Discrepancy"], [207, "Variant", "Observable Behavioral Discrepancy With Equivalent Products"]] },
+  { id: 208, fam: "infer", name: "Observable Timing Discrepancy",
+    plain: "Two operations take measurably different time depending on secret data, which reveals whether a check succeeded.",
+    game: "An upload key is checked with an ordinary string comparison that stops at the first wrong character.",
+    fix: "Compare secrets in constant time.",
+    test: "Hard to test by timing; check the comparison method in a code review or with a static rule.",
+    status: "low", parents: [[203, "Class", "Observable Discrepancy"]], kids: [[1254, "Base", "Incorrect Comparison Logic Granularity"]] },
+  { id: 1230, fam: "infer", name: "Exposure of Sensitive Information Through Metadata",
+    plain: "Access to the data itself is blocked, but metadata derived from it, such as counts, sizes, index entries or timestamps, still gives it away.",
+    game: "Private scores are hidden, yet the leaderboard shows ‘rank 3 of 12’, or the save file’s modification time shows when someone last played.",
+    fix: "Protect derived data as carefully as the data it comes from.",
+    test: "Check that public views and files reveal no counts or times about private entries.",
+    status: "low", parents: [[285, "Class", "Improper Authorization"]],
+    kids: [[202, "Base", "Exposure of Sensitive Information Through Data Queries"], [612, "Base", "Improper Authorization of Index Containing Sensitive Information"]] },
+];
+const byId = Object.fromEntries(M.map(m => [m.id, m]));
+const KIDS = M.reduce((s, m) => s + m.kids.length, 0);
+const STATUS = { found: "found in phase 1", check: "worth a check", low: "unlikely here" };
+
+// Map tiles: dots under each tile = child entries (filled Base, ring Variant).
+const tile = m => `<button type="button" class="tile" data-id="${m.id}" aria-pressed="false" aria-controls="detail">
+    <span class="id">${m.id}</span><span class="nm">${esc(m.name)}</span>
+    ${m.kids.length ? `<span class="kids" aria-label="${m.kids.length} child entries">${m.kids.map(k => `<i class="${k[1] === "Variant" ? "v" : ""}"></i>`).join("")}</span>` : ""}
+    ${m.status === "found" ? `<span class="flag found">found in ApoGames</span>` : ""}
+  </button>`;
+const famCol = (k, i) => `<section class="fam" style="--f:var(--vz-s${FAM[k].n})" aria-label="${FAM[k].title}">
+    <h3>${FAM[k].title}</h3><p>${FAM[k].sub}</p>
+    <div class="tiles">${M.filter(m => m.fam === k).map(tile).join("")}</div></section>`;
+const map = `<div class="map" id="map">
+  <div class="root"><b>CWE-199 Information Management Errors</b><span>17 member weaknesses in the Software Development view, sorted into four families</span></div>
+  <div class="fams">${Object.keys(FAM).map(famCol).join("")}</div>
+  <div class="maplegend"><span><i></i>child entry at Base level</span><span><i class="v"></i>child entry at Variant level</span><span>Pick a tile for the details below the map.</span></div>
+</div>
+<div class="detail-panel" id="detail" aria-live="polite"></div>`;
+
+function detail(m) {
+  const f = FAM[m.fam];
+  const list = xs => xs.length ? `<ul>${xs.map(([id, lvl, nm]) => `<li>${L(id)} ${esc(nm)} <span class="lvl">${lvl}${byId[id] ? ", also a member of CWE-199" : ""}</span></li>`).join("")}</ul>` : `<span class="muted">none</span>`;
+  const el = document.getElementById("detail");
+  el.style.setProperty("--f", `var(--vz-s${f.n})`);
+  el.innerHTML = `<h3>CWE-${m.id}: ${esc(m.name)}</h3>
+    <p class="off">${f.title} · Base weakness · ${L(m.id, "MITRE entry ↗")}</p>
+    <dl>
+      <dt>In plain words</dt><dd>${esc(m.plain)}</dd>
+      <dt>In a high-score game</dt><dd>${esc(m.game)}</dd>
+      <dt>How to avoid it</dt><dd>${esc(m.fix)}</dd>
+      <dt>A test for it</dt><dd>${esc(m.test)}</dd>
+      <dt>ApoGames</dt><dd>${STATUS[m.status]}</dd>
+      <dt>Parent</dt><dd>${list(m.parents)}</dd>
+      <dt>Child entries</dt><dd>${list(m.kids)}</dd>
+    </dl>`;
+}
+function pick(id, focus) {
+  document.querySelectorAll(".tile").forEach(t => t.setAttribute("aria-pressed", String(+t.dataset.id === id)));
+  detail(byId[id]);
+  if (focus) document.getElementById("detail").scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+// Chart 1: how many members sit under each parent class (209 and 312 have two parents, so 19 links for 17 members).
+const PAR = (() => { const o = {}; M.forEach(m => m.parents.forEach(([id, lvl, nm]) => { (o[id] ||= { id, lvl, nm, ms: [] }).ms.push(m.id); })); return Object.values(o).sort((a, b) => b.ms.length - a.ms.length || a.id - b.id); })();
+CHARTS.parents = narrow => {
+  const W = narrow ? 340 : 640, lw = narrow ? 64 : 300, rh = 26, top = 6, H = top + PAR.length * rh + 22, x0 = lw + 8, x1 = W - 30, max = 7;
+  const sx = v => x0 + (x1 - x0) * v / max;
+  const grid = [0, 2, 4, 6].map(v => `<line x1="${sx(v)}" x2="${sx(v)}" y1="${top}" y2="${H - 20}" stroke="var(--vz-grid)"/><text class="lab" x="${sx(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = PAR.map((p, i) => { const y = top + i * rh;
+    return `<g class="pt" tabindex="0" data-tip="<b>CWE-${p.id}</b> ${esc(p.nm)} (${p.lvl})<br>parent of ${p.ms.map(x => "CWE-" + x).join(", ")}">
+      <text class="lab" x="${lw}" y="${y + rh / 2 + 4}" text-anchor="end">${narrow ? "CWE-" + p.id : esc(("CWE-" + p.id + " " + p.nm).slice(0, 44)) + (("CWE-" + p.id + " " + p.nm).length > 44 ? "…" : "")}</text>
+      <path class="bar anchor" d="${hbar(x0, sx(p.ms.length), y + 5, rh - 10)}" fill="var(--vz-gray)"/>
+      <text class="val" x="${sx(p.ms.length) + 6}" y="${y + rh / 2 + 4}">${p.ms.length}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Members of CWE-199 per parent class">${grid}${rows}</svg>`;
+};
+// Chart 2: child entries per member, coloured by family.
+const KROWS = [...M].sort((a, b) => b.kids.length - a.kids.length || a.id - b.id);
+CHARTS.kids = narrow => {
+  const W = narrow ? 340 : 640, lw = narrow ? 64 : 300, rh = 22, top = 6, H = top + KROWS.length * rh + 22, x0 = lw + 8, x1 = W - 30, max = 7;
+  const sx = v => x0 + (x1 - x0) * v / max;
+  const grid = [0, 2, 4, 6].map(v => `<line x1="${sx(v)}" x2="${sx(v)}" y1="${top}" y2="${H - 20}" stroke="var(--vz-grid)"/><text class="lab" x="${sx(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = KROWS.map((m, i) => { const y = top + i * rh, nb = m.kids.filter(k => k[1] === "Base").length, nv = m.kids.length - nb;
+    const label = narrow ? "CWE-" + m.id : ("CWE-" + m.id + " " + m.name).slice(0, 44) + (("CWE-" + m.id + " " + m.name).length > 44 ? "…" : "");
+    return `<g class="pt" tabindex="0" data-tip="<b>CWE-${m.id}</b> ${esc(m.name)}<br>${FAM[m.fam].title}<br>${m.kids.length ? `${nb} Base, ${nv} Variant` : "no child entries"}">
+      <text class="lab" x="${lw}" y="${y + rh / 2 + 4}" text-anchor="end">${esc(label)}</text>
+      ${m.kids.length ? `<path class="bar anchor" d="${hbar(x0, sx(m.kids.length), y + 4, rh - 8)}" fill="var(--vz-s${FAM[m.fam].n})"/>` : `<rect class="anchor" x="${x0}" y="${y + 4}" width="1" height="${rh - 8}" fill="var(--vz-axis)"/>`}
+      <text class="val" x="${sx(m.kids.length) + 6}" y="${y + rh / 2 + 4}">${m.kids.length}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Child entries per member, coloured by family">${grid}${rows}</svg>`;
+};
+const famLegend = leg(Object.values(FAM).map(f => [f.n, f.title]));
+
+const apoRows = ["found", "check", "low"].flatMap(s => M.filter(m => m.status === s)).map(m =>
+  `<tr><td><span class="st ${m.status}">${STATUS[m.status]}</span></td><th scope="row">${L(m.id)}</th><td>${esc(m.name)}</td><td>${esc(m.game)}</td></tr>`).join("");
+
+document.getElementById("page").innerHTML = `
+  <a class="back" href="research-project-board.html">← Papers and project</a>
+  <header class="titlepage">
+    <p class="muted" style="margin:0;font-size:.9rem">Background for sprint 1 of ${esc(c.project)}, from the CWE list as read on ${READ} (CWE 5.0)</p>
+    <h1>CWE-199: Information Management Errors</h1>
+    <p class="authors">What the group is, its 17 member weaknesses, and which ones matter for a high-score list</p>
+    <div class="kw">${["CWE-699 view", "17 Base weaknesses", `${KIDS} child entries`, "3 found in ApoGames"].map(k => `<span>${k}</span>`).join("")}</div>
+  </header>
+
+  <div class="abstract"><span class="h">In short.</span>CWE-199 collects the weaknesses where a program handles sensitive information badly: it sends it, stores it, prints it or lets it be inferred where it should not. It belongs to the Software Development view (${L(699, "CWE-699")}) and has 17 members, all at Base level. CWE-199 itself is only a folder. MITRE’s mapping note says it must not be used to label a real weakness, so findings are reported under a member’s own number. The three leaks found in ApoGames in phase 1 are members: ${L(319)}, ${L(359)} and ${L(312)}.</div>
+
+  ${sec(1, "How the CWE list is organised", "levels")}
+  <p class="lead">CWE has two kinds of entries: weaknesses, which describe a mistake, and groupings, which only sort weaknesses for browsing.</p>
+  <p>Weaknesses sit in a tree from general to specific. The levels, with one chain from this group as the example:</p>
+  <ol class="ladder">
+    <li><b>Pillar</b><span>The most abstract theme, such as wrong handling of a resource across its lifetime. Not shown here.</span></li>
+    <li><b>Class</b><span>Still independent of a language or technology. Example: ${L(311)} Missing Encryption of Sensitive Data.</span></li>
+    <li><b>Base</b><span>Specific enough to detect and to prevent. Example: ${L(312)} Cleartext Storage of Sensitive Information, a member of CWE-199.</span></li>
+    <li><b>Variant</b><span>Tied to one technology or place. Example: ${L(313)} Cleartext Storage in a File or on Disk.</span></li>
+  </ol>
+  <p>A <i>view</i> is one way of cutting the list. The Research Concepts view (${L(1000, "CWE-1000")}) is the tree above. The Software Development view (CWE-699) instead groups weaknesses by the part of development where they happen, and CWE-199 is one of its groups. A weakness can sit in a group of one view and in a different branch of another, which is what the sprint brief means by “a single CWE can appear in several groups”.</p>
+  <div class="ctx"><b>Context, not from the sprint brief: what changed in CWE 5.0</b>MITRE’s entry was last modified on 28 Oct 2026 for CWE 5.0. It now headlines CWE-199 as a <i>Grouping</i> and marks its use for mapping as “prohibited”. MITRE has discouraged mapping to such groups since 2019, because they help browsing but are not weaknesses themselves. For the project that means writing “CWE-319”, not “CWE-199”, when we name a leak in a paper or a test.</div>
+
+  ${sec(2, "The 17 members on one map", "map")}
+  <p class="lead">MITRE lists the members flat. Sorted by where the data escapes, they fall into four families.</p>
+  <p>The families are our own sorting, not MITRE’s. Each tile is one member; the dots under it are its child entries in the Research Concepts tree. ${L(214)} appears twice in the structure: it is a member of the group and also a child of ${L(497)}, another member.</p>
+  ${map}
+
+  ${sec(3, "Where the members hang in the big tree", "tree")}
+  <p class="lead">Seven of the 17 are children of one class, ${L(200)} Exposure of Sensitive Information to an Unauthorized Actor.</p>
+  <p>The rest come from eight other places in the tree, which is why the group feels mixed: it gathers timing side channels from ${L(203)}, missing encryption from ${L(311)} and storage problems from ${L(922)} under one heading.</p>
+  ${chart("parents", "", `<h3 class="ct">CWE-200 is the parent of seven members</h3><p class="viz-sub">Members of CWE-199 per parent in the Research Concepts view; ${L(209)} and ${L(312)} have two parents each</p>`, "Bars count members, not child entries. CWE-497 is itself a member and the parent of CWE-214.")}
+  ${tbl("Table view: parents", ["Parent", "Level", "Members"], PAR.map(p => ({ cells: [`CWE-${p.id} ${esc(p.nm)}`, p.lvl, p.ms.map(x => "CWE-" + x).join(", ")] })))}
+  ${chart("kids", famLegend, `<h3 class="ct">CWE-312 has the most specific forms below it</h3><p class="viz-sub">Child entries per member in the Research Concepts view, coloured by family</p>`, "CWE-312’s seven children name the places where cleartext ends up: a file, the registry, a cookie, memory, the GUI, the executable, an environment variable.")}
+  ${tbl("Table view: child entries", ["Member", "Family", "Child entries"], KROWS.map(m => ({ cells: [`CWE-${m.id} ${esc(m.name)}`, FAM[m.fam].title, m.kids.length] })))}
+
+  ${sec(4, "Which members matter for ApoGames", "apogames")}
+  <p class="lead">Three were found and fixed in phase 1. Seven more are worth a check, because a high-score feature can produce them.</p>
+  <p>“Found” follows the phase 0–1 explainer deck. “Worth a check” and “unlikely here” are our reading of a single-player Java game that stores names and may upload them; they are not findings.</p>
+  <div class="tw"><table class="plain"><thead><tr><th>ApoGames</th><th>CWE</th><th>Name</th><th>What it would look like in a high-score list</th></tr></thead><tbody>${apoRows}</tbody></table></div>
+  <div class="ctx"><b>Context, not from the sprint brief: the children are where the checks get concrete</b>Some candidates are clearest one level down. ${L(598)} under CWE-201 is a name sent in a URL’s query string. ${L(532)} under CWE-538 is a name written to a log file. ${L(1428)} under CWE-319 is plain HTTP where HTTPS exists. These make good names for individual security tests.</div>
+
+  ${sec(5, "Take-home", "take")}
+  <ul>
+    <li>CWE-199 is a folder of 17 Base weaknesses about sensitive information. It is not itself a weakness, and since CWE 5.0 it must not be used as a label.</li>
+    <li>The members split into four families: sent to the wrong party, left readable, told by the program, and read off its behaviour.</li>
+    <li>Seven members are children of CWE-200. CWE-312 has the most specific forms below it.</li>
+    <li>The phase 1 leaks are CWE-319, CWE-359 and CWE-312. The next candidates for tests are CWE-201, CWE-213, CWE-538, CWE-212, CWE-209, CWE-215 and CWE-497.</li>
+  </ul>
+  <p class="muted" style="font-size:.85rem">Source: MITRE CWE entries for CWE-199 and its members, version 5.0, read on ${READ}. Names are MITRE’s; the families, explanations, game examples, fixes and tests are our own.</p>`;
+
+document.querySelectorAll(".tile").forEach(t => t.addEventListener("click", () => pick(+t.dataset.id, true)));
+pick(319, false);
+mountCharts(); watch();
+</script>
+</body>
+</html>
