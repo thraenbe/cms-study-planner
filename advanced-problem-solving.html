@@ -24,6 +24,7 @@ const card = (l, kind) => { const s = state(l);
     <h2>${kind === "lecture" ? "Lecture" : "Tutorial"} ${l.n} – ${esc(l.title)}</h2>
     <p class="when">${fmt(l.date)}${s === "planned" ? " · planned, date assumed" : s === "held" && !l.covered ? " · held, write-up pending" : s === "held" ? " · covered" : ` · in ${APSS.daysUntil(l.date)} days`}</p>
     <p>${esc(l.blurb)}</p>
+    ${U.files(l, m)}
     ${U.doneBox(`${CODE}:${kind}:${l.n}`)}
   </a>`; };
 const orga = `<a class="game-card" href="advanced-problem-solving/orga.html">

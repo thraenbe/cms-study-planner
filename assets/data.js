@@ -3135,7 +3135,15 @@ window.CMS = {
       "icon": "🧭",
       "covered": true,
       "planned": false,
-      "blurb": "How the course runs (12 lectures, 10 tutorials, forum first), why problems are hard: search spaces that explode (SAT, TSP), models that are only approximations, problems that change over time, hard and soft constraints, plus two puzzles to solve by reasoning."
+      "blurb": "How the course runs (12 lectures, 10 tutorials, forum first), why problems are hard: search spaces that explode (SAT, TSP), models that are only approximations, problems that change over time, hard and soft constraints, plus two puzzles to solve by reasoning.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture1.pdf",
+        "where": "OPAL · Lesson 1 (intro)",
+        "note": "31 pages"
+       }
+      ]
      },
      {
       "n": 2,
@@ -3144,7 +3152,33 @@ window.CMS = {
       "icon": "🔍",
       "covered": true,
       "planned": false,
-      "blurb": "Complete vs partial solutions, exhaustive search and backtracking, the uninformed strategies breadth-first, depth-first, depth-limited and iterative deepening, then greedy best-first and A* with admissible heuristics on the Romania map, and dynamic programming from Fibonacci to the applicability checklist."
+      "blurb": "Complete vs partial solutions, exhaustive search and backtracking, the uninformed strategies breadth-first, depth-first, depth-limited and iterative deepening, then greedy best-first and A* with admissible heuristics on the Romania map, and dynamic programming from Fibonacci to the applicability checklist.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture2.pdf",
+        "where": "OPAL · Lesson 2 (trad search)",
+        "note": "86 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Uninformed_Search.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 7 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Informed_Search.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 8 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Dynamic_Programming.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 9 pages"
+       }
+      ]
      },
      {
       "n": 3,
@@ -3153,7 +3187,15 @@ window.CMS = {
       "icon": "🏔️",
       "covered": true,
       "planned": false,
-      "blurb": "Hill climbing and its four weaknesses, local search and the size of the neighbourhood, GSAT for SAT and 2-opt for the TSP, then the stochastic hill-climber with p = 1/(1 + e^(Δ/T)), the role of T, and simulated annealing with cooling schedules, parameter choices and SA-SAT."
+      "blurb": "Hill climbing and its four weaknesses, local search and the size of the neighbourhood, GSAT for SAT and 2-opt for the TSP, then the stochastic hill-climber with p = 1/(1 + e^(Δ/T)), the role of T, and simulated annealing with cooling schedules, parameter choices and SA-SAT.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture3.pdf",
+        "where": "OPAL · Lesson 3 (local search)",
+        "note": "37 slides (56 PDF pages with overlays)"
+       }
+      ]
      },
      {
       "n": 4,
@@ -3246,7 +3288,15 @@ window.CMS = {
       "covered": true,
       "planned": false,
       "sheet": "2026-10-22",
-      "blurb": "Sheet 1, from lecture 2: A* in a 16 × 16 maze (Manhattan heuristic, explored cells, a 30-step path), coin change by dynamic programming for {1, 4, 6} and n = 8 (two coins, greedy needs three) and the bridge-crossing puzzle as a shortest path over 32 states (17 minutes). Our own worked solutions."
+      "blurb": "Sheet 1, from lecture 2: A* in a 16 × 16 maze (Manhattan heuristic, explored cells, a 30-step path), coin change by dynamic programming for {1, 4, 6} and n = 8 (two coins, greedy needs three) and the bridge-crossing puzzle as a shortest path over 32 states (17 minutes). Our own worked solutions.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T1.pdf",
+        "where": "OPAL · Tutorial 1 (trad search)",
+        "note": "2 pages, since 22 Oct, no official solution"
+       }
+      ]
      },
      {
       "n": 2,
@@ -3256,7 +3306,15 @@ window.CMS = {
       "covered": true,
       "planned": false,
       "blurb": "Sheet 2, from lecture 3: design a simulated annealing algorithm for the maze (representation, initial solution, neighbourhood, evaluation) and compare it with A*, then three GSAT steps on a four-clause formula, a local-optimum check and the acceptance probability for Δ = 3 at T = 5, 1, 10 and 100. Our own worked solutions, written before the session.",
-      "sheet": "2026-10-30"
+      "sheet": "2026-10-30",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T2.pdf",
+        "where": "OPAL · Tutorial 2 (local search)",
+        "note": "2 pages, since 30 Oct, no official solution"
+       }
+      ]
      },
      {
       "n": 3,
