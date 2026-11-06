@@ -1402,7 +1402,21 @@ window.CMS = {
       "date": "2026-10-20",
       "icon": "🧭",
       "covered": true,
-      "blurb": "What the course is for (variability, extensibility, gluing; roles; frameworks), the history from Alexander to the GOF book, MVC as a composite of Observer, Composite and Strategy, what a pattern description contains, the kinds of patterns, and how the course and the oral exam run."
+      "blurb": "What the course is for (variability, extensibility, gluing; roles; frameworks), the history from Alexander to the GOF book, MVC as a composite of Observer, Composite and Strategy, what a pattern description contains, the kinds of patterns, and how the course and the oral exam run.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "DPF-01-intro.pdf",
+        "where": "OPAL · Lecture Slides",
+        "note": "47 pages"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #01 Introduction",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 2,
@@ -1410,7 +1424,21 @@ window.CMS = {
       "date": "2026-10-27",
       "icon": "🪛",
       "covered": true,
-      "blurb": "Pree's template and hook; Template Method, Objectifier, Template Class, Strategy and Generic Template Class; dimensional class hierarchies, Bridge, parallel class hierarchies and Visitor; facets as factored class hierarchies implemented by multi-bridges, and layered objects."
+      "blurb": "Pree's template and hook; Template Method, Objectifier, Template Class, Strategy and Generic Template Class; dimensional class hierarchies, Bridge, parallel class hierarchies and Visitor; facets as factored class hierarchies implemented by multi-bridges, and layered objects.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "DPF-02-simple-variability.pdf",
+        "where": "OPAL · Lecture Slides",
+        "note": "85 pages"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #02 Variability Patterns",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 3,
@@ -1418,7 +1446,27 @@ window.CMS = {
       "date": "2026-11-03",
       "icon": "🏭",
       "covered": true,
-      "blurb": "Factory Method as the polymorphic constructor (with reflection and parallel hierarchies), Factory Class / Abstract Factory with the prototyping and interpretive variants, and Builder as a factory with a protocol, plus the modern fluent builder of the Java appendix."
+      "blurb": "Factory Method as the polymorphic constructor (with reflection and parallel hierarchies), Factory Class / Abstract Factory with the prototyping and interpretive variants, and Builder as a factory with a protocol, plus the modern fluent builder of the Java appendix.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "DPF-03-creational-variability.pdf",
+        "where": "OPAL · Lecture Slides",
+        "note": "33 pages"
+       },
+       {
+        "kind": "code",
+        "name": "DPF-03-appendix-modern-builder.java",
+        "where": "OPAL · Lecture Slides",
+        "note": "appendix: modern Builder"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #03 Creational Patterns",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 4,
@@ -1426,7 +1474,21 @@ window.CMS = {
       "date": "2026-11-10",
       "icon": "🧱",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: extensibility patterns (ObjectRecursion, Decorator, Proxy, Composite, Chain of Responsibility, Observer), extension of hooks beyond binding."
+      "blurb": "Not held yet. Planned topic: extensibility patterns (ObjectRecursion, Decorator, Proxy, Composite, Chain of Responsibility, Observer), extension of hooks beyond binding.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#04 Simple Extensibility",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #04 Extensibility Patterns",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 5,
@@ -1434,7 +1496,21 @@ window.CMS = {
       "date": "2026-11-17",
       "icon": "🌉",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: glue patterns that adapt, bridge and connect components not built for each other."
+      "blurb": "Not held yet. Planned topic: glue patterns that adapt, bridge and connect components not built for each other.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#05 Architectural Mismatch",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #05 Architectural Mismatch",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 6,
@@ -1442,7 +1518,21 @@ window.CMS = {
       "date": "2026-11-24",
       "icon": "🎭",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: roles versus objects, role types versus classes, role mapping and implementation."
+      "blurb": "Not held yet. Planned topic: roles versus objects, role types versus classes, role mapping and implementation.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#06 Role-based Design",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #06 Role-based Design",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 7,
@@ -1450,7 +1540,21 @@ window.CMS = {
       "date": "2026-12-01",
       "icon": "🎬",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: why design patterns are role models of class diagrams; composing role models into composite patterns."
+      "blurb": "Not held yet. Planned topic: why design patterns are role models of class diagrams; composing role models into composite patterns.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#07 Design Patterns as Role Models",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #07 Design Patterns as Role Models",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 8,
@@ -1458,7 +1562,21 @@ window.CMS = {
       "date": "2026-12-08",
       "icon": "🪆",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: the Role Object pattern and layered frameworks built with it."
+      "blurb": "Not held yet. Planned topic: the Role Object pattern and layered frameworks built with it.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#08 Role-Object Pattern",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #08 Role Object Pattern",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 9,
@@ -1466,7 +1584,21 @@ window.CMS = {
       "date": "2027-01-05",
       "icon": "🏗️",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: types of hooks in frameworks and components, framework variability patterns, whitebox and blackbox frameworks."
+      "blurb": "Not held yet. Planned topic: types of hooks in frameworks and components, framework variability patterns, whitebox and blackbox frameworks.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#09 Framework Variability",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #09 Framework Variability",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 10,
@@ -1474,7 +1606,21 @@ window.CMS = {
       "date": "2027-01-12",
       "icon": "🔌",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: extensible framework hook patterns and how patterns document a framework's instantiation."
+      "blurb": "Not held yet. Planned topic: extensible framework hook patterns and how patterns document a framework's instantiation.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#10 Framework Extensibility",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #10 Framework Extensibility",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      },
      {
       "n": 11,
@@ -1482,7 +1628,27 @@ window.CMS = {
       "date": "2027-01-19",
       "icon": "🧰",
       "covered": false,
-      "blurb": "Not held yet. Planned topic: the Tools-and-Materials pattern language for interactive applications, course summary, what the oral exam asks."
+      "blurb": "Not held yet. Planned topic: the Tools-and-Materials pattern language for interactive applications, course summary, what the oral exam asks.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "#11 Tools and Materials",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "slides",
+        "name": "#12 Summary",
+        "where": "OPAL · Lecture Slides",
+        "note": "already up"
+       },
+       {
+        "kind": "recording",
+        "name": "Learn video #11 Tools and Materials",
+        "where": "OPAL · Learn Videos",
+        "note": "also on YouTube (unlisted)"
+       }
+      ]
      }
     ],
     "exercises": [
@@ -1495,7 +1661,21 @@ window.CMS = {
       "covered": true,
       "lecture": 2,
       "points": null,
-      "blurb": "Composite and Template Method on a file system with typed collection folders, then the hooks reified into a renderer hierarchy; Objectifier, facets and bridges on a sensor unit; Bridge vs Template Method vs Strategy vs Generic Template Class; homework on the Search framework."
+      "blurb": "Composite and Template Method on a file system with typed collection folders, then the hooks reified into a renderer hierarchy; Objectifier, facets and bridges on a sensor unit; Bridge vs Template Method vs Strategy vs Generic Template Class; homework on the Search framework.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DPF_Ex1_Variability_Patterns-task.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "3 pages, since 29 Sep"
+       },
+       {
+        "kind": "solution",
+        "name": "DPF_Ex1_Variability_Patterns-solution.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "since 28 Oct"
+       }
+      ]
      },
      {
       "n": 2,
@@ -1506,7 +1686,21 @@ window.CMS = {
       "covered": true,
       "lecture": 3,
       "points": null,
-      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions, compared with the official solution (in OPAL since 5 Nov)."
+      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions, compared with the official solution (in OPAL since 5 Nov).",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DPF_Ex2_Creational_Patterns-task.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "4 pages, since 30 Oct"
+       },
+       {
+        "kind": "solution",
+        "name": "DPF_Ex2_Creational_Patterns-solution.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "since 5 Nov"
+       }
+      ]
      },
      {
       "n": 3,
@@ -1517,7 +1711,15 @@ window.CMS = {
       "covered": true,
       "lecture": 4,
       "points": null,
-      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet."
+      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DPF_Ex3_Extensibility_Patterns-task.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "since 5 Nov"
+       }
+      ]
      },
      {
       "n": 4,
@@ -3182,7 +3384,15 @@ window.CMS = {
       "icon": "🧭",
       "covered": true,
       "planned": false,
-      "blurb": "How the course runs (12 lectures, 10 tutorials, forum first), why problems are hard: search spaces that explode (SAT, TSP), models that are only approximations, problems that change over time, hard and soft constraints, plus two puzzles to solve by reasoning."
+      "blurb": "How the course runs (12 lectures, 10 tutorials, forum first), why problems are hard: search spaces that explode (SAT, TSP), models that are only approximations, problems that change over time, hard and soft constraints, plus two puzzles to solve by reasoning.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture1.pdf",
+        "where": "OPAL · Lesson 1 (intro)",
+        "note": "31 pages"
+       }
+      ]
      },
      {
       "n": 2,
@@ -3191,7 +3401,33 @@ window.CMS = {
       "icon": "🔍",
       "covered": true,
       "planned": false,
-      "blurb": "Complete vs partial solutions, exhaustive search and backtracking, the uninformed strategies breadth-first, depth-first, depth-limited and iterative deepening, then greedy best-first and A* with admissible heuristics on the Romania map, and dynamic programming from Fibonacci to the applicability checklist."
+      "blurb": "Complete vs partial solutions, exhaustive search and backtracking, the uninformed strategies breadth-first, depth-first, depth-limited and iterative deepening, then greedy best-first and A* with admissible heuristics on the Romania map, and dynamic programming from Fibonacci to the applicability checklist.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture2.pdf",
+        "where": "OPAL · Lesson 2 (trad search)",
+        "note": "86 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Uninformed_Search.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 7 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Informed_Search.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 8 pages"
+       },
+       {
+        "kind": "notes",
+        "name": "Dynamic_Programming.pdf",
+        "where": "OPAL · Lesson 2 / self_study",
+        "note": "self-study recap, 9 pages"
+       }
+      ]
      },
      {
       "n": 3,
@@ -3200,7 +3436,15 @@ window.CMS = {
       "icon": "🏔️",
       "covered": true,
       "planned": false,
-      "blurb": "Hill climbing and its four weaknesses, local search and the size of the neighbourhood, GSAT for SAT and 2-opt for the TSP, then the stochastic hill-climber with p = 1/(1 + e^(Δ/T)), the role of T, and simulated annealing with cooling schedules, parameter choices and SA-SAT."
+      "blurb": "Hill climbing and its four weaknesses, local search and the size of the neighbourhood, GSAT for SAT and 2-opt for the TSP, then the stochastic hill-climber with p = 1/(1 + e^(Δ/T)), the role of T, and simulated annealing with cooling schedules, parameter choices and SA-SAT.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture3.pdf",
+        "where": "OPAL · Lesson 3 (local search)",
+        "note": "37 slides (56 PDF pages with overlays)"
+       }
+      ]
      },
      {
       "n": 4,
@@ -3293,7 +3537,15 @@ window.CMS = {
       "covered": true,
       "planned": false,
       "sheet": "2026-10-22",
-      "blurb": "Sheet 1, from lecture 2: A* in a 16 × 16 maze (Manhattan heuristic, explored cells, a 30-step path), coin change by dynamic programming for {1, 4, 6} and n = 8 (two coins, greedy needs three) and the bridge-crossing puzzle as a shortest path over 32 states (17 minutes). Our own worked solutions."
+      "blurb": "Sheet 1, from lecture 2: A* in a 16 × 16 maze (Manhattan heuristic, explored cells, a 30-step path), coin change by dynamic programming for {1, 4, 6} and n = 8 (two coins, greedy needs three) and the bridge-crossing puzzle as a shortest path over 32 states (17 minutes). Our own worked solutions.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T1.pdf",
+        "where": "OPAL · Tutorial 1 (trad search)",
+        "note": "2 pages, since 22 Oct, no official solution"
+       }
+      ]
      },
      {
       "n": 2,
@@ -3303,7 +3555,15 @@ window.CMS = {
       "covered": true,
       "planned": false,
       "blurb": "Sheet 2, from lecture 3: design a simulated annealing algorithm for the maze (representation, initial solution, neighbourhood, evaluation) and compare it with A*, then three GSAT steps on a four-clause formula, a local-optimum check and the acceptance probability for Δ = 3 at T = 5, 1, 10 and 100. Our own worked solutions, written before the session.",
-      "sheet": "2026-10-30"
+      "sheet": "2026-10-30",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T2.pdf",
+        "where": "OPAL · Tutorial 2 (local search)",
+        "note": "2 pages, since 30 Oct, no official solution"
+       }
+      ]
      },
      {
       "n": 3,
