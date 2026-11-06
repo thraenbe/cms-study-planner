@@ -24,6 +24,7 @@ const lectures = c.lectures.map(l => `<a class="game-card lec" href="high-perfor
     <h2>${l.n ? `Lecture ${l.n} – ` : ""}${esc(l.title)}</h2>
     <p class="when">${when(l)}</p>
     <p>${esc(l.blurb)}</p>
+    ${U.files(l, m)}
     ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("") + `<a class="game-card" href="high-performance-computing/orga.html">
     <div class="game-icon">🗂️</div>
@@ -36,6 +37,7 @@ const exercises = c.exercises.map(x => `<a class="game-card exe ${x.covered ? ""
     <h2>Exercise ${nn(x.n)}${x.title ? ` – ${esc(x.title)}` : ""}</h2>
     <p class="when">${fmt(x.date)} · ${exe.start} · ${TYPES.exercise}${x.published ? ` · in OPAL since ${fmt(x.published)}` : " · not published yet"}</p>
     <p>${esc(x.blurb)}</p>
+    ${U.files(x, m)}
     ${U.doneBox(`${CODE}:exercise:${x.n}`)}
   </a>`).join("");
 const nDone = c.exercises.filter(x => x.covered).length;
