@@ -4033,7 +4033,15 @@ window.CMS = {
       "kind": "kick",
       "covered": true,
       "blurb": "Who teaches, the timeline, what a graded 30-minute talk must contain, the evaluation criteria and the dos and don'ts; then a short tour of conversational AI (history, components, knowledge graphs, use cases) and the catalogue of topics.",
-      "page": true
+      "page": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Slides Seminar Conversational AI WiSe2026-2027.pdf",
+        "where": "OPAL · Course Slides and additional Material",
+        "note": "kick-off deck, 47 pages"
+       }
+      ]
      },
      {
       "n": 2,
