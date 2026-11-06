@@ -832,7 +832,7 @@ window.CMS = {
       "date": "2026-11-02",
       "icon": "🔀",
       "covered": false,
-      "blurb": "Held on 2 Nov; slides not in OPAL yet. Planned topic (OPAL course overview): Transformation of random variables, pseudo- and quasi-random numbers, low-discrepancy sequences, and the transformation algorithms: inversion, Box–Muller, accept–reject and composition–rejection.",
+      "blurb": "Held on 2 Nov; the deck is not in OPAL yet (checked 6 Nov). The OPAL page maps the lecture to chapter 2 of the lecture notes: transformed random variables, generating uniform pseudo-random numbers and their practical pitfalls, and non-uniform distributions by inversion and accept–reject. Tutorial 2 works through the same material.",
       "planned": true
      },
      {
@@ -949,13 +949,14 @@ window.CMS = {
      },
      {
       "n": 2,
-      "title": null,
+      "title": "Random variate generation",
       "date": "2026-11-05",
       "icon": "🧪",
-      "covered": false,
-      "lecture": null,
+      "covered": true,
+      "lecture": 2,
       "points": null,
-      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+      "blurb": "A Pluto notebook (Julia): pseudo-random generators, the LCG and its period, parallel streams; pseudo- against quasi-random points; what a function does to a density and why F(X) is uniform; inversion, Box–Muller and accept–reject with its limits in high dimensions, composition–rejection; seven calculation problems and three programming exercises.",
+      "published": "2026-11-05"
      },
      {
       "n": 3,
