@@ -4189,7 +4189,20 @@ window.CMS = {
       "date": "2026-10-12",
       "icon": "👋",
       "covered": true,
-      "blurb": "Course goals, format, grading variants and logistics from the welcome lecture."
+      "blurb": "Course goals, format, grading variants and logistics from the welcome lecture.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 0 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-00.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 18 Oct"
+       }
+      ]
      },
      {
       "n": 1,
@@ -4197,7 +4210,20 @@ window.CMS = {
       "date": "2026-10-12",
       "icon": "🤖",
       "covered": true,
-      "blurb": "Why touch matters for humans and robots: Johansson's experiment, touch versus vision, and the grasp-success evidence."
+      "blurb": "Why touch matters for humans and robots: Johansson's experiment, touch versus vision, and the grasp-success evidence.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 1 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-01.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 18 Oct"
+       }
+      ]
      },
      {
       "n": 2,
@@ -4205,7 +4231,20 @@ window.CMS = {
       "date": "2026-10-13",
       "icon": "🧠",
       "blurb": "How human touch works at the functional level: the five receptor families of the skin, the four mechanoreceptors sorted by depth, encapsulation and adaptation speed, the finger's resolution, and how little we know about the processing.",
-      "covered": true
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 2 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-02.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 18 Oct"
+       }
+      ]
      },
      {
       "n": 3,
@@ -4213,7 +4252,20 @@ window.CMS = {
       "date": "2026-10-19",
       "icon": "🔧",
       "blurb": "How today's non-vision tactile sensors work: six evaluation criteria, the main transduction technologies (capacitive, resistive, piezoelectric, magnetic, optical) with their trade-offs, iSkin and BioTac as examples, and why force-torque sensors are not tactile sensors.",
-      "covered": true
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 3 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-03.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 18 Oct"
+       }
+      ]
      },
      {
       "n": 4,
@@ -4221,7 +4273,20 @@ window.CMS = {
       "date": "2026-11-02",
       "icon": "📷",
       "blurb": "How vision-based tactile sensors work: a camera films a lit elastomer from inside. History from Kappl 1963 to GelSight, the families (GelSight, TacTip, FingerVision, DIGIT), finger-shaped designs (OmniTact, GelTip), the five design choices, advantages and limitations, and the resolution chart with VBTS added.",
-      "covered": true
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 4 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-04.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 2 Nov"
+       }
+      ]
      },
      {
       "n": 5,
@@ -4310,7 +4375,14 @@ window.CMS = {
       "date": "2026-10-20",
       "icon": "🧭",
       "covered": true,
-      "blurb": "What the practice sessions are for, the three grading variants with their points, Selma registration windows, the topics of the practices, the three home-exercise windows and the rule on generative AI."
+      "blurb": "What the practice sessions are for, the three grading variants with their points, Selma registration windows, the topics of the practices, the three home-exercise windows and the rule on generative AI.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 0 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       }
+      ]
      },
      {
       "n": "1",
@@ -4319,7 +4391,14 @@ window.CMS = {
       "date": "2026-10-20",
       "icon": "🫙",
       "covered": true,
-      "blurb": "Recap of Lecture 1, then two group questions: what touch is useful for in everyday tasks, and the jar-and-string experiment with hands versus tweezers."
+      "blurb": "Recap of Lecture 1, then two group questions: what touch is useful for in everyday tasks, and the jar-and-string experiment with hands versus tweezers.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 1 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       }
+      ]
      },
      {
       "n": "2",
@@ -4328,7 +4407,14 @@ window.CMS = {
       "date": "2026-10-26",
       "icon": "🪶",
       "covered": true,
-      "blurb": "Recap of the receptors, then feel objects with closed eyes: which properties you sense, active versus passive touch, the Aristotle illusion, and the hand-out of Home Exercise 1."
+      "blurb": "Recap of the receptors, then feel objects with closed eyes: which properties you sense, active versus passive touch, the Aristotle illusion, and the hand-out of Home Exercise 1.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 2 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       }
+      ]
      },
      {
       "n": "x",
@@ -4337,7 +4423,16 @@ window.CMS = {
       "date": "2026-10-27",
       "icon": "🔥",
       "covered": true,
-      "blurb": "Colab warm-up for the ML parts of the course: tensor tasks and broadcasting, a LeNet-5 on MNIST, transfer learning with ResNet-18 on rock-paper-scissors, data augmentation and a validation split."
+      "blurb": "Colab warm-up for the ML parts of the course: tensor tasks and broadcasting, a LeNet-5 on MNIST, transfer learning with ResNet-18 on rock-paper-scissors, data augmentation and a validation split.",
+      "files": [
+       {
+        "kind": "notebook",
+        "name": "PyTorch and Deep Learning (Colab notebook)",
+        "where": "Google Colab, linked in OPAL",
+        "url": "https://colab.research.google.com/drive/1INJ8xYssAMQtjSgp9HnmTGZ1epadwCGO?usp=sharing",
+        "note": "run it in Colab"
+       }
+      ]
      },
      {
       "n": "h1",
@@ -4347,7 +4442,27 @@ window.CMS = {
       "due": "2026-11-13",
       "icon": "📏",
       "covered": true,
-      "blurb": "Write a 2–4 page technical document that defines experiments and protocols for benchmarking tactile sensors, as if for a NIST standard. Released 26 Oct, due 13 Nov."
+      "blurb": "Write a 2–4 page technical document that defines experiments and protocols for benchmarking tactile sensors, as if for a NIST standard. Released 26 Oct, due 13 Nov.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Home Exercise 1 task deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "code",
+        "name": "root.tex + ieeeconf.cls",
+        "where": "OPAL · Home Exercises WiSe 2026/27",
+        "note": "IEEE RA-L LaTeX template, posted 26 Oct"
+       },
+       {
+        "kind": "other",
+        "name": "NIST touch-sensitivity benchmark (example)",
+        "url": "https://www.nist.gov/document/touch-sensitivity-v1-0docx",
+        "where": "nist.gov",
+        "note": "example of a real benchmark document"
+       }
+      ]
      },
      {
       "n": "3",
@@ -4356,7 +4471,14 @@ window.CMS = {
       "date": "2026-11-03",
       "icon": "📷",
       "blurb": "Hands-on with the DIGIT and the OpenTouch interface: install and connect, record data with and without contact in the dashboard, replay touch files, export frames as PNG from a Python script, and record under different LED settings.",
-      "covered": true
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 3 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       }
+      ]
      },
      {
       "n": "4",

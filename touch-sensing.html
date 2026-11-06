@@ -23,6 +23,7 @@ const lectures = c.lectures.map(l => `<a class="game-card lec ${l.covered ? "" :
     <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
     ${when(l.date, l.date > today ? "upcoming" : l.covered ? "write-up" : "slides pending")}
     <p>${esc(l.blurb)}</p>
+    ${U.files(l, m)}
     ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("");
 const exercises = c.exercises.map(e => `<a class="game-card ${e.kind === "home" ? "home" : "exe"} ${e.covered ? "" : "soon"}" href="touch-sensing/exercise.html?n=${e.n}">
@@ -30,6 +31,7 @@ const exercises = c.exercises.map(e => `<a class="game-card ${e.kind === "home" 
     <h2>${e.kind === "home" ? esc(e.title) : `${exShort(e)} – ${esc(e.title)}`}</h2>
     ${e.kind === "home" ? when(e.date, `due ${fmt(e.due)}`) : when(e.date, e.date > today ? "upcoming" : e.covered ? "write-up" : "slides pending")}
     <p>${esc(e.blurb)}</p>
+    ${U.files(e, m)}
     ${U.doneBox(`${CODE}:exercise:${e.n}`)}
   </a>`).join("");
 const orga = `<a class="game-card" href="touch-sensing/orga.html">
