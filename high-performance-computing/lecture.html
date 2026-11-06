@@ -31,7 +31,7 @@ const back = `<a class="back" href="high-performance-computing.html">← All lec
 const { key, leg, flag, hbar, num, pct, col, CHARTS, LINES, place, chart, lab, line, mountCharts, isNarrow } = HPCViz;
 
 function head(l) {
-  const meta = l.date ? `${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(lec.room)} · ${esc(lec.who)} · ${TYPES[l.type]}`
+  const meta = l.date ? `${fmt(l.date)} · ${lec.start}–${lec.end} · ${esc(l.room || lec.room)} · ${esc(lec.who)} · ${TYPES[l.type]}`
     : "Self-study before the first lecture · slides and a recorded video from a previous semester in OPAL · Dr. Robert Schöne";
   return `${back}<div class="big-icon">${l.icon}</div><h1>${l.n ? `Lecture ${l.n} – ` : ""}${esc(l.title)}</h1><p class="meta">${meta}</p>`;
 }
@@ -1013,6 +1013,296 @@ function lecture2() {
     <p class="muted">Next: Shared Memory, parallelism within a processor and on a node (<a href="high-performance-computing/lecture.html?n=3">lecture 3</a>, 4 Nov). Previous: <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>. Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
 }
 
+// ---------------- Lecture 3: Shared memory, parallelism within a processor and on a node ----------------
+// Instructions to add two arrays of 1,024 floats (slides 22–23: 5 instructions per loop pass; SSE handles 4 floats per pass).
+// AVX and AVX-512 widths (8 and 16 floats) are the same loop with wider registers.
+const INSTR = [
+  { k: "Scalar (SISD)", w: 1, note: "slide 22: movss, addss, movss, sub, jnz per element" },
+  { k: "SSE, 128 bit", w: 4, note: "slide 23: movups, addps, movups on 4 floats at once" },
+  { k: "AVX, 256 bit", w: 8, note: "same loop, 8 floats per register" },
+  { k: "AVX-512", w: 16, note: "same loop, 16 floats per register" },
+];
+CHARTS.instr = narrow => {
+  const N = 1024, rows = INSTR.map(d => ({ ...d, v: 5 * N / d.w }));
+  const W = narrow ? 340 : 600, L = narrow ? 0 : 118, R = narrow ? 50 : 64, T = 8, RH = narrow ? 50 : 38, H = T + rows.length * RH + 26, PW = W - L - R;
+  const x = v => L + v / 5200 * PW;
+  const ticks = [0, 1000, 2000, 3000, 4000, 5000].filter(v => !narrow || v % 2000 === 0 || v === 5000).map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("");
+  const bars = rows.map((d, i) => { const y0 = T + i * RH + (narrow ? 22 : 10), bh = 18;
+    const tip = `<b>${d.k}: ${num(d.v, 0)} instructions</b>${d.w} float${d.w > 1 ? "s" : ""} per pass · ${num(N / d.w, 0)} passes × 5<br>${d.note}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - (narrow ? 22 : 10)}" width="${W}" height="${RH}"/>
+      <path class="bar ${i ? "s1" : "gray"}" d="${hbar(x(0), x(d.v), y0, bh)}"/>
+      <text class="cat" x="${narrow ? 0 : L - 8}" y="${narrow ? y0 - 6 : y0 + 13}" text-anchor="${narrow ? "start" : "end"}">${d.k}</text><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${num(d.v, 0)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: instructions executed to add two arrays of 1,024 floats. Scalar code 5,120; SSE with 4 floats per register 1,280; AVX with 8 floats 640; AVX-512 with 16 floats 320.">${ticks}${bars}</svg>`;
+};
+
+// D = C + A·B on n vector elements (slides 26–33): multiply 7 stages, add 5 stages, IF and ID one cycle each.
+// Cycle counts: SISD without pipelining 18 per element; pipelined SIMD 14 + 2n; with chaining 14 + n.
+line("cpe", {
+  x: [1, 1024], y: [0, 20], yTicks: [0, 5, 10, 15, 20], xTicks: [1, 4, 16, 64, 256, 1024], xTicksN: [1, 8, 64, 512], yTitle: "cycles per element",
+  series: [{ slot: 2, name: "scalar, no pipelining: 18n", short: "scalar 18", f: () => 18 },
+    { slot: 1, name: "pipelined SIMD: 14 + 2n", short: "pipelined → 2", dy: -7, f: v => (14 + 2 * v) / v },
+    { slot: 3, name: "pipelined + chaining: 14 + n", short: "chained → 1", dy: 8, f: v => (14 + v) / v }],
+  tipHead: v => `n = ${v} element${v > 1 ? "s" : ""}`, fmtY: v => num(v), focusAt: 8, labelW: 104,
+  hitLabel: "Read the cycles per element: arrow keys double or halve the vector length",
+  aria: "Line chart: cycles per element for D = C + A times B over the vector length n. Scalar code without pipelining stays at 18. Pipelined SIMD falls from 16 at n = 1 towards 2; with chaining it falls towards 1.",
+});
+
+// Explorer: the same computation cycle by cycle for one vector instruction pair.
+const VEC = { n: 4, mode: "pipe" };
+const VMODES = { conc: "concurrent (one unit per element)", pipe: "pipelined, no chaining", chain: "pipelined + chaining" };
+function vecOut() {
+  const { n, mode } = VEC, rows = [];
+  const mulAt = (i, k) => mode === "conc" ? 2 + k : 1 + i + k;                       // multiply stage k (1–7) of element i (1–n)
+  const wbV3 = mode === "conc" ? 10 : 9 + n;
+  const addAt = (i, k) => mode === "conc" ? 10 + k : mode === "pipe" ? 8 + n + i + k : 8 + i + k;
+  const wbV5 = mode === "conc" ? 16 : mode === "pipe" ? 14 + 2 * n : 14 + n, total = wbV5;
+  const cellRow = (label, map) => { const r = Array(total).fill(""); Object.entries(map).forEach(([t, h]) => { r[t - 1] = h; }); return `<div class="rl">${label}</div>${r.map(x => `<div class="gc">${x}</div>`).join("")}`; };
+  const pc = (s, t, tip) => `<span class="pc s${s}" title="${tip}">${t}</span>`;
+  rows.push(cellRow("MUL V3", { 1: pc(4, "IF", "fetch the multiply"), 2: pc(4, "ID", "decode the multiply"), [wbV3]: pc(4, "WB", "all products written to V3") }));
+  rows.push(cellRow("ADD V5", { 2: pc(4, "IF", "fetch the add"), 3: pc(4, "ID", "decode the add"), [wbV5]: pc(4, "WB", "all sums written to V5") }));
+  for (let i = 1; i <= n; i++) {
+    const map = {};
+    for (let k = 1; k <= 7; k++) map[mulAt(i, k)] = pc(1, `×${k}`, `element ${i}: multiply stage ${k} of 7`);
+    for (let k = 1; k <= 5; k++) map[addAt(i, k)] = pc(2, `+${k}`, `element ${i}: add stage ${k} of 5`);
+    rows.push(cellRow(`elem. ${i}`, map));
+  }
+  const head = Array.from({ length: total }, (_, t) => `<div class="gh">${t + 1}</div>`).join("");
+  const why = { conc: `needs ${n} multipliers and ${n} adders, and the add still waits for the write-back of V3`, pipe: "one pipelined multiplier and adder; the add starts only after all products are in V3", chain: "products flow straight into the adder as they leave the multiplier" }[mode];
+  return `<div class="gantt" style="--cols:${total}"><div class="rl"></div>${head}${rows.join("")}</div>
+    ${leg([[1, "multiply stages ×1–×7"], [2, "add stages +1–+5"], [4, "fetch, decode, write-back"]])}
+    <dl class="ro">
+      <dt>This mode</dt><dd><b>${total} cycles</b> for ${n} element${n > 1 ? "s" : ""}: ${why}</dd>
+      <dt>Scalar</dt><dd>without pipelining 18 cycles per element = ${18 * n} cycles ${flag(total < 18 * n ? "ok" : "bad", `${num(18 * n / total, 1)}× faster here`)}</dd>
+      <dt>Formula</dt><dd>${mode === "conc" ? "16, independent of n (as long as n units exist)" : mode === "pipe" ? `14 + 2n = 14 + ${2 * n}` : `14 + n = 14 + ${n}`}</dd>
+    </dl>`;
+}
+function initVec(body) {
+  body.innerHTML = `<div class="presets">${Object.entries(VMODES).map(([k, t]) => `<button class="preset" data-m="${k}" aria-pressed="${k === VEC.mode}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Elements n <input type="range" min="1" max="8" step="1" value="${VEC.n}"> <output>${VEC.n}</output></label></div><div class="out"></div>`;
+  const r = body.querySelector("input"), o = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { o.textContent = VEC.n; out.innerHTML = vecOut(); body.querySelectorAll("[data-m]").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === VEC.mode)); };
+  r.addEventListener("input", () => { VEC.n = +r.value; draw(); });
+  body.addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b) return; VEC.mode = b.dataset.m; draw(); });
+  draw();
+}
+
+// Explorer: floating-point peak performance (slides 24 and 53).
+const FP = { reg: 512, val: 64, units: 2, fma: true, ghz: 2, cores: 1 };
+const FP_PRESETS = [
+  ["slide 24: one Skylake-SP core", { reg: 512, val: 64, units: 2, fma: true, ghz: 2, cores: 1 }],
+  ["slide 53: 24 Skylake-SP cores", { reg: 512, val: 64, units: 2, fma: true, ghz: 2, cores: 24 }],
+  ["same core, single precision", { reg: 512, val: 32, units: 2, fma: true, ghz: 2, cores: 1 }],
+  ["same core, 128-bit SIMD only", { reg: 128, val: 64, units: 2, fma: true, ghz: 2, cores: 1 }],
+  ["same core, scalar, no FMA", { reg: 64, val: 64, units: 2, fma: false, ghz: 2, cores: 1 }],
+];
+function fpOut() {
+  const { reg, val, units, fma, ghz, cores } = FP, lanes = Math.max(1, reg / val), f = fma ? 2 : 1, perCore = lanes * units * f * ghz, total = perCore * cores;
+  return `<div class="formula">${lanes} values × ${units} instr./cycle × ${f} op${f > 1 ? "s" : ""} per value × ${num(ghz, 1)} GHz${cores > 1 ? ` × ${cores} cores` : ""} = ${num(total, 1)} GFLOPS</div>
+    <div class="ans"><div class="a"><div class="v">${num(perCore, 1)}</div><div class="l">GFLOPS per core</div></div><div class="a"><div class="v">${num(total, 1)}</div><div class="l">GFLOPS for ${cores} core${cores > 1 ? "s" : ""}</div></div><div class="a"><div class="v">${num(lanes * units * f, 0)}</div><div class="l">flops per cycle per core</div></div></div>`;
+}
+function initFp(body) {
+  body.innerHTML = `<div class="presets">${FP_PRESETS.map(([t], i) => `<button class="preset" data-p="${i}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Register <select data-k="reg">${[64, 128, 256, 512].map(v => `<option value="${v}">${v === 64 ? "scalar (64 bit)" : v + " bit"}</option>`).join("")}</select></label>
+      <label>Value <select data-k="val"><option value="64">double, 64 bit</option><option value="32">single, 32 bit</option></select></label>
+      <label>Vector units <input data-k="units" type="range" min="1" max="4" step="1"> <output data-o="units"></output></label>
+      <label><input data-k="fma" type="checkbox"> multiply-add (2 ops)</label>
+      <label>Clock <input data-k="ghz" type="range" min="1" max="4" step="0.1"> <output data-o="ghz"></output> GHz</label>
+      <label>Cores <input data-k="cores" type="range" min="1" max="128" step="1"> <output data-o="cores"></output></label></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), inputs = body.querySelectorAll("[data-k]");
+  const sync = () => { inputs.forEach(el => { const k = el.dataset.k; if (el.type === "checkbox") el.checked = FP[k]; else el.value = FP[k]; });
+    body.querySelectorAll("[data-o]").forEach(o => { o.textContent = FP[o.dataset.o]; }); out.innerHTML = fpOut(); };
+  inputs.forEach(el => el.addEventListener(el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input", () => { const k = el.dataset.k; FP[k] = el.type === "checkbox" ? el.checked : +el.value; sync(); }));
+  body.addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (!b) return; Object.assign(FP, FP_PRESETS[+b.dataset.p][1]); sync(); });
+  sync();
+}
+
+// Issue slots of a 4-wide core over 8 cycles (slide 46): which thread's instruction fills each functional unit.
+const SLOTS = [
+  ["Superscalar, 1 thread", [[1, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 0], [0, 0, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0]]],
+  ["Coarse-grained MT", [[1, 1, 0, 0], [1, 0, 0, 0], [2, 2, 2, 0], [2, 0, 0, 0], [2, 2, 0, 0], [3, 0, 0, 0], [3, 3, 3, 0], [3, 0, 0, 0]]],
+  ["Fine-grained MT", [[1, 1, 0, 0], [2, 2, 0, 0], [3, 0, 0, 0], [4, 4, 4, 0], [1, 0, 0, 0], [2, 2, 2, 0], [3, 3, 0, 0], [4, 0, 0, 0]]],
+  ["Simultaneous MT", [[1, 1, 2, 3], [2, 2, 4, 4], [1, 3, 3, 4], [2, 4, 1, 1], [3, 3, 2, 0], [1, 4, 4, 2], [2, 2, 3, 1], [4, 1, 3, 3]]],
+];
+CHARTS.smt = narrow => {
+  const cols = narrow ? 2 : 4, W = narrow ? 340 : 600, pw = (W - (cols - 1) * 16) / cols, cs = Math.min(22, (pw - 8) / 4 - 3), T = 30, ph = T + 8 * (cs + 3) + 26;
+  const H = Math.ceil(SLOTS.length / cols) * ph;
+  const panels = SLOTS.map(([name, g], p) => {
+    const ox = (p % cols) * (pw + 16), oy = Math.floor(p / cols) * ph, used = g.flat().filter(Boolean).length, gx = ox + (pw - 4 * (cs + 3)) / 2;
+    const cells = g.map((row, t) => row.map((th, u) => {
+      const x = gx + u * (cs + 3), y = oy + T + t * (cs + 3);
+      return th ? `<g class="pt" tabindex="0" data-tip="${esc(`<b>${name}</b>cycle ${t + 1}, unit ${u + 1}: thread ${th}`)}"><rect class="slot-on" x="${x}" y="${y}" width="${cs}" height="${cs}" rx="3" style="fill:var(--vz-s${th})"/></g>`
+        : `<rect class="slot" x="${x}" y="${y}" width="${cs}" height="${cs}" rx="3"/>`; }).join("")).join("");
+    return `<text class="lbl" x="${ox + pw / 2}" y="${oy + 14}" text-anchor="middle">${name}</text>${cells}
+      <text class="note" x="${ox + pw / 2}" y="${oy + T + 8 * (cs + 3) + 14}" text-anchor="middle">${used} of 32 slots used</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Four grids of functional units (columns) over eight cycles (rows). One superscalar thread fills 9 of 32 issue slots; coarse-grained multithreading, switching thread on a stall, 14; fine-grained multithreading, a different thread every cycle, 15; simultaneous multithreading, mixing threads within a cycle, 31.">${panels}</svg>`;
+};
+
+// Explorer: cache coherence, the four steps of slide 55 (states named after the MESI protocol, which the slide does not name).
+const COH = [
+  { t: "Start", d: "x = 1 lives only in main memory.", c: [null, null], mem: 1 },
+  { t: "1. Core 0 reads x", d: "Miss in every cache: the line comes from memory into core 0's caches (and the shared L3). Nobody else has it, so core 0 holds it exclusively.", c: [["E", 1], null], mem: 1 },
+  { t: "2. Core 1 reads x", d: "Core 1 misses in its private caches; the shared L3 (or core 0) supplies the line. Now two copies exist, both clean.", c: [["S", 1], ["S", 1]], mem: 1 },
+  { t: "3. Core 0 writes x = 2", d: "Before the write may complete, every other copy is invalidated. Core 0's line is now the only valid one, and memory is stale.", c: [["M", 2], ["I", 1]], mem: 1 },
+  { t: "4. Core 1 reads x again", d: "Core 1's copy is invalid, so this is a miss. The fresh value comes from core 0's cache (written back on the way); both copies are shared again.", c: [["S", 2], ["S", 2]], mem: 2 },
+];
+const COH_STATE = { M: ["Modified", "bad"], E: ["Exclusive", "ok"], S: ["Shared", "ok"], I: ["Invalid", "bad"] };
+let cohStep = 0;
+function cohOut() {
+  const s = COH[cohStep];
+  const cache = (k, v) => v ? `<div class="coh-c ${v[0] === "I" ? "inv" : ""}"><b>core ${k}</b><span class="coh-v">x = ${v[1]}</span><span class="flag ${COH_STATE[v[0]][1]}">${v[0]} · ${COH_STATE[v[0]][0]}</span></div>`
+    : `<div class="coh-c empty"><b>core ${k}</b><span class="muted">no copy</span></div>`;
+  return `<p><b>${s.t}.</b> ${s.d}</p>
+    <div class="coh">${cache(0, s.c[0])}${cache(1, s.c[1])}<div class="coh-m"><b>main memory</b><span class="coh-v">x = ${s.mem}</span>${cohStep === 3 ? `<span class="flag bad">stale</span>` : ""}</div></div>`;
+}
+function initCoh(body) {
+  body.innerHTML = `<div class="presets">${COH.map((s, i) => `<button class="preset" data-s="${i}" aria-pressed="${i === cohStep}">${i ? i : "start"}</button>`).join("")}<button class="preset" data-next>next step</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = cohOut(); body.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.s === cohStep)); };
+  body.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; cohStep = b.hasAttribute("data-next") ? (cohStep + 1) % COH.length : +b.dataset.s; draw(); });
+  draw();
+}
+
+// NUMA latencies (slide 58: AMD Zen Rome, local 110.5 ns, remote 217 ns) plus two interleaved averages computed here.
+const NUMA_LAT = [
+  { k: "local NUMA domain", v: 110.5, src: 1, note: "measured, slide 58" },
+  { k: "remote domain", v: 217, src: 1, note: "measured, slide 58" },
+  { k: "interleaved over 2", v: (110.5 + 217) / 2, src: 0, note: "computed: half the pages local, half remote" },
+  { k: "interleaved over 8", v: (110.5 + 7 * 217) / 8, src: 0, note: "computed: 1 in 8 pages local, the rest at the remote figure" },
+];
+CHARTS.numalat = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 0 : 140, R = narrow ? 56 : 70, T = 8, RH = narrow ? 50 : 38, H = T + NUMA_LAT.length * RH + 26, PW = W - L - R;
+  const x = v => L + v / 240 * PW;
+  const ticks = [0, 50, 100, 150, 200].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const bars = NUMA_LAT.map((d, i) => { const y0 = T + i * RH + (narrow ? 22 : 10), bh = 18;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}: ${num(d.v, 1)} ns</b>${d.note}<br>${num(d.v / 110.5, 2)}× the local latency`)}"><rect class="hit" x="0" y="${y0 - (narrow ? 22 : 10)}" width="${W}" height="${RH}"/>
+      <path class="bar ${d.src ? "s1" : "gray"}" d="${hbar(x(0), x(d.v), y0, bh)}"/>
+      <text class="cat" x="${narrow ? 0 : L - 8}" y="${narrow ? y0 - 6 : y0 + 13}" text-anchor="${narrow ? "start" : "end"}">${d.k}</text><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${num(d.v, 1)} ns</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: memory latency on an AMD Zen Rome system. Local access 110.5 nanoseconds, remote 217 (both from the slide). Computed here: interleaving pages over 2 domains averages 163.8, over 8 domains 203.7.">${ticks}${bars}</svg>`;
+};
+
+function lecture3() {
+  const tbl = (h, rows) => `<details class="tbl"><summary>Table view</summary><table><tr>${h.map(x => `<th>${x}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((x, i) => `<td${i ? ' class="n"' : ""}>${x}</td>`).join("")}</tr>`).join("")}</table></details>`;
+  return `${head(l)}
+    ${l.roomNote ? `<div class="box status"><p><b>Room on the day:</b> ${esc(l.roomNote)}</p></div>` : ""}
+    <p class="lead">Lectures 1 and 2 treated a parallel computer as a set of processing elements and a batch system that hands them out. This lecture opens one compute node and asks where its parallelism actually comes from. A modern node stacks several kinds: <b>pipelining</b> and <b>superscalarity</b> inside a core (invisible to the programmer), <b>SIMD</b> vector instructions within one thread, <b>hardware multithreading</b> that keeps a core's units busy, <b>many cores</b> per processor, and <b>several processors</b> per node with their own memory (NUMA). Each level adds peak performance and each one adds a new way to lose it. The next lectures (threads, then SIMD and dependencies) program exactly these levels. Four charts and three explorers below; the slides are in OPAL, and this page is a summary in our own words.</p>
+
+    <h2>How one core runs a program (slides 4–8)</h2>
+    <p>The starting point is the sequential processor from the <a href="high-performance-computing/lecture.html?n=0">preparation material</a>. In a loop, the core <b>fetches</b> the instruction the instruction pointer refers to, <b>decodes</b> it to find out what to do, <b>executes</b> it on a matching unit (an integer ALU, a floating-point unit, an address calculation), possibly <b>accesses memory</b>, <b>writes the result back</b> to a register, and moves the instruction pointer on. The underlying picture is the von Neumann architecture: a processing unit with ALU and registers, a control unit with instruction register and program counter, one memory for data and instructions, plus storage and I/O. Highly parallel systems are built from exactly such machines, which is why the lecture recaps them before multiplying them.</p>
+
+    <h2>Turning transistors into performance (slides 9–16)</h2>
+    <p>Moore's law kept the transistor budget growing exponentially from the 4004 to today's server chips. The question of the whole lecture is how designers turned those transistors into speed. The first answers, in roughly historical order, were wider words (16, 32, 64 bit), an on-chip floating-point unit, caches, pipelining, a memory-management unit, superscalar and out-of-order execution; later came integrated memory controllers, graphics on the die, SIMD, multithreading and multiple cores (slide 17 adds those to the same chart).</p>
+    <p>The running example is a loop that adds one array to another, <code>a[i] = a[i] + b[i]</code>. Compiled for single floats it is five instructions per element: load one element of <code>a</code> into an SSE register (<code>movss</code>, with the address computed from a base register plus index × 4 bytes), add one element of <code>b</code> (<code>addss</code>), store the result back, decrement the counter (<code>sub</code>) and jump back while it is not zero (<code>jnz</code>).</p>
+    <ul class="cmp" aria-label="Two transparent kinds of instruction-level parallelism">
+      <li><b>Pipelining</b><span class="v"><span class="sw t"></span>Fetch, decode, execute and write-back of consecutive instructions overlap. The speedup grows with the number of stages; current processors have more than 15.</span></li>
+      <li><b>Superscalarity</b><span class="v"><span class="sw v"></span>Several execution units (ALU, FPU, load/store …) work at once, so more than one instruction starts per cycle; current cores manage more than 4. It needs wider or duplicated fetch and decode, and it combines with pipelining.</span></li>
+    </ul>
+    <p>Both happen <b>transparently in hardware</b>; the program does not change. Who decides which instructions may run side by side (slide 15)? Either the <b>compiler</b>, as in VLIW processors that consume bundles of instructions marked parallel (padded with no-ops): done once, but it must be correct for every possible input. Or the <b>hardware</b>, which sees the actual run (it knows, for instance, that two memory regions do not overlap) but has to check dependencies again on every execution, which costs power, and even more with out-of-order execution. Mainstream x86 cores chose the hardware route.</p>
+    <p>The catch (slide 16): instructions must be <b>independent</b> to overlap, and interrupts and branches serialise the stream. That is why contemporary cores spend a large share of their area on a branch prediction unit and an out-of-order engine; the annotated die shots of an AMD Zen and an Intel Skylake core on the slide make that visible.</p>
+    ${why("Context, not on the slides: what a wrong branch guess costs", `<p>A pipeline only stays full if the fetch stage knows where the program goes next before the branch has executed. The branch predictor guesses; if it was wrong, everything fetched behind the branch is thrown away and the pipeline refills. On a core with 15–20 stages that is in the order of 15–20 lost cycles per misprediction, and on a 4-wide superscalar core up to four times as many instruction slots. A loop like the one above is easy (the <code>jnz</code> is taken every time but the last), while data-dependent <code>if</code>s inside a hot loop are the classic case where branch-free code or SIMD masks win.</p>`)}
+
+    <h2>SIMD: one instruction, many data (slides 18–24)</h2>
+    <p>In Flynn's taxonomy (recap from lecture 1) a normal core is <b>SISD</b>; SIMD keeps one instruction stream but lets each instruction work on several data elements: one fetch, one decode, several operations, one write-back. MISD is empty in practice, and MIMD is what multiple threads or processes give you. Historically there are two ways to build SIMD (slide 20):</p>
+    <ul class="cmp" aria-label="Two SIMD implementations">
+      <li><b>Pipelined (vector processors)</b><span class="v"><span class="sw t"></span>The elements of a long vector register stream through a few arithmetically pipelined units; a dependent instruction may start as soon as the first results appear (<b>chaining</b>). Usually no cache but very high memory bandwidth, e.g. 1.2 TB/s on NEC's SX-Aurora TSUBASA.</span></li>
+      <li><b>Concurrent (x86 SIMD units)</b><span class="v"><span class="sw v"></span>One execution unit per element computes the whole register at once; a dependent instruction waits until the vector instruction is complete. Speedup = number of elements per register.</span></li>
+    </ul>
+    <p>Either way the parallelism is <b>explicit</b>: someone (programmer or compiler) has to use the vector instructions, and every new vector length needs new code or a recompile. On the example loop, the SSE version uses <code>movups</code> / <code>addps</code> / <code>movups</code> on four floats at a time and decrements the counter by 4: the same five instructions now do four iterations, so 20 instructions shrink to 5. Note what does <i>not</i> shrink: the number of additions and the number of bytes moved.</p>
+    ${chart("instr")}
+      <figcaption>Instructions needed to add two arrays of 1,024 floats with the slide's loop. The scalar and SSE counts follow from slides 22–23; AVX (8 floats) and AVX-512 (16 floats) are the same loop with wider registers, added here. Hover a bar for the arithmetic.</figcaption>
+    </figure>
+    ${tbl(["Version", "Floats per pass", "Instructions for 1,024 elements"], INSTR.map(d => [d.k, d.w, num(5 * 1024 / d.w, 0)]))}
+
+    <h2>Peak performance of a core and a processor (slides 24, 53)</h2>
+    <p>Floating-point peak performance (FPP) multiplies everything a core can do per cycle by the clock. The slides' example is an Intel Skylake-SP: 512-bit vector registers hold 8 doubles, there are 2 vector units, each can do a fused multiply-add (2 floating-point operations per value), and the clock is 2 GHz:</p>
+    <div class="formula">FPP<sub>core</sub> = 512 bit / 64 bit × 2 instr./cycle × 2 flop per value × 2·10⁹ cycles/s = 64 GFLOPS<br>FPP<sub>chip</sub> = 64 GFLOPS × 24 cores = 1,536 GFLOPS</div>
+    ${lab("fp", "peak performance from register width, units, FMA, clock and cores")}
+    ${ex("Worked example: can memory keep up with 1,536 GFLOPS?", `<p>Take the slide's loop in double precision: per addition it loads two 8-byte values and stores one, 24 bytes for one flop. Running at the chip's 1,536 GFLOPS would need 1,536 × 10⁹ × 24 B ≈ <b>36.9 TB/s</b>. A Skylake-SP socket has six DDR4-2666 channels, about 6 × 21.3 ≈ 128 GB/s (figure added here from the memory standard, not on the slides). So this loop can use at most 128 / 36,864 ≈ 0.35 % of the peak once the arrays do not fit in cache. That is slide 36's warning in numbers: more parallel arithmetic needs more data, and the memory hierarchy decides how much of the peak you see.</p>`)}
+
+    <h2>Pipelined versus concurrent SIMD, cycle by cycle (slides 25–34)</h2>
+    <p>The slides time one computation, <b>D = C + A · B</b>, on hardware with a 7-stage multiplier and a 5-stage adder (for this example; a floating-point add has steps like compare exponents, shift mantissa, add, normalise, round). Fetch and decode take one cycle each.</p>
+    <ul>
+      <li><b>Scalar, no pipelining:</b> the multiply occupies cycles 1–10 (IF, ID, 7 stages, WB), the add cycles 11–18: <b>18 cycles</b> per element.</li>
+      <li><b>Scalar with pipelining:</b> two independent multiplies overlap and finish after 11 cycles instead of 20. But the add depends on the product: it is fetched and decoded early, then <b>stalls</b> until the product is written back (a data hazard), finishing at 16.</li>
+      <li><b>Concurrent SIMD</b> with four entries per register: exactly the scalar-pipelined timing, 16 cycles, but for four elements at once.</li>
+      <li><b>Pipelined SIMD</b> with n entries: element i enters the multiplier at cycle 2 + i, the last product is written at 9 + n, then the adds stream through: <b>14 + 2n</b> cycles.</li>
+      <li><b>Pipelined SIMD with chaining:</b> each product goes straight into the adder, so the two pipelines run one behind the other: <b>14 + n</b> cycles.</li>
+    </ul>
+    ${lab("vec", "D = C + A · B on n elements, cycle by cycle")}
+    ${chart("cpe", leg([[2, "scalar, no pipelining"], [1, "pipelined SIMD"], [3, "pipelined + chaining"]]))}
+      <figcaption>Cycles per element from the three formulas above as the vector gets longer. Pipelining pays off only for long vectors: the fixed 14 cycles of filling and draining are spread over n elements, so the curves approach 2 and 1 cycles per element. Move along the curve or use the arrow keys.</figcaption>
+    </figure>
+    <p>On contemporary processors (slide 34) the x86 style dominates: all results of a SIMD instruction are available at the same time, so no chaining is needed, though a wide operation is sometimes split into two halves internally, and the execution units themselves are still pipelined (how many stages an add, multiply or FMA takes depends on the processor).</p>
+    <p><b>Power</b> (slide 35): wider registers do more work per cycle and draw more power, so the processor lowers its clock to stay within its limit; when SIMD units sit idle it can clock higher. Intel Xeons since Haswell have separate, much lower frequency ranges for AVX and AVX-512 code. AMD's Zen 1 had only 128-bit SIMD units (Zen 2: 256 bit), and Intel's efficiency cores also use narrower units. So far everything ran on <b>one</b> processing element, one thread: pipelining, superscalarity and SIMD raise its peak, but all of it needs data (slide 36).</p>
+
+    <h2>The memory hierarchy (slides 37–40)</h2>
+    <p>In the von Neumann picture the CPU's few fast registers talk to one large, slow memory holding both instructions and data; that link is the <b>von Neumann bottleneck</b>. A Harvard architecture splits instruction and data memory, but raises awkward questions (how large should each be? would anyone buy DRAM just for instructions?). Today's answer mixes both: <b>caches</b> buffer recently used memory, smaller and faster the closer they sit to the core; only the level-1 cache is split Harvard-style into an instruction and a data cache, while L2 and L3 are unified. On top, <b>prefetchers</b> at several levels watch the access pattern and load data before an instruction asks for it. The average access gets faster; a miss to main memory stays slow (latencies in the <a href="high-performance-computing/lecture.html?n=0">preparation page</a>).</p>
+
+    <h2>Hardware multithreading (slides 41–49)</h2>
+    <p>A superscalar out-of-order core has many execution units, but one thread rarely keeps them busy: dependencies and memory latencies leave most units idle most of the time. The fix is to give the core several <b>hardware threads</b> to choose from:</p>
+    <ul class="cmp tri" aria-label="Three kinds of hardware multithreading">
+      <li><b>Coarse-grained</b><span class="v"><span class="sw t"></span>Run one thread until it stalls (say a 200-cycle memory access), then switch to another, and back when that one stalls.</span></li>
+      <li><b>Fine-grained</b><span class="v"><span class="sw v"></span>Switch every cycle. With a 4-cycle L1 latency, four threads taking turns each find their data ready when it is their turn again.</span></li>
+      <li><b>Simultaneous (SMT)</b><span class="v"><span class="sw p"></span>The out-of-order engine issues ready instructions from different threads in the same cycle; more threads means fewer dependencies among the candidates, since only instructions of one thread can depend on each other.</span></li>
+    </ul>
+    ${chart("smt", leg([[1, "thread 1"], [2, "thread 2"], [3, "thread 3"], [4, "thread 4"]]))}
+      <figcaption>Slide 46 redrawn with a made-up instruction mix: a 4-wide core over 8 cycles, each square an issue slot. Coarse-grained MT fills the stall cycles of one thread, fine-grained MT gives every cycle to another thread, SMT fills the slots within a cycle as well. Hover a square.</figcaption>
+    </figure>
+    ${ex("Worked example: how many threads hide a latency?", `<p>Fine-grained MT with round-robin issue hides a latency of L cycles if at least L threads take turns: with the L1 latency of 4 cycles, thread 0's load issued in cycle 1 returns by cycle 5, exactly when thread 0 is next. Hiding a 200-cycle memory access that way would need 200 threads, which is why CPUs switch on stalls (coarse) or mix threads (SMT) instead, and why GPUs, which keep thousands of threads resident, can hide memory latency that way. For coarse-grained MT the switch itself costs a few cycles to drain the pipeline, so it only pays for long stalls.</p>`)}
+    <p>The price (slides 47–48): every hardware thread needs its own register set and program counter, possibly wider fetch and decode, and every instruction in flight is tagged with its thread. Caches are rarely tagged per thread, which lets one thread <b>spy</b> on another by testing which data is cached (a microarchitectural side channel); threads can also observe or disturb each other through shared units, load/store buffers and branch prediction. Performance-wise, peak is only reached with all threads active under fine-grained MT; SMT gains nothing when both threads want the same unit all the time (two threads hammering the floating-point adder), and it can even lose when their combined working set overflows the shared cache.</p>
+    ${why("Context, not on the slides: getting the names right", `<p>Slide 49 asks for careful vocabulary, because from now on a <b>hardware thread</b>, not a core, is the processing element. "CPU" means a core to some people and a hardware thread to others (Linux's <code>lscpu</code> counts hardware threads as CPUs and reports "Thread(s) per core"); "core" sometimes includes its private caches and sometimes only the execution units. And a <b>software thread</b> (what PThreads and OpenMP create in lecture 4) is something the operating system schedules <i>onto</i> hardware threads. With Slurm, <code>-c</code> counts CPUs in this hardware-thread sense on most systems, which matters when you pin threads as in lecture 2.</p>`)}
+
+    <h2>Multicore (slides 50–53)</h2>
+    <p>Multithreading raises utilisation, not peak. Peak used to come from the clock, but that road ended around 2005 (the end of <b>Dennard scaling</b>): dynamic power grows linearly with frequency and with the square of the voltage, a higher frequency needs a higher voltage, and static power grows with voltage too. Clock and voltage cannot rise indefinitely; air cooling at an acceptable noise level caps the power. The alternative is <b>more cores</b>: peak performance grows linearly with cores as with frequency, but power only grows linearly with the number of cores. The price is that parallelism is no longer optional: it needs explicit programming and synchronisation (the next lectures). With 24 cores the Skylake-SP from above reaches 1,536 GFLOPS (try the preset in the explorer).</p>
+    ${ex("Worked example: two slower cores against one fast one", `<p>Model it with dynamic power P ∝ C·V²·f and voltage roughly proportional to frequency, so P ∝ f³ (a rule of thumb, not on the slides). One core at frequency f: power 1, performance 1. Raise it to 1.25 f: performance 1.25, power 1.25³ ≈ <b>1.95</b>. Instead, two cores at 0.8 f: performance 2 × 0.8 = <b>1.6</b> (if the program is fully parallel), power 2 × 0.8³ ≈ <b>1.02</b>. Same power budget, 60 % more throughput, but only for parallel code: with a serial fraction of 20 %, Amdahl from lecture 1 gives the dual core 0.8 × 1 / (0.2 + 0.8 / 2) ≈ 1.33.</p>`)}
+
+    <h2>Caches, coherence and on-chip networks (slides 54–57)</h2>
+    <p>With several cores, the <b>last-level cache</b> is usually shared (not always among all cores), while L1 and the mid-level cache are private per core and shared by that core's hardware threads. So the same memory line can sit in several caches at once, and the hardware must guarantee that no core ever reads an outdated copy: <b>cache coherence</b>. It is a hardware mechanism, invisible to correctness but not to performance: invalidations add latency.</p>
+    ${lab("coh", "two cores share one variable x (the four steps of slide 55)")}
+    ${why("Context, not on the slides: why coherence traffic shows up in your timings", `<p>The states above are those of the MESI protocol, the textbook family most x86 processors build on (Intel's MESIF, AMD's MOESI). Coherence works on whole cache lines (64 bytes on x86), not variables. Two threads that write <i>different</i> variables in the <i>same</i> line keep invalidating each other's copy: <b>false sharing</b>, a classic slowdown in OpenMP code that updates per-thread counters stored next to each other. Padding each counter to its own line removes it; this matters as soon as you write threaded code (lecture 4).</p>`)}
+    <p>The connections between cores, caches and memory become the next bottleneck (slide 56). Around 2004 two cores shared a northbridge with the memory controller; around 2007 a common L3 with a crossbar, which does not scale to many cores; around 2011 a ring of L3 slices, where the way to the memory controller grows too long as cores are added. Contemporary designs (slide 57): AMD Zen "Naples" groups 4 cores with an L3 into a core complex (CCX), gives each die (2 CCX) its own memory controller and connects all dies with each other; Intel Skylake-SP puts 28 cores with their L3 slices on a 2D mesh with 2 memory controllers.</p>
+
+    <h2>NUMA and multi-socket nodes (slides 58–59)</h2>
+    <p>With several memory controllers, memory access is no longer uniform. Under <b>UMA</b> a thread sees the same latency and bandwidth wherever it runs; under <b>NUMA</b> (non-uniform memory access) it depends on where the thread runs and where its data lives. On an AMD Zen "Rome" system the slide quotes 110.5 ns for local and 217 ns for remote access, almost twice as long. The operating system sees each region as a NUMA domain; the BIOS can often hide NUMA by interleaving memory round-robin across all controllers.</p>
+    ${chart("numalat", leg([[1, "measured (slide 58)"], ["g", "computed here"]]))}
+      <figcaption>Latencies on AMD Zen Rome. The two blue bars are the slide's numbers; the gray ones are averages computed here for memory interleaved page by page over 2 or 8 domains (treating every non-local domain as "remote"). Interleaving evens out the worst case but makes the typical access slower than local. Hover a bar.</figcaption>
+    </figure>
+    ${tbl(["Placement", "Latency (ns)"], NUMA_LAT.map(d => [d.k, num(d.v, 1)]))}
+    <p><b>Multi-socket nodes</b> behave like processors with several memory controllers, only more so: bandwidth and latency between sockets are much more limited, NUMA behaviour gets more complex, and keeping caches coherent costs a lot of energy. Besides the broadcast-style ("snooping") coherence protocol they use an additional <b>directory-based</b> protocol that tracks which socket holds which line. The slide's example is a quad-socket AMD Bulldozer server with 8 NUMA nodes (two per socket), from a 2014 memory-performance study by Molka, Hackenberg and Schöne. The node diagram from <a href="high-performance-computing/lecture.html?n=2">lecture 2</a> shows the same structure with two processors.</p>
+    ${why("Context, not on the slides: where your data lands", `<p>Linux places a page in the NUMA domain of the core that touches it first (<b>first-touch</b> policy), not where <code>malloc</code> was called. A program that initialises a big array in one thread and then processes it with threads on all sockets has every page in one domain and half its threads paying the remote latency. The usual fix is to initialise in parallel with the same thread layout as the compute loop, and to pin threads (OpenMP <code>OMP_PROC_BIND</code>/<code>OMP_PLACES</code>, <code>numactl</code>, Slurm's <code>--cpu-bind</code>), which ties directly back to the pinning part of lecture 2. <code>numactl --hardware</code> on a ZIH node prints its domains and the relative distances between them.</p>`)}
+
+    <h2>Summary: all the kinds of parallelism (slides 60–61)</h2>
+    <div class="tt-wrap"><table class="tt" aria-label="Kinds of parallelism in a node">
+      <tr><th>Level</th><th>Visible to the program?</th><th>What it adds</th><th>New problem it brings</th></tr>
+      <tr><td>Pipelining</td><td>no, in hardware</td><td>overlapping instruction phases</td><td>hazards, branch mispredictions</td></tr>
+      <tr><td>Superscalarity</td><td>no, in hardware</td><td>several instructions per cycle</td><td>needs independent instructions</td></tr>
+      <tr><td>SIMD</td><td>yes, one unit of execution</td><td>several data per instruction</td><td>vectorisation, lower AVX clocks, memory bandwidth</td></tr>
+      <tr><td>Hardware multithreading</td><td>yes, several units of execution</td><td>better use of the core's units</td><td>shared resources, side channels</td></tr>
+      <tr><td>Multicore</td><td>yes</td><td>peak scales with cores</td><td>explicit parallel code, cache coherence</td></tr>
+      <tr><td>Multi-socket</td><td>yes</td><td>more cores and memory channels per node</td><td>NUMA, expensive coherence</td></tr>
+    </table></div>
+    <p>Every level is needed to get the performance, and every level adds uncertainty and complexity.</p>
+
+    <div class="tiles" aria-label="Numbers and formulas to remember">
+      <div class="tile"><div class="v">64 GFLOPS</div><div class="l">one Skylake-SP core: 8 doubles × 2 units × 2 (FMA) × 2 GHz</div></div>
+      <div class="tile"><div class="v">1,536 GFLOPS</div><div class="l">the same chip with 24 cores</div></div>
+      <div class="tile"><div class="v">14 + n</div><div class="l">cycles for D = C + A·B on n elements, pipelined with chaining (14 + 2n without)</div></div>
+      <div class="tile"><div class="v">110.5 / 217 ns</div><div class="l">local vs remote memory access, AMD Zen Rome</div></div>
+      <div class="tile"><div class="v">5N → 5N/4</div><div class="l">instructions for the array add, scalar vs SSE</div></div>
+    </div>
+    <h2>Take-home: the lecture's six questions</h2>
+    <ul>
+      <li><b>How do sequential processors work?</b> Fetch, decode, execute, (memory), write back, in a loop; pipelining overlaps the phases and superscalarity runs several instructions per cycle, both transparently, limited by dependencies and branches.</li>
+      <li><b>What is SIMD and how does it affect performance?</b> One instruction on a whole register of values; fewer instructions to fetch and decode, peak multiplied by the register width, but explicit code and the same amount of data to move.</li>
+      <li><b>What is hardware multithreading?</b> Several hardware threads per core (coarse, fine-grained or simultaneous) fill execution units that one thread leaves idle; it raises utilisation, not peak.</li>
+      <li><b>How do multiple cores affect performance?</b> Peak grows linearly with cores at linear power cost, unlike frequency; the price is explicit parallel programming and cache coherence.</li>
+      <li><b>What is FPP and how is it calculated?</b> Values per register × vector instructions per cycle × flops per value (2 with FMA) × clock × cores.</li>
+      <li><b>How do multiple processors and memory influence performance?</b> Several memory controllers make access NUMA: where a thread runs relative to its data can double the latency; multi-socket nodes make it worse and coherence more expensive.</li>
+    </ul>
+    <h2>Exercise</h2>
+    <p>The online exercise for this lecture (<a href="high-performance-computing/exercise.html?n=4">Exercise 04</a>) is not in OPAL yet; by the course's rhythm it appears about a week before your group discusses it on <b>Wed 11 Nov, 07:30</b>.</p>
+    <p class="muted">Next: Shared Memory Programming 1, threads with PThreads and OpenMP (<a href="high-performance-computing/lecture.html?n=4">lecture 4</a>, 11 Nov). Previous: <a href="high-performance-computing/lecture.html?n=2">lecture 2</a>. Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -1022,8 +1312,8 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the course overview: ${esc(l.blurb)}<br>The summary appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2 };
-const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3 };
+const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham, vec: initVec, fp: initFp, coh: initCoh };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
