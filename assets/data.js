@@ -818,7 +818,15 @@ window.CMS = {
       "date": "2026-10-19",
       "icon": "🎲",
       "covered": true,
-      "blurb": "What a stochastic model predicts (probabilities of states, not states), the four hurdles of stochastic simulation and the toolkits that meet them, the roadmap of the course from Markov chains and Monte Carlo to Brownian motion and numerical SDEs, and the organisation: 5 credits, 12+12 sessions, a 90-minute written exam."
+      "blurb": "What a stochastic model predicts (probabilities of states, not states), the four hurdles of stochastic simulation and the toolkits that meet them, the roadmap of the course from Markov chains and Monte Carlo to Brownian motion and numerical SDEs, and the organisation: 5 credits, 12+12 sessions, a 90-minute written exam.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS0.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "20 pages, posted 26 Oct"
+       }
+      ]
      },
      {
       "n": 1,
@@ -826,7 +834,15 @@ window.CMS = {
       "date": "2026-10-26",
       "icon": "🃏",
       "covered": true,
-      "blurb": "From population and sample to events and P(A); the three Kolmogorov axioms and the Boolean rules that follow; permutations and combinations; conditional probability as renormalisation; independence; Bayes' theorem; the law of total probability, the chain rule and the birthday problem; binary, discrete and continuous random variables."
+      "blurb": "From population and sample to events and P(A); the three Kolmogorov axioms and the Boolean rules that follow; permutations and combinations; conditional probability as renormalisation; independence; Bayes' theorem; the law of total probability, the chain rule and the birthday problem; binary, discrete and continuous random variables.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS1.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "18-page summary deck, posted 1 Nov"
+       }
+      ]
      },
      {
       "n": 2,
@@ -947,7 +963,21 @@ window.CMS = {
       "covered": true,
       "lecture": 1,
       "points": null,
-      "blurb": "A Pluto notebook (Julia): the screening-test table, sequences and the chain rule, memory, the birthday problem, binary/discrete/continuous random variables, PMF and CDF of two dice, joint tables, densities and the inverse CDF, moments and covariance, the common distributions and the central limit theorem, plus nine exercises."
+      "blurb": "A Pluto notebook (Julia): the screening-test table, sequences and the chain rule, memory, the birthday problem, binary/discrete/continuous random variables, PMF and CDF of two dice, joint tables, densities and the inverse CDF, moments and covariance, the common distributions and the central limit theorem, plus nine exercises.",
+      "files": [
+       {
+        "kind": "notebook",
+        "name": "SMS_T01.jl",
+        "where": "OPAL · Exercises2026",
+        "note": "Pluto notebook, posted 1 Nov"
+       },
+       {
+        "kind": "notes",
+        "name": "Pluto_Installation.pdf",
+        "where": "OPAL · Exercises2026",
+        "note": "setup guide, 7 pages"
+       }
+      ]
      },
      {
       "n": 2,
@@ -958,7 +988,15 @@ window.CMS = {
       "lecture": 2,
       "points": null,
       "blurb": "A Pluto notebook (Julia): pseudo-random generators, the LCG and its period, parallel streams; pseudo- against quasi-random points; what a function does to a density and why F(X) is uniform; inversion, Box–Muller and accept–reject with its limits in high dimensions, composition–rejection; seven calculation problems and three programming exercises.",
-      "published": "2026-11-05"
+      "published": "2026-11-05",
+      "files": [
+       {
+        "kind": "notebook",
+        "name": "SMS_T02.jl",
+        "where": "OPAL · Exercises2026",
+        "note": "Pluto notebook, posted 5 Nov"
+       }
+      ]
      },
      {
       "n": 3,

@@ -24,6 +24,7 @@ const lectures = (c.lectures || []).map(l => `<a class="game-card lec ${l.covere
     <h2>Lecture ${l.n} – ${esc(l.title)}</h2>
     <p class="when">${l.date ? fmt(l.date) : "no fixed date"}${lec ? ` · ${lec.start} · ${esc(lec.room)}` : ""} · ${state(l)}</p>
     <p>${esc(l.blurb)}</p>
+    ${U.files(l, m)}
     ${U.doneBox(`${CODE}:lecture:${l.n}`)}
   </a>`).join("") + `<a class="game-card" href="stochastics/orga.html">
     <div class="game-icon">🗂️</div>
@@ -35,6 +36,7 @@ const exercises = (c.exercises || []).map(x => `<a class="game-card exe ${x.cove
     <h2>${EX} ${x.n}${x.title ? ` – ${esc(x.title)}` : ""}</h2>
     <p class="when">${fmt(x.date)}${exe ? ` · ${exe.start} · ${esc(exe.room)}` : ""}${x.published ? ` · sheet in OPAL since ${fmt(x.published)}` : ""} · ${state(x)}</p>
     <p>${esc(x.blurb)}</p>
+    ${U.files(x, m)}
     ${U.doneBox(`${CODE}:exercise:${x.n}`)}
   </a>`).join("");
 const nLec = (c.lectures || []).filter(l => l.covered).length, nExe = (c.exercises || []).filter(x => x.covered).length;
