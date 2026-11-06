@@ -2172,16 +2172,16 @@ window.CMS = {
       "published": "2026-10-28",
       "icon": "✏️",
       "covered": true,
-      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions; the chair has not posted theirs yet."
+      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions, checked against the chair’s solution (in OPAL since 6 Nov)."
      },
      {
       "n": 3,
-      "title": null,
+      "title": "Arithmetic circuits",
       "date": "2026-11-19",
-      "published": null,
+      "published": "2026-11-06",
       "icon": "✏️",
-      "covered": false,
-      "blurb": "Expected to cover lectures 5–6 (CMOS technology and logic); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+      "covered": true,
+      "blurb": "Sheet 3 (tasks 3.3, 3.5–3.10, in OPAL since 6 Nov): carry-save versus ripple-carry addition of three numbers, a switchable adder/subtractor, incrementer and decrementer, Dadda reduction of a 5 × 5 multiplier with and without a 10-bit accumulate, restoring division of 173 / 8 and Newton-Raphson for 176 / 83. Our own worked solutions; 3.3 repeats the floating-point task of sheet 2."
      },
      {
       "n": 4,

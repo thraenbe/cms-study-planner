@@ -286,9 +286,16 @@ function halfRow(bitsStr) {
 
 function exercise2() {
   return `${head(x)}
-    <p class="lead">Sheet 2 of the chair's exercise collection, posted in OPAL on 28 Oct (the English version; the German one for this Thursday group is listed under 4 Nov). Eight tasks in three blocks: two combinational cells (full adder, multiplexer), three state machines (two from a state graph, one from Verilog), and three number-format tasks (Gray and two's complement, fixed-point formats, IEEE 754). The chair has not posted solutions yet: <b>every solution below is our own</b>, worked through and cross-checked with the explorers on this page, so treat a disagreement with the official solution as a reason to look twice at both.</p>
-    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (9 pages) in the OPAL exercise folder since 28 Oct; the tasks are numbered 1.7 to 3.3 because the collection numbers through the whole semester (1.1 to 1.6 were sheet 1). No solution sheet yet; the chair usually posts it around the session.</p>
+    <p class="lead">Sheet 2 of the chair's exercise collection, posted in OPAL on 28 Oct (the English version; the German one for this Thursday group is listed under 4 Nov). Eight tasks in three blocks: two combinational cells (full adder, multiplexer), three state machines (two from a state graph, one from Verilog), and three number-format tasks (Gray and two's complement, fixed-point formats, IEEE 754). The solutions below are our own, worked out before the chair published theirs and cross-checked with the explorers on this page. The official solution (in OPAL since 6 Nov) has the same results; the box below lists the places where it takes a different form or, in one map, a different value.</p>
+    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (9 pages) in the OPAL exercise folder since 28 Oct; the tasks are numbered 1.7 to 3.3 because the collection numbers through the whole semester (1.1 to 1.6 were sheet 1). The English solution (37 slides) and a German solution from an earlier year have been in OPAL since 6 Nov.</p>
       <p style="margin:0"><b>Session.</b> Thursday 5 Nov, 2nd DS, ${esc(exe.room)}, German group. The sheet is worked through at the board; bring the state graphs drawn and the K-maps filled in, the discussion is usually about the don't cares and the formats.</p></div>
+    <div class="why"><div class="kicker">Checked against the official solution (6 Nov)</div>
+      <ul style="margin:0;padding-left:1.1rem">
+        <li><b>Same results</b> for 1.7, 1.8, 2.1, 2.2 (a)–(b), 2.3, 3.1, 3.2 (a)–(b) and 3.3 (a)–(b): truth tables, maps, next-state equations, Gray and two's complement tables (the official one adds 8 → 1000 as −8), the s8.6 sum format, −2.5 and 49120, the three single-precision codes. Part 3.3 (c) is given there only as the two step lists, no worked numbers.</li>
+        <li><b>3.2 (c)</b>: the official format of the product is s12.10 (integer bits 5 + 7, fractional bits 6 + 4), followed by aligning it back to the source format, where an out-of-range result can occur. Our s13.10 adds the one integer bit that only the product (−32) · (−128) needs; both counts are in use, so say which one you mean.</li>
+        <li><b>3.2 (d)</b>: the official answer to "more fractional bits" scales <i>both</i> operands inside the fixed 12-bit divider: the dividend up by 2<sup>2</sup> (s3.8) and the divisor down by 2<sup>−2</sup> (s9.2), giving a quotient in s5.6. Our pre-shift of the dividend alone needs a wider dividend register.</li>
+        <li><b>2.2 (c)</b>: the don't-care slide of the official solution writes a 1 into s₀′ for A = 1 in state 00 (it is 0 in the table without don't cares), which lets it group the whole column of state 00 (its S₂S₁ are our s₁s₀) into s₀′ = s̅₁s̅₀ + s₁A. Read with the graph as drawn (00 → 10 on A = 1) that cell is 0, which gives our s̅₁s̅₀A̅ + s₁A; worth asking about in the session.</li>
+      </ul></div>
 
     <h2>Block 1: combinational cells</h2>
     ${task("1.7", "Full adder", `<p>Give the truth table, the Karnaugh maps and the logic functions of a one-bit full adder (sum S and carry C<sub>out</sub> as functions of A, B and C<sub>in</sub>), and rewrite the functions with the intermediate terms propagate P and generate G.</p>
@@ -336,7 +343,7 @@ function exercise2() {
       ${kmap3("s₀′ with don't cares", "s<sub>1</sub>", "s<sub>0</sub>A", [1, 0, 0, 0, 0, 1, "–", "–"], [{ cells: [0], slot: 1 }, { cells: [5, 7], slot: 2 }], "s<sub>0</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>A")}</div>
       ${ans([["s<sub>1</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A + s<sub>0</sub>A̅", "(c): one literal fewer than s̅<sub>1</sub>s̅<sub>0</sub>A + s̅<sub>1</sub>s<sub>0</sub>A̅"], ["s<sub>0</sub>′ = s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>A", "(c): one literal fewer than s̅<sub>1</sub>s̅<sub>0</sub>A̅ + s<sub>1</sub>s̅<sub>0</sub>A"], ["Z = s̅<sub>1</sub> s̅<sub>0</sub>", "two inverters, with or without don't cares"]])}
       <p>The price of the simplification: if the machine ever lands in 11 (power-up without reset, a glitch), the don't-care equations send it to s<sub>1</sub>′ = A̅, s<sub>0</sub>′ = A, so it recovers into 10 or 01 on the next clock rather than into the reset state; it does not lock up, which is the question to ask whenever unused codes are declared don't care. The sheet draws the dotted edges from 11 to 00, 01 and 10, which is exactly this set of possible exits.</p>
-      <p class="muted">If the official solution has s<sub>1</sub> and s<sub>0</sub> swapped (A = 0 → 10 from reset), the graph's labels were meant next to the arrowheads; the structure (a mod-3 up/down counter) and the gate count are the same, only the roles of 01 and 10 change.</p>`, "sheet task")}
+      <p class="muted">The official solution reads the graph the same way (labels next to the source state: 00 → 01 on A = 0, 00 → 10 on A = 1) and has the same tables and equations for (a) and (b).</p>`, "sheet task")}
 
     ${task("2.3", "FSM III: the control unit of a small ALU, from Verilog", `<p>The listing describes a Moore machine with five states IDLE = 000, LOAD = 001, ADD = 010, SUB = 011, STORE = 100, two inputs start_i and addsub_i, four outputs read_o, write_o, mode_o, enable_o, a synchronous next-state register with asynchronous reset into IDLE, a combinational next-state block (case over the state, the default branch goes to IDLE) and a combinational output block. Draw the state diagram and derive the equations for the transitions and outputs.</p>
       ${fsmDiagram("f3", { w: 400, h: 270, states: [{ k: "IDLE", x: 50, y: 70, label: "IDLE 000", reset: true, out: "all 0" }, { k: "LOAD", x: 200, y: 70, label: "LOAD 001", out: "read_o" }, { k: "ADD", x: 330, y: 150, label: "ADD 010", out: "mode, enable" }, { k: "SUB", x: 120, y: 150, label: "SUB 011", out: "enable" }, { k: "STORE", x: 200, y: 230, label: "STORE 100", out: "write_o" }],
@@ -372,7 +379,7 @@ function exercise2() {
       ${fxRow("A + B = −23.609375", A32 + B32, 8, 6)}
       <p>(c) A product carries both scales: 2<sup>−6</sup> · 2<sup>−4</sup> = 2<sup>−10</sup>, so 10 fractional bits, and the integer part grows to 5 + 7 + 1 = 13 bits (the 12 × 12 two's-complement multiplier of lecture 3 delivers 24 bits): Z = A × B in s13.10. A × B = −508.11328125 fits.</p>
       ${fxRow("A × B = −508.11328125", A32 * B32, 13, 10)}
-      <p>(d) An integer divider sees only the codes: 873 / (−596) = −1.46 → −1 (toward zero). The code of the quotient carries the scale 2<sup>−6</sup>/2<sup>−4</sup> = 2<sup>−2</sup>, so the 12-bit result is in s9.2: here −1 · 2<sup>−2</sup> = −0.25, while A/B = −0.366. Two fractional bits are all that survive. To get more, scale the dividend up before dividing: shifting A left by k bits (a wider dividend register or a 12+k-bit divider) gives k extra fractional bits; with k = 8, 873 · 256 / (−596) = −374 → −374 / 2<sup>10</sup> = −0.3652. Shifting the divisor right instead would throw away its low bits and is not an option.</p>
+      <p>(d) An integer divider sees only the codes: 873 / (−596) = −1.46 → −1 (toward zero). The code of the quotient carries the scale 2<sup>−6</sup>/2<sup>−4</sup> = 2<sup>−2</sup>, so the 12-bit result is in s9.2: here −1 · 2<sup>−2</sup> = −0.25, while A/B = −0.366. Two fractional bits are all that survive. To get more, scale the dividend up before dividing: shifting A left by k bits (a wider dividend register or a 12+k-bit divider) gives k extra fractional bits; with k = 8, 873 · 256 / (−596) = −374 → −374 / 2<sup>10</sup> = −0.3652. If the divider width is fixed at 12 bits, the official solution's way is to trade bits on both sides: shift the dividend left by 2 (s3.8, giving up two integer bits) and the divisor right by 2 (s9.2, giving up two fractional bits); the quotient then comes out in s5.6, the format A started in. Both shifts cost range or precision, so they only work when the values leave room for it.</p>
       ${ans([["s7.6 → s8.6", "(b) align to the finer fraction, one more integer bit for the sum"], ["s13.10 · 24 bits", "(c) integer bits add, fractional bits add"], ["s9.2 · 12 bits", "(d) fractional bits subtract; pre-shift the dividend for more"]])}`, "sheet task")}
 
     ${task("3.3", "IEEE 754: half and single precision", `<p>(a) Decode the two 16-bit IEEE 754 words 1100 0001 0000 0000 and 0111 1001 1111 1111 (1 sign bit, 5 exponent bits with bias 15, 10 mantissa bits). (b) Encode 1.0, 0.0 and −5.0 in 32-bit single precision. (c) Using the two values from (a), describe the steps of a floating-point addition and multiplication.</p>
@@ -390,11 +397,293 @@ function exercise2() {
     <ul>
       <li>Draw the three state diagrams and fill in the K-maps by hand once; the explorers only confirm, the board work is the drawing.</li>
       <li>Reread <a href="digital-circuit-design/lecture.html?n=1">lecture 1</a> (K-maps, Moore machines, state coding) for block 2, <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a> (Gray code, two's complement, fixed point, IEEE 754) for block 3, and the floating-point section of <a href="digital-circuit-design/lecture.html?n=4">lecture 4</a> for 3.3 (c).</li>
-      <li>Questions to settle in the session: the arrow-label convention of the graph in 2.2; whether a 12-bit integer divider in 3.2 (d) is meant to take 12-bit operands or deliver a 12-bit quotient; which rounding mode the chair assumes in 3.3 (c).</li>
+      <li>Questions to settle in the session: the arrow-label convention of the graph in 2.2; whether the official don't-care map of 2.2 (c) really means 00 → 11 on A = 1; s12.10 or s13.10 for the product in 3.2 (c); which rounding mode the chair assumes in 3.3 (c).</li>
     </ul>
     <div class="why"><div class="kicker">Context, not on the sheet: what these tasks train</div>
       <p>Blocks 1 and 2 are the written-exam staples of a digital design course: a truth table to a minimal equation, a graph to a transition table to D-flip-flop equations, and the don't-care question. Block 3 is the arithmetic chapter in exam form: format bookkeeping (where does the binary point go, how wide must the adder be) and the IEEE 754 decode/encode with the alignment-and-rounding story. The Verilog task also previews the hardware description languages of the later lectures: the three always blocks are the canonical way to write a Moore machine.</p></div>
-    <p class="muted">Previous exercise: <a href="digital-circuit-design/exercise.html?n=1">exercise 1</a>. Next: <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a>, expected to cover lectures 5 and 6. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=1">1</a>, <a href="digital-circuit-design/lecture.html?n=2">2</a> and <a href="digital-circuit-design/lecture.html?n=4">4</a>.</p>`;
+    <p class="muted">Previous exercise: <a href="digital-circuit-design/exercise.html?n=1">exercise 1</a>. Next: <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a>, the arithmetic-circuits sheet (adders, multipliers, dividers). Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=1">1</a>, <a href="digital-circuit-design/lecture.html?n=2">2</a> and <a href="digital-circuit-design/lecture.html?n=4">4</a>.</p>`;
+}
+// ======================= Exercise 3: arithmetic circuits (sheet in OPAL since 6 Nov; no official solution yet) =======================
+const SUB = i => String(i).split("").map(ch => String.fromCharCode(0x2080 + +ch)).join("");
+
+// Task 3.5: two chained ripple-carry adders versus one carry-save row plus one ripple-carry adder, three 4-bit operands.
+function csaPanel(ox, oy, kind, narrow) {
+  const bw = narrow ? 30 : 38, step = narrow ? 40 : 54, bh = 24, X = i => ox + 24 + (4 - i) * step, cx = i => X(i) + bw / 2;
+  const y1 = oy + 40, y2 = oy + 112, yo = oy + 168;
+  const box = (i, y, t) => `<g class="fa"><rect x="${X(i)}" y="${y}" width="${bw}" height="${bh}" rx="5"/><text x="${cx(i)}" y="${y + 16}" text-anchor="middle">${t}</text></g>`;
+  const w = (d, k = "") => `<path class="w ${k}" d="${d}"/>`;
+  let s = `<text class="lbl" x="${ox + 24}" y="${oy + 12}">${kind === "rca" ? "Two ripple-carry adders" : "Carry-save row + one ripple-carry adder"}</text>`;
+  for (let i = 0; i < 4; i++) s += `<text class="tick" x="${cx(i)}" y="${y1 - 8}" text-anchor="middle">${kind === "rca" ? `a${SUB(i)}b${SUB(i)}` : `a${SUB(i)}b${SUB(i)}c${SUB(i)}`}</text>`;
+  const row2 = kind === "rca" ? ["FA", "FA", "FA", "FA", "HA"] : [null, "HA", "FA", "FA", "HA"];
+  for (let i = 0; i < 4; i++) {
+    if (kind === "rca") {
+      s += w(`M${cx(i)},${y1 + bh} V${y2}`, "s");
+      s += w(i < 3 ? `M${X(i)},${y1 + bh / 2} H${X(i + 1) + bw}` : `M${X(3)},${y1 + bh / 2} H${cx(4)} V${y2}`, "c");
+      s += w(`M${X(i) + bw - 6},${y2 - 18} V${y2}`) + `<text class="tick" x="${X(i) + bw - 2}" y="${y2 - 21}" text-anchor="middle">c${SUB(i)}</text>`;
+    } else {
+      s += w(`M${X(i) + 10},${y1 + bh} V${i === 0 ? yo - 14 : y2}`, "s");
+      s += w(`M${X(i) + 3},${y1 + bh} L${X(i + 1) + bw - 8},${y2}`, "c");
+    }
+  }
+  for (let i = 0; i < 4; i++) s += box(i, y1, "FA");
+  row2.forEach((t, i) => { if (!t) return; s += w(`M${cx(i)},${y2 + bh} V${yo - 14}`);
+    const hasCarry = kind === "rca" ? i < 4 : i >= 1 && i < 4; if (hasCarry) s += w(`M${X(i)},${y2 + bh / 2} H${X(i + 1) + bw}`, "c"); s += box(i, y2, t); });
+  s += w(`M${X(4)},${y2 + bh / 2 + 4} H${X(4) - 12} V${yo - 14}`, "c");
+  for (let i = 0; i <= 4; i++) s += `<text class="tick" x="${kind === "csa" && i === 0 ? X(0) + 10 : cx(i)}" y="${yo}" text-anchor="middle">r${SUB(i)}</text>`;
+  s += `<text class="tick" x="${X(4) - 12}" y="${yo}" text-anchor="middle">r${SUB(5)}</text>`;
+  s += `<text class="note" x="${ox + 24}" y="${yo + 20}">${kind === "rca" ? "8 FA + 1 HA · two carry chains" : "6 FA + 2 HA · one carry chain"}</text>`;
+  return s;
+}
+CHARTS.csa3 = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 410 : 200, o2 = narrow ? [40, 205] : [300, 0];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two structures for adding three 4-bit numbers. Left: two ripple-carry adders in series, each with a horizontal carry chain, 8 full adders and 1 half adder. Right: a row of four independent full adders whose carries go diagonally to the next column, followed by a single ripple-carry adder, 6 full adders and 2 half adders.">${csaPanel(narrow ? 40 : 0, 0, "rca", narrow)}${csaPanel(o2[0], o2[1], "csa", narrow)}</svg>`;
+};
+const CSA3 = { a: 5, b: 12, c: 10 };
+function csa3Out() {
+  const { a, b, c } = CSA3, s1 = a + b, S = a ^ b ^ c, C = ((a & b) | (a & c) | (b & c)) << 1, t = a + b + c;
+  const btn = (k, v) => bits(v, 4).map((bit, i) => `<button type="button" class="bit ${bit ? "on" : ""}" data-op="${k}" data-i="${3 - i}" aria-label="${k} bit ${3 - i}" aria-pressed="${!!bit}">${bit}</button>`).join("");
+  const pad = n => Array(n).fill('<div class="cell blank"></div>').join("");
+  const row = (lbl, v, cls = "") => cellRow(lbl, bits(v, 6), Object.fromEntries([0, 1, 2, 3, 4, 5].map(i => [i, cls])));
+  return `<div class="kmaps"><div><p class="muted">Ripple: (a + b) + c</p><div class="agrid six"><div></div>${[32, 16, 8, 4, 2, 1].map(w => `<div class="h">${w}</div>`).join("")}
+        <div class="rl">a = ${a}</div>${pad(2)}${btn("a", a)}<div class="rl">b = ${b}</div>${pad(2)}${btn("b", b)}
+        ${row(`a + b = ${s1}`, s1, "t1")}<div class="rl">c = ${c}</div>${pad(2)}${btn("c", c)}${row(`sum = ${t}`, t)}</div></div>
+      <div><p class="muted">Carry-save: a + b + c → s + carry</p><div class="agrid six"><div></div>${[32, 16, 8, 4, 2, 1].map(w => `<div class="h">${w}</div>`).join("")}
+        ${row(`a = ${a}`, a)}${row(`b = ${b}`, b)}${row(`c = ${c}`, c)}${row(`s = ${S}`, S, "t1")}${row(`carry = ${C}`, C, "t2")}${row(`s + carry = ${S + C}`, S + C)}</div></div></div>
+    <dl class="ro"><dt>Ripple</dt><dd>two carry-propagating additions: ${a} + ${b} = ${s1}, then ${s1} + ${c} = ${t}</dd>
+      <dt>Carry-save</dt><dd>one full-adder delay to ${S} + ${C} (each column alone), then one carry-propagating addition: ${S + C} ${S + C === t ? flag("ok", "same sum") : flag("bad", "mismatch")}</dd></dl>`;
+}
+function initCsa3(body) { const render = () => { body.innerHTML = csa3Out(); }; render(); body.addEventListener("click", e => { const b = e.target.closest("button.bit"); if (!b) return; CSA3[b.dataset.op] ^= 1 << +b.dataset.i; render(); }); }
+
+// Task 3.6: a 4-bit adder/subtractor with control bit S (B xor S, carry-in S).
+const AS = { a: 5, b: 7, s: 1 };
+function addsubOut() {
+  const { a, b, s } = AS, bx = s ? (~b & 15) : b, cin = s; let c = cin; const car = [];
+  for (let i = 0; i < 4; i++) { car[i] = c; const t = (a >> i & 1) + (bx >> i & 1) + c; c = t >> 1; }
+  const c4 = c, r = (a + bx + cin) & 15, tc = v => v >= 8 ? v - 16 : v;
+  const v = (((a >> 3) & 1) === ((bx >> 3) & 1)) && (((r >> 3) & 1) !== ((a >> 3) & 1)) ? 1 : 0;
+  const btn = (k, val) => bits(val, 4).map((bit, i) => `<button type="button" class="bit ${bit ? "on" : ""}" data-op="${k}" data-i="${3 - i}" aria-label="${k} bit ${3 - i}" aria-pressed="${!!bit}">${bit}</button>`).join("");
+  const carries = [c4, car[3], car[2], car[1], car[0]];
+  return `<div class="presets" role="group" aria-label="Control bit S">${[["S = 0: A + B", 0], ["S = 1: A − B", 1]].map(([t, k]) => `<button type="button" class="preset" data-s="${k}" aria-pressed="${s === k}">${t}</button>`).join("")}</div>
+    <div class="agrid"><div></div>${["c<sub>4</sub>", "2<sup>3</sup>", "2<sup>2</sup>", "2<sup>1</sup>", "2<sup>0</sup>"].map(h => `<div class="h">${h}</div>`).join("")}
+      <div class="rl">A = ${a} (${tc(a)})</div><div class="cell blank"></div>${btn("a", a)}
+      <div class="rl">B = ${b} (${tc(b)})</div><div class="cell blank"></div>${btn("b", b)}
+      ${cellRow(`B ⊕ S = ${bx}`, [null, ...bits(bx, 4)].map(x => x === null ? "" : x), { 1: s ? "t2" : "", 2: s ? "t2" : "", 3: s ? "t2" : "", 4: s ? "t2" : "" })}
+      ${cellRow(`carries (c<sub>0</sub> = S)`, carries, { 0: "t4", 1: "t4", 2: "t4", 3: "t4", 4: "t4" })}
+      ${cellRow(`result = ${r} (${tc(r)})`, [null, ...bits(r, 4)].map(x => x === null ? "" : x), { 1: "t1", 2: "t1", 3: "t1", 4: "t1" })}</div>
+    <dl class="ro"><dt>Unsigned</dt><dd>${s ? `${a} − ${b}: carry-out c<sub>4</sub> = ${c4} ${c4 ? flag("ok", "no borrow, result valid") : flag("bad", `borrow: ${a} < ${b}, result is ${a} − ${b} + 16`)}` : `${a} + ${b} = ${a + b}: c<sub>4</sub> = ${c4} ${c4 ? flag("bad", "carry out, exceeds 15") : flag("ok", "fits in 4 bits")}`}</dd>
+      <dt>Signed</dt><dd>${tc(a)} ${s ? "−" : "+"} ${tc(b)} = ${s ? tc(a) - tc(b) : tc(a) + tc(b)} → ${tc(r)} ${v ? flag("bad", "overflow: c₃ ≠ c₄") : flag("ok", "no overflow, c₃ = c₄")}</dd></dl>`;
+}
+function initAddsub(body) { const render = () => { body.innerHTML = addsubOut(); }; render();
+  body.addEventListener("click", e => { const b = e.target.closest("button.bit"); if (b) { AS[b.dataset.op] ^= 1 << +b.dataset.i; return render(); } const p = e.target.closest("[data-s]"); if (p) { AS.s = +p.dataset.s; render(); } }); }
+
+// Task 3.7: incrementer and decrementer as half-adder chains.
+const ID = { a: 11 };
+function incdecOut() {
+  const a = ID.a, inc = (a + 1) & 15, dec = (a + 15) & 15, ab = bits(a, 4);
+  const chain = (f) => { const out = []; let c = 1; for (let i = 0; i < 4; i++) { out[i] = c; c = f(a >> i & 1) & c; } out[4] = c; return [out[4], out[3], out[2], out[1], out[0]]; };
+  const cI = chain(x => x), cD = chain(x => 1 - x);
+  const flip = (r) => Object.fromEntries(bits(a ^ r, 4).map((f, i) => [i + 1, f ? "t2" : ""]));
+  return `<div class="ctl"><label>A <input type="range" min="0" max="15" value="${a}" data-k="a"> <output>${a}</output></label></div>
+    <div class="agrid"><div></div>${["out", "2<sup>3</sup>", "2<sup>2</sup>", "2<sup>1</sup>", "2<sup>0</sup>"].map(h => `<div class="h">${h}</div>`).join("")}
+      ${cellRow(`A = ${bin(a, 4)}`, ["", ...ab])}
+      ${cellRow("carry (+1)", cI, { 0: "t4", 1: "t4", 2: "t4", 3: "t4", 4: "t4" })}
+      ${cellRow(`A + 1 = ${inc}`, [cI[0], ...bits(inc, 4)], flip(inc))}
+      ${cellRow("borrow (−1)", cD, { 0: "t3", 1: "t3", 2: "t3", 3: "t3", 4: "t3" })}
+      ${cellRow(`A − 1 = ${dec}`, [cD[0], ...bits(dec, 4)], flip(dec))}</div>
+    <dl class="ro"><dt>Increment</dt><dd>the carry runs through the trailing ones of A and stops at the first 0; ${bits(a ^ inc, 4).filter(Boolean).length} bit${bits(a ^ inc, 4).filter(Boolean).length > 1 ? "s" : ""} flip (orange)${a === 15 ? `; 15 + 1 wraps to 0 with carry-out 1` : ""}</dd>
+      <dt>Decrement</dt><dd>the borrow runs through the trailing zeros and stops at the first 1; ${bits(a ^ dec, 4).filter(Boolean).length} bit${bits(a ^ dec, 4).filter(Boolean).length > 1 ? "s" : ""} flip${a === 0 ? "; 0 − 1 wraps to 15 with a borrow out" : ""}</dd></dl>`;
+}
+function initIncdec(body) { const render = () => { body.innerHTML = incdecOut(); body.querySelector("[data-k]").addEventListener("input", e => { ID.a = +e.target.value; render(); }); }; render(); }
+
+// Task 3.8: Dadda reduction of the 5 × 5 bit-product matrix, without and with a 10-bit accumulate operand.
+function daddaStages(h0) {
+  let h = h0.slice(); const seq = [2]; while (seq[seq.length - 1] < Math.max(...h)) seq.push(Math.floor(seq[seq.length - 1] * 1.5));
+  const out = [{ d: null, fa: 0, ha: 0, h: h.slice() }];
+  for (const d of seq.slice(0, -1).reverse()) {
+    if (Math.max(...h) <= d) continue;
+    const nh = Array(h.length + 1).fill(0); let carry = 0, fa = 0, ha = 0;
+    for (let i = 0; i < h.length; i++) { let cur = h[i] + carry; carry = 0; while (cur > d) { if (cur - d === 1) { cur -= 1; ha++; } else { cur -= 2; fa++; } carry++; } nh[i] = cur; }
+    nh[h.length] = carry; while (nh.length && nh[nh.length - 1] === 0) nh.pop();
+    h = nh; out.push({ d, fa, ha, h: h.slice() });
+  }
+  return out;
+}
+const MAT5 = Array.from({ length: 9 }, (_, i) => Math.min(i + 1, 9 - i));
+const MAC5 = Array.from({ length: 10 }, (_, i) => (MAT5[i] || 0) + 1);
+const DD = { mac: 0 };
+function dadda5Out() {
+  const st = daddaStages(DD.mac ? MAC5 : MAT5), cols = 11, cw = 26, W = 40 + cols * cw, bandH = k => Math.max(...st[k].h) * 12 + 22;
+  let y = 6, svg = "";
+  st.forEach((s, k) => {
+    const hh = bandH(k);
+    svg += `<text class="note" x="4" y="${y + 12}">${k === 0 ? "start" : `→ ${s.d}`}</text>`;
+    s.h.forEach((n, i) => { const x = 40 + (cols - 1 - i) * cw + cw / 2;
+      for (let j = 0; j < n; j++) { const isC = k === 0 && DD.mac && j === n - 1; svg += `<circle class="${isC ? "f2" : k === st.length - 1 ? "f3" : "f1"}" cx="${x}" cy="${y + 10 + j * 12}" r="4.2"/>`; } });
+    y += hh;
+  });
+  svg += Array.from({ length: cols }, (_, i) => `<text class="note" x="${40 + (cols - 1 - i) * cw + cw / 2}" y="${y + 6}" text-anchor="middle">${i}</text>`).join("");
+  const fa = st.reduce((t, s) => t + s.fa, 0), ha = st.reduce((t, s) => t + s.ha, 0), last = st[st.length - 1].h, cpa = last.filter(n => n === 2).length;
+  return `<div class="presets" role="group" aria-label="Which operation">${[["(a) P = A · B", 0], ["(b) P = A · B + C", 1]].map(([t, k]) => `<button type="button" class="preset" data-mac="${k}" aria-pressed="${DD.mac === k}">${t}</button>`).join("")}</div>
+    <svg viewBox="0 0 ${W} ${y + 12}" style="max-width:${W + 20}px" role="img" aria-label="Dot diagram of the ${DD.mac ? "5 by 5 multiplier with a 10-bit accumulate row" : "5 by 5 multiplier"}: column heights ${st[0].h.slice().reverse().join(", ")} reduced in ${st.length - 1} Dadda stages to at most two bits per column">${svg}</svg>
+    <dl class="ro"><dt>Column heights</dt><dd>${st[0].h.slice().reverse().join(" ")} (weight 2<sup>${st[0].h.length - 1}</sup> … 2<sup>0</sup>), tallest ${Math.max(...st[0].h)}${DD.mac ? ", the C bits in orange" : ""}</dd>
+      <dt>Stages</dt><dd>${st.length - 1}: ${st.slice(1).map(s => `to ${s.d} (${s.fa} FA, ${s.ha} HA)`).join(", ")}</dd>
+      <dt>Total</dt><dd>${fa} full adders + ${ha} half adders, then a ${cpa}-bit carry-propagate adder (green: two bits left per column); result ${DD.mac ? 11 : 10} bits</dd></dl>`;
+}
+function initDadda5(body) { const render = () => { body.innerHTML = dadda5Out(); }; render(); body.addEventListener("click", e => { const p = e.target.closest("[data-mac]"); if (p) { DD.mac = +p.dataset.mac; render(); } }); }
+
+// Task 3.9: restoring division, the sheet's circuit redrawn, and an 8-cycle explorer.
+CHARTS.divhw = narrow => {
+  const W = 470, H = 254, blk = (x, y, w, h, t, sub = "") => `<g class="fa"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><text x="${x + w / 2}" y="${y + h / 2 + (sub ? -2 : 4)}" text-anchor="middle">${t}</text>${sub ? `<text class="tick" x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle">${sub}</text>` : ""}</g>`;
+  const w = (d, k = "") => `<path class="w ${k}" d="${d}"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Block diagram of the restoring divider: a multiplexer loads x or the fed-back remainder into the remainder register; a subtractor computes r minus 2 to the n times d; its sign bit selects through a second multiplexer between the difference and the old remainder, and the inverted sign is shifted into the quotient register.">
+    ${w("M8,52 H40")}<text class="tick" x="10" y="44">x</text>
+    ${w("M144,52 H168", "s")}${w("M258,48 H337 V96", "s")}${w("M258,62 H270 V178 H296", "s")}
+    ${w("M337,140 V160", "s")}${w("M392,118 H414 V178 H380", "c")}<text class="tick" x="420" y="150">sign</text>
+    ${w("M338,196 V214 H92 V72", "s")}<text class="tick" x="100" y="208">≪ 1 (shift left), back to the register</text>
+    ${w("M414,178 V197", "c")}${w("M414,211 V226", "c")}
+    ${blk(40, 32, 104, 40, "MUX", "load x / feed back")}
+    ${blk(168, 32, 90, 40, "register r", "n + 1 bits")}
+    ${blk(282, 96, 110, 44, "r − 2ⁿ·d", "subtractor")}
+    ${blk(296, 160, 84, 36, "MUX", "sign selects")}
+    <g class="fa"><circle cx="414" cy="204" r="7"/><text x="414" y="208" text-anchor="middle">¬</text></g>
+    ${blk(350, 226, 112, 24, "q shift register")}
+  </svg>`;
+};
+const RD = { x: 173, d: 8 };
+function rdivOut() {
+  const { x, d } = RD, n = 8; let R = 0, q = 0; const rows = [];
+  for (let i = n - 1; i >= 0; i--) { const xb = x >> i & 1, Rs = 2 * R + xb, diff = Rs - d, ok = diff >= 0; R = ok ? diff : Rs; q = q << 1 | (ok ? 1 : 0);
+    rows.push([n - i, `${bin(Rs, 5)} = ${Rs}`, `${Rs} − ${d} = ${diff}`, ok ? flag("ok", "keep") : flag("bad", "restore"), ok ? 1 : 0, `${bin(R, 5)} = ${R}`]); }
+  return `<div class="presets" role="group" aria-label="Presets">${[[173, 8], [176, 13], [255, 15], [100, 7]].map(([a, b]) => `<button type="button" class="preset" data-x="${a}" data-d="${b}" aria-pressed="${x === a && d === b}">${a} / ${b}</button>`).join("")}</div>
+    <div class="ctl"><label>x <input type="range" min="0" max="255" value="${x}" data-k="x"> <output>${x} = ${bin(x, 8)}</output></label>
+      <label>d <input type="range" min="1" max="15" value="${d}" data-k="d"> <output>${d} = ${bin(d, 4)}</output></label></div>
+    <div class="tt-wrap"><table class="tt steps"><tr><th>Cycle</th><th>2r + next bit of x</th><th>minus d</th><th>Sign</th><th>q bit</th><th>r after cycle</th></tr>
+      ${rows.map(r => `<tr>${r.map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Result</dt><dd>q = ${bin(q, 8)} = ${q}, remainder ${R}: ${x} = ${q} · ${d} + ${R} ${q * d + R === x && R < d ? flag("ok", "x = q·d + rem") : flag("bad", "check")}</dd>
+      <dt>Cost</dt><dd>8 cycles, one subtraction each, whatever the operands; the remainder register never needs more than 5 bits here because r &lt; 2d</dd></dl>`;
+}
+function initRdiv(body) { const render = () => { body.innerHTML = rdivOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { RD[e.target.dataset.k] = +e.target.value; render(); })); }; render();
+  body.addEventListener("click", e => { const p = e.target.closest("[data-x]"); if (p) { RD.x = +p.dataset.x; RD.d = +p.dataset.d; render(); } }); }
+
+// Task 3.10: Newton-Raphson division with the lecture's linear start X0 = 48/17 − 32/17·d on the scaled divisor.
+function nrRun(a, dv, iters = 5) {
+  let k = 0; while (dv / 2 ** k >= 1) k++; while (dv / 2 ** k < 0.5) k--;
+  const d = dv / 2 ** k, as = a / 2 ** k; let X = 48 / 17 - 32 / 17 * d; const rows = [];
+  for (let i = 0; i <= iters; i++) { const e = 1 - d * X; rows.push({ i, X, dX: d * X, e, q: as * X, bits: e === 0 ? 53 : Math.min(53, -Math.log2(Math.abs(e))) }); X = X * (2 - d * X); }
+  return { k, d, as, rows };
+}
+const NR176 = nrRun(176, 83, 3);
+const fe = v => v.toExponential(2).replace(/e(-?\d+)/, "·10<sup>$1</sup>").replace("-", "−");
+CHARTS.nr176 = narrow => {
+  const W = narrow ? 340 : 600, H = 220, L = 34, R = 14, T = 18, B = 30, PW = W - L - R, PH = H - T - B, rows = NR176.rows;
+  const band = PW / rows.length, bw = Math.min(40, band * 0.5), y = v => T + PH - v / 60 * PH;
+  const grid = [0, 20, 40, 60].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const refs = [[24, "float32: 24 bits"], [53, "double: 53 bits"]].map(([v, t]) => `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke-dasharray="3 3"/><text class="note" x="${L + 6}" y="${y(v) - 4}">${t}</text>`).join("");
+  const bars = rows.map((r, k) => { const cx = L + band * (k + 0.5);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>X<sub>${r.i}</sub> = ${r.X.toFixed(10)}</b>ε = ${fe(r.e)} · ${r.bits.toFixed(1)} correct bits<br>q = 1.375 · X = ${r.q.toFixed(10)}`)}"><rect class="hit" x="${cx - band / 2}" y="${T}" width="${band}" height="${PH}"/>
+      <path class="bar s1" d="${barPath(cx - bw / 2, bw, y(r.bits), y(0))}"/><text class="val" x="${cx}" y="${y(r.bits) - 6}" text-anchor="middle">${r.bits.toFixed(1)}</text><text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">X${SUB(r.i)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Columns: correct bits of the reciprocal of the scaled divisor 0.6484375 after 0 to 3 Newton-Raphson steps: 4.7, 9.3, 18.7 and 37.3 bits, doubling every step; float32 precision is passed after step 3">${grid}${refs}${bars}</svg>`;
+};
+const NRX = { a: 176, d: 83 };
+function nrxOut() {
+  const { k, d, as, rows } = nrRun(NRX.a, NRX.d), exact = NRX.a / NRX.d;
+  return `<div class="presets" role="group" aria-label="Presets">${[[176, 83], [173, 8], [1000, 7], [1, 3]].map(([a, b]) => `<button type="button" class="preset" data-a="${a}" data-dv="${b}" aria-pressed="${NRX.a === a && NRX.d === b}">${a} / ${b}</button>`).join("")}</div>
+    <div class="ctl"><label>a <input type="range" min="1" max="1000" value="${NRX.a}" data-k="a"> <output>${NRX.a}</output></label>
+      <label>d <input type="range" min="1" max="255" value="${NRX.d}" data-k="d"> <output>${NRX.d}</output></label></div>
+    <p class="muted" style="margin:0 0 6px">Normalise: d′ = ${NRX.d} / 2<sup>${k}</sup> = ${d}, a′ = ${NRX.a} / 2<sup>${k}</sup> = ${as}; start X<sub>0</sub> = 48/17 − 32/17 · d′.</p>
+    <div class="tt-wrap"><table class="tt steps"><tr><th>i</th><th>X<sub>i</sub></th><th>d′·X<sub>i</sub></th><th>ε<sub>i</sub> = 1 − d′X<sub>i</sub></th><th>q<sub>i</sub> = a′·X<sub>i</sub></th></tr>
+      ${rows.slice(0, 5).map(r => `<tr><td>${r.i}</td><td>${r.X.toFixed(12)}</td><td>${r.dX.toFixed(12)}</td><td>${Math.abs(r.e) < 1e-15 ? "&lt; 10<sup>−15</sup>" : r.e.toExponential(2).replace(/e(-?\d+)/, "·10<sup>$1</sup>")}</td><td>${r.q.toFixed(12)}</td></tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Exact</dt><dd>${NRX.a} / ${NRX.d} = ${exact.toFixed(12)}</dd></dl>`;
+}
+function initNrx(body) { const render = () => { body.innerHTML = nrxOut(); body.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", e => { NRX[e.target.dataset.k] = +e.target.value; render(); })); }; render();
+  body.addEventListener("click", e => { const p = e.target.closest("[data-a]"); if (p) { NRX.a = +p.dataset.a; NRX.d = +p.dataset.dv; render(); } }); }
+Object.assign(LABS, { csa3: initCsa3, addsub: initAddsub, incdec: initIncdec, dadda5: initDadda5, rdiv: initRdiv, nrx: initNrx });
+
+function exercise3() {
+  const r = NR176.rows;
+  return `${head(x)}
+    <p class="lead">Sheet 3 is the arithmetic-circuits sheet: how to add three numbers without two carry chains, how one adder becomes a subtractor and an incrementer, how far a multiplier's partial-product tree can be squeezed, and the two division algorithms of <a href="digital-circuit-design/lecture.html?n=3">lecture 3</a>, restoring and Newton-Raphson. The sheet opens with task 3.3 again, the floating-point task that closed sheet 2, so it is only recapped here. The chair has not posted a solution yet: <b>every solution below is our own</b>, with every number checked by the explorers on this page.</p>
+    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (8 pages) in the OPAL exercise folder since 6 Nov in English, listed for the Wednesday group on 11 Nov; the German version is listed for this group under 18 Nov (Buß- und Bettag, the Thursday group meets on 19 Nov). Tasks 3.3 and 3.5 to 3.10; there is no 3.4. The cover page still carries last year's date.</p>
+      <p style="margin:0"><b>Session.</b> Thursday 19 Nov, 2nd DS, ${esc(exe.room)}, German group. Material: lecture 2 (adders, subtraction), lecture 3 (carry-save, multipliers, division) and the ALU part of lecture 4.</p></div>
+
+    ${task("3.3", "Floating-point format (repeated from sheet 2)", `<p>The same three parts as the last task of sheet 2: decode two IEEE 754 half-precision words, encode 1.0, 0.0 and −5.0 in single precision, and describe the steps of a floating-point addition and multiplication with the two decoded values.</p>`,
+      `<p>Fully worked on the <a href="digital-circuit-design/exercise.html?n=2#t3.3">exercise 2 page, task 3.3</a>, with the bit fields drawn. The chair's solution for sheet 2 (in OPAL since 6 Nov) has the same values and lists part (c) as two short recipes, which is the level of detail to expect in the session: <b>multiplication</b> XORs the signs, multiplies the normalised mantissas 1 + m and adds the exponents (minus the bias); <b>addition</b> shifts the mantissa of the smaller operand until both exponents agree, adds or subtracts, then renormalises to the form 1 + m.</p>
+      ${ans([["−2.5", "1100 0001 0000 0000"], ["49120", "0111 1001 1111 1111"], ["0x3F800000 · 0 · 0xC0A00000", "1.0, 0.0 and −5.0 in single precision"]])}`, "repeated task")}
+
+    <h2>Adding and subtracting</h2>
+    ${task("3.5", "Carry-save addition", `<p>Show the difference between adding three 4-bit numbers with several carry-ripple adders and with the carry-save principle.</p>
+      ${chart("csa3", leg([[1, "sum bits"], [2, "carry bits"]]))}
+        <figcaption>Our drawing of both structures for operands a, b, c. Left: the second adder has to wait for the first one's sum bits, and both have a horizontal carry chain. Right: the four full adders of the first row do not talk to each other; each produces a sum bit in its own column and a carry one column to the left, and only the final adder propagates carries.</figcaption>
+      </figure>`,
+      `<p><b>Carry-ripple:</b> add a + b in a 4-bit ripple-carry adder (5-bit result), then add c in a second one. Every column of the second adder depends on the first adder's sum and on its own neighbour's carry, so there are two carry chains in series. Cost: 8 full adders + 1 half adder; the critical path is about n + 1 = 5 full-adder delays, because the second chain can start while the first is still rippling (n + m − 2 for m operands of n bits, lecture 3's chart).</p>
+      <p><b>Carry-save:</b> one row of four full adders takes the three bits of each column at once (lecture 3, slides 4–5). Its outputs are two numbers: the sum word s = a ⊕ b ⊕ c and the carry word, the majority of each column shifted one place left. That takes <b>one</b> full-adder delay whatever the word width, because no carry moves sideways. One ordinary adder then computes s + carry. Cost: 4 FA in the carry-save row, 2 FA + 2 HA in the final adder (bit 0 of s needs no adder at all); critical path again about 5 full-adder delays.</p>
+      ${lab("csa3", "both ways side by side")}
+      <div class="ex"><div class="kicker">Worked example: 5 + 12 + 10</div>
+        <p>a = 0101, b = 1100, c = 1010. Counting the ones per column: bits 3 and 2 hold two ones each, bits 1 and 0 one each. Sum word s = 0011 = 3 (odd columns), carry word = 1100 shifted left = 11000 = 24 (columns with two or more ones). 3 + 24 = 27 = 5 + 12 + 10. The ripple version gets 5 + 12 = 17 first and then 17 + 10 = 27.</p></div>
+      ${ans([["1 FA delay", "for the carry-save row, independent of the width n"], ["1 carry chain", "instead of m − 1 for m operands"], ["n + m − 2 → stages + 1 CPA", "ripple chain versus carry-save: the gain grows with m"]])}
+      <p>For three 4-bit operands the two delays are about equal; the point of carry-save is what happens with more operands. Every further operand adds one carry-save row (one full-adder delay, no carry chain), and a tree of such rows reduces m operands to two in about log<sub>1.5</sub>(m/2) stages. Only one carry-propagate adder remains, so it is worth making that one fast (lookahead). This is exactly the multiplier situation of task 3.8 and the accumulator case of lecture 3, slide 5, where the running sum stays in carry-save form for many cycles.</p>`, "sheet task")}
+
+    ${task("3.6", "Subtractor", `<p>Give the logic of an N-bit subtractor built from an adder, and modify it so that a control bit S switches between subtraction and addition.</p>`,
+      `<p>In two's complement, −B = B̅ + 1 (lecture 2, slides 9–10), so A − B = A + B̅ + 1. The subtractor is an ordinary N-bit adder whose B inputs pass through inverters and whose carry-in c<sub>0</sub> is tied to 1: the "+1" costs no extra adder, it rides in on the carry input of the lowest full adder.</p>
+      <p>For the switchable version, replace each inverter by an XOR gate with S: B<sub>i</sub> ⊕ S is B<sub>i</sub> for S = 0 and B̅<sub>i</sub> for S = 1, and connect S to c<sub>0</sub> as well. S = 0 gives A + B + 0, S = 1 gives A + B̅ + 1 = A − B. This is the adder/subtractor inside the ALU of lecture 4 (opcodes 000 and 001).</p>
+      <div class="formula">Y = A + (B ⊕ S) + S &nbsp;&nbsp; with &nbsp; B ⊕ S = (B<sub>N−1</sub> ⊕ S, …, B<sub>0</sub> ⊕ S), &nbsp; c<sub>0</sub> = S</div>
+      ${lab("addsub", "a 4-bit adder/subtractor")}
+      <div class="ex"><div class="kicker">Worked example: 5 − 7 in 4 bits</div>
+        <p>S = 1: B = 0111 becomes 1000, c<sub>0</sub> = 1. 0101 + 1000 + 1 = 1110. Read as two's complement that is −2, correct. The carry-out c<sub>4</sub> is 0: for unsigned numbers a missing carry in subtraction means a borrow (5 &lt; 7), which is how a processor sets its borrow flag. Signed overflow is c<sub>3</sub> ⊕ c<sub>4</sub> (lecture 2, slide 12); here both are 0.</p></div>
+      ${ans([["A + B̅ + 1", "subtraction on an adder: invert B, carry-in 1"], ["N XOR gates", "B<sub>i</sub> ⊕ S, plus c<sub>0</sub> = S"], ["V = c<sub>N−1</sub> ⊕ c<sub>N</sub>", "overflow flag for signed operands, as for addition"]])}`, "sheet task")}
+
+    ${task("3.7", "Incrementer and decrementer", `<p>Give the logic circuits of an incrementer (A + 1) and a decrementer (A − 1).</p>`,
+      `<p><b>Incrementer.</b> Adding the constant 1 is an adder with B = 0 and c<sub>0</sub> = 1; with one input fixed at 0 each full adder shrinks to a half adder: s<sub>i</sub> = a<sub>i</sub> ⊕ c<sub>i</sub>, c<sub>i+1</sub> = a<sub>i</sub> · c<sub>i</sub>, c<sub>0</sub> = 1. Unrolled: s<sub>0</sub> = a̅<sub>0</sub> and s<sub>i</sub> = a<sub>i</sub> ⊕ (a<sub>0</sub> a<sub>1</sub> … a<sub>i−1</sub>): a bit flips exactly when all bits below it are 1.</p>
+      <p><b>Decrementer.</b> A − 1 = A + 1111…1 (adding −1), or directly with a borrow chain: s<sub>i</sub> = a<sub>i</sub> ⊕ b<sub>i</sub>, b<sub>i+1</sub> = a̅<sub>i</sub> · b<sub>i</sub>, b<sub>0</sub> = 1. A bit flips exactly when all bits below it are 0. The decrementer is the incrementer with the AND chain fed by inverted inputs.</p>
+      <div class="formula">A + 1: &nbsp;s<sub>i</sub> = a<sub>i</sub> ⊕ c<sub>i</sub>, &nbsp;c<sub>i+1</sub> = a<sub>i</sub>c<sub>i</sub>, &nbsp;c<sub>0</sub> = 1 &nbsp;&nbsp;&nbsp; A − 1: &nbsp;s<sub>i</sub> = a<sub>i</sub> ⊕ b<sub>i</sub>, &nbsp;b<sub>i+1</sub> = a̅<sub>i</sub>b<sub>i</sub>, &nbsp;b<sub>0</sub> = 1</div>
+      ${lab("incdec", "increment and decrement, bit by bit")}
+      <p>Both directions in one circuit: with a control bit D (0 = up, 1 = down), c<sub>i+1</sub> = (a<sub>i</sub> ⊕ D) · c<sub>i</sub> and s<sub>i</sub> = a<sub>i</sub> ⊕ c<sub>i</sub>, which is an up/down counter's next-state logic. The chain of ANDs is a ripple path of n gates; for wide counters the prefix products a<sub>0</sub>…a<sub>i−1</sub> are computed with a tree instead, the same idea as carry lookahead with every generate signal zero.</p>
+      ${ans([["n half adders", "per direction: n XOR + n AND, no full adders"], ["s<sub>i</sub> = a<sub>i</sub> ⊕ a<sub>0</sub>…a<sub>i−1</sub>", "incrementer: flip where all lower bits are 1"], ["s<sub>i</sub> = a<sub>i</sub> ⊕ a̅<sub>0</sub>…a̅<sub>i−1</sub>", "decrementer: flip where all lower bits are 0"]])}`, "sheet task")}
+
+    <h2>Multiplying and dividing</h2>
+    ${task("3.8", "Multiplication: reducing the tree", `<p>Investigate how the tree structure can be reduced for (a) a multiplier with 5-bit operands, P = A · B, and (b) a multiplier-accumulator with 5-bit operands A, B and a 10-bit operand C, P = A · B + C.</p>`,
+      `<p>The 25 bit products a<sub>i</sub>b<sub>j</sub> form a matrix whose columns (weights 2<sup>0</sup> to 2<sup>8</sup>) hold 1, 2, 3, 4, 5, 4, 3, 2, 1 bits. A naive array adds the five rows one after the other with four adders; the tree approach of lecture 3 treats the matrix as a multi-operand addition and reduces the columns with carry-save adders until two rows remain, which one carry-propagate adder sums.</p>
+      <p><b>(a) Dadda reduction</b> (lecture 3, slides 9–12). Dadda's height limits are 2, 3, 4, 6, 9, …; the tallest column has 5 bits, so three stages with targets 4, 3, 2 are needed. Each stage reduces only as much as the next limit requires (half adders only where one bit too many remains). For 5 × 5 that costs 0 FA + 2 HA, then 3 FA + 1 HA, then 5 FA + 1 HA: <b>8 full adders and 4 half adders</b>, followed by an 8-bit carry-propagate adder. The general count for an n × n Dadda tree is n² − 4n + 3 full adders and n − 1 half adders (6 × 6 gives the 15 + 5 of slide 11).</p>
+      <p><b>(b) Accumulate inside the tree.</b> C is not added afterwards with an extra adder: its ten bits are simply one more row of the matrix, one bit in each of the columns 2<sup>0</sup> to 2<sup>9</sup>. The column heights become 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, the tallest is 6, and 6 is still within the three-stage limit: <b>no additional stage</b>, only more adders (15 FA + 5 HA) and a 10-bit final adder. The result needs 11 bits (31 · 31 + 1023 = 1984 &lt; 2<sup>11</sup>).</p>
+      ${lab("dadda5", "Dadda reduction of the 5 × 5 matrix")}
+      ${ans([["3 stages", "both (a) and (b): Dadda limits 4, 3, 2"], ["8 FA + 4 HA", "(a), then an 8-bit CPA; result 10 bits"], ["15 FA + 5 HA", "(b), then a 10-bit CPA; result 11 bits, no extra delay for + C"]])}
+      <div class="why"><div class="kicker">Context, not on the sheet: other ways to shrink the tree</div>
+        <p>Wallace's scheme reduces as early as possible and uses more half adders for the same three stages (lecture 3, slide 8). Booth recoding (radix 4) cuts the number of rows itself: B is recoded into digits −2 … 2, so a 5-bit multiplier needs 3 partial products instead of 5 and the tallest column drops accordingly; in wide multipliers this halves the tree. And in an accumulating loop, P can stay in carry-save form between iterations, so the final adder is only paid once at the end, which is what multiply-accumulate units in DSPs and AI accelerators do (lecture 14).</p></div>`, "sheet task")}
+
+    ${task("3.9", "Division: restoring division", `<p>Show the conventional (restoring) division first with a decimal example, q = a / d with a = 173 and d = 8. What is special about binary division with this method? Explain how the division circuit of the lecture works.</p>
+      ${chart("divhw", leg([[1, "remainder path"], [2, "sign / select"]]))}
+        <figcaption>The sheet's circuit (lecture 3, slide 23) redrawn as blocks. One clock cycle per quotient bit: shift, subtract, let the sign decide.</figcaption>
+      </figure>`,
+      `<p><b>Decimal.</b> Long division brings down one digit at a time and asks how often 8 fits. Restoring division answers that question by subtracting until the remainder turns negative and then adding the last subtraction back ("restoring"); the number of successful subtractions is the quotient digit.</p>
+      ${tt1(["Step", "partial remainder", "subtractions of 8", "restore", "q digit", "remainder"], [["1", "1", "1 − 8 &lt; 0", "+8 → 1", 0, "1"], ["2", "17", "17 → 9 → 1 → −7", "+8 → 1", 2, "1"], ["3", "13", "13 → 5 → −3", "+8 → 5", 1, "5"]], 0)}
+      <p>173 = 21 · 8 + 5. In decimal each digit can need up to nine subtractions plus the restoring addition, and the hardware would have to try or precompute multiples of d.</p>
+      <p><b>Binary.</b> Every quotient digit is 0 or 1, so each step is <b>one</b> subtraction and one decision: if 2r + next bit − d ≥ 0, keep the difference and write 1, otherwise keep the old value and write 0. No multiples of the divisor, no digit estimation; the sign bit of the subtractor <i>is</i> the (inverted) quotient bit. With the multiplexer the "restore" is not even an addition: the old value is simply not overwritten (lecture 3, slide 24).</p>
+      ${lab("rdiv", "restoring division, 8 cycles")}
+      <p><b>The circuit.</b> At the start the input multiplexer loads x into the remainder register (n + 1 bits, the divisor aligned at 2<sup>n</sup>·d as in the lecture, equivalently the dividend shifted in bit by bit as in the table above). Each clock: the subtractor forms r − 2<sup>n</sup>·d; its sign bit drives the second multiplexer, which writes back the difference (sign 0, it fitted) or the unchanged r (sign 1, restore); the inverted sign is shifted into the q register; the value written back is shifted left by one. After n cycles q holds the quotient and the upper part of r the remainder.</p>
+      ${ans([["21 remainder 5", "173 / 8, in decimal and in binary 10101101 / 1000 = 10101 rem 101"], ["1 subtraction per bit", "binary digits are 0 or 1: compare, keep or restore"], ["n cycles", "for n quotient bits; the sign bit is the inverted quotient bit"]])}`, "sheet task")}
+
+    ${task("3.10", "Division: Newton-Raphson", `<p>Show division by the Newton-Raphson method (normalisation, iteration, final multiplication) with one or more decimal examples, for instance q = a / d with a = 176, d = 83. The sheet suggests a spreadsheet table for the iteration.</p>`,
+      `<p><b>Normalisation.</b> Scale d into 0.5 ≤ d′ &lt; 1 by a shift: 83 / 2<sup>7</sup> = 0.6484375, and shift a by the same amount, a′ = 176 / 128 = 1.375, so that a′/d′ = a/d. <b>Start</b> with the lecture's best straight line (lecture 3, slide 27): X<sub>0</sub> = 48/17 − 32/17 · 0.6484375 = ${r[0].X.toFixed(6)}. <b>Iterate</b> X<sub>i+1</sub> = X<sub>i</sub>(2 − d′X<sub>i</sub>); the error ε<sub>i</sub> = 1 − d′X<sub>i</sub> squares every step. <b>Multiply</b> at the end: q = a′ · X<sub>n</sub>.</p>
+      ${tt1(["i", "X<sub>i</sub>", "ε<sub>i</sub> = 1 − d′X<sub>i</sub>", "q<sub>i</sub> = 1.375 · X<sub>i</sub>"], r.map(z => [z.i, z.X.toFixed(10), fe(z.e), z.q.toFixed(10)]), 0)}
+      ${chart("nr176")}
+        <figcaption>Correct bits of the reciprocal 1/d′ after each step for d = 83: 4.7, 9.3, 18.7, 37.3. The error squares, so the bits double; three steps pass single precision. Hover a column for X<sub>i</sub> and the quotient so far.</figcaption>
+      </figure>
+      <details class="tbl"><summary>Table view</summary><table><tr><th>Step</th><th>ε</th><th>Correct bits</th></tr>${r.map(z => `<tr><td class="n">${z.i}</td><td class="n">${fe(z.e)}</td><td class="n">${z.bits.toFixed(1)}</td></tr>`).join("")}</table></details>
+      <p>176 / 83 = 2.1204819277…; after three steps q = ${r[3].q.toFixed(10)}, correct to about 11 decimal places. Note how ε<sub>1</sub> = ${fe(r[1].e)} ≈ ε<sub>0</sub><sup>2</sup> = (−${Math.abs(r[0].e).toFixed(4)})<sup>2</sup>: the sign of ε<sub>0</sub> does not matter after the first step, every later X<sub>i</sub> is slightly below 1/d′.</p>
+      ${lab("nrx", "the spreadsheet: Newton-Raphson for any a / d")}
+      ${ans([["2.1204819277", "176 / 83 after 3 iterations"], ["ε<sub>i+1</sub> = ε<sub>i</sub><sup>2</sup>", "quadratic convergence: correct bits double"], ["2 multiplications per step", "plus one at the end; no subtract-and-test loop"]])}
+      <div class="why"><div class="kicker">Context, not on the sheet: restoring versus Newton-Raphson</div>
+        <p>Restoring division costs one cycle per quotient bit, 24 cycles for a float32 mantissa, but only a subtractor. Newton-Raphson needs about three iterations of two multiplications for the same precision and reuses the multiplier that the floating-point unit has anyway, which is why fast floating-point units divide this way (or with the related Goldschmidt method), while small integer cores use the restoring or non-restoring loop.</p></div>`, "sheet task")}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the two adder structures of 3.5 and the switchable subtractor of 3.6 by hand once; the board work in the session is usually the gate-level drawing.</li>
+      <li>Reread <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a> (two's complement, overflow, ripple-carry adder) for 3.6 and 3.7, and <a href="digital-circuit-design/lecture.html?n=3">lecture 3</a> (carry-save, Dadda trees, restoring and Newton-Raphson division) for 3.5 and 3.8 to 3.10.</li>
+      <li>Questions to settle in the session: whether 3.8 expects Dadda or Wallace counting (the adder counts differ); whether the decimal part of 3.9 should be done as true restoring (subtract until negative) or as plain long division.</li>
+    </ul>
+    <div class="why"><div class="kicker">Context, not on the sheet: what these tasks train</div>
+      <p>Together the tasks are the datapath of a small processor: the adder of lecture 2 reused for subtraction, increment and decrement (the ALU opcodes of lecture 4), a multiplier tree with accumulate, and a divider. The exam-style skills are counting (adders, stages, cycles, bit widths) and running an algorithm by hand on given numbers, which is why the sheet fixes the operands of 3.9 and 3.10.</p></div>
+    <p class="muted">Previous exercise: <a href="digital-circuit-design/exercise.html?n=2">exercise 2</a>. Next: <a href="digital-circuit-design/exercise.html?n=4">exercise 4 on 3 Dec</a>. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=2">2</a>, <a href="digital-circuit-design/lecture.html?n=3">3</a> and <a href="digital-circuit-design/lecture.html?n=4">4</a>.</p>`;
 }
 function placeholder() {
   const d = daysUntil(x.date);
@@ -405,7 +694,7 @@ function placeholder() {
       <p class="muted">This exercise is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(x.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(x.blurb)}<br>The write-up appears here once the sheet is available and the session has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: exercise1, 2: exercise2 };
+const WRITEUPS = { 1: exercise1, 2: exercise2, 3: exercise3 };
 if (!x) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(n)}.</p>`;
 } else {
