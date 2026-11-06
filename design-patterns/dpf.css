@@ -325,3 +325,15 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dpf .viz.mini { padding: 0; border: 0; background: none; margin: 0; }
 .dpf .viz.mini .bar.s1 { fill: var(--vz-s1); } .dpf .viz.mini .bar.s2 { fill: var(--vz-s2); } .dpf .viz.mini .bar.s3 { fill: var(--vz-s3); }
 .dpf .viz .cls .cn.sm { font-size: 10px; }
+/* Exercise 3: the polynomial explorer (expression tree next to the read-outs) */
+.dpf .pgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px 18px; align-items: start; }
+@media (max-width: 760px) { .dpf .pgrid { grid-template-columns: 1fr; } }
+.dpf .ptree, .dpf .ptree ul { list-style: none; margin: 0; padding-left: 0; }
+.dpf .ptree ul { padding-left: 14px; margin-left: 6px; border-left: 1px dashed var(--line); }
+.dpf .ptree li { font-size: 13px; line-height: 1.75; }
+.dpf .ptree .k { font-weight: 700; padding: 0 6px; border-radius: 4px; }
+.dpf .ptree .k.p { background: color-mix(in srgb, var(--vz-s4) 18%, var(--surface)); }
+.dpf .ptree .k.h { background: color-mix(in srgb, var(--vz-s2) 16%, var(--surface)); }
+.dpf .ptree .op { font-family: ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
+.dpf .ptree .dg { color: var(--ink-3); font-size: 12px; }
+.dpf .ptree .flag { font-size: 11px; padding: 0 6px; }

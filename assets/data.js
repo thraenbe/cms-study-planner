@@ -1353,18 +1353,18 @@ window.CMS = {
       "covered": true,
       "lecture": 3,
       "points": null,
-      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions; no official solution yet."
+      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions, compared with the official solution (in OPAL since 5 Nov)."
      },
      {
       "n": 3,
       "title": "Extensibility Patterns",
       "date": "2026-11-11",
-      "published": null,
+      "published": "2026-11-05",
       "icon": "🧩",
-      "covered": false,
+      "covered": true,
       "lecture": 4,
       "points": null,
-      "blurb": "Not published yet. Planned topic: the extensibility patterns of lecture 4."
+      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet."
      },
      {
       "n": 4,
