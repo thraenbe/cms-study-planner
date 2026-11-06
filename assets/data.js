@@ -1356,18 +1356,18 @@ window.CMS = {
       "covered": true,
       "lecture": 3,
       "points": null,
-      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions; no official solution yet."
+      "blurb": "The maze game of the lecture: Abstract Factory, Factory Method and a prototyping factory for a standard and an enchanted game, a MazeBuilder that enforces the structural rules, and factory methods in the parallel read-only and mutable hierarchies of UML editor views. Own worked solutions, compared with the official solution (in OPAL since 5 Nov)."
      },
      {
       "n": 3,
       "title": "Extensibility Patterns",
       "date": "2026-11-11",
-      "published": null,
+      "published": "2026-11-05",
       "icon": "🧩",
-      "covered": false,
+      "covered": true,
       "lecture": 4,
       "points": null,
-      "blurb": "Not published yet. Planned topic: the extensibility patterns of lecture 4."
+      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet."
      },
      {
       "n": 4,
@@ -2175,16 +2175,16 @@ window.CMS = {
       "published": "2026-10-28",
       "icon": "✏️",
       "covered": true,
-      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions; the chair has not posted theirs yet."
+      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions, checked against the chair’s solution (in OPAL since 6 Nov)."
      },
      {
       "n": 3,
-      "title": null,
+      "title": "Arithmetic circuits",
       "date": "2026-11-19",
-      "published": null,
+      "published": "2026-11-06",
       "icon": "✏️",
-      "covered": false,
-      "blurb": "Expected to cover lectures 5–6 (CMOS technology and logic); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+      "covered": true,
+      "blurb": "Sheet 3 (tasks 3.3, 3.5–3.10, in OPAL since 6 Nov): carry-save versus ripple-carry addition of three numbers, a switchable adder/subtractor, incrementer and decrementer, Dadda reduction of a 5 × 5 multiplier with and without a 10-bit accumulate, restoring division of 173 / 8 and Newton-Raphson for 176 / 83. Our own worked solutions; 3.3 repeats the floating-point task of sheet 2."
      },
      {
       "n": 4,

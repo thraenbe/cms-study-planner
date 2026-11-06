@@ -339,3 +339,9 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .trail { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.9rem; word-break: break-word; }
 .dcd .trail b { color: var(--vz-s1); }
 .dcd .kmap .h.corner { white-space: nowrap; font-size: 9px; justify-items: start; }
+/* Exercise 3: adder structures and block diagrams drawn as boxes and wires */
+.dcd .viz .fa rect, .dcd .viz .fa circle { fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.2; }
+.dcd .viz .fa text { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.dcd .viz .w { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.dcd .viz .w.s { stroke: var(--vz-s1); }
+.dcd .viz .w.c { stroke: var(--vz-s2); }

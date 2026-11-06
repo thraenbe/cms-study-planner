@@ -191,7 +191,7 @@ function exercise1() {
       <li>Task 4's diagrams are due with <a href="design-patterns/exercise.html?n=2">exercise 2</a>.</li>
     </ul>`;
 }
-// ======================= Exercise 2: Creational Patterns (sheet since 30 Oct, discussed 4 Nov; no official solution yet) =======================
+// ======================= Exercise 2: Creational Patterns (sheet since 30 Oct, discussed 4 Nov; official solution since 5 Nov, compared) =======================
 const CROLES = leg([[1, "creator / director"], [2, "factory or builder (hook)"], [4, "products"], [3, "client / game"]]);
 // Task 1a: Abstract Factory for the maze game.
 CHARTS.mazeAF = narrow => {
@@ -284,8 +284,18 @@ function initMazeLab(body) {
 }
 function exercise2() {
   return `${head(e)}
-    <p class="lead">The second sheet applies the three creational patterns of <a href="design-patterns/lecture.html?n=3">lecture 3</a> to the maze game the lecture itself uses: Abstract Factory, Factory Method and Prototype to get a standard and an enchanted game from one construction routine, Builder to make that routine safe, and factory methods in parallel hierarchies for read-only and editable views of UML diagrams. The sheet has been in OPAL since 30 Oct and is discussed on 4 Nov; <b>no official solution exists yet</b>, so every answer below is our own worked solution, to be checked against the session. The sheet carries no points.</p>
+    <p class="lead">The second sheet applies the three creational patterns of <a href="design-patterns/lecture.html?n=3">lecture 3</a> to the maze game the lecture itself uses: Abstract Factory, Factory Method and Prototype to get a standard and an enchanted game from one construction routine, Builder to make that routine safe, and factory methods in parallel hierarchies for read-only and editable views of UML diagrams. The sheet has been in OPAL since 30 Oct and was discussed on 4 Nov. Every answer below is our own worked solution, written before the official one; the official solution (in OPAL since 5 Nov) uses the same patterns and structures, and the box below lists where it is more specific or differs. The sheet carries no points.</p>
     <div class="box status"><p style="margin:0"><b>Status:</b> own solutions drafted; session on ${fmt(e.date)}, ${exe.start}, ${esc(exe.room)}. The homework of <a href="design-patterns/exercise.html?n=1">exercise 1, task 4</a> (three patterns in the Search framework) is due in the same session.</p></div>
+    ${why("Compared with the official solution (5 Nov)", `<ul style="margin:0;padding-left:1.1rem">
+      <li><b>1a</b>: the official MazeFactory is a concrete class with the standard products as defaults, and MagicMazeFactory subclasses it (makeRoom, makeDoorWall); the game holds the factory in a static field chosen once by an initFactory() step (old or new version) instead of receiving it as a parameter. That settles our open question: held, not passed. Spells are picked by the factory for every room and door.</li>
+      <li><b>1b</b>: MazeGame owns the factory methods with the standard products, MagicMazeGame overrides two of them; same as ours.</li>
+      <li><b>1c</b>: one PrototypeMazeFactory initialised with a prototype maze, room, wall and door; every make method clones and then sets the room number or the two rooms of a door. Same structure as ours.</li>
+      <li><b>1d</b>: the official comparison adds two points we did not make: prototypes do not pay off when the prototype objects are large (memory, e.g. embedded systems) or when copying is slower than constructing (profile it), and an Abstract Factory pays off when several clients use the same set of factory methods, since the factory object can be handed to all of them.</li>
+      <li><b>2a</b>: a concrete MazeBuilder (buildMaze, buildRoom(n), buildDoor(n1, direction, n2), getMaze) that creates the Maze itself, plus a MagicMazeBuilder subclass; it remarks that the builder could use factory methods for its parts. Ours differs only in names and in an abstract base class.</li>
+      <li><b>2b</b>: the builder encapsulates the product and checks the rules inside its operations, throwing an exception for a missing room or a side that already has a door; a further step would keep the rooms on a grid so that doors can only join neighbours.</li>
+      <li><b>3a–3b</b>: the official answer names Model-View-Controller for 3a and uses <b>three</b> parallel hierarchies, the model elements (Class, State, Activity and their relations), the read-only figures and the manipulators, with the constraint that a ClassManipulator always belongs to a ClassFigure, which belongs to a Class model object. Our two hierarchies merged model and figure.</li>
+      <li><b>3c–3d</b>: createManipulator() on the top figure class, as ours. The official Abstract Factory has a single method createManipulatorFor(figure) on a singleton factory, which inspects the figure's class (reflection and a switch); its advantage is that one figure can get different kinds of manipulators (resize, delete), its drawback that type dispatch is done by hand, which the polymorphic factory method does better.</li>
+    </ul>`)}
 
     ${task("1", 0, "Amazing creation: two games from one plan of rooms", `
       <p>The sheet gives a maze game: a Maze holds Rooms by number; a Room has four sides, each a Wall or a DoorWall that joins two rooms and can be open; MazeGame.createMaze() builds two rooms, one door between them and plain walls elsewhere, all with explicit <code>new</code> calls. Now a second game needs the same plan of rooms but <b>magic rooms</b> (with booby traps survivable only with a spell) and <b>spell doors</b> that open only while the right spell, invoked in the player's room, is in effect. The construction code must not be duplicated: one program creates both games.</p>
@@ -342,12 +352,244 @@ function exercise2() {
       <li>Draw the four diagrams of tasks 1 and 2 by hand or in PlantUML and compare them with the ones above; the names of the classes are free, the roles are not.</li>
       <li>Reread <a href="design-patterns/lecture.html?n=3">lecture 3</a>, slides 5 to 11 (Factory Method), 15 to 24 (Factory Class and its variants) and 26 to 31 (Builder).</li>
       <li>Finish the Search-framework homework from <a href="design-patterns/exercise.html?n=1">exercise 1</a>.</li>
-      <li>Open questions for the tutor: whether the factory in 1a should be passed in or held; whether 2a expects the builder to also build the Maze object itself or to receive one.</li>
+      <li>Settled by the official solution: the factory in 1a is held in a field and chosen once; the builder in 2a creates the Maze itself.</li>
     </ul>`;
 }
 
-const WRITEUPS = { 1: exercise1, 2: exercise2 };
-const LABS = { maze: initMazeLab };
+// ======================= Exercise 3: Extensibility Patterns (sheet since 5 Nov, discussed 11 Nov; no official solution yet) =======================
+const PROLES = leg([[1, "component (abstract)"], [4, "leaves"], [2, "composites"], [3, "client / operations"]]);
+// Task 1a/1b: the smallest reasonable Composite for polynomials.
+CHARTS.polyComp = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 100 });
+  const e = D.box(narrow ? 0.5 : 1.5, 0, { name: "Expression", ops: ["evaluate(x): double", "degree(): int", "countSigns(): int"], role: "t", abstract: true, span: 1 });
+  const k = D.box(0, narrow ? 1.35 : 1.45, { name: "Constant", ops: ["value: double"], role: "p" });
+  const v = D.box(1, narrow ? 1.35 : 1.45, { name: "Variable", ops: ["(the x)"], role: "p" });
+  const s = D.box(narrow ? 0 : 2, narrow ? 2.5 : 1.45, { name: "Sum", ops: ["left, right: Expression", "negRight: bool"], role: "h" });
+  const p = D.box(narrow ? 1 : 3, narrow ? 2.5 : 1.45, { name: "Product", ops: ["left, right: Expression"], role: "h" });
+  D.inh(k, e); D.inh(v, e); D.inh(s, e); D.inh(p, e);
+  return D.svg("Composite for polynomials: the abstract Expression with evaluate, degree and countSigns; two leaves Constant and Variable; two composites Sum and Product that each aggregate two Expressions. A Sum with a flag for a subtracted right operand covers the minus sign.");
+};
+// Task 1c/1d: operations as visitors.
+CHARTS.polyVis = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 96 });
+  const v = D.box(narrow ? 0.5 : 1.5, 0, { name: "ExprVisitor", ops: ["visitConstant(c)", "visitVariable(x)", "visitSum(s)", "visitProduct(p)"], role: "h", abstract: true });
+  const a = D.box(0, narrow ? 1.6 : 1.5, { name: "SignCounter", ops: ["count: int"], role: "c" });
+  const b = D.box(narrow ? 1 : 1.5, narrow ? 1.6 : 1.5, { name: "DegreeVisitor", ops: ["returns int"], role: "c" });
+  const c3 = D.box(narrow ? 0.5 : 3, narrow ? 2.6 : 1.5, { name: "Evaluator", ops: ["x: double"], role: "c" });
+  D.inh(a, v); D.inh(b, v); D.inh(c3, v);
+  if (!narrow) D.note(0, 0.05, ["Expression.accept(v)", "Sum.accept(v) {", "  v.visitSum(this);", "}"], v, { span: 1.2 });
+  return D.svg("Visitor for polynomial operations: the abstract ExprVisitor has one visit method per node class; SignCounter, DegreeVisitor and Evaluator implement it; every Expression class gets accept(v), which calls back the visit method for its own class.");
+};
+// Task 2a/2d: Interpreter structure, with the trigonometric functions added as a decorating nonterminal.
+CHARTS.polyInterp = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 90 : 96 });
+  const cl = D.box(0, 0, { name: "Client", ops: ["builds the tree", "calls evaluate(ctx)"], role: "c" });
+  const e = D.box(narrow ? 1 : 1.5, 0, { name: "Expression", ops: ["evaluate(ctx): double"], role: "t", abstract: true });
+  const cx = D.box(narrow ? 0.5 : 3, narrow ? 3.7 : 0, { name: "Context", ops: ["x: double"], role: "g" });
+  const t = D.box(0, narrow ? 1.35 : 1.4, { name: "Constant, Variable", ops: ["terminals", "Variable: ctx.x"], role: "p", stereo: "TerminalExpr" });
+  const n = D.box(1, narrow ? 1.35 : 1.4, { name: "Sum, Product", ops: ["nonterminals", "l.evaluate ∘ r.evaluate"], role: "h", stereo: "NonterminalExpr" });
+  const f = D.box(narrow ? 0.5 : 2.4, narrow ? 2.5 : 1.4, { name: "Function", ops: ["inner: Expression", "f ∈ {sin, cos, tan}", "f(inner.evaluate(ctx))"], role: "h", stereo: "Decorator", span: narrow ? 1 : 1.5 });
+  D.ref(cl, e, { kind: "dep", label: narrow ? "" : "uses" }); D.inh(t, e); D.inh(n, e); D.inh(f, e);
+  if (!narrow) D.ref(e, cx, { kind: "dep", label: "reads" });
+  return D.svg("Interpreter for polynomial expressions: the client builds the syntax tree and calls evaluate with a context holding x; Constant and Variable are terminal expressions, Sum and Product nonterminals; for the extension to sine, cosine and tangent a Function node wraps an inner Expression and applies the function to its value, a Decorator of the expression.");
+};
+// Task 3: the chained Observer, its cycle, and the change-manager solution.
+CHARTS.obsChain = narrow => seq(narrow, [{ name: "C", role: "t" }, { name: "B", role: "h" }, { name: "A", role: "h" }],
+  [{ from: 0, to: 0, text: "setState(); notify()" }, { from: 0, to: 1, text: "update()", tag: "B observes C" }, { from: 1, to: 0, text: "getState()" }, { from: 0, to: 1, text: "state", ret: true },
+   { from: 1, to: 1, text: "recompute; notify()" }, { from: 1, to: 2, text: "update()", tag: "A observes B" }, { from: 2, to: 1, text: "getState()" }, { from: 1, to: 2, text: "state", ret: true }, { from: 2, to: 2, text: "recompute" }],
+  "Sequence diagram of the chained Observer: C changes and notifies; B's update pulls C's state, recomputes and notifies in turn; A's update pulls B's state and recomputes. The chain ends at A because nobody observes A.");
+CHARTS.obsCycle = narrow => seq(narrow, [{ name: "C", role: "t" }, { name: "B", role: "h" }, { name: "A", role: "h" }],
+  [{ from: 0, to: 1, text: "update()" }, { from: 1, to: 2, text: "update()" }, { from: 2, to: 0, text: "update()", tag: "new: C observes A" }, { from: 0, to: 1, text: "update()", tag: "round 2 …" }, { from: 1, to: 2, text: "update()", tag: "… forever, until the stack overflows" }],
+  "Sequence diagram of the cycle: C notifies B, B notifies A, A now notifies C, which notifies B again, and so on without end.");
+CHARTS.obsCM = narrow => seq(narrow, [{ name: "C", role: "t" }, { name: "ChangeManager", role: "c" }, { name: "B", role: "h" }, { name: "A", role: "h" }],
+  [{ from: 0, to: 1, text: "changed(C)", tag: "round starts, C marked" }, { from: 1, to: 2, text: "update()" }, { from: 2, to: 1, text: "changed(B)", tag: "B marked" }, { from: 1, to: 3, text: "update()" },
+   { from: 3, to: 1, text: "changed(A)", tag: "A marked" }, { from: 1, to: 1, text: narrow ? "C marked: skip" : "observer C already marked: skip" }, { from: 1, to: 0, text: "round done", ret: true }],
+  "Sequence diagram of the solution with a change manager: every change is reported to the manager, which marks the changed object and updates its observers; when A's change would update C again, the manager sees that C is already marked in this round and stops.");
+
+// The polynomial explorer: a small parser builds the Composite; the operations are visitors over the tree.
+function parsePoly(src) {
+  const s = src.replace(/\s+/g, "").replace(/²/g, "^2").replace(/³/g, "^3").replace(/−/g, "-").replace(/[·×]/g, "*"); let i = 0;
+  const eat = ch => s[i] === ch ? (i++, true) : false, err = () => { throw Error(i < s.length ? `unexpected “${s[i]}” at position ${i + 1}` : "the expression ends too early"); };
+  const startsFactor = () => /[0-9.x(sct]/.test(s[i] || "");
+  const expr = () => { let n = term(); for (;;) { if (eat("+")) n = { k: "Sum", l: n, r: term(), neg: false }; else if (eat("-")) n = { k: "Sum", l: n, r: term(), neg: true }; else return n; } };
+  const term = () => { let n = unary(); for (;;) { if (eat("*")) n = { k: "Product", l: n, r: unary() }; else if (startsFactor()) n = { k: "Product", l: n, r: power() }; else return n; } };
+  const unary = () => eat("-") ? { k: "Sum", l: { k: "Constant", v: 0, hidden: true }, r: unary(), neg: true } : power();
+  const power = () => { let b = atom(); if (eat("^")) { const m = s.slice(i).match(/^\d+/); if (!m) throw Error("exponents must be whole numbers"); i += m[0].length; const n = +m[0]; if (n > 12) throw Error("exponent too large for the explorer"); if (n === 0) return { k: "Constant", v: 1 }; let p = b; for (let j = 1; j < n; j++) p = { k: "Product", l: p, r: b, pow: true }; return p; } return b; };
+  const atom = () => {
+    const m = s.slice(i).match(/^\d+(\.\d+)?/); if (m) { i += m[0].length; return { k: "Constant", v: +m[0] }; }
+    const f = s.slice(i).match(/^(sin|cos|tan)\(/); if (f) { i += f[0].length; const c = expr(); if (!eat(")")) err(); return { k: "Function", f: f[1], c }; }
+    if (eat("x")) return { k: "Variable" };
+    if (eat("(")) { const n = expr(); if (!eat(")")) err(); return n; }
+    err();
+  };
+  if (!s) throw Error("type a polynomial in x");
+  const n = expr(); if (i < s.length) err(); return n;
+}
+const visit = (n, V) => V[n.k](n, c => visit(c, V));
+const DEGREE = { Constant: n => 0, Variable: () => 1, Sum: (n, d) => Math.max(d(n.l), d(n.r)), Product: (n, d) => d(n.l) + d(n.r), Function: () => NaN };
+const SIGNS = { Constant: () => 0, Variable: () => 0, Sum: (n, d) => (n.neg ? 1 : 0) + d(n.l) + d(n.r), Product: (n, d) => d(n.l) + d(n.r), Function: (n, d) => d(n.c) };
+const EVAL = x => ({ Constant: n => n.v, Variable: () => x, Sum: (n, d) => n.neg ? d(n.l) - d(n.r) : d(n.l) + d(n.r), Product: (n, d) => d(n.l) * d(n.r), Function: (n, d) => Math[n.f](d(n.c)) });
+const COEF = { Constant: n => [n.v], Variable: () => [0, 1], Function: () => null,
+  Sum: (n, d) => { const a = d(n.l), b = d(n.r); if (!a || !b) return null; return Array.from({ length: Math.max(a.length, b.length) }, (_, i) => (a[i] || 0) + (n.neg ? -1 : 1) * (b[i] || 0)); },
+  Product: (n, d) => { const a = d(n.l), b = d(n.r); if (!a || !b) return null; const r = Array(a.length + b.length - 1).fill(0); a.forEach((x, i) => b.forEach((y, j) => { r[i + j] += x * y; })); return r; } };
+const COUNT = { Constant: () => 1, Variable: () => 1, Sum: (n, d) => 1 + d(n.l) + d(n.r), Product: (n, d) => 1 + d(n.l) + d(n.r), Function: (n, d) => 1 + d(n.c) };
+function treeHTML(n) {
+  if (n.k === "Sum" && n.l.hidden) return `<li><span class="k h">Sum</span> <span class="op">0 − (…)</span> <span class="flag bad">− sign</span> <span class="dg">degree ${visit(n, DEGREE)}</span><ul>${treeHTML(n.r)}</ul></li>`;
+  const deg = visit(n, DEGREE), dg = Number.isNaN(deg) ? "no degree" : `degree ${deg}`;
+  if (n.k === "Constant") return `<li><span class="k p">Constant</span> <span class="op">${n.v}</span> <span class="dg">${dg}</span></li>`;
+  if (n.k === "Variable") return `<li><span class="k p">Variable</span> <span class="op">x</span> <span class="dg">${dg}</span></li>`;
+  if (n.k === "Function") return `<li><span class="k h">Function</span> <span class="op">${n.f}(…)</span> <span class="dg">${dg}</span><ul>${treeHTML(n.c)}</ul></li>`;
+  const op = n.k === "Product" ? (n.pow ? "· (power)" : "·") : n.neg ? "−" : "+";
+  return `<li><span class="k h">${n.k}</span> <span class="op">${op}</span>${n.neg ? ` <span class="flag bad">− sign</span>` : ""} <span class="dg">${dg}</span><ul>${treeHTML(n.l)}${treeHTML(n.r)}</ul></li>`;
+}
+function secant(f, x0, x1) {
+  const pts = [{ i: 0, x: x0, y: f(x0) }, { i: 1, x: x1, y: f(x1) }];
+  for (let i = 2; i < 30; i++) { const a = pts[i - 2], b = pts[i - 1], den = b.y - a.y; if (!isFinite(den) || Math.abs(den) < 1e-14 || Math.abs(b.y) < 1e-12) break;
+    const x = b.x - b.y * (b.x - a.x) / den; if (!isFinite(x) || Math.abs(x) > 1e6) { pts.push({ i, x, y: NaN, bad: true }); break; } pts.push({ i, x, y: f(x) }); }
+  return pts;
+}
+const PX = { src: "(x - 2x^2)(2 + 4x)", x: 1, x0: 0.4, x1: 0.6 };
+function polyOut() {
+  let tree, msg = "";
+  try { tree = parsePoly(PX.src); } catch (e) { msg = e.message; }
+  const presets = [["2x² − 5", "2x^2 - 5"], ["x(177x − 15x)", "x(177x - 15x)"], ["(x − 2x²)(2 + 4x)", "(x - 2x^2)(2 + 4x)"], ["x² + 1 − x²", "x^2 + 1 - x^2"], ["sin(x²) − 0.5", "sin(x^2) - 0.5"]];
+  const head = `<div class="presets" role="group" aria-label="Examples">${presets.map(([t, v]) => `<button type="button" class="preset" data-src="${esc(v)}" aria-pressed="${PX.src === v}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>p(x) = <input type="text" data-k="src" value="${esc(PX.src)}" spellcheck="false" aria-label="Polynomial in x"></label></div>`;
+  if (!tree) return `${head}<p>${flag("bad", esc(msg))}</p>`;
+  const f = x => visit(tree, EVAL(x)), deg = visit(tree, DEGREE), coef = visit(tree, COEF), signs = visit(tree, SIGNS), nodes = visit(tree, COUNT);
+  let exact = null; if (coef) { exact = -1; coef.forEach((c, i) => { if (Math.abs(c) > 1e-12) exact = i; }); }
+  const pts = secant(f, PX.x0, PX.x1), last = pts[pts.length - 1], conv = Math.abs(last.y) < 1e-9;
+  // f over [−2, 2] with the secant iterates; the y range is cut at the median of |p| so that the zeros stay visible.
+  const W = 340, H = 190, L = 34, R = 8, T = 10, B = 22, PW = W - L - R, PH = H - T - B, xs = Array.from({ length: 161 }, (_, k) => -2 + k * 0.025), ys = xs.map(f).filter(isFinite);
+  const ab = ys.map(Math.abs).sort((a, b) => a - b), cap = Math.max(1, ab[Math.floor(ab.length * 0.5)] || 1);
+  let lo = Math.max(-cap, Math.min(...ys, 0)), hi = Math.min(cap, Math.max(...ys, 0)); if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+  const X = x => L + (x + 2) / 4 * PW, Y = y => T + PH - (Math.min(hi, Math.max(lo, y)) - lo) / (hi - lo) * PH;
+  const path = "M" + xs.map(x => `${X(x).toFixed(1)},${Y(f(x)).toFixed(1)}`).join(" L");
+  const sec = pts.slice(0, 5).map((p, k) => k ? `<line class="ann" stroke-dasharray="3 3" x1="${X(Math.max(-2, Math.min(2, pts[k - 1].x)))}" y1="${Y(pts[k - 1].y)}" x2="${X(Math.max(-2, Math.min(2, p.x)))}" y2="${Y(p.y)}"/>` : "").join("");
+  const dots = pts.filter(p => isFinite(p.y) && p.x >= -2 && p.x <= 2).map(p => `<circle class="dot${p.i < 2 ? " gray" : ""}" cx="${X(p.x)}" cy="${Y(p.y)}" r="${p.i < 2 ? 4 : 3.5}"/>`).join("");
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plot of p(x) from −2 to 2 with the secant iterates as dots${conv ? `, converging to the zero at x = ${last.x.toFixed(6)}` : ""}">
+      <line class="axis" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/><line class="grid" x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${T + PH}"/>
+      ${[-2, -1, 0, 1, 2].map(v => `<text class="tick" x="${X(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("")}
+      <text class="tick" x="${L - 4}" y="${T + 8}" text-anchor="end">${num(hi, 1)}</text><text class="tick" x="${L - 4}" y="${T + PH}" text-anchor="end">${num(lo, 1)}</text>
+      <path class="line" d="${path}"/>${sec}${dots}</svg>`;
+  return `${head}
+    <div class="pgrid"><div><ul class="ptree">${treeHTML(tree)}</ul></div>
+      <dl class="ro"><dt>Nodes</dt><dd>${nodes} objects in the Composite</dd>
+        <dt>degree()</dt><dd>${Number.isNaN(deg) ? "not defined: the tree contains a trigonometric function" : `${deg} by the structural rules`}${exact !== null && exact !== deg && !Number.isNaN(deg) ? ` ${flag("bad", `exact degree ${exact < 0 ? "−∞ (zero polynomial)" : exact}: terms cancel`)}` : exact !== null ? ` ${flag("ok", "equals the exact degree")}` : ""}</dd>
+        <dt>countSigns()</dt><dd>${signs} minus sign${signs === 1 ? "" : "s"}</dd>
+        <dt>evaluate(x)</dt><dd><label class="ctl" style="margin:0"><input type="range" min="-3" max="3" step="0.1" value="${PX.x}" data-k="x"> <output>x = ${PX.x}</output></label> p(${PX.x}) = ${num(f(PX.x), 6)}</dd></dl></div>
+    <p class="lab-note" style="margin-top:10px"><b>Secant method</b> (task 2c) from x₀ and x₁, using only evaluate():</p>
+    <div class="ctl"><label>x₀ <input type="range" min="-2" max="2" step="0.1" value="${PX.x0}" data-k="x0"> <output>${PX.x0}</output></label><label>x₁ <input type="range" min="-2" max="2" step="0.1" value="${PX.x1}" data-k="x1"> <output>${PX.x1}</output></label></div>
+    <figure class="viz" style="max-width:460px;margin-top:0">${svg}</figure>
+    <div class="tt-wrap"><table class="tt"><tr><th>n</th><th>x<sub>n</sub></th><th>p(x<sub>n</sub>)</th></tr>${pts.map(p => `<tr><td>${p.i}</td><td>${isFinite(p.x) ? p.x.toFixed(9) : "—"}</td><td>${isFinite(p.y) ? p.y.toExponential(2) : "diverged"}</td></tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Result</dt><dd>${conv ? `${flag("ok", "converged")} zero at x ≈ ${last.x.toFixed(9)} after ${pts.length - 2} secant steps` : flag("bad", "no convergence from these start values (flat secant or divergence); move x₀ and x₁")}</dd></dl>`;
+}
+function initPolyLab(body) {
+  const render = (focus) => { body.innerHTML = polyOut();
+    body.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.type === "text" ? "change" : "input", e => { const k = e.target.dataset.k; PX[k] = k === "src" ? e.target.value : +e.target.value; render(k); }));
+    if (focus) { const el = body.querySelector(`[data-k="${focus}"]`); if (el) el.focus(); } };
+  body.addEventListener("click", e => { const p = e.target.closest("[data-src]"); if (p) { PX.src = p.dataset.src; render(); } });
+  render();
+}
+// Explorer: the Observer chain with or without the cycle, under three update strategies.
+const OB = { cycle: true, strat: "naive", log: [] };
+function obsRun() {
+  const obs = { C: ["B"], B: ["A"], A: OB.cycle ? ["C"] : [] }, val = { A: 0, B: 0, C: 0 }, log = [], CAP = 14;
+  if (OB.strat === "manager") {
+    const marked = new Set(["C"]), queue = ["C"]; val.C = 1; log.push("C.setState(1); changeManager.changed(C)");
+    while (queue.length) { const s = queue.shift(); for (const o of obs[s]) { if (marked.has(o)) { log.push(`skip ${o}.update(): ${o} already updated in this round`); continue; } val[o] = val[s]; marked.add(o); queue.push(o); log.push(`${o}.update(): reads ${s} = ${val[s]}, changed(${o})`); } }
+    return { log, ok: true, n: log.length - 1 };
+  }
+  let n = 0, overflow = false; val.C = 1; log.push("C.setState(1); C.notify()");
+  const notify = (s, depth) => { for (const o of obs[s]) { if (n >= CAP) { overflow = true; return; } n++;
+      const nv = val[s], changed = nv !== val[o]; val[o] = nv;
+      if (OB.strat === "guard" && !changed) { log.push(`${"· ".repeat(depth)}${o}.update(): ${o} is already ${nv}, nothing changed, no notify`); continue; }
+      log.push(`${"· ".repeat(depth)}${o}.update(): reads ${s} = ${nv}, ${o}.notify()`); notify(o, depth + 1); if (overflow) return; } };
+  notify("C", 1);
+  return { log, ok: !overflow, n };
+}
+function obsOut() {
+  const r = obsRun();
+  return `<div class="presets" role="group" aria-label="Strategy">${[["naive: always notify", "naive"], ["notify only on a real change", "guard"], ["change manager (Mediator)", "manager"]].map(([t, k]) => `<button type="button" class="preset" data-strat="${k}" aria-pressed="${OB.strat === k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label><input type="checkbox" data-cycle ${OB.cycle ? "checked" : ""}> C also observes A (task 3b)</label></div>
+    <div class="trace">${r.log.map(l => `<div>${esc(l)}</div>`).join("")}${r.ok ? "" : `<div><span class="bad">… and so on: update calls nest deeper forever (stopped here after 14)</span></div>`}</div>
+    <dl class="ro"><dt>Outcome</dt><dd>${r.ok ? flag("ok", `terminates after ${r.n} update${r.n === 1 ? "" : "s"}`) : flag("bad", "endless notification cycle, ends in a stack overflow")}</dd></dl>`;
+}
+function initObsLab(body) { const render = () => { body.innerHTML = obsOut(); body.querySelector("[data-cycle]").addEventListener("change", e => { OB.cycle = e.target.checked; render(); }); }; render();
+  body.addEventListener("click", e => { const p = e.target.closest("[data-strat]"); if (p) { OB.strat = p.dataset.strat; render(); } }); }
+
+function exercise3() {
+  return `${head(e)}
+    <p class="lead">The third sheet is about extensibility: a polynomial represented as an object tree that new operations (count the minus signs, compute the degree, evaluate at x) and new node kinds (sine, cosine, tangent) can be added to, and an Observer chain that turns into an endless loop once it is closed into a cycle. It belongs to <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a> (10 Nov), which comes the day before the session, and it reuses Composite and Observer from <a href="design-patterns/lecture.html?n=1">lecture 1</a>'s MVC and Visitor from <a href="design-patterns/lecture.html?n=2">lecture 2</a>. There is no official solution yet: <b>every answer below is our own</b>. The sheet carries no points.</p>
+    <div class="box status"><p style="margin:0"><b>Status:</b> sheet in OPAL since ${fmt(e.published)} (2 pages, three tasks); session on ${fmt(e.date)}, ${exe.start}, ${esc(exe.room)}. Lecture 4's slides are not written up yet, so the links to it lead to the lecture's placeholder until then.</p></div>
+
+    ${task("1", 0, "The degree of polynomials", `
+      <p>Polynomials in one variable x and their degree, with three examples: 2x² − 5 (degree 2), x(177x − 15x) (degree 2) and (x − 2x²)(2 + 4x) (degree 3). (a) Which extensibility pattern represents polynomials? Draw the class diagram. (b) What is the smallest reasonable number of classes, and why? (c) A function countSigns() counts the minus signs of a polynomial: which patterns fit, with which advantages and disadvantages? (d) Which pattern computes the degree, and how? (e) Explain how degree() works in the classes of the diagram, in pseudocode or words.</p>
+      <h3>a) Composite</h3>
+      <p>The examples are not lists of terms but nested expressions: a product of two sums, a product of x and a difference. The structure that represents "a whole made of parts of the same kind, to any depth" is <b>Composite</b> (object recursion): an abstract Expression, leaves that end the recursion (a constant, the variable x) and composites that hold sub-expressions (sum and product). A client treats a single constant and a whole product of sums the same way, through Expression. Extensibility comes from both directions: a new node kind is one new subclass, and every operation is a recursive method over the tree.</p>
+      ${chart("polyComp", PROLES)}<figcaption>Our class diagram for 1a with the five classes of 1b. Powers are products (x² = x · x), subtraction is a Sum with a flag on its right operand.</figcaption></figure>
+      <h3>b) The smallest reasonable number of classes</h3>
+      <p><b>Five</b>: Expression (abstract), Constant, Variable, Sum, Product. Fewer is possible but not reasonable: a single "Operation" class with an operator field would replace subclassing by a type switch inside every method, which is exactly what Composite avoids; and a list-of-monomials representation (a Polynomial holding coefficient/exponent pairs) cannot keep (x − 2x²)(2 + 4x) as written, it would have to multiply it out. More classes are optional: a Difference class instead of the sign flag makes countSigns a type test, a Power class makes x<sup>100</sup> one node instead of 99 products, a Negation class covers a leading minus. Each of them adds a class without changing the others, which is the extensibility the pattern promises.</p>
+      ${ans([["5 classes", "Expression, Constant, Variable, Sum, Product"], ["2 leaves + 2 composites", "everything else is built from them: x² = x · x, a − b = Sum with the sign flag"]])}
+      <h3>c) countSigns(): three ways</h3>
+      <ul class="cmp">
+        <li><b>Object recursion</b><span class="v">Pro: add countSigns() to Expression and implement it in every class: leaves return 0, a Sum returns (its own minus ? 1 : 0) + left.countSigns() + right.countSigns(). Simple, no extra classes, polymorphism does the dispatch</span><span class="v">Con: every new operation (degree, evaluate, print …) touches all node classes; the node classes collect unrelated functionality</span></li>
+        <li><b>Visitor</b><span class="v">Pro: one SignCounter class with a visit method per node class; nodes only offer accept(v). New operations are new visitors, the node classes stay closed (lecture 2, slides 47–59)</span><span class="v">Con: a new node class (Power, Sine) forces a new visit method in every visitor; the visitor needs access to the nodes' fields (the sign flag), which weakens encapsulation</span></li>
+        <li><b>Iterator + type test</b><span class="v">Pro: walk the tree with an iterator and count the nodes that are subtractions; the counting code stays outside and is short</span><span class="v">Con: an instanceof or flag test per node: the dispatch the patterns provide is done by hand, and it breaks silently when a new minus-carrying node kind is added</span></li>
+      </ul>
+      ${chart("polyVis", leg([[2, "visitor (operation interface)"], [3, "concrete operations"]]))}<figcaption>Our class diagram of the Visitor variant: the three operations of this sheet become three visitor classes; the five node classes of 1a only get accept(v).</figcaption></figure>
+      <h3>d) and e) degree()</h3>
+      <p>The degree is another recursive operation over the Composite, so either a method in every class (object recursion, the Interpreter view: the degree is one more interpretation of the expression) or a DegreeVisitor. Its rules follow from the algebra of degrees:</p>
+      <div class="formula">Constant.degree() = 0 &nbsp;&nbsp; Variable.degree() = 1<br>Sum.degree() = max(left.degree(), right.degree())<br>Product.degree() = left.degree() + right.degree()</div>
+      ${ex("Worked example: the three polynomials of the sheet", `<p>(1) 2x² − 5 = Sum(Product(2, Product(x, x)), 5 with minus): max(0 + (1 + 1), 0) = <b>2</b>. (2) x(177x − 15x) = Product(x, Sum(Product(177, x), Product(15, x))): 1 + max(1, 1) = <b>2</b>. (3) (x − 2x²)(2 + 4x) = Product(Sum(x, Product(2, Product(x, x))), Sum(2, Product(4, x))): max(1, 2) + max(0, 1) = <b>3</b>. countSigns gives 1, 1 and 1.</p>`)}
+      <p>The Sum rule is an upper bound: in x² + 1 − x² the leading terms cancel and the true degree is 0, while the structural rule says 2 (try it below). For the sheet's examples nothing cancels (177x − 15x = 162x), so the rules give the exact degree. An exact degree() has to compute the coefficients (a Product multiplies coefficient lists, a Sum adds them) and take the highest non-zero one; the explorer does both and flags the difference.</p>
+      ${lab("poly", "polynomials as a Composite: degree, minus signs, evaluate, secant")}
+      ${ans([["2 · 2 · 3", "degrees of the three examples, by the structural rules"], ["max / +", "Sum takes the maximum, Product the sum of the children's degrees"], ["Visitor or recursion", "both are fine; Visitor if more operations are expected than node kinds"]])}
+      ${why("What the task trains", "<p>Recognising a recursive structure in a domain (an expression grammar) and the classic trade-off of lecture 2: object recursion makes new node kinds cheap and new operations expensive, Visitor the other way round. The question in (b) is the usual exam question about a minimal design: name the classes and justify why none can be dropped without losing the pattern.</p>")}`)}
+
+    ${task("2", 0, "Secant method for polynomials", `
+      <p>The secant method finds a zero of a function numerically and evaluates it at a new x in every step. (a) What is the Interpreter pattern: its intent and its structure? (b) Design evaluate(double x) in the Polynomial class of task 1 with Interpreter, in pseudocode or words. (c) Optional: implement the secant method and test the class and evaluate. (d) The class is to be extended to trigonometric functions (sine, cosine, tangent) of polynomials: which pattern fits, and how is it used?</p>
+      <h3>a) Interpreter</h3>
+      <p><b>Intent</b> (GoF): for a simple language, represent its grammar as classes, one per rule, and interpret sentences by evaluating their syntax tree. It fits when sentences are evaluated often and the grammar is small and stable: expressions, queries, rules. <b>Structure</b>: an abstract expression with interpret(context); terminal expressions for the grammar's tokens; nonterminal expressions holding their sub-expressions and combining their results; a context with the global input (here the value of x); a client that builds the tree (by hand or with a parser) and calls interpret on its root. Structurally it is Composite plus one recursive operation, which is why the polynomial classes of task 1 already are an interpreter for the grammar p ::= c | x | p + p | p − p | p · p.</p>
+      ${chart("polyInterp", leg([[3, "client"], [1, "abstract expression"], [4, "terminals"], [2, "nonterminals, decorator"]]))}<figcaption>Our class diagram for 2a and 2d: the Interpreter roles on the polynomial classes, with the trigonometric functions as one decorating node kind.</figcaption></figure>
+      <h3>b) evaluate(double x)</h3>
+      <div class="formula">Constant.evaluate(ctx) = value<br>Variable.evaluate(ctx) = ctx.x<br>Sum.evaluate(ctx) = left.evaluate(ctx) ± right.evaluate(ctx) &nbsp;(− if the sign flag is set)<br>Product.evaluate(ctx) = left.evaluate(ctx) · right.evaluate(ctx)<br>Polynomial.evaluate(x) = root.evaluate(new Context(x))</div>
+      <p>One pass over the tree, one multiplication or addition per inner node. Example: (x − 2x²)(2 + 4x) at x = 1 is (1 − 2)(2 + 4) = −6.</p>
+      <h3>c) The secant method (optional)</h3>
+      <p>From two start values the method replaces the function by the straight line through (x<sub>n−1</sub>, p(x<sub>n−1</sub>)) and (x<sub>n</sub>, p(x<sub>n</sub>)) and takes its zero as the next point; it needs only evaluate(), no derivative:</p>
+      <div class="formula">x<sub>n+1</sub> = x<sub>n</sub> − p(x<sub>n</sub>) · (x<sub>n</sub> − x<sub>n−1</sub>) / (p(x<sub>n</sub>) − p(x<sub>n−1</sub>)) &nbsp;&nbsp; stop when |p(x<sub>n</sub>)| &lt; ε</div>
+      <p>For (x − 2x²)(2 + 4x) the zeros are 0, ½ and −½. Starting at 0.4 and 0.6 the iterates reach ½ to nine digits in seven steps; from 0.2 and 0.8 the first secants overshoot (one lands at 1.73) and it takes twelve. The explorer above runs it on whatever you type. Convergence is superlinear (order about 1.62) near a simple zero, and the method fails where the secant is flat (p(x<sub>n</sub>) = p(x<sub>n−1</sub>)), which a test should cover.</p>
+      <h3>d) sin, cos, tan of polynomials</h3>
+      <p>A sine of a polynomial is again an expression that can be evaluated, so the extension is one new node kind with one child: <b>Function</b> (or Sine, Cosine, Tangent) holding an inner Expression and evaluating to f(inner.evaluate(ctx)). It has the same interface as what it wraps and adds behaviour around the inner call, which is the <b>Decorator</b> pattern on the Composite; in Interpreter terms it is one new nonterminal rule p ::= sin(p) | cos(p) | tan(p). No existing class changes. What does change is every operation that is only defined for polynomials: degree() has no meaning for sin(x²), so Function.degree() must throw or the type hierarchy must distinguish polynomial expressions from general ones, and with the Visitor variant of task 1 every visitor needs a new visitFunction method, the price of Visitor named in 1c.</p>
+      ${ans([["Composite + interpret()", "Interpreter is a Composite with one recursive evaluation"], ["sin(p(x))", "the trigonometric node: f(inner.evaluate(x)), a Decorator of an Expression"], ["≈ 1.62", "order of convergence of the secant method at a simple zero"]])}
+      ${why("What the task trains", "<p>Seeing Composite, Interpreter, Visitor and Decorator as variations of one object tree: what differs is whether the operation lives in the nodes (Interpreter), outside them (Visitor) or in a wrapping node (Decorator). The secant method is the client that shows why evaluate must be cheap: it is called once per step.</p>")}`)}
+
+    ${task("3", 0, "Chained Observer", `
+      <p>Three agents A, B and C in a chained Observer: A observes B and B observes C. (a) Draw a sequence diagram for C notifying its observers. (b) Now C also observes A: which problem occurs, and how can it be fixed? (c) Draw a sequence diagram of the solution. (d) Does the solution apply the Mediator pattern?</p>
+      <h3>a) The chain</h3>
+      ${chart("obsChain", leg([[1, "subject only"], [2, "observer (and subject)"]]))}<figcaption>Our sequence diagram for 3a in the pull variant: an update only says "something changed", the observer asks its subject for the state. B is observer of C and subject for A at the same time, which is what makes the chain.</figcaption></figure>
+      <h3>b) The cycle</h3>
+      <p>With C observing A the dependency graph is the cycle C → B → A → C. Every update makes the observer recompute and notify its own observers, so C's change reaches A, A's notification reaches C, C notifies B again, and the calls nest without end: an infinite update loop that ends in a stack overflow (or, with asynchronous events, a flood that never settles). Even where it terminates, observers may see inconsistent intermediate states and be updated several times per change.</p>
+      ${chart("obsCycle")}<figcaption>The cycle drawn for three rounds: nothing in the plain Observer protocol stops it.</figcaption></figure>
+      <p>Fixes, from local to structural: (1) <b>notify only on a real change</b>: an observer compares the new state with the old one and only notifies if it differs; this terminates when the values reach a fixed point (copying a value), but not when every update changes the value again (incrementing a counter). (2) A <b>re-entrance guard</b>: a flag "I am notifying" that ignores updates arriving during one's own notification. (3) A <b>change manager</b> (GOF's ChangeManager in the Observer chapter) that owns the subject–observer relation, runs each change as one round, and updates every object at most once per round, in a consistent order.</p>
+      ${lab("obs", "the Observer cycle under three strategies")}
+      <h3>c) The solution</h3>
+      ${chart("obsCM", leg([[1, "subject C"], [3, "change manager"], [2, "observers"]]))}<figcaption>Our sequence diagram for 3c: changes are reported to the manager instead of being pushed along the chain; the manager marks every object it has updated in the current round and skips C when A's change comes back to it.</figcaption></figure>
+      <h3>d) Mediator?</h3>
+      <p>With the change manager: <b>yes</b>. The objects no longer call each other; they only talk to the manager, which encapsulates how they interact (who is updated, in which order, how often). That is Mediator's intent, and GOF name the ChangeManager explicitly as an instance of Mediator. With fix (1) or (2) alone: no, the objects still notify each other directly and only guard themselves.</p>
+      ${ans([["C → B → A → C", "the cycle of 3b: an endless update loop"], ["≤ 1 update per round", "what the change manager guarantees"], ["yes, Mediator", "the ChangeManager encapsulates the subject–observer interaction"]])}
+      ${why("What the task trains", "<p>Observer's known liabilities (unexpected update cascades, cycles, update order) and the step from a pattern that couples objects directly to one that routes their interaction through a third object. The sequence diagram is the exam's way of asking for the protocol: who calls whom, and in which order.</p>")}`)}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the Composite of 1a and the two sequence diagrams of task 3 by hand; the class names are free, the roles are not.</li>
+      <li>Reread the Visitor part of <a href="design-patterns/lecture.html?n=2">lecture 2</a> (slides 47–59) and MVC with Observer and Composite in <a href="design-patterns/lecture.html?n=1">lecture 1</a> (slides 18–20); lecture 4 on 10 Nov brings the extensibility patterns themselves.</li>
+      <li>Open questions for the session: whether 1b expects five classes (with a sign flag) or six (with a Difference class); whether 2d is meant as Decorator or as one more Interpreter rule; whether the chair counts the pull or the push variant as the standard Observer in 3a.</li>
+    </ul>`;
+}
+
+const WRITEUPS = { 1: exercise1, 2: exercise2, 3: exercise3 };
+const LABS = { maze: initMazeLab, poly: initPolyLab, obs: initObsLab };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!e) {
   page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
