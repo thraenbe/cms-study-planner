@@ -451,8 +451,10 @@ window.CMS = {
       "date": "2026-11-04",
       "icon": "🧩",
       "type": "hardware",
-      "covered": false,
-      "blurb": "Pipelining and superscalarity, SIMD, multicore and multiprocessor nodes, NUMA."
+      "covered": true,
+      "blurb": "Where a node gets its parallelism: pipelining and superscalarity recapped, SIMD (vector instructions, pipelined vs concurrent, chaining, D = C + A·B cycle by cycle), floating-point peak performance (64 GFLOPS per Skylake-SP core, 1,536 per chip), the cache hierarchy, hardware multithreading (coarse, fine, SMT), multicore and the end of Dennard scaling, cache coherence, on-chip networks, NUMA and multi-socket nodes.",
+      "room": "TOE/317/H",
+      "roomNote": "moved at short notice on 4 Nov to TOE/317/H (Toepler-Bau); from 11 Nov the lecture is back in HÜL/S186/H (OPAL announcements of 4 Nov)."
      },
      {
       "n": 4,
