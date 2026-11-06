@@ -425,7 +425,37 @@ window.CMS = {
       "icon": "🖥️",
       "type": "overview",
       "covered": true,
-      "blurb": "Self-study before the late start: how a sequential computer runs a program, registers, caches, pipelining, superscalar and out-of-order cores, and what the operating system adds (virtual memory, processes, threads)."
+      "blurb": "Self-study before the late start: how a sequential computer runs a program, registers, caches, pipelining, superscalar and out-of-order cores, and what the operating system adds (virtual memory, processes, threads).",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_00_HW_Basics.pdf",
+        "where": "OPAL · Slides / Download"
+       },
+       {
+        "kind": "recording",
+        "name": "Video 00 – Preparation: Sequential Computers",
+        "where": "OPAL · Video Links from Previous Semesters",
+        "note": "Videocampus Sachsen, login"
+       },
+       {
+        "kind": "solution",
+        "name": "00a_Linux_solution.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "for the Linux self-test 00a"
+       },
+       {
+        "kind": "sheet",
+        "name": "00b_C_tutorial.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "for the C self-test 00b"
+       },
+       {
+        "kind": "solution",
+        "name": "00b_C_solutions.zip",
+        "where": "OPAL · Exercise Sheets and Tutorials"
+       }
+      ]
      },
      {
       "n": 1,
@@ -434,7 +464,19 @@ window.CMS = {
       "icon": "🧭",
       "type": "overview",
       "covered": true,
-      "blurb": "Why HPC (simulation, Top500, ZIH's clusters), then the basics: concurrency vs pipelining, the PCAM model, synchronization, Amdahl and Gustafson, Flynn's taxonomy, OpenMP and MPI."
+      "blurb": "Why HPC (simulation, Top500, ZIH's clusters), then the basics: concurrency vs pipelining, the PCAM model, synchronization, Amdahl and Gustafson, Flynn's taxonomy, OpenMP and MPI.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_00b_Introduction.pdf",
+        "where": "OPAL · Slides / Download"
+       },
+       {
+        "kind": "slides",
+        "name": "HPC_01_Basics_of_Parallelism.pdf",
+        "where": "OPAL · Slides / Download"
+       }
+      ]
      },
      {
       "n": 2,
@@ -443,7 +485,15 @@ window.CMS = {
       "icon": "🗃️",
       "type": "software",
       "covered": true,
-      "blurb": "Why batch systems exist, the notation of schedules (precedence relations, activity-on-node and on-arrow networks), FIFO, shortest job next and SJN with aging, Graham's scheduling anomalies, then Slurm: jobs and job steps, sbatch/srun/salloc, the daemons, the scheduling loop, builtin vs backfill, priority factors, and scheduling inside a node (NUMA, pinning)."
+      "blurb": "Why batch systems exist, the notation of schedules (precedence relations, activity-on-node and on-arrow networks), FIFO, shortest job next and SJN with aging, Graham's scheduling anomalies, then Slurm: jobs and job steps, sbatch/srun/salloc, the daemons, the scheduling loop, builtin vs backfill, priority factors, and scheduling inside a node (NUMA, pinning).",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_02_Batchsystems.pdf",
+        "where": "OPAL · Slides / Download",
+        "note": "posted 28 Oct"
+       }
+      ]
      },
      {
       "n": 3,
@@ -454,7 +504,15 @@ window.CMS = {
       "covered": true,
       "blurb": "Where a node gets its parallelism: pipelining and superscalarity recapped, SIMD (vector instructions, pipelined vs concurrent, chaining, D = C + A·B cycle by cycle), floating-point peak performance (64 GFLOPS per Skylake-SP core, 1,536 per chip), the cache hierarchy, hardware multithreading (coarse, fine, SMT), multicore and the end of Dennard scaling, cache coherence, on-chip networks, NUMA and multi-socket nodes.",
       "room": "TOE/317/H",
-      "roomNote": "moved at short notice on 4 Nov to TOE/317/H (Toepler-Bau); from 11 Nov the lecture is back in HÜL/S186/H (OPAL announcements of 4 Nov)."
+      "roomNote": "moved at short notice on 4 Nov to TOE/317/H (Toepler-Bau); from 11 Nov the lecture is back in HÜL/S186/H (OPAL announcements of 4 Nov).",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_03_Processor_Architecture.pdf",
+        "where": "OPAL · Slides / Download",
+        "note": "posted 30 Oct"
+       }
+      ]
      },
      {
       "n": 4,
@@ -463,7 +521,27 @@ window.CMS = {
       "icon": "🧵",
       "type": "software",
       "covered": false,
-      "blurb": "Thread-level parallelism with PThreads and OpenMP, and how loop iterations are scheduled onto threads."
+      "blurb": "Thread-level parallelism with PThreads and OpenMP, and how loop iterations are scheduled onto threads.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_04_05_Shared_Memory_Threads_SIMD.pdf",
+        "where": "OPAL · Slides / Download",
+        "note": "posted 6 Nov, one deck for lectures 4 and 5"
+       },
+       {
+        "kind": "code",
+        "name": "pthread_find_min_max_*.c (4 example programs)",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "code folder"
+       },
+       {
+        "kind": "code",
+        "name": "heat_sim_sdl_omp_for.c, heat_sim_sdl_omp_tasks.c",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "code folder; OpenMP examples"
+       }
+      ]
      },
      {
       "n": 5,
@@ -472,7 +550,15 @@ window.CMS = {
       "icon": "➡️",
       "type": "software",
       "covered": false,
-      "blurb": "Vectorization and the data dependencies that allow or forbid it."
+      "blurb": "Vectorization and the data dependencies that allow or forbid it.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "HPC_04_05_Shared_Memory_Threads_SIMD.pdf",
+        "where": "OPAL · Slides / Download",
+        "note": "posted 6 Nov, shared with lecture 4"
+       }
+      ]
      },
      {
       "n": 6,
@@ -558,7 +644,20 @@ window.CMS = {
       "covered": true,
       "lecture": 1,
       "points": 36,
-      "blurb": "Speedup and efficiency of a parallel sum with tree reduction, Amdahl's law for four parallel fractions, the largest PE count that keeps 90 % efficiency, a loop nest on 100 to 10,000 PEs, fitting the parallel fraction to measured runtimes, a synchronization-overhead model, and PCAM on a 2D heat solver with a double-buffer and a mean-temperature speedup."
+      "blurb": "Speedup and efficiency of a parallel sum with tree reduction, Amdahl's law for four parallel fractions, the largest PE count that keeps 90 % efficiency, a loop nest on 100 to 10,000 PEs, fitting the parallel fraction to measured runtimes, a synchronization-overhead model, and PCAM on a 2D heat solver with a double-buffer and a mean-temperature speedup.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "Exercise_02_Basics_of_Parallel_Computing.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "tutorial sheet, posted 22 Oct"
+       },
+       {
+        "kind": "other",
+        "name": "Exercise 02 – Basics of Parallelism and Amdahls Law (online test)",
+        "where": "OPAL · Exercises / Übungen"
+       }
+      ]
      },
      {
       "n": 3,
@@ -569,7 +668,20 @@ window.CMS = {
       "covered": true,
       "lecture": 2,
       "points": 42.9,
-      "blurb": "Gantt charts for FIFO, SJN and the optimum on two processors with and without dependencies, activity-on-node and on-arrow networks, a Slurm dependency script, SJN with aging on seven jobs arriving over time, and three batch scripts on Romeo (sequential vs parallel steps, -n vs -c)."
+      "blurb": "Gantt charts for FIFO, SJN and the optimum on two processors with and without dependencies, activity-on-node and on-arrow networks, a Slurm dependency script, SJN with aging on seven jobs arriving over time, and three batch scripts on Romeo (sequential vs parallel steps, -n vs -c).",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "Exercise_03_Scheduling_and_Batch_Systems.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "tutorial sheet, posted 30 Oct"
+       },
+       {
+        "kind": "other",
+        "name": "Exercise 03 – Job Scheduling and Batch System (online test)",
+        "where": "OPAL · Exercises / Übungen"
+       }
+      ]
      },
      {
       "n": 4,
@@ -2089,7 +2201,16 @@ window.CMS = {
       "date": "2026-10-12",
       "icon": "🧭",
       "covered": true,
-      "blurb": "Why digital wins: abstraction and scaling, analog vs digital, Boolean algebra, Karnaugh maps, binary arithmetic, latches and finite-state machines."
+      "blurb": "Why digital wins: abstraction and scaling, analog vs digital, Boolean algebra, Karnaugh maps, binary arithmetic, latches and finite-state machines.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_01_Einfuehrung_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 2,
@@ -2097,7 +2218,16 @@ window.CMS = {
       "date": "2026-10-19",
       "icon": "➕",
       "covered": true,
-      "blurb": "Number representations (unsigned, Gray code, sign + magnitude, offset, two's complement, fixed point, IEEE 754 floating point) and adders from the half adder to carry lookahead and the Manchester carry chain."
+      "blurb": "Number representations (unsigned, Gray code, sign + magnitude, offset, two's complement, fixed point, IEEE 754 floating point) and adders from the half adder to carry lookahead and the Manchester carry chain.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_02_Arithmetik1_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 3,
@@ -2105,7 +2235,16 @@ window.CMS = {
       "date": "2026-10-26",
       "icon": "✖️",
       "covered": true,
-      "blurb": "Carry-save addition, the bit-product matrix, Wallace and Dadda reduction trees, signed and multiply-accumulate multipliers, sequential multiplication, and division by restoring steps or Newton's method."
+      "blurb": "Carry-save addition, the bit-product matrix, Wallace and Dadda reduction trees, signed and multiply-accumulate multipliers, sequential multiplication, and division by restoring steps or Newton's method.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_03_Arithmetik2_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 4,
@@ -2113,7 +2252,16 @@ window.CMS = {
       "date": "2026-11-02",
       "icon": "➗",
       "covered": true,
-      "blurb": "Division concluded (restoring division in hardware and its optimisation, Newton-Raphson, when to avoid dividing), the arithmetic logic unit in the execution unit with a VHDL example, floating-point multiplication, division, addition with alignment and normalisation, rounding modes, and digital FIR and IIR filters."
+      "blurb": "Division concluded (restoring division in hardware and its optimisation, Newton-Raphson, when to avoid dividing), the arithmetic logic unit in the execution unit with a VHDL example, floating-point multiplication, division, addition with alignment and normalisation, rounding modes, and digital FIR and IIR filters.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_04_Arithmetik3_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 5,
@@ -2204,7 +2352,31 @@ window.CMS = {
       "published": "2026-10-22",
       "icon": "✏️",
       "covered": true,
-      "blurb": "First Thursday session of the German group. Sheet 1 with solutions is in OPAL (English version from 21 Oct, German from 22 Oct) but not read yet; the page holds a practice set on lectures 1–2: Karnaugh maps, two's complement and overflow, adder delays, fixed point, IEEE 754 and a small state machine."
+      "blurb": "First Thursday session of the German group. Sheet 1 with solutions is in OPAL (English version from 21 Oct, German from 22 Oct) but not read yet; the page holds a practice set on lectures 1–2: Karnaugh maps, two's complement and overflow, adder delays, fixed point, IEEE 754 and a small state machine.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DSTUebung1_2026de_Aufgaben.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German, your group"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung1_2026de_Loesungen.pdf",
+        "where": "OPAL · Exercises/Übungen"
+       },
+       {
+        "kind": "sheet",
+        "name": "DSTUebung1_2026en_taskdescription.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "English version"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung1_2026en_solutions.pdf",
+        "where": "OPAL · Exercises/Übungen"
+       }
+      ]
      },
      {
       "n": 2,
@@ -2213,7 +2385,32 @@ window.CMS = {
       "published": "2026-10-28",
       "icon": "✏️",
       "covered": true,
-      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions, checked against the chair’s solution (in OPAL since 6 Nov)."
+      "blurb": "Sheet 2 (tasks 1.7–3.3, in OPAL since 28 Oct): full adder and multiplexer, three Moore machines (two from state graphs, one from Verilog) with K-maps and don’t cares, Gray and two’s complement codes, fixed-point format bookkeeping and IEEE 754 half and single precision. Our own worked solutions, checked against the chair’s solution (in OPAL since 6 Nov).",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DSTUebung2_2025de_Aufgaben.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German, your group"
+       },
+       {
+        "kind": "solution",
+        "name": "Uebung_DST_2023_Uebung_2_Loesung_DST_23_24.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German solution"
+       },
+       {
+        "kind": "sheet",
+        "name": "DSTUebung2_2025en_taskdescription.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "English version"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung2_2025en_solution.pdf",
+        "where": "OPAL · Exercises/Übungen"
+       }
+      ]
      },
      {
       "n": 3,
@@ -2222,7 +2419,21 @@ window.CMS = {
       "published": "2026-11-06",
       "icon": "✏️",
       "covered": true,
-      "blurb": "Sheet 3 (tasks 3.3, 3.5–3.10, in OPAL since 6 Nov): carry-save versus ripple-carry addition of three numbers, a switchable adder/subtractor, incrementer and decrementer, Dadda reduction of a 5 × 5 multiplier with and without a 10-bit accumulate, restoring division of 173 / 8 and Newton-Raphson for 176 / 83. Our own worked solutions; 3.3 repeats the floating-point task of sheet 2."
+      "blurb": "Sheet 3 (tasks 3.3, 3.5–3.10, in OPAL since 6 Nov): carry-save versus ripple-carry addition of three numbers, a switchable adder/subtractor, incrementer and decrementer, Dadda reduction of a 5 × 5 multiplier with and without a 10-bit accumulate, restoring division of 173 / 8 and Newton-Raphson for 176 / 83. Our own worked solutions; 3.3 repeats the floating-point task of sheet 2.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DSTUebung3_2025de_Aufgaben.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German, your group; solution not posted yet"
+       },
+       {
+        "kind": "sheet",
+        "name": "DSTUebung3_2025en_taskdescription.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "English version"
+       }
+      ]
      },
      {
       "n": 4,
