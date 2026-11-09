@@ -1213,6 +1213,357 @@ function lecture4() {
     </ul>
     <p class="muted">Exercise: <a href="digital-circuit-design/exercise.html?n=2">exercise 2 on 5 Nov</a> (sheet 2: state machines, codes, fixed and floating point). Previous: <a href="digital-circuit-design/lecture.html?n=3">lecture 3, Arithmetic circuits 2</a>. Next: <a href="digital-circuit-design/lecture.html?n=5">lecture 5</a> on semiconductor technology for digital circuits (9 Nov). Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
 }
+// ===== Lecture 5: semiconductor technology for digital circuits (2022/23 deck, 31 slides) =====
+const l5box = (cls, t, body) => `<div class="${cls}"><div class="kicker">${t}</div>${body}</div>`;
+const nice = v => { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; };
+const f2 = (v, d = 2) => (+v.toFixed(d)).toLocaleString("en-GB", { maximumFractionDigits: d });
+
+// Diagram (slides 3-4): a bulk CMOS inverter in cross section, frontend (silicon) and backend (contacts, vias, metals).
+// Geometry is ours and not to scale; the layer stack and the four regions are the slide's.
+const XS_TIPS = {
+  sub: "<b>P-substrate</b>lightly p-doped wafer, tied to V<sub>SS</sub>;<br>the NMOS lives directly in it",
+  nw: "<b>N-well</b>n-doped pocket for the PMOS, tied to V<sub>DD</sub>",
+  sti: "<b>STI</b>shallow trench isolation: oxide-filled<br>trenches that separate neighbouring devices",
+  subc: "<b>Substrate contact</b>p+ tap that ties the substrate to V<sub>SS</sub>",
+  nmos: "<b>NMOS</b>n+ source and drain in the p-substrate;<br>gate = poly on a thin oxide",
+  pmos: "<b>PMOS</b>p+ source and drain in the n-well",
+  wellc: "<b>Well contact</b>n+ tap that ties the n-well to V<sub>DD</sub>",
+  co: "<b>CO</b>contacts: the first vertical plugs from<br>diffusion or poly up to metal 1",
+  m1: "<b>M1</b>metal 1: local wiring inside a cell<br>(here V<sub>SS</sub>, gate pads, output Z, V<sub>DD</sub>)",
+  v1: "<b>VIA1</b>vertical plugs between M1 and M2",
+  m2: "<b>M2</b>metal 2: here it joins both gates (input A)",
+  v2: "<b>VIA2</b>vertical plugs between M2 and M3",
+  m3: "<b>M3 and up</b>upper metals: global routing and<br>the V<sub>DD</sub>/V<sub>SS</sub> power grid",
+};
+CHARTS.xsec = narrow => {
+  const W = 660, H = narrow ? 300 : 340, S = 206, fs = narrow ? 19 : 11;
+  const g = (k, inner) => `<g class="pt" tabindex="0" data-k="${k}" data-tip="${esc(XS_TIPS[k])}">${inner}</g>`;
+  const r = (x, y, w, h, cls, rx = 0) => `<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}"/>`;
+  const t = (x, y, s, cls = "xl", a = "middle") => `<text class="${cls}" x="${x}" y="${y}" text-anchor="${a}" font-size="${fs}">${s}</text>`;
+  const sti = [[20, 50], [90, 130], [240, 300], [410, 450], [490, 540]].map(([a, b]) => `<path class="sti" d="M${a},${S} V${S + 22} Q${a},${S + 30} ${a + 8},${S + 30} H${b - 8} Q${b},${S + 30} ${b},${S + 22} V${S} Z"/>`).join("");
+  const diff = (a, b, k) => r(a, S, b - a, 20, k === "p" ? "pd" : "nd", 3) + (narrow ? "" : t((a + b) / 2, S + 14, k + "+", "xl sm"));
+  const gate = x => r(x, S - 6, 30, 6, "ox") + r(x, S - 22, 30, 16, "poly", 2);
+  const co = (x, top, bot) => r(x - 5, top, 10, bot - top, "via");
+  const front = [
+    g("sub", r(20, S, 560, 100, "sub") + (narrow ? "" : t(34, S + 90, "P-substrate", "xl", "start"))),
+    g("nw", r(280, S, 230, 74, "nw", 6) + (narrow ? "" : t(296, S + 66, "N-well", "xl", "start"))),
+    g("sti", sti + (narrow ? "" : t(270, S + 18, "STI", "xl sm"))),
+    g("subc", diff(50, 90, "p")),
+    g("nmos", diff(130, 170, "n") + gate(170) + diff(200, 240, "n")),
+    g("pmos", diff(300, 340, "p") + gate(340) + diff(370, 410, "p")),
+    g("wellc", diff(450, 490, "n")),
+  ].join("");
+  const back = [
+    g("co", [70, 150, 220, 320, 390, 470].map(x => co(x, 150, S)).join("") + co(185, 150, S - 22) + co(355, 150, S - 22)),
+    g("m1", r(55, 135, 105, 15, "met", 2) + r(175, 135, 20, 15, "met", 2) + r(210, 135, 125, 15, "met", 2) + r(345, 135, 20, 15, "met", 2) + r(380, 135, 110, 15, "met", 2)
+      + (narrow ? "" : t(107, 146, "V<tspan baseline-shift='sub' font-size='8'>SS</tspan>", "xl sm") + t(272, 146, "Z", "xl sm") + t(435, 146, "V<tspan baseline-shift='sub' font-size='8'>DD</tspan>", "xl sm"))),
+    g("v1", [185, 355, 100, 460].map(x => co(x, 115, 135)).join("")),
+    g("m2", r(170, 100, 200, 15, "met", 2) + r(85, 100, 30, 15, "met", 2) + r(445, 100, 30, 15, "met", 2) + (narrow ? "" : t(270, 111, "A", "xl sm"))),
+    g("v2", co(100, 62, 100) + co(460, 62, 100)),
+    g("m3", r(20, 45, 240, 17, "met", 2) + r(320, 45, 260, 17, "met", 2) + (narrow ? "" : t(140, 57, "V<tspan baseline-shift='sub' font-size='8'>SS</tspan> grid", "xl sm") + t(450, 57, "V<tspan baseline-shift='sub' font-size='8'>DD</tspan> grid", "xl sm"))),
+  ].join("");
+  const side = [["M3", 57], ["VIA2", 85], ["M2", 111], ["VIA1", 129], ["M1", 146], ["CO", 172], ["Si", S + 40]].map(([s, y]) => t(592, y + (narrow ? 4 : 0), s, "xl dim", "start")).join("");
+  const under = narrow ? "" : [["substrate contact", 70], ["NMOS", 185], ["PMOS", 355], ["well contact", 470]].map(([s, x]) => t(x, H - 8, s, "xl")).join("");
+  return `<svg class="xs" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cross section of a bulk CMOS inverter: a p-substrate with an n-well; from left a p+ substrate contact, an NMOS with n+ source and drain and a poly gate on thin oxide, a PMOS with p+ source and drain inside the n-well, and an n+ well contact, all separated by shallow trench isolation. Above the silicon: contacts, metal 1, via 1, metal 2, via 2 and metal 3">
+    ${r(20, 20, 560, S - 20, "be", 4)}<line class="axis" x1="20" x2="580" y1="${S}" y2="${S}"/>${back}${front}${side}${under}</svg>`;
+};
+
+// Chart (slides 6, 7, 31): minimum feature size over time on a log axis. The three marked points are the slides'
+// numbers; the dashed reference is the doubling rule of slide 6 (density x2 every 2 years = length / sqrt 2).
+const MOORE = [
+  { y: 1965, nm: 50000, t: "50 µm, ca. 1965", src: "slide 6" },
+  { y: 2024, nm: 2, t: "2 nm, ca. 2024", src: "slide 6" },
+  { y: 2035, nm: 0.5, t: "0.5 nm, 2035", src: "the roadmap on slide 31" },
+];
+const REINV = [[1965, "TTL", "the 1960s"], [1975, "MOS", "the 1970s"], [1985, "CMOS", "the 1980s"], [2012, "FinFET", "2012"], [2024, "GAAFET", "2024"], [2027, "Forksheet", "2027 (stacked forksheets, 1–2 nm node)"]];
+const mooreRef = y => 50000 * 2 ** (-(y - 1965) / 4);
+const fmtNm = v => v >= 1000 ? f2(v / 1000, 1) + " µm" : f2(v, 2) + " nm";
+CHARTS.moore = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 250 : 280, L = narrow ? 50 : 58, R = narrow ? 10 : 18, T = 12, B = 58, PW = W - L - R, PH = H - T - B;
+  const x = y => L + (y - 1960) / 80 * PW, y = nm => T + (5 - Math.log10(nm)) / 6 * PH;
+  const yt = [[100000, "100 µm"], [10000, "10 µm"], [1000, "1 µm"], [100, "100 nm"], [10, "10 nm"], [1, "1 nm"], [0.1, "0.1 nm"]];
+  const grid = yt.map(([v, s], i) => `<line class="${i === yt.length - 1 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>${narrow && i % 2 ? "" : `<text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${s}</text>`}`).join("")
+    + (narrow ? [1960, 1980, 2000, 2020, 2040] : [1960, 1970, 1980, 1990, 2000, 2010, 2020, 2030, 2040]).map(v => `<text class="tick" x="${x(v)}" y="${T + PH + 16}" text-anchor="${v === 2040 ? "end" : v === 1960 ? "start" : "middle"}">${v}</text>`).join("");
+  const ref = `<path class="line ref" d="M${x(1960)},${y(mooreRef(1960))} L${x(2040)},${y(mooreRef(2040))}"/>`;
+  const atom = `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(0.15)}" y2="${y(0.15)}" stroke-dasharray="2 3"/><text class="note" x="${L + 6}" y="${y(0.15) - 5}">Si atomic radius 0.15 nm</text>`;
+  const path = "M" + MOORE.map(d => `${x(d.y).toFixed(1)},${y(d.nm).toFixed(1)}`).join(" L");
+  const pts = MOORE.map((d, i) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.t}</b>from ${d.src}<br>doubling rule gives ${fmtNm(mooreRef(d.y))}`)}"><circle class="hit" cx="${x(d.y)}" cy="${y(d.nm)}" r="16"/><circle class="dot" cx="${x(d.y)}" cy="${y(d.nm)}" r="4.5"/>${narrow && i === 2 ? "" : `<text class="lbl" x="${x(d.y) + (i === 0 ? 9 : -9)}" y="${y(d.nm) + (i === 0 ? -8 : i === 2 ? -10 : 4)}" text-anchor="${i === 0 ? "start" : "end"}">${d.t}</text>`}</g>`).join("");
+  const by = T + PH + 34;
+  const inv = REINV.map(([yr, s, when], i) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${s}</b>${when}: a re-invention that kept scaling going (slide 7)`)}"><rect class="hit" x="${x(yr) - 10}" y="${by - 12}" width="20" height="24"/><path class="dot k2" d="M${x(yr)},${by - 5} l5,5 l-5,5 l-5,-5 Z"/>${narrow ? "" : `<text class="note" x="${x(yr) + (i >= 4 ? (i === 4 ? -8 : 8) : 0)}" y="${by + 17}" text-anchor="${i === 4 ? "end" : i === 5 ? "start" : "middle"}">${s}</text>`}</g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Minimum feature size on a log axis from 1960 to 2040: 50 micrometres around 1965, 2 nanometres around 2024 and 0.5 nanometres projected for 2035, close to a dashed reference that shrinks by the square root of two every two years; the silicon atomic radius of 0.15 nanometres is marked as a floor. Diamonds below the axis mark TTL, MOS, CMOS, FinFET 2012, GAAFET 2024 and forksheets 2027">${grid}${ref}${atom}<path class="line" d="${path}"/>${pts}${inv}</svg>`;
+};
+
+// Explorer + chart (slides 16-17): the square-law NMOS. KP and the slider ranges are ours; the equations are the slides'.
+const MO = { vgs: 1.0, vds: 0.3, vth: 0.4, wl: 2, lam: 0.1 }, KP = 0.3; // KP in mA/V²
+const idSq = (vgs, vds, vth, beta, lam) => { const ov = vgs - vth; if (ov <= 0) return 0; return vds < ov ? beta * (ov * vds - vds * vds / 2) : beta / 2 * ov * ov * (1 + lam * (vds - ov)); };
+const moRegion = () => MO.vgs <= MO.vth ? "cutoff" : MO.vds < MO.vgs - MO.vth ? "linear" : "saturation";
+CHARTS.iv = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = 46, R = narrow ? 12 : 58, T = 12, B = 30, PW = W - L - R, PH = H - T - B;
+  const beta = KP * MO.wl, ymax = nice(idSq(1.2, 1.2, 0.2, KP * 8, 0.2) / 8 * MO.wl * 1.02);
+  const x = v => L + v / 1.2 * PW, y = v => T + PH - Math.min(v, ymax) / ymax * PH;
+  const yt = [0, 0.25, 0.5, 0.75, 1].map(f => f * ymax);
+  const grid = yt.map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${f2(v * 1000, 0)}</text>`).join("")
+    + [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${f2(v, 1)}${v === 1.2 ? " V" : ""}</text>`).join("")
+    + `<text class="axl" x="${L + 4}" y="${T + 10}">I<tspan baseline-shift="sub" font-size="8">D</tspan> in µA</text>`;
+  const curve = vgs => { const p = []; for (let v = 0; v <= 1.2001; v += 0.01) p.push(`${x(v).toFixed(1)},${y(idSq(vgs, v, MO.vth, beta, MO.lam)).toFixed(1)}`); return "M" + p.join(" L"); };
+  const fam = [0.4, 0.6, 0.8, 1.0, 1.2].filter(v => v > MO.vth).map(v => `<path class="line gray" d="${curve(v)}"/>${narrow ? "" : `<text class="note" x="${x(1.2) + 6}" y="${y(idSq(v, 1.2, MO.vth, beta, MO.lam)) + 4}">${f2(v, 1)} V</text>`}`).join("");
+  const bnd = []; for (let v = 0; v <= 1.2001; v += 0.01) { const i = beta / 2 * v * v; if (i > ymax) break; bnd.push(`${x(v).toFixed(1)},${y(i).toFixed(1)}`); }
+  const id = idSq(MO.vgs, MO.vds, MO.vth, beta, MO.lam);
+  const op = `<g class="pt" tabindex="0" data-tip="${esc(`<b>${f2(id * 1000, 1)} µA</b>${moRegion()} · V<sub>GS</sub> = ${f2(MO.vgs)} V, V<sub>DS</sub> = ${f2(MO.vds)} V`)}"><circle class="hit" cx="${x(MO.vds)}" cy="${y(id)}" r="14"/><circle class="dot k2" cx="${x(MO.vds)}" cy="${y(id)}" r="5"/></g>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Output characteristics of the square-law NMOS: drain current over drain-source voltage for gate voltages 0.4 to 1.2 volts, with the curve for the chosen gate voltage highlighted, the dashed boundary between linear and saturation region, and the operating point at ${f2(MO.vds)} volts and ${f2(id * 1000, 1)} microamps">${grid}${fam}<path class="line ref" d="M${bnd.join(" L")}"/>${MO.vgs > MO.vth ? `<path class="line" d="${curve(MO.vgs)}"/>` : ""}${op}</svg>`;
+};
+function moOut() {
+  const beta = KP * MO.wl, ov = MO.vgs - MO.vth, id = idSq(MO.vgs, MO.vds, MO.vth, beta, MO.lam), reg = moRegion();
+  const eq = reg === "cutoff" ? `V<sub>GS</sub> = ${f2(MO.vgs)} V ≤ V<sub>th</sub> = ${f2(MO.vth)} V, so I<sub>D</sub> = 0`
+    : reg === "linear" ? `${f2(beta)} · (${f2(ov)} · ${f2(MO.vds)} − ${f2(MO.vds)}²/2) = ${f2(id * 1000, 1)} µA`
+    : `${f2(beta)}/2 · ${f2(ov)}² · (1 + ${f2(MO.lam)} · (${f2(MO.vds)} − ${f2(ov)})) = ${f2(id * 1000, 1)} µA`;
+  return `<dt>β</dt><dd>KP · W/L = ${KP} mA/V² · ${MO.wl} = ${f2(beta)} mA/V²</dd>
+    <dt>Region</dt><dd>${reg}${reg === "cutoff" ? "" : `: V<sub>DS</sub> = ${f2(MO.vds)} V ${reg === "linear" ? "&lt;" : "≥"} V<sub>GS</sub> − V<sub>th</sub> = ${f2(ov)} V`}</dd>
+    <dt>I<sub>D</sub></dt><dd>${eq}</dd>`;
+}
+function initMo(body) {
+  const sl = (k, t, min, max, step, unit) => `<label>${t} <input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${MO[k]}"> <output data-o="${k}">${f2(MO[k])}${unit}</output></label>`;
+  body.innerHTML = `<div class="ctl">${sl("vgs", "V<sub>GS</sub>", 0, 1.2, 0.05, " V")}${sl("vds", "V<sub>DS</sub>", 0, 1.2, 0.05, " V")}${sl("vth", "V<sub>th</sub>", 0.2, 0.6, 0.05, " V")}${sl("wl", "W/L", 1, 8, 1, "")}${sl("lam", "λ", 0, 0.3, 0.05, " /V")}</div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), render = () => { ro.innerHTML = moOut(); body.querySelectorAll("[data-o]").forEach(o => { o.textContent = f2(MO[o.dataset.o]) + ({ vgs: " V", vds: " V", vth: " V", lam: " /V" }[o.dataset.o] || ""); }); mountCharts(); };
+  body.querySelectorAll("[data-k]").forEach(i => i.addEventListener("input", e => { MO[e.target.dataset.k] = +e.target.value; render(); }));
+  ro.innerHTML = moOut();
+}
+
+// Explorer (slide 15): the inverter's 2 × 2 delay table, bilinearly interpolated as a timing tool does it.
+const NL = { tr: 15, cl: 75 }, NL_TR = [10, 20], NL_CL = [50, 100], NL_D = [[0.2, 0.4], [0.3, 0.6]];
+function nlOut() {
+  const u = (NL.tr - 10) / 10, v = (NL.cl - 50) / 50, w = [[(1 - u) * (1 - v), (1 - u) * v], [u * (1 - v), u * v]];
+  const a = NL_D[0][0] * (1 - v) + NL_D[0][1] * v, b = NL_D[1][0] * (1 - v) + NL_D[1][1] * v, d = a * (1 - u) + b * u;
+  const cell = (s, cls = "", st = "") => `<div class="cell ${cls}" style="${st}">${s}</div>`;
+  const grid = `<div class="l5nl">${cell("ps \\ fF", "blank")}${NL_CL.map(c => cell(c, "hd")).join("")}${NL_TR.map((t, i) => cell(t, "hd") + NL_D[i].map((x, j) => cell(x.toFixed(1) + " ns", "one", `--w:${(w[i][j] * 100).toFixed(0)}%`)).join("")).join("")}</div>`;
+  return `${grid}<dl class="ro"><dt>Weights</dt><dd>${w.flat().map(x => f2(x)).join(" · ")} (shading of the four cells)</dd>
+    <dt>Along the load</dt><dd>at 10 ps: ${f2(a, 3)} ns · at 20 ps: ${f2(b, 3)} ns</dd>
+    <dt>Delay A↑ → Y↓</dt><dd><b>${f2(d, 3)} ns</b> for ${NL.tr} ps input transition and ${NL.cl} fF load</dd></dl>`;
+}
+function initNl(body) {
+  body.innerHTML = `<div class="ctl"><label>Input transition <input type="range" data-k="tr" min="10" max="20" step="1" value="${NL.tr}"> <output data-o="tr">${NL.tr} ps</output></label>
+    <label>Output load <input type="range" data-k="cl" min="50" max="100" step="5" value="${NL.cl}"> <output data-o="cl">${NL.cl} fF</output></label></div><div data-ro></div>`;
+  const ro = body.querySelector("[data-ro]"), render = () => { ro.innerHTML = nlOut(); body.querySelector('[data-o="tr"]').textContent = NL.tr + " ps"; body.querySelector('[data-o="cl"]').textContent = NL.cl + " fF"; };
+  body.querySelectorAll("[data-k]").forEach(i => i.addEventListener("input", e => { NL[e.target.dataset.k] = +e.target.value; render(); }));
+  render();
+}
+
+// Explorer + chart (slide 18): CMOS inverter transfer curve and its short-circuit current, solved numerically from
+// the square-law models of slides 16-17. Thresholds 0.3 / −0.3 V, β_N = 0.5 mA/V², λ = 0.05 /V are ours.
+const IV = { r: 1, vdd: 1.0 }, VTN = 0.3, VTP = 0.3, BN = 0.5, LAM = 0.05;
+function invVz(va) {
+  const bp = BN * IV.r; let lo = 0, hi = IV.vdd;
+  for (let k = 0; k < 50; k++) { const m = (lo + hi) / 2, f = idSq(va, m, VTN, BN, LAM) - idSq(IV.vdd - va, IV.vdd - m, VTP, bp, LAM); if (f > 0) hi = m; else lo = m; }
+  const vz = (lo + hi) / 2; return { vz, id: idSq(va, vz, VTN, BN, LAM) };
+}
+function invVm() { let lo = 0, hi = IV.vdd; for (let k = 0; k < 40; k++) { const m = (lo + hi) / 2; if (invVz(m).vz > m) lo = m; else hi = m; } return (lo + hi) / 2; }
+const vmFormula = () => { const s = Math.sqrt(IV.r); return (VTN + s * (IV.vdd - VTP)) / (1 + s); };
+CHARTS.vtc = narrow => {
+  const W = narrow ? 340 : 600, L = 46, R = 14, T = 12, H1 = narrow ? 150 : 170, G = 26, H2 = 80, B = 30, H = T + H1 + G + H2 + B, PW = W - L - R;
+  const pts = []; for (let k = 0; k <= 200; k++) { const va = k / 200 * IV.vdd; pts.push({ va, ...invVz(va) }); }
+  const imax = nice(Math.max(...pts.map(p => p.id)) * 1000 * 1.05);
+  const x = v => L + v / 1.2 * PW, y1 = v => T + H1 - v / 1.2 * H1, y2 = i => T + H1 + G + H2 - i * 1000 / imax * H2;
+  const bands = [[0, VTN], [IV.vdd - VTP, IV.vdd]].map(([a, b]) => `<rect class="band" x="${x(a)}" y="${T}" width="${x(b) - x(a)}" height="${H1}"/><rect class="band" x="${x(a)}" y="${T + H1 + G}" width="${x(b) - x(a)}" height="${H2}"/>`).join("");
+  const grid = [0, 0.3, 0.6, 0.9, 1.2].map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y1(v)}" y2="${y1(v)}"/><text class="tick" x="${L - 6}" y="${y1(v) + 4}" text-anchor="end">${f2(v, 1)}</text>`).join("")
+    + [0, imax / 2, imax].map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y2(v / 1000)}" y2="${y2(v / 1000)}"/><text class="tick" x="${L - 6}" y="${y2(v / 1000) + 4}" text-anchor="end">${f2(v, 0)}</text>`).join("")
+    + [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${f2(v, 1)}${v === 1.2 ? " V" : ""}</text>`).join("")
+    + `<text class="axl" x="${L + 4}" y="${T + 10}">V<tspan baseline-shift="sub" font-size="8">Z</tspan> in V</text><text class="axl" x="${L + 4}" y="${T + H1 + G - 6}">I<tspan baseline-shift="sub" font-size="8">D</tspan> in µA</text>`;
+  const vz = "M" + pts.map(p => `${x(p.va).toFixed(1)},${y1(p.vz).toFixed(1)}`).join(" L"), id = "M" + pts.map(p => `${x(p.va).toFixed(1)},${y2(p.id).toFixed(1)}`).join(" L");
+  const vm = invVm(), pk = pts.reduce((a, p) => p.id > a.id ? p : a);
+  const diag = `<line class="ann" x1="${x(0)}" y1="${y1(0)}" x2="${x(IV.vdd)}" y2="${y1(IV.vdd)}" stroke-dasharray="3 3"/>`;
+  const mark = `<g class="pt" tabindex="0" data-tip="${esc(`<b>V<sub>M</sub> = ${f2(vm, 3)} V</b>switching threshold: V<sub>Z</sub> = V<sub>A</sub><br>square-law formula: ${f2(vmFormula(), 3)} V`)}"><circle class="hit" cx="${x(vm)}" cy="${y1(vm)}" r="14"/><circle class="dot k2" cx="${x(vm)}" cy="${y1(vm)}" r="5"/></g>
+    <g class="pt" tabindex="0" data-tip="${esc(`<b>${f2(pk.id * 1000, 1)} µA peak</b>at V<sub>A</sub> = ${f2(pk.va, 2)} V: both transistors conduct<br>(short-circuit current while switching)`)}"><circle class="hit" cx="${x(pk.va)}" cy="${y2(pk.id)}" r="14"/><circle class="dot k2" cx="${x(pk.va)}" cy="${y2(pk.id)}" r="5"/></g>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two panels over the input voltage from 0 to ${f2(IV.vdd)} volts. Top: the inverter output falls from ${f2(IV.vdd)} volts to 0, crossing the input at the switching threshold ${f2(vm, 2)} volts. Bottom: the current through both transistors is zero where one of them is cut off (shaded bands) and peaks at ${f2(pk.id * 1000, 1)} microamps near the threshold">${bands}${grid}${diag}<path class="line" d="${vz}"/><path class="line" d="${id}"/>${mark}</svg>`;
+};
+function ivOut() {
+  const vm = invVm(), s = Math.sqrt(IV.r);
+  return `<dt>Cut-off bands</dt><dd>NMOS off for V<sub>A</sub> &lt; ${VTN} V · PMOS off for V<sub>A</sub> &gt; ${f2(IV.vdd - VTP)} V (shaded): no current path</dd>
+    <dt>V<sub>M</sub></dt><dd>(V<sub>th,N</sub> + √(β<sub>P</sub>/β<sub>N</sub>)·(V<sub>DD</sub> − |V<sub>th,P</sub>|)) / (1 + √(β<sub>P</sub>/β<sub>N</sub>)) = (0.3 + ${f2(s, 3)} · ${f2(IV.vdd - VTP)}) / ${f2(1 + s, 3)} = <b>${f2(vmFormula(), 3)} V</b> (numerical, with λ: ${f2(vm, 3)} V)</dd>`;
+}
+function initIv(body) {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Inverter sizing">${[[1, "β_P = β_N (balanced)"], [0.5, "equal W/L, holes half as mobile"], [2, "PMOS twice as strong"]].map(([r, t]) => `<button type="button" class="preset" data-r="${r}" aria-pressed="${IV.r === r}">${t.replace("β_P", "β<sub>P</sub>").replace("β_N", "β<sub>N</sub>")}</button>`).join("")}</div>
+    <div class="ctl"><label>β<sub>P</sub>/β<sub>N</sub> <input type="range" data-k="r" min="0.25" max="4" step="0.05" value="${IV.r}"> <output data-o="r">${f2(IV.r)}</output></label>
+    <label>V<sub>DD</sub> <input type="range" data-k="vdd" min="0.7" max="1.2" step="0.05" value="${IV.vdd}"> <output data-o="vdd">${f2(IV.vdd)} V</output></label></div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), render = () => {
+    ro.innerHTML = ivOut(); body.querySelector('[data-o="r"]').textContent = f2(IV.r); body.querySelector('[data-o="vdd"]').textContent = f2(IV.vdd) + " V";
+    body.querySelector('[data-k="r"]').value = IV.r; body.querySelectorAll("[data-r]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.r === IV.r)); mountCharts(); };
+  body.querySelectorAll("[data-k]").forEach(i => i.addEventListener("input", e => { IV[e.target.dataset.k] = +e.target.value; render(); }));
+  body.querySelectorAll("[data-r]").forEach(b => b.addEventListener("click", () => { IV.r = +b.dataset.r; render(); }));
+  ro.innerHTML = ivOut();
+}
+
+// Chart (slide 29): log(I_D) over V_GS for a standard and an improved sub-threshold slope. A smooth long-channel
+// model, I = I_S·ln²(1 + e^((V_GS − V_th)/(2nφ_t))), with n = 1.5 (89 mV/dec) and n = 1.1 (65 mV/dec); numbers are ours.
+const PHI = 0.02585, SS_VDD = 0.8, SS = [
+  { s: 1, n: 1.5, vth: 0.35, name: "standard slope" },
+  { s: 2, n: 1.1, vth: 0.35, name: "improved, same V<sub>th</sub>" },
+  { s: 3, n: 1.1, vth: 0.35 * 1.1 / 1.5, name: "improved, lower V<sub>th</sub>" },
+];
+const ssI = (d, v) => { const a = (v - d.vth) / (2 * d.n * PHI); return (a > 30 ? a : Math.log1p(Math.exp(a))) ** 2; }; // µA
+const fmtI = ua => ua >= 1 ? f2(ua, 1) + " µA" : ua >= 1e-3 ? f2(ua * 1e3, 1) + " nA" : f2(ua * 1e6, 1) + " pA";
+CHARTS.ss = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 260, L = 50, R = narrow ? 14 : 24, T = 12, B = 30, PW = W - L - R, PH = H - T - B;
+  const x = v => L + v / SS_VDD * PW, y = ua => T + (3 - Math.log10(ua)) / 9 * PH; // 1 mA … 1 fA → use 10^3 … 10^-6 µA
+  const grid = [3, 0, -3, -6].map((e, i) => `<line class="${i === 3 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(10 ** e)}" y2="${y(10 ** e)}"/><text class="tick" x="${L - 6}" y="${y(10 ** e) + 4}" text-anchor="end">${["1 mA", "1 µA", "1 nA", "1 pA"][i]}</text>`).join("")
+    + [0, 0.2, 0.4, 0.6, 0.8].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${f2(v, 1)}${v === 0.8 ? " V" : ""}</text>`).join("")
+    + `<line class="ann" x1="${x(SS_VDD)}" x2="${x(SS_VDD)}" y1="${T}" y2="${T + PH}" stroke-dasharray="3 3"/>`;
+  const lines = SS.map(d => { const p = []; for (let v = 0; v <= SS_VDD + 1e-9; v += 0.01) p.push(`${x(v).toFixed(1)},${y(ssI(d, v)).toFixed(1)}`);
+    const on = ssI(d, SS_VDD), off = ssI(d, 0);
+    const tip = `<b>${d.name}</b>S = ${f2(d.n * PHI * Math.LN10 * 1000, 0)} mV/dec · V<sub>th</sub> = ${f2(d.vth, 3)} V<br>I<sub>on</sub> ${fmtI(on)} · I<sub>off</sub> ${fmtI(off)} · ratio ${f2(Math.log10(on / off), 1)} decades`;
+    return `<path class="line k${d.s}" d="M${p.join(" L")}"/>` + [[0, off], [SS_VDD, on]].map(([v, i]) => `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><circle class="hit" cx="${x(v)}" cy="${y(i)}" r="12"/><circle class="dot k${d.s}" cx="${x(v)}" cy="${y(i)}" r="4"/></g>`).join(""); }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Drain current on a log axis over gate voltage from 0 to 0.8 volts for three transistors: a standard sub-threshold slope of 89 millivolts per decade, an improved 65 millivolts per decade at the same threshold, which leaks about 27 times less at zero volts, and the improved slope with a lower threshold, which leaks as much as the standard one but delivers more on-current">${grid}${lines}</svg>`;
+};
+
+// Chart (slide 27): cell-area shares by threshold flavour before and after leakage optimisation (the slide's pies).
+const MVT = [["before optimisation", [87, 12, 1]], ["after leakage optimisation", [23, 20, 57]]], MVT_K = ["LVT (fast, leaky)", "RVT (regular)", "HVT (slow, low leakage)"];
+CHARTS.mvt = narrow => {
+  const W = narrow ? 340 : 600, L = 0, R = 0, T = 4, RH = 58, H = T + MVT.length * RH, PW = W - L - R;
+  const rows = MVT.map(([name, v], r) => { let acc = 0; const y0 = T + r * RH + 20;
+    return `<text class="cat" x="0" y="${y0 - 6}">${name}</text>` + v.map((p, i) => { const x0 = L + acc / 100 * PW, w = p / 100 * PW; acc += p;
+      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p} % ${MVT_K[i]}</b>${name}`)}"><rect class="bar s${i + 1}" x="${x0 + (i ? 1 : 0)}" y="${y0}" width="${Math.max(w - (i ? 1 : 0) - (i < 2 ? 1 : 0), 1)}" height="20" rx="${i === 0 || i === 2 ? 4 : 0}"/>${p >= 8 ? `<text class="val" x="${x0 + 6}" y="${y0 + 35}">${p} %</text>` : ""}</g>`; }).join(""); }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share of cell area by threshold flavour. Before optimisation: 87 percent low-threshold, 12 percent regular, 1 percent high-threshold. After the place-and-route tool's leakage optimisation: 23 percent low, 20 percent regular, 57 percent high threshold">${rows}</svg>`;
+};
+Object.assign(LABS, { mo: initMo, nl: initNl, iv: initIv });
+
+function lecture5() {
+  return `${head(l)}
+    <p class="l5-start">New to transistors? <a href="digital-circuit-design/basics.html">Start with the basics page</a>: what a transistor is, NMOS, PMOS, CMOS, V<sub>DD</sub> and V<sub>SS</sub>, and a glossary. This page assumes those words.</p>
+    <p class="lead">After four lectures of logic and arithmetic on paper, this one goes down to the silicon those gates are made of. It shows how a CMOS chip is built up in layers, how far sixty years of shrinking have taken it and what replaced the planar transistor when shrinking got hard, why CMOS beat every earlier logic family (it draws no current while idle), and which physical effects a designer of a nanoscale chip has to budget for: voltage drop on the supply wires, wires wearing out, parasitic R and C, and transistors that are never quite identical. Written from the chair's 2022/23 deck (31 slides); three explorers and five charts.</p>
+
+    <h2>Manufacturing: one wafer, many chips (slide 2)</h2>
+    <p>Semiconductor manufacturing is lithographic: patterns are projected layer by layer onto a silicon wafer, which is what makes very large and very cheap digital, analog and mixed-signal circuits possible. Production today runs on 300 mm wafers. The same process family can build far more than transistors: bipolar and field-effect transistors, capacitors, inductors, resistors, memristors, photodiodes, LEDs, electrical and optical waveguides, micromechanical systems, chemical sensors and even particle accelerators. The photo on the slide is a 300 mm wafer from a 22 nm FDSOI multi-project-wafer run carrying a prototype of the chair.</p>
+    ${l5box("why", "Context, not on the slides: what a multi-project wafer is", "<p>A mask set for an advanced node costs millions, far too much for a research prototype. On a multi-project wafer (MPW) many groups share one mask set: each design gets a small rectangle of the reticle, and the foundry dices the wafer and hands every customer their own dies. That is why the wafer on the slide looks like a mosaic of different chips rather than hundreds of identical ones.</p>")}
+
+    <h2>The CMOS cross section and the layout (slides 3–5)</h2>
+    <p>A bulk CMOS chip has two halves. The <b>frontend</b> is the silicon itself: a lightly p-doped substrate in which the NMOS transistors sit directly, n-doped wells that host the PMOS transistors, heavily doped n+ and p+ regions for sources and drains, and oxide-filled trenches (STI, shallow trench isolation) between neighbouring devices. Two more doped regions are not transistors at all: a p+ <b>substrate contact</b> and an n+ <b>well contact</b> fix the substrate and the well to a defined potential. The <b>backend</b> is the wiring stack on top: contacts (CO) from silicon or gate up to metal 1, then alternating via and metal layers (M1, VIA1, M2, VIA2, M3, …).</p>
+    ${chart("xsec")}
+      <figcaption>Redrawn after slide 3 and wired up as an inverter (our addition): M1 joins the substrate contact with the NMOS source (V<sub>SS</sub>), the two drains (output Z), and the PMOS source with the well contact (V<sub>DD</sub>); M2 joins both gates (input A); M3 carries the supply grid. Not to scale. Hover or focus a layer for what it is.</figcaption>
+    </figure>
+    <p>The layout view (slide 4) is the same structure seen from above, one drawing layer per mask: <b>NW</b> (n-well), <b>RX</b> (active area, where diffusion is allowed), <b>PP</b> (p+ implant; areas without it get n+), <b>Poly</b> (gates), <b>CO</b> (contacts), <b>M1</b> and up. A transistor appears wherever poly crosses active area. The designer's degrees of freedom are where the NMOS and PMOS transistors go and how they are wired, and two numbers per transistor: the channel <b>width W</b> (how far the poly runs across the active area) and the <b>length L</b> (how wide the poly line is, source to drain).</p>
+    <p>Slide 5 adds the symbols. Both transistors have four terminals: gate G, drain D, source S and bulk B. The NMOS bulk is the substrate, the PMOS bulk is the n-well. The NMOS current I<sub>D</sub> flows from drain to source; the PMOS symbol has the bubble at the gate and its current flows from source to drain.</p>
+    ${l5box("why", "Context, not on the slides: why the taps matter", "<p>Every source and drain forms a pn junction with its substrate or well. As long as the p-substrate sits at the lowest potential (V<sub>SS</sub>) and the n-well at the highest (V<sub>DD</sub>), these junctions are reverse-biased and isolate the transistors from each other. The taps are what hold them there. Without enough taps, a current spike can lift the substrate locally, forward-bias a junction and trigger the parasitic thyristor that a p+/n-well/p-substrate/n+ stack forms: <i>latch-up</i>, a short from V<sub>DD</sub> to V<sub>SS</sub> that only a power cycle ends. Standard cells therefore carry tap cells at regular intervals.</p>")}
+
+    <h2>Moore's law and its re-inventions (slides 6–7)</h2>
+    <p>Around 1965 the smallest structures were about 50 µm; around 2024 they are about 2 nm. That is a linear shrink by 25&#8239;000 and therefore 25&#8239;000² = 625&#8239;000&#8239;000 times more transistors per area (or, as the slide puts it, performance): sixty years of exponential scaling with the transistor count doubling about every two years. Two limits are on the slide. <b>Complexity</b>: the table behind the numbers lists the manufacturers with a leading-edge logic fab per node, 29 at 180 nm and only three (Samsung, TSMC, Intel) from 10 nm on. And <b>atoms</b>: a silicon atom has a radius of about 0.15 nm, so a 2 nm structure is fewer than ten atoms across.</p>
+    ${chart("moore", leg([[1, "feature size named on the slides", "ln"], [0, "<span class=\"l5dash\"></span> density ×2 every 2 years"], [2, "re-inventions (slide 7)"]]))}
+      <figcaption>Feature size on a log axis. The three dots are the slides' numbers (50 µm ≈ 1965, 2 nm ≈ 2024 from slide 6; 0.5 nm by 2035 from the roadmap on slide 31). The dashed line is the doubling rule from 50 µm, computed here: halving the area every two years means dividing the length by √2. The 1960s/70s/80s re-inventions are placed mid-decade by us.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: does \"doubling every two years\" fit the slide's two numbers?", `<p>Area density grew by 625&#8239;000&#8239;000 = 2<sup>29.2</sup> (log<sub>2</sub> 6.25·10<sup>8</sup> = 8.796 / 0.301 = 29.2). Between 1965 and 2024 lie 59 years, so one doubling took 59 / 29.2 = <b>2.02 years</b>. In length: 25&#8239;000 = √2<sup>29.2</sup>, a factor √2 ≈ 1.41 every two years, about 0.7× per node, which is why node names step 180 → 130 → 90 → 65 → 45 nm. Continuing the rule to 2035 gives 50 µm · 2<sup>−70/4</sup> = 0.27 nm, the same ballpark as the roadmap's 0.5 nm and about the diameter of a single silicon atom.</p>`)}
+    <p>Scaling did not happen with one device. Slide 7 lists the re-inventions: <b>TTL</b> (bipolar, 1960s), <b>MOS</b> (1970s), <b>CMOS</b> (1980s), the <b>FinFET</b> (2012), the gate-all-around FET <b>GAAFET</b> (2024), and stacked <b>forksheets</b> (expected 2027, the 1–2 nm node). The ITRS picture next to it names the two directions: <b>More Moore</b>, the miniaturisation of baseline CMOS for CPUs, memory and logic from 130 nm down to 16 nm and beyond, with "beyond CMOS" at the bottom; and <b>More than Moore</b>, diversification into analog/RF, passives, high-voltage power, sensors and actuators (MEMS) and biochips. The first produces systems-on-chip (digital content), the second systems-in-package that interact with people and the environment, and the combination gives the "higher value systems".</p>
+
+    <h2>Before CMOS: enhancement and depletion NMOS (slide 8)</h2>
+    <p>Early MOS logic used only NMOS transistors. The switching transistor pulls the output A to V<sub>SS</sub> when the input E1 is high; something must pull A up when it is low, and that load was also an NMOS:</p>
+    <ul class="cmp" aria-label="EE versus ED NMOS logic">
+      <li><b>EE (enhancement load)</b><span class="v"><span class="sw t"></span>The load is an enhancement transistor with gate tied to drain (a "diode"), V<sub>tE,N</sub> ≈ 2 V. It stops conducting once the output is a threshold below V<sub>DD</sub>, so the high level is reached slowly as the load pinches off. Example: Intel 4004.</span></li>
+      <li><b>ED (depletion load)</b><span class="v"><span class="sw v"></span>The load is a depletion transistor, V<sub>tD,N</sub> ≈ −2 V, with gate tied to source (V<sub>GS</sub> = 0). It still conducts at V<sub>GS</sub> = 0, so it pulls all the way to V<sub>DD</sub> and is faster. Price: higher DC power. Dominant in the 1970s and early 1980s (e.g. Zilog Z80).</span></li>
+    </ul>
+    ${l5box("ex", "Worked example: levels and standby power of an ED gate", `<p>Take V<sub>DD</sub> = 5 V (a typical supply of that era; the slide gives only the thresholds). EE: the diode-connected load turns off at V<sub>GS</sub> = V<sub>tE</sub>, so the high level is at most 5 − 2 = 3 V (less with the body effect). ED: the depletion load conducts down to V<sub>GS</sub> = −2 V, so the output reaches the full 5 V. But whenever E1 is high, both transistors conduct and a current flows from V<sub>DD</sub> to V<sub>SS</sub> permanently. With an assumed 50 µA per gate that is 5 V · 50 µA = 250 µW; 20&#8239;000 gates with half of them low draw 10&#8239;000 · 250 µW = <b>2.5 W</b> while doing nothing. CMOS removes exactly this term.</p>`)}
+
+    <h2>The CMOS inverter, and why CMOS won (slides 9–11)</h2>
+    <p>The inverter is the basic element of CMOS logic: a PMOS from V<sub>DD</sub> to the output Z and an NMOS from Z to V<sub>SS</sub>, both gates on the input A, the PMOS bulk at V<sub>DD</sub> and the NMOS bulk at V<sub>SS</sub>. In the layout (slide 9) the PMOS sits in the n-well at the top under the V<sub>DD</sub> rail, the NMOS at the bottom over the V<sub>SS</sub> rail, one poly line forms both gates, and an M1 strip joins the two drains to Z.</p>
+    <p>The switch model of slide 11 explains the main advantage. Treat each transistor as a switch: with input 0 the PMOS is closed and the NMOS open, so Z = 1; with input 1 the opposite. For any static input there is always at least one blocking transistor in the path from V<sub>DD</sub> to V<sub>SS</sub>, hence <b>zero static power draw</b> (complementary MOS). And both edges are driven actively, with the full current of a transistor towards V<sub>DD</sub> and towards V<sub>SS</sub>, unlike the pull-up resistors of TTL or the diode-connected loads of EE NMOS.</p>
+    <h3>TTL versus CMOS (slide 10)</h3>
+    <ul class="cmp" aria-label="TTL versus CMOS">
+      <li><b>Basic gate</b><span class="v"><span class="sw v"></span>TTL: NAND</span><span class="v"><span class="sw t"></span>CMOS: NAND and NOR</span></li>
+      <li><b>Fanout</b><span class="v"><span class="sw v"></span>&lt; 10</span><span class="v"><span class="sw t"></span>&gt; 50</span></li>
+      <li><b>Power per gate, 1-micron node</b><span class="v"><span class="sw v"></span>1–22 µW</span><span class="v"><span class="sw t"></span>0.5–1 µW</span></li>
+      <li><b>Noise immunity</b><span class="v"><span class="sw v"></span>good</span><span class="v"><span class="sw t"></span>excellent</span></li>
+      <li><b>Voltage swing</b><span class="v"><span class="sw v"></span>V<sub>DD</sub> − R2·I<sub>load</sub> down to V<sub>SS</sub> + V<sub>CE,sat</sub></span><span class="v"><span class="sw t"></span>rail to rail, V<sub>DD</sub> to V<sub>SS</sub></span></li>
+      <li><b>Delay t<sub>pd</sub>, 1-micron node</b><span class="v"><span class="sw v"></span>2–33 ns</span><span class="v"><span class="sw t"></span>1–200 ns</span></li>
+      <li><b>Era</b><span class="v"><span class="sw v"></span>1960s, e.g. the Apollo guidance computers</span><span class="v"><span class="sw t"></span>from the 1980s to today's compute hardware, from planar CMOS to FinFET</span></li>
+    </ul>
+    <p>Other families named on the slide: <b>ECL</b> (emitter-coupled logic: parallel and cascaded differential bipolar pairs, fast but with a limited voltage swing), <b>BiCMOS</b> (CMOS input logic with a bipolar push-pull output driver for high current, used e.g. in the Pentium 4 era) and <b>NMOS</b>, the precursor of CMOS with a diode-connected NMOS where CMOS has the PMOS.</p>
+    ${l5box("why", "Context, not on the slides: why fanout is so different", "<p>A TTL input is the emitter of a bipolar transistor and sinks a real DC current from whatever drives it, so a driver can only feed a handful of inputs before its low level rises too far. A CMOS input is a gate on an insulating oxide: it draws no DC current, only the charge for its capacitance when it switches. Fanout in CMOS is therefore a speed question (more load capacitance, slower edges, as the delay table below shows), not a question of whether the logic levels still hold.</p>")}
+
+    <h2>Digital advantages: size and abstraction (slides 12–15)</h2>
+    <p>Slides 12–14 zoom into one example chip: the whole die is about 5 mm × 5 mm with the I/O pads around the edge; a window of about 50 µm × 50 µm shows the rows of standard cells; at about 5 µm × 5 µm individual transistors, contacts and wires become visible.</p>
+    ${l5box("ex", "Worked example: how big is \"5 mm × 5 mm\"?", `<p>The die is 25 mm². The middle window, 50 µm × 50 µm = 2&#8239;500 µm², fits (5&#8239;000 / 50)² = <b>10&#8239;000</b> times onto it; the last window, 25 µm², fits (5&#8239;000 / 5)² = <b>1&#8239;000&#8239;000</b> times. In a 28 nm-class process a small gate such as a two-input NAND takes well under 1 µm² (typical figure, not from the slides), so the smallest window already holds a few dozen gates and the whole die tens of millions. Nobody places those by hand, which is the point of the next slide.</p>`)}
+    <p><b>Standard cell libraries</b> (slide 15) make this manageable. A library is a collection of basic cells, combinational (INV, NAND, NOR, …) and sequential (latch, flip-flop, …), each in several drive strengths. Every cell comes with all the views the EDA tools need: schematic, layout, timing model and more. Each cell is characterised for timing and power in different corners of process, voltage and temperature (<b>PVT</b>). This is a higher level of abstraction: instead of running a SPICE simulation of the transistors (slow, accurate), a timing tool looks the delay of every timing arc up in a table (fast, less accurate).</p>
+    ${lab("nl", "the inverter's delay table, interpolated")}
+    <p class="muted">The four values are slide 15's table for the inverter arc A↑ → Y↓ (input transition 10 or 20 ps, output load 50 or 100 fF, delay in ns). Between the grid points the tool interpolates linearly in both directions, which is what the weights show.</p>
+    ${l5box("ex", "Worked example: 15 ps input transition into 75 fF", `<p>Interpolate along the load first. At 10 ps: halfway between 0.2 and 0.4 ns = 0.3 ns. At 20 ps: halfway between 0.3 and 0.6 ns = 0.45 ns. Then along the transition: halfway between 0.3 and 0.45 ns = <b>0.375 ns</b>. Each corner weighs 0.25 here. Note what the table says about the cell: doubling the load doubles the delay (0.2 → 0.4 ns, 0.3 → 0.6 ns), so this inverter's delay is almost pure load charging, and a slower input edge adds 50 %.</p>`)}
+
+    <h2>Transistor curves (slides 16–17)</h2>
+    <p>Below the table models sits the transistor. The long-channel (square-law) model of the NMOS has three regions:</p>
+    <div class="formula">Cutoff: V<sub>GS</sub> &lt; V<sub>th,N</sub> → I<sub>D</sub> = 0<br>Linear: V<sub>DS</sub> &lt; V<sub>GS</sub> − V<sub>th,N</sub> → I<sub>D</sub> = β<sub>N</sub> · ((V<sub>GS</sub> − V<sub>th,N</sub>)·V<sub>DS</sub> − V<sub>DS</sub>²/2)<br>Saturation: V<sub>DS</sub> ≥ V<sub>GS</sub> − V<sub>th,N</sub> → I<sub>D</sub> = β<sub>N</sub>/2 · (V<sub>GS</sub> − V<sub>th,N</sub>)² · (1 + λ<sub>N</sub>·(V<sub>DS</sub> − V<sub>GS</sub> + V<sub>th,N</sub>))<br>β<sub>N</sub> = KP<sub>N</sub> · W/L = µ<sub>N</sub>C<sub>ox</sub> · W/L</div>
+    <p>The threshold V<sub>th,N</sub>(V<sub>SB</sub>) &gt; 0 depends on the source-bulk voltage; µ<sub>N</sub> is the electron mobility, C<sub>ox</sub> the gate-oxide capacitance per area, and λ<sub>N</sub>(L) &gt; 0 models channel-length modulation, the slight rise of the saturation current with V<sub>DS</sub>. The <b>transfer curve</b> (I<sub>D</sub> over V<sub>GS</sub>) is zero up to the threshold and then grows quadratically; the <b>output characteristics</b> (I<sub>D</sub> over V<sub>DS</sub>) rise steeply in the linear region and flatten in saturation, with the boundary on the parabola V<sub>DS</sub> = V<sub>GS</sub> − V<sub>th</sub>. W/L is the knob from the layout: twice the width, twice the current.</p>
+    ${lab("mo", "the square-law NMOS")}
+    ${chart("iv", leg([[1, "I<sub>D</sub>(V<sub>DS</sub>) at the chosen V<sub>GS</sub>", "ln"], [0, "<span class=\"l5gray\"></span> V<sub>GS</sub> = 0.4 … 1.2 V"], [0, "<span class=\"l5dash\"></span> linear / saturation boundary"], [2, "operating point"]]))}
+      <figcaption>Output characteristics from the slide-16 equations. KP = 0.3 mA/V² and the slider ranges are our choice (a plausible order of magnitude for a modern NMOS per square, not from the slides). Gray: the curve family; the dashed parabola is where the linear region ends.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: one NMOS in both regions", `<p>KP = 0.3 mA/V², W/L = 2, so β = 0.6 mA/V²; V<sub>th</sub> = 0.4 V, λ = 0.1 /V, V<sub>GS</sub> = 1.0 V, so V<sub>GS</sub> − V<sub>th</sub> = 0.6 V. At V<sub>DS</sub> = 0.3 V &lt; 0.6 V the transistor is linear: I<sub>D</sub> = 0.6 · (0.6 · 0.3 − 0.3²/2) = 0.6 · 0.135 = <b>81 µA</b>. At V<sub>DS</sub> = 1.0 V ≥ 0.6 V it saturates: I<sub>D</sub> = 0.3 · 0.6² · (1 + 0.1 · 0.4) = 0.108 · 1.04 = <b>112 µA</b>. Both match the explorer's defaults; move V<sub>DS</sub> to check.</p>`)}
+    <p>The PMOS (slide 17) is the mirror image, with every sign flipped:</p>
+    <ul class="cmp" aria-label="NMOS versus PMOS">
+      <li><b>Threshold</b><span class="v"><span class="sw t"></span>NMOS: V<sub>th,N</sub> &gt; 0</span><span class="v"><span class="sw v"></span>PMOS: V<sub>th,P</sub> &lt; 0</span></li>
+      <li><b>Cutoff</b><span class="v"><span class="sw t"></span>V<sub>GS</sub> &lt; V<sub>th,N</sub></span><span class="v"><span class="sw v"></span>V<sub>GS</sub> &gt; V<sub>th,P</sub></span></li>
+      <li><b>Linear</b><span class="v"><span class="sw t"></span>V<sub>DS</sub> &lt; V<sub>GS</sub> − V<sub>th,N</sub></span><span class="v"><span class="sw v"></span>V<sub>DS</sub> &gt; V<sub>GS</sub> − V<sub>th,P</sub></span></li>
+      <li><b>Saturation</b><span class="v"><span class="sw t"></span>V<sub>DS</sub> ≥ V<sub>GS</sub> − V<sub>th,N</sub></span><span class="v"><span class="sw v"></span>V<sub>DS</sub> ≤ V<sub>GS</sub> − V<sub>th,P</sub></span></li>
+      <li><b>Parameters</b><span class="v"><span class="sw t"></span>µ<sub>N</sub> &gt; 0, λ<sub>N</sub> &gt; 0</span><span class="v"><span class="sw v"></span>µ<sub>P</sub> &lt; 0, λ<sub>P</sub> &lt; 0 (so that I<sub>D</sub> comes out negative: the current flows the other way)</span></li>
+    </ul>
+    ${l5box("why", "Context, not on the slides: the PMOS is the weaker transistor", "<p>The PMOS conducts with holes, whose mobility in silicon is roughly two to three times lower than that of electrons. With the same W/L, β<sub>P</sub> is therefore only a third to a half of β<sub>N</sub>. That is why PMOS transistors in standard cells are usually drawn wider than their NMOS partners, and why NAND gates (PMOS in parallel, NMOS in series) are preferred over NOR gates (PMOS in series). The inverter explorer below shows what an unequal pair does to the switching point; sizing itself is the topic of <a href=\"digital-circuit-design/lecture.html?n=6\">lecture 6</a>.</p>")}
+
+    <h2>The inverter transfer curve (slide 18)</h2>
+    <p>Sweeping the input of an inverter from 0 to V<sub>DD</sub> gives its transfer curve V<sub>Z</sub>(V<sub>A</sub>). For V<sub>A</sub> below V<sub>th,N</sub> the NMOS is in cutoff and Z sits at V<sub>DD</sub>; above V<sub>DD</sub> + V<sub>th,P</sub> the PMOS is off and Z sits at 0. In both shaded bands one transistor is off, so <b>no static current</b> flows, except leakage and sub-threshold current. In between, both transistors conduct for a moment while the output swings: the <b>short-circuit current</b> during switching, the bump in the lower panel.</p>
+    ${lab("iv", "a CMOS inverter, swept from 0 to V<sub>DD</sub>")}
+    ${chart("vtc", leg([[1, "transfer curve (top) and supply current (bottom)", "ln"], [2, "switching threshold and current peak"]]))}
+      <figcaption>Solved point by point from the slide-16/17 equations: for each V<sub>A</sub> the output voltage where NMOS and PMOS carry the same current. V<sub>th,N</sub> = 0.3 V, V<sub>th,P</sub> = −0.3 V, β<sub>N</sub> = 0.5 mA/V², λ = 0.05 /V are our values. Shaded: one transistor in cutoff. The dashed diagonal V<sub>Z</sub> = V<sub>A</sub> crosses the curve at the switching threshold.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: where does an equal-size inverter switch?", `<p>At the switching threshold V<sub>M</sub> both transistors saturate and carry the same current: β<sub>N</sub>/2·(V<sub>M</sub> − V<sub>th,N</sub>)² = β<sub>P</sub>/2·(V<sub>DD</sub> − V<sub>M</sub> − |V<sub>th,P</sub>|)². Taking the square root and solving gives V<sub>M</sub> = (V<sub>th,N</sub> + r·(V<sub>DD</sub> − |V<sub>th,P</sub>|)) / (1 + r) with r = √(β<sub>P</sub>/β<sub>N</sub>). Balanced (r = 1), V<sub>DD</sub> = 1 V, thresholds ±0.3 V: V<sub>M</sub> = (0.3 + 0.7) / 2 = <b>0.5 V</b>, the middle. Same W/L but holes half as mobile (β<sub>P</sub>/β<sub>N</sub> = 0.5, r = 0.707): V<sub>M</sub> = (0.3 + 0.707 · 0.7) / 1.707 = <b>0.466 V</b>, the stronger NMOS pulls the switching point down. Making the PMOS twice as wide restores 0.5 V.</p>`)}
+
+    <h2>Parasitic effects: IR drop and electromigration (slides 19–24)</h2>
+    <p>The supply reaches every cell through a <b>power grid</b> (slide 19): wide V<sub>DD</sub> and GND straps on an upper metal (M4 in the picture) run across thinner straps on the layer below (M3), and stacks of vias carry the supply down through M2 to the M1 rails of the cell rows. Every segment has resistance, so the current drawn by switching cells drops a voltage along the way: <b>IR drop</b>. Locally the cells see less than V<sub>DD</sub> (and more than 0 V on their ground), which makes them slower.</p>
+    ${l5box("ex", "Worked example: the drop along one rail (our numbers)", `<p>A thin lower-metal rail with a sheet resistance of 0.1 Ω per square, 0.5 µm wide and 100 µm long, has 100 / 0.5 = 200 squares, so R = 200 · 0.1 Ω = 20 Ω. If the cells along it draw 1 mA on average, the far end sees 1 mA · 20 Ω = 20 mV less; fed from both ends and with the load spread evenly, the worst point drops a quarter of that. On a 0.8 V supply 20 mV is 2.5 %, and since gate delay grows as the supply falls, timing sign-off budgets a few per cent of supply drop. This is why the grid uses many parallel straps and wide upper metals.</p>`)}
+    <p><b>Measuring it</b> (slides 20–22, the chair's own work): small sense cells compare the local V<sub>DD</sub> and V<sub>SS</sub> against a clean external reference with edge-triggered sense amplifiers. Asynchronous subsampling gives 62.5 ps time resolution: a measurement loop steps the reference voltage, the clock cycle and the sub-cycle, resets the circuit under test, triggers and stores the result in a flip-flop that sits in a shift chain. One sense cell takes about the area of four flip-flops. The test chip, in 28 nm CMOS (GlobalFoundries 28SLP), has scalable LFSRs as noise generators and 300 sense spots in a 120 µm × 120 µm area, read out via JTAG from an FPGA board. The measured traces at 500 MHz, V<sub>DD</sub> = 1 V and 25 °C show V<sub>DD</sub> dipping from 1000 mV to about 920–930 mV and V<sub>SS</sub> rising by up to about 40 mV during a burst of clock cycles, then settling once the clock stops.</p>
+    <p><b>Electromigration</b> (EM, slides 23–24) is the long-term counterpart: a high current density slowly moves metal atoms along the wire with the electron flow. Where atoms leave, a <b>void</b> grows into an open circuit; where they pile up, a <b>hillock</b> can grow into a neighbouring wire and short it. It degrades or destroys the supply network and depends on the average power (that is, the supply current), the temperature, the required lifetime and the geometry (width and thickness) of the segments. From these factors each metal layer gets a maximum allowed current density.</p>
+    ${l5box("ex", "Worked example: current density in a supply strap (our numbers)", `<p>The same rail, 0.5 µm wide and 0.2 µm thick, has a cross section of 0.1 µm² = 10<sup>−9</sup> cm². At 1 mA the current density is 10<sup>−3</sup> A / 10<sup>−9</sup> cm² = <b>10<sup>6</sup> A/cm²</b>, i.e. 1 MA/cm², the order of magnitude of typical EM limits for copper interconnect. So the rail that is fine for IR drop at 1 mA is at its EM limit; doubling the width halves the density. Average current matters more than peaks, which is why the slide lists average power first.</p>`)}
+
+    <h2>RC corners and device variations (slides 25–26)</h2>
+    <p>Wires vary in geometry from chip to chip, and resistance and capacitance move together (slide 25): wide, thick wires close to their neighbours have high lateral capacitance C<sub>h</sub>, high vertical capacitance C<sub>v</sub> and low R (<b>cmax</b>); thin, widely spaced wires have low C and high R (<b>cmin</b>). A corner with both maximum R and maximum C is physically impossible, so the extraction corners lie on an ellipse in the R–C plane: cmax, rcmax, rcmin, cmin. Which corner is worst for setup or hold timing is, below 65 nm, hard to predict, especially when the resistance of the clock tree dominates its timing.</p>
+    <p>Transistors vary too (slide 26). <b>Global variations</b> shift the whole die: process corners fast-fast (FF), typical-typical (TT) and slow-slow (SS) bracket them. <b>Local variations</b> (on-chip variation, OCV) make transistors on the same die differ randomly and uncorrelated, so they cannot be captured by a static corner; timing analysis applies them as derating factors (OCV, AOCV, …). At low supply voltages OCV becomes dominant, timing closure gets difficult (above all for hold), and in sub-threshold operation it is close to impossible for usual synchronous designs.</p>
+    ${l5box("ex", "Worked example: a path that passes at TT and fails with derating (our numbers)", `<p>Clock period 1&#8239;000 ps, flip-flop setup time 30 ps, data path 900 ps nominal: slack 1&#8239;000 − 30 − 900 = +70 ps. Now derate for on-chip variation: the data path may be 8 % slow (late derate 1.08 → 972 ps) while the capture clock arrives 5 % early on a 200 ps clock path (−10 ps). Slack: 1&#8239;000 − 10 − 30 − 972 = <b>−12 ps</b>. Nothing in the design changed; only the assumption that two transistors on the same die are not identical. The same reasoning on a short hold path is what makes low-voltage designs hard to close.</p>`)}
+
+    <h2>Multi-V<sub>th</sub> design (slide 27)</h2>
+    <p>For technologies below about 100 nm, foundries usually offer several threshold flavours of the same transistor, made with additional channel implants (which cost extra masks): low-V<sub>th</sub> (<b>LVT</b>, fast but leaky), regular (<b>RVT</b>) and high-V<sub>th</sub> (<b>HVT</b>, slow but frugal). The library provides each cell in all flavours with identical size and pins, so a tool can swap one for another without touching the layout. Synthesis and place-and-route use this to cut leakage or to speed up critical paths.</p>
+    ${chart("mvt", leg([[1, "LVT"], [2, "RVT"], [3, "HVT"]]))}
+      <figcaption>Cell-area shares from the slide's two pie charts, drawn as stacked bars. Before optimisation 87 % LVT, 12 % RVT, 1 % HVT; after the place-and-route tool's leakage optimisation 23 % LVT, 20 % RVT, 57 % HVT.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th></th><th>LVT</th><th>RVT</th><th>HVT</th></tr>${MVT.map(([n, v]) => `<tr><td>${n}</td>${v.map(p => `<td class="n">${p} %</td>`).join("")}</tr>`).join("")}</table></details>
+    ${l5box("why", "Context, not on the slides: why this works", "<p>Sub-threshold leakage grows exponentially as V<sub>th</sub> falls (next section): roughly ten times more per 60–100 mV less threshold. Most paths in a design have timing slack, so only the critical few need the fast cells. A typical flow therefore synthesises with fast cells and lets the tool swap every cell on a non-critical path for its HVT twin; in the slide's example more than half of the area ends up high-V<sub>th</sub>, and the leakage falls by a large factor while the clock frequency stays the same.</p>")}
+
+    <h2>Beyond planar: FinFET, sub-threshold slope, FDSOI (slides 28–30)</h2>
+    <p>The <b>FinFET</b> (slide 28) stands the channel up as a thin fin and wraps the gate around three sides. That gives very good electrostatic control and a sub-threshold slope close to the optimum. The channel is undoped and fully depleted, so variations from random dopant fluctuation (RDF) are strongly reduced: less V<sub>th</sub> variation, better low-voltage behaviour. On bulk wafers a channel-stop implant under the fin isolates it from the substrate, which is again a source of variation; fin height and width are new ones. And the transistor width is quantised: W comes in whole numbers of fins.</p>
+    <p>The <b>sub-threshold slope</b> S (slide 29) is how many millivolts of gate voltage it takes to change the off-state current by a factor of ten. A steeper slope improves the I<sub>on</sub>/I<sub>off</sub> ratio and can be spent in two ways: identical I<sub>off</sub> at a lower V<sub>th</sub> (more speed), or lower I<sub>off</sub> at the same V<sub>th</sub> (less leakage). FinFETs on bulk come close to the theoretical limit of about 60 mV/decade; shrinking the gate length usually makes the slope worse.</p>
+    ${chart("ss", leg([[1, "standard slope, 89 mV/dec", "ln"], [2, "improved, same V<sub>th</sub>", "ln"], [3, "improved, lower V<sub>th</sub>", "ln"]]))}
+      <figcaption>Drain current on a log axis, our model I = I<sub>S</sub>·ln²(1 + e<sup>(V<sub>GS</sub> − V<sub>th</sub>)/(2nφ<sub>t</sub>)</sup>) with I<sub>S</sub> = 1 µA, φ<sub>t</sub> = 25.85 mV, n = 1.5 (89 mV/dec) and n = 1.1 (65 mV/dec), V<sub>th</sub> = 0.35 V or 0.257 V, V<sub>DD</sub> = 0.8 V (dashed). It reproduces the two options of slide 29; the dots carry I<sub>off</sub> (left) and I<sub>on</sub> (right).</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th></th><th>S</th><th>V<sub>th</sub></th><th>I<sub>off</sub> (0 V)</th><th>I<sub>on</sub> (0.8 V)</th></tr>${SS.map(d => `<tr><td>${d.name}</td><td class="n">${f2(d.n * PHI * Math.LN10 * 1000, 1)} mV/dec</td><td class="n">${f2(d.vth, 3)} V</td><td class="n">${fmtI(ssI(d, 0))}</td><td class="n">${fmtI(ssI(d, SS_VDD))}</td></tr>`).join("")}</table></details>
+    ${l5box("ex", "Worked example: where 60 mV/decade comes from, and what 25 mV of slope buys", `<p>Below threshold the current is exponential in V<sub>GS</sub>: I ∝ e<sup>V<sub>GS</sub>/(n·kT/q)</sup>. A factor of ten needs ΔV<sub>GS</sub> = n · kT/q · ln 10 = n · 25.85 mV · 2.303 = n · 59.5 mV at room temperature. The ideal n = 1 gives the ~60 mV/dec limit of slide 29; a planar device with n = 1.5 has 89 mV/dec. With V<sub>th</sub> = 350 mV the off-current at V<sub>GS</sub> = 0 lies about 350 / 89 = 3.9 decades below the current at threshold for the planar device, and 350 / 65 = 5.4 decades for the FinFET-like one: 10<sup>1.4</sup> ≈ <b>27× less leakage</b> at the same threshold. Or keep the leakage and lower V<sub>th</sub> to 350 · 65 / 89 = 257 mV, which raises the on-current at 0.8 V.</p>`)}
+    <p>Further steps (slide 29): FinFETs on SOI need no channel-stop implant and should vary less in fin height and width; <b>gate-all-around FETs</b> put the gate on all four sides of a thin round channel, a silicon nanowire.</p>
+    <p><b>FDSOI</b> (fully depleted silicon on insulator, slide 30) takes the other route: a very thin silicon channel on a buried oxide (BOX). The thin, undoped channel again gives good electrostatic control and a better sub-threshold slope, which makes gate-length scaling possible again, and reduces RDF variation. If the BOX is thin enough, the substrate below it acts as a <b>back gate</b>: a bias voltage V<sub>bias</sub> on the well contact shifts the nominal V<sub>th</sub> (forward bias for speed, reverse bias for low leakage), and doing so at run time, <b>adaptive body biasing</b>, compensates variations. FDSOI also has improved analog and RF characteristics.</p>
+    ${l5box("why", "Context, not on the slides: back to the wafer of slide 2", "<p>The prototype wafer on slide 2 is a 22 nm FDSOI run, the chair's technology of choice for its own chips. Body biasing is one of the reasons: the same transistor can be made faster or less leaky after manufacture, per chip or per region, which is exactly the variation and leakage problem of the previous sections handled by a knob instead of by margins.</p>")}
+
+    <div class="tiles">
+      <div class="tile"><div class="v">25&#8239;000²</div><div class="l">50 µm → 2 nm: 6.25·10<sup>8</sup> times more transistors per area</div></div>
+      <div class="tile"><div class="v">≈ 2 years</div><div class="l">per doubling of density (length ÷ √2)</div></div>
+      <div class="tile"><div class="v">0 W</div><div class="l">static power of an ideal CMOS gate: one transistor always blocks</div></div>
+      <div class="tile"><div class="v">60 mV/dec</div><div class="l">ideal sub-threshold slope, kT/q · ln 10</div></div>
+    </div>
+    <h2>Take-home message (slide 31)</h2>
+    <ul>
+      <li><b>How far has scaling come?</b> About 30 generations in 60 years, kept going by several re-inventions of the device (TTL, MOS, CMOS, FinFET, GAAFET, forksheets).</li>
+      <li><b>Is Moore's law ending?</b> Slowly, because of absolute sizes, variations and complexity; but the industry roadmap runs to 2035 and nodes below 0.5 nm, with innovations such as stacked PMOS/NMOS and RibbonFETs.</li>
+      <li><b>Why CMOS?</b> The abstract digital paradigm can be built from many circuit styles and devices, but CMOS and its derivatives are the only devices that scale energy-wise to ultra-high-density chips, because they draw no static current.</li>
+      <li><b>What does a nanoscale designer budget for?</b> IR drop, electromigration, RC corners, global and on-chip variation and leakage, each with its tricks: power grids, current-density limits, derating, multi-V<sub>th</sub>, body biasing.</li>
+      <li><b>What next?</b> "More than Moore": a new golden age of custom compute architectures and novel devices, with many developers needed.</li>
+    </ul>
+    <div class="tiles">
+      <div class="tile"><div class="v">10<sup>10</sup></div><div class="l">density factor 1965–2035 (50 µm → 0.5 nm)</div></div>
+      <div class="tile"><div class="v">5·10<sup>10</sup></div><div class="l">transistors on a current large chip</div></div>
+      <div class="tile"><div class="v">7·10<sup>11</sup></div><div class="l">parameters of the largest transformer models</div></div>
+      <div class="tile"><div class="v">10<sup>14</sup></div><div class="l">synapses in a human brain</div></div>
+    </div>
+    <p class="muted">No exercise sheet on this lecture yet (sheet 3, <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a>, is still arithmetic). Previous: <a href="digital-circuit-design/lecture.html?n=4">lecture 4, Arithmetic circuits 3</a>. Next: <a href="digital-circuit-design/lecture.html?n=6">lecture 6, CMOS logic 1</a> (16 Nov), which builds gates and sizing on the inverter and the transistor models of this lecture. Background: <a href="digital-circuit-design/basics.html">basics page</a>. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a> (password from lecture 1; not for republication).</p>`;
+}
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -1222,7 +1573,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {

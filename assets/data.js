@@ -2470,8 +2470,17 @@ window.CMS = {
       "title": "Semiconductor technology for digital circuits",
       "date": "2026-11-09",
       "icon": "🔬",
-      "covered": false,
-      "blurb": "Lithography-based CMOS manufacturing, the bulk CMOS cross section, devices and the 22 nm FDSOI prototype of the chair."
+      "covered": true,
+      "blurb": "How CMOS chips are built and why CMOS won: the bulk cross section and layout layers, NMOS/PMOS square-law curves, Moore’s law and its re-inventions (NMOS, CMOS, FinFET, FDSOI, GAA), zero static power and the inverter transfer curve, standard cells with table timing models, and nanoscale parasitics: IR drop, electromigration, RC corners, variation, multi-Vth.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_05_Technologie_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 6,
