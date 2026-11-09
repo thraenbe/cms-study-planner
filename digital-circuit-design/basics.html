@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Digital Circuit Design · Transistor basics</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔰</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="digital-circuit-design/dcd.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="digital-circuit-design/dcd.js"></script>
+<script src="digital-circuit-design/dcd-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). Blue = n-type and NMOS,
+   orange = p-type and PMOS throughout the page, so the two kinds keep one colour each; green marks "conducting". */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+
+.dcd .viz svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .viz .tick { fill: var(--ink-3); font-size: 11px; }
+.dcd .viz .lbl { fill: var(--ink-2); font-size: 11.5px; }
+.dcd .viz .val { fill: var(--ink); font-size: 12.5px; font-weight: 600; }
+.dcd .viz .grid { stroke: var(--vz-grid); stroke-width: 1; }
+.dcd .viz .axis { stroke: var(--vz-axis); stroke-width: 1; }
+.dcd .viz .line { fill: none; stroke-width: 2.2; stroke-linejoin: round; }
+.dcd .viz figcaption { font-size: 0.85rem; color: var(--ink-2); margin: 6px 2px 0; }
+.dcd .viz .pt .dot { stroke: var(--surface); stroke-width: 2; }
+.dcd .viz .pt:focus-visible .dot, .dcd .viz .pt:focus-visible .bar { outline: 2px solid var(--focus); }
+
+/* Explorers: a drawing on the left, readouts on the right; one column on phones. */
+.dcd .xp { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+.dcd .xp svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .xp .xro { display: grid; gap: 8px; }
+.dcd .xp .xro .r { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.dcd .xp .xro .r b { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.dcd .xp .xro .r span { font-size: 1.05rem; font-weight: 600; }
+.dcd .xp .xro .r small { display: block; color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+.dcd .xp .xro .r.on { border-color: var(--vz-s3); }
+.dcd .xp .xro .r.off { border-color: var(--line); }
+.dcd .xp .xro .r.on span { color: var(--vz-s3); }
+.dcd .sw-on { fill: none; stroke: var(--vz-s3); stroke-width: 3; }
+.dcd .sw-off { fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-dasharray: 4 3; }
+.dcd .wire { stroke: var(--ink-2); stroke-width: 1.6; fill: none; }
+.dcd .wire.hot { stroke: var(--vz-s3); stroke-width: 2.6; }
+.dcd .sym { fill: none; stroke: var(--ink); stroke-width: 1.8; }
+.dcd .sym.n { stroke: var(--vz-s1); } .dcd .sym.p { stroke: var(--vz-s2); }
+.dcd .pin { fill: var(--ink-2); font-size: 11px; }
+.dcd .pin.b { fill: var(--ink); font-weight: 600; font-size: 12px; }
+.dcd .xp .ctl input[type="range"] { width: 200px; max-width: 70vw; }
+.dcd .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dcd .seg button { font: 600 13px system-ui, sans-serif; padding: 5px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .seg button[aria-pressed="true"] { background: var(--focus); color: #fff; }
+.dcd .seg button + button { border-left: 1px solid var(--line); }
+.dcd .inbtn { font: 600 14px ui-monospace, monospace; width: 44px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .inbtn[aria-pressed="true"] { background: var(--vz-s3); color: #fff; border-color: var(--vz-s3); }
+
+/* Two-up comparison of NMOS and PMOS. */
+.dcd .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: .6rem 0 1rem; }
+.dcd .duo > div { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 10px; padding: 10px 14px; }
+.dcd .duo .nn { --c: var(--vz-s1); } .dcd .duo .pp { --c: var(--vz-s2); }
+.dcd .duo h3 { margin: 0 0 .3rem; }
+.dcd .duo ul { margin: 0; padding-left: 1.1rem; }
+.dcd .duo li { margin: 0 0 .25rem; }
+
+/* Glossary: filter row, category chips, then a two-column list of terms. */
+.dcd .gl-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: .4rem 0 .8rem; }
+.dcd .gl-ctl input { font: 15px system-ui, sans-serif; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); min-width: 220px; }
+.dcd .gl-ctl .chip { font: 600 12px system-ui, sans-serif; padding: 5px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .gl-ctl .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.dcd .gl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0; }
+.dcd .gl .t { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.dcd .gl .t dt { font-weight: 700; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.dcd .gl .t dt .cat { font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.dcd .gl .t dd { margin: 3px 0 0; font-size: .92rem; color: var(--ink-2); line-height: 1.45; }
+.dcd .gl .t dd .sl { color: var(--ink-3); font-size: .82rem; }
+.dcd .gl-count { font-size: .85rem; color: var(--ink-2); margin: 0 0 .5rem; }
+.dcd .gl mark { background: color-mix(in srgb, var(--vz-s4) 35%, transparent); color: inherit; border-radius: 2px; }
+
+@media (max-width: 700px) { .dcd .xp, .dcd .duo, .dcd .gl { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="dcd">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, c, esc, U } = DCD;
+const { isNarrow, key, leg, barPath, CHARTS, LABS, chart, lab, mountCharts, mountLabs } = DCDViz;
+const page = document.getElementById("page");
+const why = (t, html) => `<div class="why"><div class="kicker">${t}</div>${html}</div>`;
+const ex = (t, html) => `<div class="ex"><div class="kicker">${t}</div>${html}</div>`;
+const f = (v, d = 2) => v.toFixed(d);
+
+// One simple transistor model for the whole page: the square-law equations of lecture 5, slides 16 and 17.
+// Numbers are illustrative for a 1.2 V process; the PMOS has half the gain of the NMOS because holes move slower.
+const VDD = 1.2, VTN = 0.4, VTP = 0.4, BN = 200, BP = 100, LAM = 0.05; // µA/V², 1/V
+function idN(vgs, vds) { if (vgs <= VTN) return 0; const ov = vgs - VTN; return vds < ov ? BN * (ov * vds - vds * vds / 2) : BN / 2 * ov * ov * (1 + LAM * (vds - ov)); }
+function idP(vsg, vsd) { if (vsg <= VTP) return 0; const ov = vsg - VTP; return vsd < ov ? BP * (ov * vsd - vsd * vsd / 2) : BP / 2 * ov * ov * (1 + LAM * (vsd - ov)); }
+// Inverter: find Vout where the NMOS current equals the PMOS current (bisection), then the current through both.
+function inverter(vin) { let lo = 0, hi = VDD; for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2, d = idN(vin, mid) - idP(VDD - vin, VDD - mid); if (d > 0) hi = mid; else lo = mid; } const vout = (lo + hi) / 2; return { vout, i: idN(vin, vout) }; }
+const VTC = Array.from({ length: 121 }, (_, k) => { const vin = VDD * k / 120; return { vin, ...inverter(vin) }; });
+const IMAX = Math.max(...VTC.map(p => p.i));
+const level = v => v > 0.7 * VDD ? "1" : v < 0.3 * VDD ? "0" : "between";
+
+// Small chart kit: axes and a line for a y(x) curve on a fixed box.
+function frame(W, H, L, R, T, B, xl, yl, xt, yt, xmax, ymax) {
+  const x = v => L + (W - L - R) * v / xmax, y = v => T + (H - T - B) * (1 - v / ymax);
+  const g = yt.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")
+    + xt.map(v => `<text class="tick" x="${x(v)}" y="${H - B + 14}" text-anchor="middle">${v}</text>`).join("")
+    + `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/><line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>`
+    + `<text class="lbl" x="${W - R}" y="${H - 4}" text-anchor="end">${xl}</text><text class="lbl" x="${L}" y="${T - 8}">${yl}</text>`;
+  return { x, y, g };
+}
+const path = (pts, x, y) => "M" + pts.map(p => `${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" L");
+
+// Chart: supply voltages shrank with the technology (context, typical core voltages; not on the slides).
+const SUPPLY = [["1980s, 3 µm", 5], ["1995, 350 nm", 3.3], ["1999, 180 nm", 1.8], ["2004, 90 nm", 1.2], ["2008, 45 nm", 1.0], ["2012, 28 nm", 0.9], ["2018, 7 nm", 0.75]];
+CHARTS.supply = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 240, L = 34, R = 10, T = 22, B = 44, n = SUPPLY.length, bw = (W - L - R) / n;
+  const { x, y, g } = frame(W, H, L, R, T, B, "", "V", [], [0, 1, 2, 3, 4, 5], n, 5.5);
+  const bars = SUPPLY.map(([t, v], i) => { const x0 = L + i * bw + bw * 0.18, w = bw * 0.64; const [yr, node] = t.split(", ");
+    return `<g class="pt" tabindex="0" data-tip="<b>${t}</b>VDD about ${v} V"><path class="bar" d="${barPath(x0, w, y(v), y(0))}" style="fill:var(--vz-s1)"/><text class="val" x="${x0 + w / 2}" y="${y(v) - 5}" text-anchor="middle">${v}</text>
+      <text class="tick" x="${x0 + w / 2}" y="${H - B + 14}" text-anchor="middle">${yr}</text><text class="tick" x="${x0 + w / 2}" y="${H - B + 26}" text-anchor="middle">${node}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Typical core supply voltage VDD by technology generation: 5 volts in the 1980s, 3.3 at 350 nanometres, 1.8 at 180, 1.2 at 90, 1.0 at 45, 0.9 at 28 and about 0.75 volts at 7 nanometres.">${g}${bars}</svg>`;
+};
+
+// Chart: transfer curves, drain current against gate voltage, NMOS and PMOS, in saturation.
+CHARTS.transfer = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 240 : 250, L = 40, R = 12, T = 22, B = 36, ymax = 80;
+  const { x, y, g } = frame(W, H, L, R, T, B, "gate voltage VG in V (VS at the rail)", "ID in µA", [0, 0.4, 0.8, 1.2], [0, 20, 40, 60, 80], VDD, ymax);
+  const N = Array.from({ length: 61 }, (_, k) => { const v = VDD * k / 60; return [v, idN(v, VDD)]; });
+  const P = Array.from({ length: 61 }, (_, k) => { const v = VDD * k / 60; return [v, idP(VDD - v, VDD)]; });
+  const thr = `<line class="grid" x1="${x(VTN)}" x2="${x(VTN)}" y1="${T}" y2="${y(0)}" stroke-dasharray="3 3"/><text class="tick" x="${x(VTN) + 3}" y="${T + 10}">Vth,N</text>
+    <line class="grid" x1="${x(VDD - VTP)}" x2="${x(VDD - VTP)}" y1="${T}" y2="${y(0)}" stroke-dasharray="3 3"/><text class="tick" x="${x(VDD - VTP) + 3}" y="${T + (narrow ? 22 : 10)}">VDD − |Vth,P|</text>`;
+  const dots = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2].map(v => `<g class="pt" tabindex="0" data-tip="<b>VG = ${f(v, 1)} V</b>NMOS ${f(idN(v, VDD), 1)} µA<br>PMOS ${f(idP(VDD - v, VDD), 1)} µA"><circle class="dot" cx="${x(v)}" cy="${y(idN(v, VDD))}" r="4" style="fill:var(--vz-s1)"/><circle class="dot" cx="${x(v)}" cy="${y(idP(VDD - v, VDD))}" r="4" style="fill:var(--vz-s2)"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Drain current against gate voltage. The NMOS curve is zero below its threshold of 0.4 volts and rises to 64 microamps at 1.2 volts. The PMOS curve is the mirror image: zero above 0.8 volts, rising to 32 microamps at 0 volts.">${g}${thr}
+    <path class="line" style="stroke:var(--vz-s1)" d="${path(N, x, y)}"/><path class="line" style="stroke:var(--vz-s2)" d="${path(P, x, y)}"/>
+    <text class="val" x="${x(1.05)}" y="${y(idN(1.05, VDD)) - 8}" text-anchor="end" style="fill:var(--vz-s1)">NMOS: on when the gate is high</text>
+    <text class="val" x="${x(0.15)}" y="${y(idP(VDD - 0.15, VDD)) - 8}" style="fill:var(--vz-s2)">PMOS: on when the gate is low</text>${dots}</svg>`;
+};
+
+// Diagram: the two transistors in the silicon (lecture 5, slide 3), simplified to what a beginner needs.
+CHARTS.xsec = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 310 : 250, s = W / 600;
+  const X = v => (v * s).toFixed(1), top = narrow ? 70 : 60, sub = top + 20;
+  const nm = names => narrow ? ["S", "G", "D"] : names;
+  const dev = (x0, kind, names0) => { const names = nm(names0); const c = kind === "n" ? "var(--vz-s1)" : "var(--vz-s2)", cg = kind === "n" ? "var(--vz-s2)" : "var(--vz-s1)";
+    return `<rect x="${X(x0)}" y="${sub}" width="${X(44)}" height="22" rx="3" style="fill:${c}"/><rect x="${X(x0 + 96)}" y="${sub}" width="${X(44)}" height="22" rx="3" style="fill:${c}"/>
+      <text class="val" x="${X(x0 + 22)}" y="${sub + 15}" text-anchor="middle" style="fill:#fff;font-size:11px">${kind}+</text><text class="val" x="${X(x0 + 118)}" y="${sub + 15}" text-anchor="middle" style="fill:#fff;font-size:11px">${kind}+</text>
+      <rect x="${X(x0 + 44)}" y="${sub - 4}" width="${X(52)}" height="4" style="fill:var(--vz-s4)"/><rect x="${X(x0 + 46)}" y="${sub - 22}" width="${X(48)}" height="18" rx="2" style="fill:var(--ink-2)"/>
+      <text class="val" x="${X(x0 + 70)}" y="${sub - 9}" text-anchor="middle" style="fill:var(--surface);font-size:11px">gate</text>
+      <path d="M${X(x0 + 44)},${sub + 1} h${X(52)}" style="stroke:${cg};stroke-width:3;stroke-dasharray:4 3"/>
+      <text class="lbl" x="${X(x0 + 22)}" y="${sub - 28}" text-anchor="middle">${names[0]}</text><text class="lbl" x="${X(x0 + 70)}" y="${sub - 28}" text-anchor="middle">${names[1]}</text><text class="lbl" x="${X(x0 + 118)}" y="${sub - 28}" text-anchor="middle">${names[2]}</text>`; };
+  const sti = x0 => `<rect x="${X(x0)}" y="${sub}" width="${X(26)}" height="26" style="fill:var(--vz-grid)"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cross section of a CMOS chip: a p-type substrate holds the NMOS transistor with two n-plus regions and a gate above a thin oxide; an n-well inside the substrate holds the PMOS transistor with two p-plus regions. Shallow trench isolation separates the devices and metal layers run above.">
+    <rect x="0" y="${sub}" width="${W}" height="${H - sub - 26}" rx="6" style="fill:var(--vz-s2);opacity:.16"/><text class="lbl" x="10" y="${H - 34}">p-substrate (the silicon wafer, lightly p-doped)</text>
+    <rect x="${X(318)}" y="${sub}" width="${X(270)}" height="${H - sub - 60}" rx="6" style="fill:var(--vz-s1);opacity:.18"/><text class="lbl" x="${X(588) - 6}" y="${H - 68}" text-anchor="end">n-well</text>
+    ${sti(10)}${sti(154)}${sti(296)}${sti(462)}${sti(574)}
+    ${dev(36, "n", ["source", "gate", "drain"])}${dev(344, "p", ["source", "gate", "drain"])}
+    <text class="val" x="${X(106)}" y="${top - (narrow ? 44 : 34)}" text-anchor="middle" style="fill:var(--vz-s1)">NMOS</text><text class="lbl" x="${X(106)}" y="${top - (narrow ? 32 : 22)}" text-anchor="middle">${narrow ? "electrons" : "electrons carry the current"}</text>
+    <text class="val" x="${X(414)}" y="${top - (narrow ? 44 : 34)}" text-anchor="middle" style="fill:var(--vz-s2)">PMOS</text><text class="lbl" x="${X(414)}" y="${top - (narrow ? 32 : 22)}" text-anchor="middle">${narrow ? "holes" : "holes carry the current"}</text>
+    ${narrow ? `<text class="tick" x="10" y="${H - 18}">grey = STI trenches · yellow = gate oxide</text><text class="tick" x="10" y="${H - 6}">dashed = where the channel forms</text>` : `<text class="tick" x="10" y="${H - 8}">grey blocks = STI, insulating trenches · yellow = gate oxide · dashed = where the channel forms</text>`}</svg>`;
+};
+
+// Diagram: symbol and switch model, NMOS and PMOS, gate low and gate high.
+CHARTS.symbols = narrow => {
+  const W = narrow ? 340 : 600, cols = narrow ? 2 : 4, cw = W / cols, H = narrow ? 300 : 150;
+  const cell = (i, kind, vg) => { const cx = (i % cols) * cw + cw / 2, cy = Math.floor(i / cols) * 150 + 14, on = kind === "n" ? vg === 1 : vg === 0, c = kind === "n" ? "var(--vz-s1)" : "var(--vz-s2)";
+    const sym = `<path class="sym ${kind}" d="M${cx - 20},${cy + 30} h14 M${cx - 6},${cy + 20} v20 M${cx - 1},${cy + 14} v32 M${cx - 1},${cy + 18} h10 v-10 M${cx - 1},${cy + 42} h10 v10"/>${kind === "p" ? `<circle cx="${cx - 9}" cy="${cy + 30}" r="3" style="fill:var(--surface);stroke:var(--vz-s2);stroke-width:1.6"/>` : ""}
+      <path class="sym ${kind}" d="${kind === "n" ? `M${cx + 2},${cy + 42} l-5,-3 v6 z` : `M${cx + 9},${cy + 18} l5,-3 v6 z`}" style="fill:${c}"/>
+      <text class="pin" x="${cx - 24}" y="${cy + 33}" text-anchor="end">G = ${vg}</text><text class="pin" x="${cx + 13}" y="${cy + 8}">${kind === "n" ? "D" : "S"}</text><text class="pin" x="${cx + 13}" y="${cy + 58}">${kind === "n" ? "S" : "D"}</text>`;
+    const sx = cx + 46, sw = on ? `<path class="sw-on" d="M${sx},${cy + 10} v12 M${sx},${cy + 22} v16 M${sx},${cy + 38} v12"/>` : `<path class="sw-off" d="M${sx},${cy + 10} v12 M${sx},${cy + 22} l14,-12 M${sx},${cy + 38} v12"/>`;
+    return `<g class="pt" tabindex="0" data-tip="<b>${kind.toUpperCase()}MOS, gate ${vg}</b>${on ? "conducts: source and drain are connected" : "blocks: the path is open"}">${sym}${sw}<circle cx="${sx}" cy="${cy + 22}" r="2.5" style="fill:var(--ink-2)"/><circle cx="${sx}" cy="${cy + 38}" r="2.5" style="fill:var(--ink-2)"/>
+      <text class="val" x="${cx + 10}" y="${cy + 78}" text-anchor="middle" style="fill:${on ? "var(--vz-s3)" : "var(--ink-3)"}">${on ? "closed (on)" : "open (off)"}</text><text class="lbl" x="${cx + 10}" y="${cy + 94}" text-anchor="middle">${kind.toUpperCase()}MOS, gate at ${vg ? "VDD" : "VSS"}</text></g>`; };
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Four cases. NMOS with gate at 0: open. NMOS with gate at 1: closed. PMOS with gate at 0: closed. PMOS with gate at 1: open. The PMOS symbol carries a small circle at the gate, which means active low.">${[["n", 0], ["n", 1], ["p", 0], ["p", 1]].map(([k, v], i) => cell(i, k, v)).join("")}</svg>`;
+};
+
+// Explorer 1: one gate voltage, both transistors. The slider sets VG; each transistor shows its state and current.
+LABS.sw = el => {
+  el.innerHTML = `<p class="lab-note">Slide the gate voltage. The source of the NMOS sits at VSS (0 V), the source of the PMOS at VDD (1.2 V); each drain is held at the opposite rail, as in an inverter. Watch which one conducts.</p>
+    <div class="ctl"><label>gate voltage VG <input type="range" min="0" max="120" value="0" step="1" id="swv"> <output id="swo">0.00 V</output></label></div>
+    <div class="xp"><div id="swsvg"></div><div class="xro" id="swro"></div></div>`;
+  const r = el.querySelector("#swv"), o = el.querySelector("#swo"), svg = el.querySelector("#swsvg"), ro = el.querySelector("#swro");
+  const draw = () => { const vg = r.value / 100; o.value = `${f(vg)} V`;
+    const nOn = vg > VTN, pOn = VDD - vg > VTP, iN = idN(vg, VDD), iP = idP(VDD - vg, VDD);
+    const tr = (x, kind, on) => `<rect x="${x - 34}" y="40" width="68" height="110" rx="8" style="fill:${kind === "n" ? "var(--vz-s1)" : "var(--vz-s2)"};opacity:.12"/>
+      <text class="val" x="${x}" y="30" text-anchor="middle" style="fill:${kind === "n" ? "var(--vz-s1)" : "var(--vz-s2)"}">${kind.toUpperCase()}MOS</text>
+      <path class="wire" d="M${x - 60},95 h26"/><path class="sym ${kind}" d="M${x - 34},80 v30 M${x - 28},74 v42"/>${kind === "p" ? `<circle cx="${x - 37}" cy="95" r="3" style="fill:var(--surface);stroke:var(--vz-s2);stroke-width:1.6"/>` : ""}
+      <path class="wire ${on ? "hot" : ""}" d="M${x - 28},78 h14 v-26 M${x - 28},112 h14 v26"/>
+      ${on ? `<path class="sw-on" d="M${x - 14},78 v34"/>` : `<path class="sw-off" d="M${x - 14},78 l16,-10 M${x - 14},112 v-8"/>`}
+      <text class="pin" x="${x - 66}" y="99" text-anchor="end">G</text><text class="pin" x="${x - 8}" y="50">${kind === "n" ? "D at VDD" : "S at VDD"}</text><text class="pin" x="${x - 8}" y="146">${kind === "n" ? "S at VSS" : "D at VSS"}</text>`;
+    svg.innerHTML = `<svg viewBox="0 0 340 160" role="img" aria-label="Switch model of an NMOS and a PMOS at the chosen gate voltage">${tr(110, "n", nOn)}${tr(270, "p", pOn)}</svg>`;
+    const row = (t, on, i, rule) => `<div class="r ${on ? "on" : "off"}"><b>${t}</b><span>${on ? "conducts" : "blocks"}</span><small>${rule} · current about ${f(i, 1)} µA</small></div>`;
+    ro.innerHTML = row("NMOS", nOn, iN, `on when VG > Vth,N = ${VTN} V`) + row("PMOS", pOn, iP, `on when VG < VDD − |Vth,P| = ${f(VDD - VTP, 1)} V`) + `<div class="r"><b>both</b><span>${nOn && pOn ? "both conduct" : nOn || pOn ? "exactly one conducts" : "neither"}</span><small>${nOn && pOn ? "only while the input is between the thresholds: this is the short-circuit window during switching" : "at a logic level, one of the two is always off"}</small></div>`; };
+  r.addEventListener("input", draw); draw();
+};
+
+// Explorer 2: the CMOS inverter. Slider for the input voltage; circuit, output and the two curves follow.
+LABS.inv = el => {
+  el.innerHTML = `<p class="lab-note">The inverter is one PMOS on top of one NMOS, gates tied together as the input A, drains tied together as the output Z. Drag the input from 0 to VDD and watch the output swing the other way.</p>
+    <div class="ctl"><label>input A <input type="range" min="0" max="120" value="0" step="1" id="invv"> <output id="invo">0.00 V</output></label>
+      <span class="seg" role="group" aria-label="presets"><button type="button" data-v="0">A = 0</button><button type="button" data-v="60">middle</button><button type="button" data-v="120">A = 1</button></span></div>
+    <div class="xp"><div id="invsvg"></div><div class="xro" id="invro"></div></div>
+    <div class="xp" style="margin-top:12px"><figure class="viz"><div id="vtc"></div><figcaption>Output voltage against input voltage. The steep middle is where both transistors conduct.</figcaption></figure>
+    <figure class="viz"><div id="icur"></div><figcaption>Current from VDD to VSS. Zero at both logic levels, a short spike in between.</figcaption></figure></div>`;
+  const r = el.querySelector("#invv"), o = el.querySelector("#invo"), svg = el.querySelector("#invsvg"), ro = el.querySelector("#invro"), vtc = el.querySelector("#vtc"), icur = el.querySelector("#icur");
+  el.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => { r.value = b.dataset.v; draw(); }));
+  const draw = () => { const vin = r.value / 100, { vout, i } = inverter(vin); o.value = `${f(vin)} V`;
+    const nOn = vin > VTN, pOn = VDD - vin > VTP;
+    svg.innerHTML = `<svg viewBox="0 0 300 250" role="img" aria-label="CMOS inverter with the current state of both transistors">
+      <path class="wire" d="M40,24 h220"/><text class="pin b" x="266" y="28">VDD</text><path class="wire" d="M40,228 h220"/><text class="pin b" x="266" y="232">VSS</text>
+      <rect x="112" y="46" width="76" height="70" rx="8" style="fill:var(--vz-s2);opacity:.12"/><rect x="112" y="136" width="76" height="70" rx="8" style="fill:var(--vz-s1);opacity:.12"/>
+      <text class="pin" x="192" y="60" style="fill:var(--vz-s2);font-weight:600">PMOS</text><text class="pin" x="192" y="200" style="fill:var(--vz-s1);font-weight:600">NMOS</text>
+      <path class="wire ${pOn ? "hot" : ""}" d="M150,24 v22 M150,116 v10"/><path class="wire ${nOn ? "hot" : ""}" d="M150,206 v22 M150,126 v10"/>
+      <path class="sym p" d="M132,66 v30 M126,72 v18"/><circle cx="123" cy="81" r="3" style="fill:var(--surface);stroke:var(--vz-s2);stroke-width:1.6"/><path class="sym n" d="M132,156 v30 M126,162 v18"/>
+      ${pOn ? `<path class="sw-on" d="M150,46 v70"/>` : `<path class="sw-off" d="M150,46 v24 l16,-14 M150,116 v-14"/>`}
+      ${nOn ? `<path class="sw-on" d="M150,136 v70"/>` : `<path class="sw-off" d="M150,136 v24 l16,-14 M150,206 v-14"/>`}
+      <path class="wire" d="M60,126 h66 M126,81 v90 M126,81 h-6 M126,171 h-6"/><circle cx="126" cy="126" r="3" style="fill:var(--ink-2)"/>
+      <text class="pin b" x="20" y="130">A</text><text class="pin" x="20" y="146">${f(vin)} V</text>
+      <path class="wire" d="M150,126 h90"/><circle cx="150" cy="126" r="3" style="fill:var(--ink-2)"/><text class="pin b" x="246" y="122">Z</text><text class="pin" x="246" y="138">${f(vout)} V</text>
+      <text class="pin" x="150" y="245" text-anchor="middle" style="fill:${pOn && nOn ? "var(--vz-s4)" : "var(--vz-s3)"}">${pOn && nOn ? "both on: current flows" : pOn ? "PMOS pulls Z up to VDD" : nOn ? "NMOS pulls Z down to VSS" : ""}</text></svg>`;
+    const lv = level(vin), lo = level(vout);
+    ro.innerHTML = `<div class="r"><b>input A</b><span>${f(vin)} V · logic ${lv}</span></div><div class="r ${pOn ? "on" : "off"}"><b>PMOS</b><span>${pOn ? "on" : "off"}</span><small>gate ${f(vin)} V is ${pOn ? "low enough" : "too high"} for a PMOS</small></div>
+      <div class="r ${nOn ? "on" : "off"}"><b>NMOS</b><span>${nOn ? "on" : "off"}</span><small>gate ${f(vin)} V is ${nOn ? "above" : "below"} Vth,N</small></div>
+      <div class="r"><b>output Z</b><span>${f(vout)} V · logic ${lo}</span><small>${lo === "between" ? "not a clean level: the input is in the switching window" : `Z = NOT A: ${lv} in, ${lo} out`}</small></div>
+      <div class="r"><b>current VDD → VSS</b><span>${f(i, 1)} µA</span><small>${i < 0.5 ? "no static current: one transistor blocks" : "short-circuit current while both conduct"}</small></div>`;
+    const W = 290, H = 190, L = 36, R = 10, T = 20, B = 34;
+    const a = frame(W, H, L, R, T, B, "input A in V", "Z in V", [0, 0.4, 0.8, 1.2], [0, 0.4, 0.8, 1.2], VDD, VDD);
+    vtc.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Voltage transfer curve of the inverter with the current operating point">${a.g}<path class="line" style="stroke:var(--vz-s3)" d="${path(VTC.map(p => [p.vin, p.vout]), a.x, a.y)}"/><circle cx="${a.x(vin)}" cy="${a.y(vout)}" r="5" style="fill:var(--ink);stroke:var(--surface);stroke-width:2"/></svg>`;
+    const b = frame(W, H, L, R, T, B, "input A in V", "µA", [0, 0.4, 0.8, 1.2], [0, 10, 20, 30], VDD, Math.ceil(IMAX / 10) * 10);
+    icur.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Supply current of the inverter against the input voltage, with the current operating point">${b.g}<path class="line" style="stroke:var(--vz-s4)" d="${path(VTC.map(p => [p.vin, p.i]), b.x, b.y)}"/><circle cx="${b.x(vin)}" cy="${b.y(i)}" r="5" style="fill:var(--ink);stroke:var(--surface);stroke-width:2"/></svg>`; };
+  r.addEventListener("input", draw); draw();
+};
+
+// Explorer 3: NAND and NOR from the same four transistors; the pull-up and pull-down networks are complements.
+LABS.gate = el => {
+  el.innerHTML = `<p class="lab-note">Two inputs, four transistors. In a NAND the PMOS pull-up network is parallel and the NMOS pull-down network is series; in a NOR it is the other way round. Flip the inputs and see which path to a rail is closed.</p>
+    <div class="ctl"><span class="seg" role="group" aria-label="gate type" id="gtyp"><button type="button" data-g="nand" aria-pressed="true">NAND</button><button type="button" data-g="nor" aria-pressed="false">NOR</button></span>
+      <label>A <button type="button" class="inbtn" id="ina" aria-pressed="false">0</button></label><label>B <button type="button" class="inbtn" id="inb" aria-pressed="false">0</button></label></div>
+    <div class="xp"><div id="gsvg"></div><div class="xro" id="gro"></div></div>`;
+  let g = "nand", A = 0, B = 0; const svg = el.querySelector("#gsvg"), ro = el.querySelector("#gro");
+  el.querySelectorAll("#gtyp button").forEach(b => b.addEventListener("click", () => { g = b.dataset.g; el.querySelectorAll("#gtyp button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw(); }));
+  const ta = el.querySelector("#ina"), tb = el.querySelector("#inb");
+  ta.addEventListener("click", () => { A ^= 1; draw(); }); tb.addEventListener("click", () => { B ^= 1; draw(); });
+  const draw = () => { ta.textContent = A; ta.setAttribute("aria-pressed", String(!!A)); tb.textContent = B; tb.setAttribute("aria-pressed", String(!!B));
+    const pA = !A, pB = !B, nA = !!A, nB = !!B; // PMOS on when input is 0, NMOS on when input is 1
+    const up = g === "nand" ? pA || pB : pA && pB, down = g === "nand" ? nA && nB : nA || nB, z = up ? 1 : 0;
+    const sw = (x, y, on, kind, lbl) => `<rect x="${x - 22}" y="${y - 26}" width="44" height="52" rx="7" style="fill:${kind === "p" ? "var(--vz-s2)" : "var(--vz-s1)"};opacity:${on ? .28 : .1}"/>${on ? `<path class="sw-on" d="M${x},${y - 26} v52"/>` : `<path class="sw-off" d="M${x},${y - 26} v16 l14,-12 M${x},${y + 26} v-14"/>`}<text class="pin" x="${x}" y="${y + 40}" text-anchor="middle">${lbl}</text>`;
+    const parP = `${sw(110, 70, pA, "p", "P·A")}${sw(190, 70, pB, "p", "P·B")}<path class="wire ${up ? "hot" : ""}" d="M110,24 v20 M190,24 v20 M110,96 v20 h80 v-20"/><path class="wire ${up ? "hot" : ""}" d="M150,116 v14"/>`;
+    const serP = `${sw(150, 52, pA, "p", "")}${sw(150, 104, pB, "p", "")}<text class="pin" x="178" y="56">P·A</text><text class="pin" x="178" y="108">P·B</text><path class="wire ${up ? "hot" : ""}" d="M150,24 v2 M150,78 v0 M150,130 v0"/>`;
+    const serN = `${sw(150, 162, nA, "n", "")}${sw(150, 214, nB, "n", "")}<text class="pin" x="178" y="166">N·A</text><text class="pin" x="178" y="218">N·B</text><path class="wire ${down ? "hot" : ""}" d="M150,240 v2"/>`;
+    const parN = `${sw(110, 190, nA, "n", "N·A")}${sw(190, 190, nB, "n", "N·B")}<path class="wire ${down ? "hot" : ""}" d="M150,130 v14 M110,164 v-20 h80 v20 M110,216 v20 M190,216 v20"/>`;
+    svg.innerHTML = `<svg viewBox="0 0 300 262" role="img" aria-label="${g.toUpperCase()} gate with inputs A=${A} and B=${B}, output ${z}"><path class="wire" d="M40,24 h220"/><text class="pin b" x="268" y="28">VDD</text><path class="wire" d="M40,242 h220"/><text class="pin b" x="268" y="246">VSS</text>
+      ${g === "nand" ? parP + serN : serP + parN}<circle cx="150" cy="130" r="3.5" style="fill:var(--ink)"/><path class="wire" d="M150,130 h86"/><text class="pin b" x="240" y="126">Z = ${z}</text>
+      <text class="pin" x="36" y="70" style="fill:var(--vz-s2);font-weight:600">pull-up</text><text class="pin" x="36" y="190" style="fill:var(--vz-s1);font-weight:600">pull-down</text></svg>`;
+    const tbl = `<table class="tt" style="margin:0"><tr><th>A</th><th>B</th><th>${g.toUpperCase()}</th></tr>${[0, 1].flatMap(a => [0, 1].map(b => { const v = g === "nand" ? +!(a && b) : +!(a || b); return `<tr style="${a === A && b === B ? "font-weight:700" : ""}"><td>${a}</td><td>${b}</td><td class="${v ? "one" : ""}">${v}</td></tr>`; })).join("")}</table>`;
+    ro.innerHTML = `<div class="r ${up ? "on" : "off"}"><b>pull-up (PMOS)</b><span>${up ? "closed" : "open"}</span><small>${g === "nand" ? "parallel: any PMOS on is enough" : "series: both PMOS must be on"}</small></div>
+      <div class="r ${down ? "on" : "off"}"><b>pull-down (NMOS)</b><span>${down ? "closed" : "open"}</span><small>${g === "nand" ? "series: both NMOS must be on" : "parallel: any NMOS on is enough"}</small></div>
+      <div class="r"><b>output</b><span>Z = ${z}</span><small>exactly one network is closed, never both: that is the complementary rule</small></div><div class="r">${tbl}</div>`; };
+  draw();
+};
+
+// Glossary: term, category, one-line explanation, where it appears in the course.
+const CATS = { dev: "inside the transistor", volt: "voltages and levels", circ: "circuits", tech: "technology", eff: "effects and limits" };
+const GLOSS = [
+  ["Transistor", "dev", "A tiny electrically controlled switch. A voltage on one terminal decides whether current can flow between the other two."],
+  ["MOSFET / MOS transistor", "dev", "The kind of transistor in every digital chip. Metal-Oxide-Semiconductor Field-Effect Transistor: a gate (once metal, now polysilicon) over a thin oxide controls a channel in the silicon.", "L5 slides 3, 5"],
+  ["FET (field-effect transistor)", "dev", "A transistor controlled by an electric field, not by a current. The gate draws no current at rest, which is why CMOS burns almost nothing while idle."],
+  ["Gate (G)", "dev", "The control terminal. Its voltage opens or closes the channel. Think of the handle of a tap."],
+  ["Source (S)", "dev", "One end of the channel: where the charge carriers come from. For an NMOS it is usually tied to VSS, for a PMOS to VDD."],
+  ["Drain (D)", "dev", "The other end of the channel: where the carriers leave. In an inverter both drains form the output."],
+  ["Body / bulk / substrate (B)", "dev", "The silicon the transistor sits in. Normally tied to the same rail as the source. Its voltage shifts the threshold a little (body effect).", "L5 slides 3, 5, 16"],
+  ["Channel", "dev", "The thin conducting path that forms under the gate between source and drain when the gate voltage is past the threshold."],
+  ["Silicon", "tech", "The semiconductor all this is built from: a crystal that conducts a little, and much more once it is doped."],
+  ["Doping", "dev", "Adding a few foreign atoms to silicon to give it extra free electrons (n-type) or extra holes (p-type)."],
+  ["n-type, n+", "dev", "Silicon doped so that electrons carry the current. n+ means heavily doped, used for the source and drain of an NMOS."],
+  ["p-type, p+", "dev", "Silicon doped so that holes carry the current. p+ is used for the source and drain of a PMOS."],
+  ["Electron", "dev", "The negative charge carrier. Moves fast, which makes NMOS transistors stronger than PMOS of the same size."],
+  ["Hole", "dev", "A missing electron that behaves like a positive charge carrier. Holes move slower, so a PMOS needs to be wider to match an NMOS."],
+  ["NMOS", "dev", "n-channel MOS transistor. Conducts when its gate is high (above Vth,N). Good at pulling a node down to VSS.", "L5 slides 5, 16"],
+  ["PMOS", "dev", "p-channel MOS transistor, built in an n-well. Conducts when its gate is low (below VDD − |Vth,P|). Good at pulling a node up to VDD. Drawn with a small circle at the gate.", "L5 slides 5, 17"],
+  ["CMOS", "circ", "Complementary MOS: every logic gate uses PMOS and NMOS in pairs, so that for any steady input exactly one path to a rail is closed. The standard technology for digital chips since the 1980s.", "L5 slides 7, 9, 11"],
+  ["n-well", "tech", "A pocket of n-type silicon inside the p-substrate in which the PMOS transistors are built.", "L5 slide 3"],
+  ["Gate oxide", "dev", "The very thin insulating layer (silicon dioxide or a high-k material) between gate and channel. A few atoms thick in modern chips."],
+  ["Polysilicon (poly)", "tech", "The material of the gate in most processes: silicon without a regular crystal. In the newest nodes it is metal again."],
+  ["Threshold voltage Vth", "volt", "The gate voltage at which a transistor starts to conduct. Positive for NMOS (about 0.3 to 0.5 V), negative for PMOS. Below it: cutoff.", "L5 slides 16, 17"],
+  ["VGS", "volt", "Voltage between gate and source: the control voltage of the transistor."],
+  ["VDS", "volt", "Voltage between drain and source: the voltage across the switch."],
+  ["ID (drain current)", "volt", "The current through the transistor. Zero in cutoff, growing with the gate voltage.", "L5 slide 16"],
+  ["Cutoff", "dev", "The off state: gate voltage below the threshold, no channel, no current (except a tiny leakage)."],
+  ["Linear (triode) region", "dev", "The on state with a small VDS: the transistor behaves like a resistor whose value the gate sets."],
+  ["Saturation region", "dev", "The on state with a large VDS: the current no longer grows with VDS and depends on (VGS − Vth)² only."],
+  ["Gain constant β", "dev", "How strongly a transistor conducts for a given overdrive: β = KP · W/L. Wider (W) and shorter (L) means more current.", "L5 slide 16"],
+  ["W / L", "dev", "Width and length of the channel, the two sizes a designer picks. The exercises and later lectures size transistors with this ratio.", "L5 slide 5"],
+  ["Enhancement vs depletion", "dev", "An enhancement transistor is off at VGS = 0 and must be switched on (all CMOS transistors). A depletion transistor is on at 0 and must be switched off (1970s NMOS logic).", "L5 slide 8"],
+  ["VDD", "volt", "The positive supply rail, the voltage that means logic 1. Historically the drain supply of NMOS logic, hence the double D. 5 V in old chips, about 0.7 to 1.2 V today."],
+  ["VSS", "volt", "The negative supply rail, 0 V in almost every digital chip, the voltage that means logic 0. Historically the source supply, hence the double S."],
+  ["GND (ground)", "volt", "The 0 V reference. In digital chips VSS and GND are the same net."],
+  ["VCC / VEE", "volt", "The supply names of bipolar (TTL) logic: collector and emitter supply. You still see VCC on boards and datasheets for the positive rail."],
+  ["Rail", "volt", "A supply line (VDD or VSS) that runs across the whole chip. 'Rail to rail' means the output swings the full way from 0 V to VDD."],
+  ["Logic level 0 / 1", "volt", "A voltage range, not a single value: near VSS counts as 0, near VDD as 1. The band in between is forbidden for steady signals."],
+  ["Inverter (NOT)", "circ", "The simplest CMOS gate: one PMOS above one NMOS. Output is 1 when the input is 0 and vice versa.", "L5 slides 9, 11, 18"],
+  ["NAND", "circ", "Two PMOS in parallel on top, two NMOS in series below. Output 0 only when both inputs are 1. The natural CMOS gate: every other function can be built from NANDs."],
+  ["NOR", "circ", "Two PMOS in series on top, two NMOS in parallel below. Output 1 only when both inputs are 0."],
+  ["Pull-up network", "circ", "The PMOS part of a gate between VDD and the output. When it is closed the output is pulled to 1."],
+  ["Pull-down network", "circ", "The NMOS part between the output and VSS. When it is closed the output is pulled to 0. In CMOS it is the exact complement of the pull-up."],
+  ["Complementary", "circ", "The CMOS rule: whenever the pull-up conducts the pull-down blocks, and vice versa. That is why there is no path from VDD to VSS at rest.", "L5 slide 11"],
+  ["Static power", "eff", "Power burned while nothing switches. In ideal CMOS it is zero; in real chips a little leakage remains.", "L5 slides 11, 18"],
+  ["Dynamic power", "eff", "Power used while switching: charging and discharging the capacitances of wires and gates, plus the short-circuit current. Topic of lecture 8."],
+  ["Short-circuit current", "eff", "The brief current from VDD to VSS while an input passes through the middle band and both transistors of an inverter conduct.", "L5 slide 18"],
+  ["Leakage / subthreshold current", "eff", "The small current that still flows through a transistor that is nominally off. Grows as chips shrink; the reason for FinFET and FDSOI.", "L5 slides 18, 29"],
+  ["Fan-out", "circ", "How many gate inputs one output can drive. CMOS manages more than 50, TTL fewer than 10.", "L5 slide 10"],
+  ["Noise margin", "volt", "How much noise a signal can pick up before the receiving gate misreads it. CMOS has excellent noise immunity because its levels sit at the rails."],
+  ["Propagation delay tpd", "eff", "The time from an input change to the resulting output change. Topic of lecture 7.", "L5 slide 10"],
+  ["Voltage transfer curve (VTC)", "circ", "The plot of output voltage against input voltage of a gate. For an inverter it is a steep S from VDD down to 0.", "L5 slide 18"],
+  ["Standard cell", "tech", "A pre-designed, pre-characterised gate (INV, NAND, flip-flop …) from a library. Chips are assembled from millions of them by software.", "L5 slide 15"],
+  ["Layout", "tech", "The drawing of the physical shapes on each mask layer: diffusion, poly, contacts, metals. The chip is manufactured from it.", "L5 slide 4"],
+  ["Wafer / die", "tech", "A wafer is the 300 mm silicon disc that hundreds of chips are made on at once; a die is one cut-out chip.", "L5 slide 2"],
+  ["Technology node", "tech", "A generation of the manufacturing process, named by a length in nanometres (180 nm, 28 nm, 7 nm). Since about 2010 the number is a marketing label, not a real size."],
+  ["Moore's law", "tech", "The observation that the number of transistors per chip doubles about every two years. 60 years so far, now slowing down.", "L5 slides 6, 31"],
+  ["Scaling", "tech", "Making every dimension smaller from one node to the next: more transistors per area, faster, and less energy per operation.", "L5 slides 6, 7, 12–14"],
+  ["Bulk process", "tech", "The classic way to build CMOS: transistors directly in the wafer, PMOS in n-wells. As opposed to SOI.", "L5 slide 3"],
+  ["FinFET", "tech", "A transistor whose channel is a thin vertical fin with the gate wrapped around three sides. Better control of leakage; standard from 22 nm on.", "L5 slide 28"],
+  ["GAAFET / nanosheet", "tech", "Gate-all-around: the gate surrounds stacked horizontal sheets of channel. The step after FinFET (2 nm, around 2024).", "L5 slide 7"],
+  ["FDSOI", "tech", "Fully depleted silicon on insulator: a very thin channel on top of a buried oxide. The oxide acts as a back gate that can tune the threshold.", "L5 slide 30"],
+  ["Metal layers, via, contact", "tech", "The wiring above the transistors: several metal layers (M1, M2 …) connected vertically by vias; contacts link M1 down to the transistors.", "L5 slide 3"],
+  ["STI", "tech", "Shallow trench isolation: insulating trenches that keep neighbouring transistors apart.", "L5 slide 3"],
+  ["IR drop", "eff", "The supply voltage lost along the resistance of the power wires (V = I·R). Far from the pins a gate sees less than VDD.", "L5 slides 19–22"],
+  ["Electromigration", "eff", "Metal atoms pushed along by a high current until a wire thins out (open) or bulges into a neighbour (short). Limits the current per wire.", "L5 slides 23, 24"],
+  ["Process corners (FF, TT, SS)", "eff", "Fast, typical and slow versions of the same chip caused by manufacturing variation. Designs must work at all of them.", "L5 slide 26"],
+  ["PVT", "eff", "Process, voltage, temperature: the three things that vary and that every timing and power figure is characterised against.", "L5 slide 15"],
+  ["Multi-Vth (LVT, RVT, HVT)", "tech", "Low, regular and high threshold variants of the same cell. Low Vth is fast but leaky, high Vth is slow but frugal; tools mix them.", "L5 slide 27"],
+  ["TTL", "tech", "Transistor-transistor logic built from bipolar transistors, the 1960s and 70s standard. Faster at the time, but it burns power even at rest.", "L5 slides 7, 10"],
+  ["Bipolar transistor", "dev", "The other transistor family, controlled by a base current rather than a gate voltage. Used in TTL and in analog circuits."],
+  ["EDA", "tech", "Electronic design automation: the software that synthesises, places, routes and checks a chip.", "L5 slide 15"],
+  ["SPICE", "tech", "The circuit simulator that solves the transistor equations numerically. Too slow for whole chips, so standard cells are characterised once and reused as tables.", "L5 slide 15"],
+];
+function glossary(el) {
+  const q = el.querySelector("#glq"), chips = [...el.querySelectorAll(".chip")], list = el.querySelector("#gl"), count = el.querySelector("#glc");
+  let cat = "all";
+  const hl = (t, s) => s ? esc(t).replace(new RegExp(`(${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>") : esc(t);
+  const render = () => { const s = q.value.trim();
+    const rows = GLOSS.filter(([t, c, d]) => (cat === "all" || c === cat) && (!s || (t + " " + d).toLowerCase().includes(s.toLowerCase())));
+    list.innerHTML = rows.map(([t, c, d, sl]) => `<div class="t"><dt>${hl(t, s)} <span class="cat">${CATS[c]}</span></dt><dd>${hl(d, s)}${sl ? ` <span class="sl">· ${esc(sl)}</span>` : ""}</dd></div>`).join("") || `<p class="muted">No term matches. Try a shorter word.</p>`;
+    count.textContent = `${rows.length} of ${GLOSS.length} terms${cat !== "all" ? ` · ${CATS[cat]}` : ""}${s ? ` · matching “${s}”` : ""}`; };
+  q.addEventListener("input", render);
+  chips.forEach(b => b.addEventListener("click", () => { cat = b.dataset.cat; chips.forEach(x => x.setAttribute("aria-pressed", String(x === b))); render(); }));
+  render();
+}
+
+page.innerHTML = `
+  <a class="back" href="digital-circuit-design.html">← All lectures and exercises</a>
+  <div class="big-icon">🔰</div>
+  <h1>Transistor basics: NMOS, PMOS, CMOS, VDD and VSS</h1>
+  <p class="meta">A beginner's companion to ${esc(m.name)} · written for lecture 5 (semiconductor technology) and lecture 6 (CMOS logic) · all numbers illustrative for a 1.2 V process</p>
+  <p class="lead">Every digital chip is a few billion tiny switches. This page explains the two kinds of switch CMOS uses, the two supply rails they connect to, and how one of each makes the simplest logic gate. A dictionary of every term is at the end.</p>
+  <div class="tiles">
+    <div class="tile"><div class="v">2</div><div class="l">kinds of transistor: NMOS (on when the gate is high) and PMOS (on when the gate is low)</div></div>
+    <div class="tile"><div class="v">VDD</div><div class="l">the positive rail, logic 1; about 1 V in current chips, 5 V in the 1980s</div></div>
+    <div class="tile"><div class="v">VSS</div><div class="l">the 0 V rail, logic 0; the same net as ground (GND) in digital chips</div></div>
+    <div class="tile"><div class="v">0 µA</div><div class="l">static current of a CMOS gate at rest: one transistor of each pair always blocks</div></div>
+  </div>
+
+  <h2 id="s1">1 · A transistor is a switch with a control terminal</h2>
+  <p>A MOS transistor has three terminals that matter: the <b>gate</b> controls, and current flows between the <b>source</b> and the <b>drain</b> when the gate allows it. There is no moving part. The gate is a metal-like plate sitting on a very thin insulator above the silicon; its voltage pulls charge carriers to the surface and forms a conducting <b>channel</b> between source and drain, or lets it disappear. A fourth terminal, the <b>body</b>, is the silicon itself and is tied to a supply rail.</p>
+  ${why("The tap picture", `<p>Think of a water tap. Water comes in at the source and leaves at the drain; the handle is the gate. Turning the handle costs almost no water, but it decides how much flows. A MOS gate draws practically no current itself, which is the reason CMOS chips can sit idle at near-zero power.</p>`)}
+  <p>Lecture 5 (slide 3) shows the chip in cross section. Both kinds of transistor live side by side in the same silicon wafer; what differs is the doping of the pieces.</p>
+  ${chart("xsec")}<figcaption>Cross section of a CMOS chip, simplified from slide 3. Left: an NMOS in the p-substrate, with n+ source and drain. Right: a PMOS inside an n-well, with p+ source and drain. The metal wiring that connects them runs in layers above.</figcaption></figure>
+
+  <h2 id="s2">2 · NMOS and PMOS: the same device, mirrored</h2>
+  <div class="duo">
+    <div class="nn"><h3>NMOS</h3><ul><li>n-channel: <b>electrons</b> carry the current.</li><li>Source normally at <b>VSS</b>.</li><li>Conducts when the gate is <b>high</b>: VGS above the threshold Vth,N (about 0.4 V).</li><li>Pulls a node <b>down</b> to 0 cleanly; passes a 1 only weakly.</li><li>Symbol: arrow pointing out at the source, no circle.</li></ul></div>
+    <div class="pp"><h3>PMOS</h3><ul><li>p-channel: <b>holes</b> carry the current, more slowly, so it is made wider.</li><li>Source normally at <b>VDD</b>.</li><li>Conducts when the gate is <b>low</b>: gate below VDD − |Vth,P| (about 0.8 V here).</li><li>Pulls a node <b>up</b> to VDD cleanly; passes a 0 only weakly.</li><li>Symbol: a small circle at the gate ("active low"), arrow pointing in.</li></ul></div>
+  </div>
+  ${chart("symbols")}<figcaption>Symbol and switch model side by side, for both gate levels. The circle on the PMOS gate is the reminder that it works the opposite way round.</figcaption></figure>
+  <p>The transfer curve says the same thing as a graph. Below the threshold nothing flows; above it the current grows roughly with the square of how far the gate is past the threshold (slides 16 and 17 give the formulas: cutoff, linear region, saturation).</p>
+  ${chart("transfer", leg([[1, "NMOS, source at VSS"], [2, "PMOS, source at VDD"]]))}<figcaption>Drain current against gate voltage with the drain at the far rail, from the square-law model of slides 16 and 17 with illustrative numbers (VDD 1.2 V, thresholds 0.4 V, PMOS gain half of NMOS). Hover a dot for the values.</figcaption></figure>
+  ${lab("sw", "one gate voltage, both transistors")}
+  ${ex("Worked example: reading the thresholds", `<p>With VDD = 1.2 V and both thresholds at 0.4 V: an NMOS conducts for a gate voltage above 0.4 V, a PMOS for a gate voltage below 1.2 − 0.4 = 0.8 V. Between 0.4 V and 0.8 V <i>both</i> conduct. At the two logic levels, 0 V and 1.2 V, exactly one does. That 0.4 V wide window in the middle is where an inverter burns its short-circuit current, and why inputs should switch quickly through it.</p>`)}
+
+  <h2 id="s3">3 · VDD and VSS: the two rails</h2>
+  <p>Every gate on a chip connects to the same two supply lines. <b>VDD</b> is the positive supply and stands for logic 1. <b>VSS</b> is the negative supply, 0 V in practically every digital chip, and stands for logic 0; it is the same thing as ground (GND). The odd names are history: in the NMOS logic of the 1970s, VDD fed the drains and VSS the sources, and the doubled letter means "supply". Bipolar TTL chips use VCC and VEE (collector and emitter) for the same two rails.</p>
+  <p>A logic level is a <i>range</i>, not one voltage: anything near VSS reads as 0, anything near VDD as 1, and a steady signal must not sit in between. The size of VDD has shrunk with every generation, because a smaller transistor cannot take a large voltage and because energy per switch goes with VDD².</p>
+  ${chart("supply")}<figcaption>Typical core supply voltage by generation. Context, not on the slides: the values are the usual ones for each node, rounded; I/O pins often keep a higher voltage such as 1.8 or 3.3 V.</figcaption></figure>
+
+  <h2 id="s4">4 · CMOS: one of each, and you have an inverter</h2>
+  <p><b>C</b> stands for complementary. Put a PMOS between VDD and the output, an NMOS between the output and VSS, and tie both gates to the same input (slide 9). When the input is 0 the PMOS conducts and the NMOS blocks, so the output is pulled up to VDD: a 1. When the input is 1 the roles swap and the output is pulled down to VSS: a 0. The circuit inverts, and at either logic level there is never a closed path from VDD to VSS (slide 11), so a CMOS gate at rest draws no current apart from leakage.</p>
+  ${lab("inv", "the CMOS inverter")}
+  ${why("Why the complementary pair beat everything before it (slides 8, 10, 11)", `<p>The NMOS-only logic of the 1970s replaced the PMOS with a resistor-like load, so a 0 at the output meant a permanent current through that load: chips got hot and could not grow. TTL, built from bipolar transistors, drew current all the time too. CMOS has a real switch in both directions: it drives the output hard to either rail (full swing, excellent noise immunity, fan-out above 50) and spends energy only while switching. That is why slide 31 calls CMOS the only device that scales energy-wise to very dense chips.</p>`)}
+
+  <h2 id="s5">5 · From the inverter to NAND and NOR</h2>
+  <p>Every CMOS gate keeps the same shape: a <b>pull-up network</b> of PMOS transistors between VDD and the output, a <b>pull-down network</b> of NMOS transistors between the output and VSS, and the two networks are exact complements. Transistors in series mean AND ("both must conduct"), transistors in parallel mean OR ("either one is enough"). A series pull-down with a parallel pull-up gives NAND; swap them and you get NOR.</p>
+  ${lab("gate", "NAND and NOR from four transistors")}
+  ${ex("Worked example: why NAND is the natural CMOS gate", `<p>In a NAND the slow PMOS transistors are in parallel, so only one of them has to carry the output current, while the fast NMOS transistors share the series path. In a NOR it is the reverse: two slow PMOS in series. For equal speed a NOR therefore needs much wider PMOS transistors, which is why libraries and synthesis tools prefer NAND, and why the first thing lecture 6 does is size these networks.</p>`)}
+
+  <h2 id="s6">6 · Where this leads in the course</h2>
+  <ul>
+    <li><a href="digital-circuit-design/lecture.html?n=5">Lecture 5</a> adds the manufacturing side: layout layers, Moore's law and scaling, the formulas behind the curves above, and the limits (IR drop, electromigration, variation, FinFET and FDSOI).</li>
+    <li>Lecture 6 builds complete CMOS logic from these pairs and sizes the transistors; lecture 7 turns the switching window into delay; lecture 8 into power.</li>
+    <li>The exercise sheets use the switch model exactly as on this page: decide for each transistor whether it conducts, then read off the output.</li>
+  </ul>
+
+  <h2 id="s7">7 · Dictionary</h2>
+  <p>Every term from this page and from lecture 5, in one plain sentence each. Type to filter, or pick a group.</p>
+  <div id="glossary">
+    <div class="gl-ctl"><input type="search" id="glq" placeholder="search a term, e.g. threshold" aria-label="Search the dictionary">
+      <button type="button" class="chip" data-cat="all" aria-pressed="true">all</button>${Object.entries(CATS).map(([k, v]) => `<button type="button" class="chip" data-cat="${k}" aria-pressed="false">${v}</button>`).join("")}</div>
+    <p class="gl-count" id="glc"></p>
+    <dl class="gl" id="gl"></dl>
+  </div>
+  <p class="muted" style="font-size:.85rem">Sources: lecture 5 of the course (2022/23 deck, slides as cited) for the device facts and the inverter; the supply-voltage history, the tap picture and the glossary wording are our own. Numbers on this page are illustrative, not from a datasheet.</p>
+  <div class="foot"><a class="back" href="digital-circuit-design.html">← All lectures and exercises</a></div>`;
+mountCharts(); mountLabs(); glossary(document.getElementById("glossary"));
+U.wireDone && U.wireDone(page);
+</script>
+</body>
+</html>

@@ -25,7 +25,12 @@ const lectures = c.lectures.map(l => `<a class="game-card lec ${l.covered ? "" :
     <p>${esc(l.blurb)}</p>
     ${U.files(l, m)}
     ${U.doneBox(`${CODE}:lecture:${l.n}`)}
-  </a>`).join("") + `<a class="game-card" href="digital-circuit-design/orga.html">
+  </a>`).join("") + `<a class="game-card basics" href="digital-circuit-design/basics.html">
+    <div class="game-icon">🔰</div>
+    <h2>Transistor basics</h2>
+    <p class="when">beginner's companion · for lectures 5 and 6</p>
+    <p>What a transistor is, NMOS versus PMOS, the rails VDD and VSS, how one of each makes an inverter and how four make NAND and NOR, with interactive switch models and a dictionary of every term.</p>
+  </a><a class="game-card" href="digital-circuit-design/orga.html">
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
     <p>Next session, exam and Selma, the full schedule with rooms, slides and OPAL links, reading list and contacts.</p>
