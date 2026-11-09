@@ -345,3 +345,29 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .viz .w { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
 .dcd .viz .w.s { stroke: var(--vz-s1); }
 .dcd .viz .w.c { stroke: var(--vz-s2); }
+/* Lecture 5: basics pointer, CMOS cross section (material colours), reference lines, cut-off bands, delay table */
+.dcd .l5-start { border-left: 4px solid var(--c-trk); background: var(--surface-2); border-radius: 0 8px 8px 0; padding: 8px 12px; margin: 0.4rem 0 1rem; }
+.dcd .xs .be { fill: var(--surface); stroke: var(--line); }
+.dcd .xs .sub { fill: color-mix(in srgb, var(--vz-s4) 30%, var(--surface)); }
+.dcd .xs .nw { fill: color-mix(in srgb, var(--vz-s3) 34%, var(--surface)); }
+.dcd .xs .nd, .dcd .xs .pd { fill: color-mix(in srgb, var(--vz-s2) 62%, var(--surface)); }
+.dcd .xs .pd { stroke: var(--vz-s2); stroke-width: 1; stroke-dasharray: 3 2; }
+.dcd .xs .sti { fill: var(--surface-2); stroke: var(--vz-axis); stroke-width: 1; }
+.dcd .xs .ox { fill: var(--ink-3); }
+.dcd .xs .poly { fill: var(--vz-s3); }
+.dcd .xs .met { fill: color-mix(in srgb, var(--vz-s1) 36%, var(--surface)); stroke: var(--vz-s1); stroke-width: 1; }
+.dcd .xs .via { fill: var(--surface-2); stroke: var(--vz-s1); stroke-width: 1; }
+.dcd .xs .xl { fill: var(--ink); font-weight: 500; }
+.dcd .xs .xl.dim { fill: var(--ink-3); }
+.dcd .xs .pt { cursor: default; outline: none; }
+.dcd .xs.hovering .pt:not(.on) { opacity: .4; }
+.dcd .xs .pt.on rect, .dcd .xs .pt.on path { stroke: var(--ink); stroke-width: 1.5; }
+.dcd .viz .line.gray { stroke: var(--vz-gray); stroke-width: 1.25; }
+.dcd .viz .line.ref { stroke: var(--vz-gray); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.dcd .viz .band { fill: var(--vz-grid); opacity: .7; }
+.dcd .l5dash, .dcd .l5gray { display: inline-block; width: 14px; height: 0; border-top: 2px dashed var(--vz-gray); vertical-align: 3px; }
+.dcd .l5gray { border-top-style: solid; }
+.dcd .l5nl { display: grid; grid-template-columns: repeat(3, minmax(64px, 110px)); gap: 4px; margin: 0 0 6px; }
+.dcd .l5nl .cell.hd { background: transparent; color: var(--ink-3); font-size: 13px; }
+.dcd .l5nl .cell.blank { font-size: 11px; color: var(--ink-3); }
+.dcd .l5nl .cell.one { background: color-mix(in srgb, var(--vz-s1) var(--w), var(--surface)); }
