@@ -392,3 +392,17 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .sap .viz .drop { fill: var(--vz-gray); opacity: .35; }
 .sap .viz .dbox { fill: none; stroke: var(--vz-axis); stroke-dasharray: 4 3; }
 .sap table.tt.prose td { text-align: left; }
+
+/* Lectures 2–3 (random variate generation, Markov chains): dashed references, accept–reject envelope, Markov split bar, state strip, matrix powers, random walks */
+.sap .viz .line.dash, .sap svg.lab-svg .line.dash { stroke-dasharray: 5 4; }
+.sap .key.dash { height: 2px; border-radius: 0; background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+.sap svg.lab-svg .curve { fill: none; stroke: var(--vz-s1); stroke-width: 2.4; }
+.sap svg.lab-svg .env { fill: none; stroke: var(--vz-s3); stroke-width: 2; }
+.sap svg.lab-svg .keep { fill: var(--vz-s1); opacity: .8; }
+.sap svg.lab-svg .drop { fill: var(--vz-gray); opacity: .4; }
+.sap svg.lab-svg .band-rw { fill: var(--vz-s4); fill-opacity: .16; }
+.sap svg.lab-svg .line.thin-w { stroke-width: 1.1; opacity: .55; }
+.sap .strip { display: flex; gap: 2px; margin: 4px 0 10px; }
+.sap .strip i { flex: 1 1 0; min-width: 0; max-width: 10px; height: 20px; border-radius: 2px; background: var(--c); }
+.sap table.tt.mx td { min-width: 4.2em; }
+@media (max-width: 480px) { .sap table.tt.mx td { min-width: 3em; } }
