@@ -270,7 +270,7 @@ function resSVG(narrow, pts) {
   const tv = [0.001, 0.01, 0.1, 1, 10];
   const xt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${T + PH + 16}" text-anchor="middle">${v}</text>`).join("");
   const yt = tv.map(v => `<line class="${v === 0.001 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
-  const dots = pts.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>≈ ${p.f} N force resolution · ≈ ${p.s} mm spatial resolution<br>${p.note}`)}"><circle class="hit" cx="${x(p.f)}" cy="${y(p.s)}" r="14"/>${p.tri ? `<path class="dot ring" style="fill:var(--vz-s${p.slot})" d="M${x(p.f)} ${y(p.s) - 8} L${x(p.f) + 7.5} ${y(p.s) + 5} L${x(p.f) - 7.5} ${y(p.s) + 5} Z"/>` : `<circle class="dot ring" style="fill:${p.fill || (p.slot ? `var(--vz-s${p.slot})` : "var(--vz-gray)")}" cx="${x(p.f)}" cy="${y(p.s)}" r="6"/>`}
+  const dots = pts.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>≈ ${p.f} N force resolution · ≈ ${p.s} mm spatial resolution<br>${p.note}`)}"><circle class="hit" cx="${x(p.f)}" cy="${y(p.s)}" r="14"/>${p.star ? `<path class="dot ring" style="fill:var(--vz-s${p.slot})" d="${Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? 4 : 9.5, a = -Math.PI / 2 + i * Math.PI / 5; return (i ? "L" : "M") + (x(p.f) + r * Math.cos(a)).toFixed(1) + " " + (y(p.s) + r * Math.sin(a)).toFixed(1); }).join(" ")} Z"/>` : p.tri ? `<path class="dot ring" style="fill:var(--vz-s${p.slot})" d="M${x(p.f)} ${y(p.s) - 8} L${x(p.f) + 7.5} ${y(p.s) + 5} L${x(p.f) - 7.5} ${y(p.s) + 5} Z"/>` : `<circle class="dot ring" style="fill:${p.fill || (p.slot ? `var(--vz-s${p.slot})` : "var(--vz-gray)")}" cx="${x(p.f)}" cy="${y(p.s)}" r="6"/>`}
     ${narrow ? "" : `<text class="vl2" x="${x(p.f) + p.lx}" y="${y(p.s) + p.ly}" text-anchor="${p.a}" style="opacity:1">${p.k}</text>`}</g>`).join("");
   const better = `<text class="note" x="${L + 6}" y="${T + PH - 8}">← finer is better, towards the bottom-left</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter chart on log axes: spatial resolution in millimetres against normal-force resolution in newtons. ${pts.map(p => `${p.k} about ${p.f} newtons and ${p.s} millimetres`).join("; ")}.">
@@ -726,6 +726,194 @@ function lecture4() {
     <p class="muted">Next: <a href="touch-sensing/lecture.html?n=5">Lecture 5, Vision-based Tactile Sensors 2</a> (9 Nov). The hands-on session with the DIGIT and OpenTouch is <a href="touch-sensing/exercise.html?n=3">Practice 3</a>. Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
+// ======================================================================================
+// Lecture 5 – vision-based tactile sensors 2: the design session on DIGIT's limits, Evetac, DIGIT Pinky, Digit360
+// ======================================================================================
+// The four limitations of slide 4, each with the sensor the lecture presents as an answer (slides 7, 10, 15).
+const LIMITS = [
+  ["Sampling rate", "cameras are relatively slow", "Evetac: an event camera, up to 1 kHz", 1],
+  ["Data bandwidth", "a hand can generate hundreds of Mb/s", "Evetac: only changing pixels are sent", 1],
+  ["Bulky", "focal distance and electronics", "DIGIT Pinky: optical fibres move the camera out of the finger", 2],
+  ["No multimodality", "human skin has very heterogeneous receptors", "Digit360: pressure, vibration, audio, temperature, gas, IMU in one fingertip", 3],
+];
+// Evetac data volume (slide 9): output relative to an RGB optical tactile sensor during one grasp, as printed on the slide.
+const EVSHARE = [
+  { k: "RGB optical tactile sensor", v: 100, s: "g", t: "constant: every frame is sent whether something changes or not" },
+  { k: "Evetac at its peak (slip)", v: 12, s: 1, t: "the largest burst, when the can slips as the gripper opens" },
+  { k: "Evetac over the whole grasp", v: 1.7, s: 1, t: "averaged over the entire 20-second trajectory" },
+];
+CHARTS.evShare = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 8 : 200, R = 56, T = narrow ? 22 : 10, BH = 20, GAP = narrow ? 32 : 14, PW = W - L - R, x = v => L + v / 100 * PW;
+  const H = T + EVSHARE.length * (BH + GAP) + 28;
+  const grid = [0, 25, 50, 75, 100].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T - 4}" y2="${H - 26}"/><text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v} %</text>`).join("");
+  const bars = EVSHARE.map((d, i) => { const y = T + i * (BH + GAP), fill = d.s === "g" ? "var(--vz-gray)" : `var(--vz-s${d.s})`;
+    const label = narrow ? `<text class="cat" x="${L}" y="${y - 6}">${d.k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${d.k}</text>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}</b>${d.v} % of the RGB sensor's output<br>${d.t}`)}"><rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}<path class="bar" style="fill:${fill}" d="${hbar(L, Math.max(x(d.v), L + 3), y, BH)}"/><text class="val" x="${Math.max(x(d.v), L + 3) + 6}" y="${y + BH / 2 + 4}">${num(d.v, 1)} %</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of sensor output relative to an RGB optical tactile sensor: RGB 100 percent, Evetac peak 12 percent, Evetac over the whole grasp 1.7 percent">${grid}${bars}</svg>`;
+};
+
+// Frames versus events: when does the sensor first report a slip that starts at time t? A frame camera reports at the
+// next frame boundary; an event camera at up to 1 kHz reports within about a millisecond. Toy timing, no exposure or readout.
+const SM = { fps: 60, t: 37 };
+LABS.sample = body => {
+  body.innerHTML = `<figure class="viz bare"><div class="samp"></div></figure>
+    <div class="ctl"><label>frame camera <input type="range" min="15" max="240" step="15" value="${SM.fps}" data-k="fps"><output>${SM.fps}</output> fps</label>
+    <label>slip starts at <input type="range" min="0" max="99" step="1" value="${SM.t}" data-k="t"><output>${SM.t}</output> ms</label></div>
+    <div class="ro-out"></div>`;
+  const box = body.querySelector(".samp"), out = body.querySelector(".ro-out");
+  const draw = () => {
+    const narrow = isNarrow(), W = narrow ? 340 : 600, L = 12, R = 12, PW = W - L - R, H = 118, x = ms => L + ms / 100 * PW, per = 1000 / SM.fps;
+    const nextF = Math.ceil(SM.t / per + 1e-9) * per, nextE = Math.floor(SM.t) + 1;
+    const frames = Array.from({ length: Math.floor(100 / per) + 1 }, (_, k) => k * per).filter(v => v <= 100)
+      .map(v => `<line x1="${x(v)}" x2="${x(v)}" y1="22" y2="44" style="stroke:var(--vz-gray);stroke-width:${Math.abs(v - nextF) < 1e-6 ? 3 : 1.5}"/>`).join("");
+    const events = Array.from({ length: 101 }, (_, k) => k).map(v => `<line x1="${x(v)}" x2="${x(v)}" y1="68" y2="${v >= nextE ? 86 : 78}" style="stroke:var(--vz-s1);stroke-width:${v === nextE ? 2.5 : 1};opacity:${v >= nextE ? 1 : .35}"/>`).join("");
+    const ax = [0, 25, 50, 75, 100].map(v => `<text class="tick" x="${x(v)}" y="${H - 4}" text-anchor="middle">${v} ms</text>`).join("");
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of 100 milliseconds: frame times of a ${SM.fps} fps camera, event slots at 1 kilohertz, and the moment the slip starts at ${SM.t} ms">
+      <text class="note" x="${L}" y="14">frame camera, ${SM.fps} fps: a full image every ${num(per, 1)} ms</text>${frames}
+      <text class="note" x="${L}" y="60">event camera, up to 1 kHz: changed pixels only</text>${events}
+      <rect x="${x(SM.t)}" y="20" width="${Math.max(0, x(Math.min(nextF, 100)) - x(SM.t))}" height="26" style="fill:var(--vz-gray);opacity:.18"/>
+      <line x1="${x(SM.t)}" x2="${x(SM.t)}" y1="16" y2="90" style="stroke:var(--vz-s2);stroke-width:2"/>
+      <text class="lbl" x="${x(SM.t) + (SM.t > 70 ? -4 : 4)}" y="100" text-anchor="${SM.t > 70 ? "end" : "start"}">slip starts</text>${ax}</svg>`;
+    out.innerHTML = ro([["first frame after the slip", `${num(nextF - SM.t, 1)} ms later (worst case ${num(per, 1)} ms, average ${num(per / 2, 1)} ms)`],
+      ["first event after the slip", `≤ ${num(nextE - SM.t, 0)} ms later`],
+      ["data while nothing moves", `frame camera: ${num(320 * 240 * 3 * SM.fps / 1e6, 1)} MB/s at QVGA · event camera: almost nothing`]]);
+  };
+  body.querySelectorAll("input").forEach(r => r.addEventListener("input", () => { SM[r.dataset.k] = +r.value; r.nextElementSibling.value = r.value; draw(); }));
+  draw();
+};
+
+// DIGIT Pinky (slides 11–12): the optics split into a distal sensing element and a proximal box, joined by fibre bundles.
+function pinkySVG() {
+  return `<svg viewBox="0 0 600 190" role="img" aria-label="Schematic of DIGIT Pinky: a small dome-shaped gel at the fingertip, illumination fibres carrying red, green and blue light to it, an imaging fibre bundle carrying the image back to lenses and a camera in a box far from the fingertip">
+    <path d="M60 60 A40 40 0 0 0 60 140 Z" style="fill:var(--surface);stroke:var(--ink-3)"/>
+    <rect x="60" y="60" width="26" height="80" rx="3" style="fill:var(--surface-2);stroke:var(--ink-3)"/>
+    <text class="lbl" x="10" y="40">distal sensing element</text><text class="note" x="10" y="168">gel + fibre ends only</text>
+    ${[[78, "#e5484d"], [100, "#30a46c"], [122, "#3e63dd"]].map(([y, c]) => `<path d="M86 ${y} C200 ${y} 260 ${y + (y - 100) * 0.6 + 50} 380 ${y + (y - 100) * 0.4 + 52}" style="fill:none;stroke:${c};stroke-width:2.2"/>`).join("")}
+    <path d="M86 100 C200 100 250 40 380 40" style="fill:none;stroke:var(--vz-s1);stroke-width:7;opacity:.55"/>
+    <text class="note" x="232" y="54" text-anchor="middle">imaging fibre bundle →</text><text class="note" x="232" y="170" text-anchor="middle">← illumination fibres (R, G, B)</text>
+    <rect x="380" y="20" width="200" height="46" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+    <ellipse cx="420" cy="43" rx="5" ry="15" style="fill:none;stroke:var(--ink-3)"/><ellipse cx="448" cy="43" rx="5" ry="15" style="fill:none;stroke:var(--ink-3)"/>
+    <rect x="478" y="31" width="24" height="24" rx="3" style="fill:var(--ink-3)"/><circle cx="550" cy="43" r="16" style="fill:var(--vz-s1);opacity:.35"/>
+    <text class="lbl" x="480" y="84" text-anchor="middle">proximal imaging</text><text class="note" x="480" y="99" text-anchor="middle">lenses → camera → round image</text>
+    <rect x="380" y="118" width="200" height="40" rx="8" style="fill:var(--surface-2);stroke:var(--line)"/>
+    ${["#e5484d", "#30a46c", "#3e63dd"].map((c, i) => `<circle cx="${420 + i * 22}" cy="138" r="7" fill="${c}"/>`).join("")}
+    <text class="lbl" x="480" y="178" text-anchor="middle">proximal illumination: RGB LEDs</text></svg>`;
+}
+
+// Resolution chart of slide 17: Lecture 4's chart with Digit360 added (star). Values read off the slide and rounded.
+const RES5 = [...RES4, { k: "Digit360", f: 0.0015, s: 0.007, slot: 1, star: true, note: "vision-based and non-vision combined (Lambeta et al. 2024)", lx: 12, ly: 4, a: "start" }];
+CHARTS.res5 = narrow => resSVG(narrow, RES5);
+
+// In-finger processing (slide 19): event-to-action latency in ms, split into event capture and action command, read off the chart.
+const LAT = [
+  { k: "Digit360, on-device", cap: 0.6, act: 0.4, sd: "± about 0.05 ms" },
+  { k: "Digit360, via host", cap: 1.2, act: 1.4, sd: "± about 0.1 ms" },
+  { k: "DIGIT, via host", cap: 4.7, act: 1.4, sd: "± about 2.6 ms (3.5 to 8.7 ms)" },
+];
+CHARTS.latency = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 8 : 150, R = 60, T = narrow ? 22 : 10, BH = 20, GAP = narrow ? 32 : 14, PW = W - L - R, mx = 8, x = v => L + v / mx * PW;
+  const H = T + LAT.length * (BH + GAP) + 30;
+  const grid = [0, 2, 4, 6, 8].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T - 4}" y2="${H - 28}"/><text class="tick" x="${x(v)}" y="${H - 12}" text-anchor="middle">${v} ms</text>`).join("");
+  const bars = LAT.map((d, i) => { const y = T + i * (BH + GAP), tot = d.cap + d.act;
+    const label = narrow ? `<text class="cat" x="${L}" y="${y - 6}">${d.k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${d.k}</text>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}</b>≈ ${num(tot, 1)} ms from event to action (${d.sd})<br>${num(d.act, 1)} ms action command + ${num(d.cap, 1)} ms event capture`)}"><rect class="hit" x="0" y="${y - GAP / 2}" width="${W}" height="${BH + GAP}"/>${label}
+      <rect class="bar" x="${L}" y="${y}" width="${x(d.act) - L - 1}" height="${BH}" style="fill:var(--vz-s2)"/><path class="bar" style="fill:var(--vz-s1)" d="${hbar(x(d.act) + 1, x(tot), y, BH)}"/>
+      <text class="val" x="${x(tot) + 6}" y="${y + BH / 2 + 4}">${num(tot, 1)} ms</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stacked bar chart of event-to-action latency: Digit360 on-device about 1.0 ms, Digit360 via host about 2.6 ms, DIGIT via host about 6.1 ms; each bar split into action command and event capture">${grid}${bars}</svg>`;
+};
+
+// Digit360's sensing channels (slide 18) next to the human analogue from Lecture 2 (our mapping, not on the slides).
+const MODES = [
+  ["Visuotactile image", "hyperfisheye lens and image capture system", "shape and texture of the contact; the DIGIT's only channel", "spatial acuity of the fingertip (Merkel)", 1],
+  ["Static pressure", "fingertip layer", "how hard it presses, without the camera", "Merkel discs, Ruffini endings", 2],
+  ["Dynamic pressure, surface vibration", "fingertip layer and the sensing board", "fast changes, slip, contact onset", "Meissner and Pacinian corpuscles", 2],
+  ["Surface audio", "fingertip layer", "what the contact sounds like (the bottle on slide 18)", "Pacinian corpuscles pick up vibration well into the audio range", 3],
+  ["Temperature", "fingertip layer", "warm or cold, thermal conductivity of the material", "thermoreceptors (free nerve endings)", 3],
+  ["Gas", "gas sensing, fed by an air intake fan", "smell-like chemical cues", "none: this is beyond human touch", 4],
+  ["Inertial measurement", "sensing and illumination board", "accelerations of the fingertip itself", "proprioception rather than touch", 4],
+];
+
+function lecture5() {
+  return `${head(l)}
+    <p class="lead">Lecture 4 closed with the limitations of vision-based tactile sensors. This lecture turns them into a design brief: <b>design an improved version of the DIGIT</b>. It is half interactive (the room proposes fixes) and half a tour of three newer sensors from the lab and its collaborators, each attacking one limitation: Evetac for speed and bandwidth, DIGIT Pinky for size, Digit360 for multimodality.</p>
+
+    <h2>Recap and goal (slides 2–3)</h2>
+    <p>Last time: the basic principle (a camera filming a lit elastomer from inside), relative advantages and limitations, and the existing sensors from Kappl to GelSight and DIGIT. Today: an interactive design session to understand how a touch sensor gets designed, then a deeper dive into advanced VBTS. Full write-up of the previous lecture: <a href="touch-sensing/lecture.html?n=4">Lecture 4</a>.</p>
+
+    <h2>The brief: DIGIT's limitations (slides 4–6)</h2>
+    <p>The starting point is a hand full of DIGITs, one on every fingertip (slide 4). Four things are wrong with it; the deck comes back to this list three times and highlights one or two items each time before showing a sensor that answers them:</p>
+    <div class="levels">${LIMITS.map(([t, d, a, s]) => `<div class="lv" style="border-top-color:var(--vz-s${s})"><div class="t">${t}</div><div class="d">${d}</div><div class="d"><b>→ ${a}</b></div></div>`).join("")}</div>
+    ${why("how to run the design session yourself", `<p>The slides carry only the brief, so the session's ideas are not written down here. A useful way to replay it: for each limitation, ask which of Lecture 4's five design axes it lives on (form factor, substrate, lighting, optics, electronics) and what you would have to give up to fix it. Speed and bandwidth live in the electronics (the image sensor), bulk in the optics (the focal distance), multimodality in the substrate and electronics (other transducers next to the camera). The three sensors below are one answer each.</p>`)}
+
+    <h2>Evetac: an event-based VBTS (slides 7–9)</h2>
+    <p>Highlighted limitations: <b>sampling rate</b> and <b>data bandwidth</b>. Evetac (Funk, Helmut, Chalvatzaki, Calandra &amp; Peters, T-RO 2024) replaces the frame camera with an <b>event-based camera</b>. Every pixel reports on its own, and only when its brightness changes; nothing is sent while the gel is still. That gives readings at up to <b>1 kHz</b>, fast enough to capture dynamic touch such as slip and vibration. The design is modular and built from off-the-shelf parts (inspired by Nathan Lepora's DigiTac); the slide's exploded view shows camera, housing, holder and gel. It is not the first event-based tactile sensor: the slide credits pioneer work by Benjamin Ward-Cherrier. The photo shows two Evetacs as the fingertips of a parallel gripper holding a pencil, each with its dot pattern.</p>
+    ${lab("sample", "frames versus events")}
+    <p>The lab is a timing cartoon ${ctx}: a frame camera only notices the slip at its next frame, so on average half a frame period late; an event pixel fires as soon as its brightness changes, so the reaction time is bounded by the event rate, not by a frame clock.</p>
+    <h3>Data bandwidth (slide 9)</h3>
+    <p>The slide plots the sensor output in bytes over one 20-second grasp of a can: no contact with the gripper open, making contact as it closes, a perturbation, and slippage as the gripper opens. An RGB optical tactile sensor sends a constant amount, roughly 780 kB per step on the slide's axis, from start to finish. Evetac sends almost nothing while nothing happens and short bursts at the four events; its largest burst, at the slip, reaches <b>12 %</b> of the RGB output, and over the whole trajectory it sends <b>1.7 %</b>.</p>
+    ${chart("evShare", leg([["g", "frame-based RGB sensor"], [1, "Evetac"]]))}<figcaption>Evetac's output as a share of an RGB optical tactile sensor's, the two percentages printed on slide 9. Hover or focus a bar.</figcaption></figure>
+    ${tbl(["Sensor and moment", "Share of the RGB output"], EVSHARE.map(d => [d.k, `${num(d.v, 1)} %`]))}
+    ${ex("Worked example · the hand of Lecture 4 with event cameras", `<p>Lecture 4 computed 111 Mb/s for one DIGIT at QVGA and 60 fps, so 553 Mb/s for five fingertips, more than USB 2.0 carries. If an event sensor sent the same 1.7 % of that on average, one fingertip would need about 111 · 0.017 ≈ <b>1.9 Mb/s</b>, five about 9.4 Mb/s; even all five fingertips peaking at 12 % at once would be 5 · 13.3 ≈ 67 Mb/s. This transfers the slide's ratios to the DIGIT's numbers ${ctx}; the ratio depends on how much happens in the scene, so a vibrating or sliding contact sends far more.</p>`)}
+    ${why("what you give up with events", `<p>An event camera sees change, not state: a finger pressing steadily on an object stops producing events, so the static shape (what GelSight-style photometric stereo reconstructs) has to be integrated from the events or kept from another channel. That is why the dot pattern matters on Evetac: moving dots produce clean events, and their tracked positions carry the shear and force.</p>`)}
+
+    <h2>DIGIT Pinky: miniaturisation with fibre bundles (slides 10–14)</h2>
+    <p>Highlighted limitation: <b>bulky</b>. The camera of a VBTS needs a focal distance and its electronics need room, so the fingertip cannot shrink below the optics. DIGIT Pinky (Di, Dugonjic, … Lambeta &amp; Calandra, T-RO 2024, "Using fiber optic bundles to miniaturize vision-based tactile sensors") moves the optics out of the finger. At the fingertip sits only a small <b>distal sensing element</b>: a dome-shaped gel and the polished ends of fibres. <b>Illumination fibres</b> bring red, green and blue light from LEDs far away; an <b>imaging fibre bundle</b> carries the picture of the gel back to lenses and a camera in a box at the other end. The output is a round image (the bundle's cross-section) of the fingerprint pressed against the dome.</p>
+    <figure class="viz">${pinkySVG()}<figcaption>Schematic of the split design after slide 12: everything bulky (LEDs, lenses, camera) sits proximally, the fingertip only holds gel and fibre ends. Drawn here, not to scale.</figcaption></figure>
+    <ul>
+      <li><b>Size</b> (slide 11): the Pinky's dome next to the elastomer of a standard DIGIT, with a 10 mm scale bar; the dome is far smaller, small enough for a little finger, hence the name.</li>
+      <li><b>On a hand</b> (slide 13): mounted as the fingertip of an anthropomorphic robot hand that pinches a coin between thumb and finger.</li>
+      <li><b>Cancer detection in prostate tissue</b> (slide 14): a sample of removed prostate tissue with two marked spots, one with cancer and one without, is palpated with the Pinky; the tactile images of the two spots differ visibly (two videos on the slide). A sensor this small can go where a surgeon's finger palpates.</li>
+    </ul>
+    ${why("why palpation works", `<p>Tumours are usually stiffer than the surrounding tissue; pressing the same way on both gives a different deformation pattern of the gel. Doctors use the same cue with their fingers (Lecture 2's slowly adapting receptors), but in minimally invasive surgery the finger is not there, so a sensor at the tip of an instrument restores the sense.</p>`)}
+    ${ex("Worked example · what the fibres cost", `<p>${ctx} An imaging bundle transports one pixel per fibre core, so the image resolution is capped by the number of cores, not by the camera; and the bundle is only as flexible as its diameter allows. The trade is therefore spatial resolution and some light for a much smaller fingertip: the opposite corner of Lecture 3's criteria table from the DIGIT, which optimises cost and resolution and accepts bulk.</p>`)}
+
+    <h2>Digit360: a superhuman multimodal fingertip (slides 15–19)</h2>
+    <p>Highlighted limitation: <b>no multimodality</b>. Human skin has very heterogeneous receptors (Lecture 2); a camera sees only shape. Digit360 (Lambeta et al., "Digitizing touch with an artificial multimodal fingertip", arXiv 2024, with the files public on GitHub) packs many sensors into one finger-like tip. The cut-away on slide 16 names five headline features: <b>multimodal sensing</b>, an <b>omnidirectional</b> dome, <b>edge AI</b> in the finger, a <b>finger-like form factor</b> and a USB 3.0 link.</p>
+    <h3>Resolution (slide 17)</h3>
+    <p>The chart of Lectures 2–4 once more, now with Digit360 as a star in the far bottom-left: about 7 µm spatial and about 1.5 mN force resolution on the slide's axes: about 20 times finer than the DIGIT in space and 4 times in force, and roughly 140 and 40 times finer than the human finger.</p>
+    ${chart("res5", leg([["g", "non-vision sensors and the finger"], [1, "DIGIT ▲ and Digit360 ★"], [2, "Insight"], [3, "GelSlim"], [4, "GelSight"]]))}<figcaption>Spatial against normal-force resolution, log-log, bottom-left is better. Values read off slide 17 and rounded; the slide marks Digit360 as "both" (vision-based and non-vision). Hover or focus a mark.</figcaption></figure>
+    ${tbl(["Sensor", "≈ force resolution", "≈ spatial resolution"], RES5.map(r => [r.k + (r.star ? " (both)" : r.tri ? " (VBTS)" : ""), `${r.f} N`, `${r.s} mm`]))}
+    <h3>Multimodality (slide 18)</h3>
+    <p>The exploded view lists the layers from the tip down: a silicone fingertip; a sensing and illumination board with directional lighting, inertial measurement and surface vibration; static and dynamic pressure, surface audio and temperature at the tip; a hyperfisheye lens on a lens mount; the image capture system (visuotactile); an image signal processor; gas sensing with an air intake fan; a processing system with on-device AI; a data serializer and a USB-C port. The demonstration: a robot hand taps a metal bottle that is full, half full or empty, and the audio spectrograms of the taps differ clearly; the camera alone could not tell them apart.</p>
+    <div class="tt-wrap"><table class="tt fam"><tr><th>channel</th><th>where in the finger</th><th>what it adds</th><th>human analogue</th></tr>${MODES.map(([a, b, cc, d, s]) => `<tr><td>${key(s)} ${a}</td><td>${b}</td><td>${cc}</td><td>${d}</td></tr>`).join("")}</table></div>
+    <p class="muted" style="font-size:.85rem">The channels and their places are from slide 18; the last two columns, and the colour groups (image, pressure, other senses of the skin, beyond touch), are our reading with Lecture 2 ${ctx}.</p>
+    <h3>In-finger processing with edge AI (slide 19)</h3>
+    <p>With so many channels, sending everything to a host computer is the bandwidth problem again. Digit360 runs models in the finger itself. The slide measures the event-to-action latency, from a touch event to a resulting action command, split into event capture and the action command:</p>
+    ${chart("latency", leg([[2, "action command"], [1, "event capture"]]))}<figcaption>Event-to-action latency in milliseconds, read off slide 19 and rounded. The DIGIT bar has a large spread (about 3.5 to 8.7 ms); the Digit360 bars are tight. Hover or focus a bar.</figcaption></figure>
+    ${tbl(["Configuration", "Action command", "Event capture", "Total"], LAT.map(d => [d.k, `${num(d.act, 1)} ms`, `${num(d.cap, 1)} ms`, `${num(d.cap + d.act, 1)} ms`]))}
+    ${ex("Worked example · what 5 ms mean for a slip", `<p>${ctx} A grasped object that starts to slide at 0.1 m/s moves 0.1 mm per millisecond. With the DIGIT via a host (about 6.1 ms) it has slipped about 0.6 mm before the action command leaves; with Digit360 on-device (about 1.0 ms) about 0.1 mm, below the DIGIT's spatial resolution on slide 17. Human reflexes to slip take tens of milliseconds, so both beat us, but only the on-device path reacts within a single frame period of a 60 fps camera (16.7 ms) with room to spare.</p>`)}
+
+    <div class="tiles">
+      <div class="tile"><div class="v">1 kHz</div><div class="l">Evetac's event rate, against 30–60 fps for a frame camera</div></div>
+      <div class="tile"><div class="v">1.7 %</div><div class="l">Evetac's data over a whole grasp, relative to an RGB sensor</div></div>
+      <div class="tile"><div class="v">≈ 7 µm</div><div class="l">Digit360's spatial resolution on the slide chart</div></div>
+      <div class="tile"><div class="v">≈ 1 ms</div><div class="l">Digit360 event-to-action latency with on-device AI</div></div>
+    </div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What limits the DIGIT?</b> Slow sampling, high bandwidth, bulk, a single modality.</li>
+      <li><b>Speed and bandwidth:</b> an event camera sends only changes, up to 1 kHz, and a small fraction of the data (Evetac: 12 % at the peak, 1.7 % on average).</li>
+      <li><b>Bulk:</b> fibre bundles carry light in and the image out, so only gel and fibre ends sit in the fingertip (DIGIT Pinky); small enough for palpating tissue.</li>
+      <li><b>Multimodality:</b> put other transducers next to the camera: pressure, vibration, audio, temperature, gas, IMU (Digit360).</li>
+      <li><b>Bandwidth again:</b> many channels call for processing in the finger; on-device AI cuts the event-to-action latency to about 1 ms.</li>
+      <li><b>Design is a trade:</b> each fix moves the sensor along one of Lecture 4's design axes and costs something on another.</li>
+    </ul>
+    <h2>Summary (slide 20)</h2>
+    <ul><li>Interactive design session to understand the process of designing a touch sensor.</li><li>Explored a few more VBTS sensors.</li></ul>
+    ${ex("Likely exam questions", `<p>Name the four limitations of the DIGIT and one sensor that addresses each. Explain how an event camera differs from a frame camera and why that helps for slip. Sketch how fibre bundles shrink a VBTS and what that costs. List the modalities of Digit360 and match them to human receptors. Why process tactile data in the finger? This list is our guess ${ctx}.</p>`)}
+    <h2>References named in the lecture</h2>
+    <ul class="refs">
+      <li>Funk, Helmut, Chalvatzaki, Calandra &amp; Peters (2024). Evetac: an event-based optical tactile sensor for robotic manipulation. IEEE T-RO. arXiv 2312.01236.</li>
+      <li>Di, Dugonjic, Fu, Wu, Mercado, Sawyer, Most, Kammerer, Speidel, Fan, Sonn, Cutkosky, Lambeta &amp; Calandra (2024). Using fiber optic bundles to miniaturize vision-based tactile sensors. IEEE T-RO. arXiv 2403.05500.</li>
+      <li>Lambeta et al. (2024). Digitizing touch with an artificial multimodal fingertip. arXiv 2411.02479.</li>
+      <li>Lambeta et al. (2020). DIGIT: a novel design for a low-cost compact high-resolution tactile sensor with application to in-hand manipulation. RA-L 5.</li>
+      <li>Shimonomura (2019). Tactile image sensors employing camera: a review. Sensors 19.</li>
+      <li>Abad &amp; Ranasinghe (2020). Visuotactile sensors with emphasis on GelSight sensor: a review. IEEE Sensors Journal 20.</li>
+    </ul>
+    <p class="muted">Next: <a href="touch-sensing/lecture.html?n=6">Lecture 6, Simulating Touch</a> (16 Nov). The practice to this lecture's topic is <a href="touch-sensing/exercise.html?n=4">Practice 4</a> (background subtraction and photometric stereo on DIGIT images). Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -735,7 +923,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, 09:20–10:50, ${esc(roomOn(l.date))}.<br>The summary appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;

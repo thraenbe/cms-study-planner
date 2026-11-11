@@ -4781,7 +4781,21 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 2",
       "date": "2026-11-09",
       "icon": "🔍",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "blurb": "A design session on the DIGIT's four limitations and three sensors that answer them: Evetac (an event camera, up to 1 kHz, 1.7 % of the data), DIGIT Pinky (fibre bundles shrink the fingertip, used to palpate prostate tissue) and Digit360 (multimodal, about 7 µm resolution, on-device AI with about 1 ms latency).",
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 5 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-05.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export"
+       }
+      ]
      },
      {
       "n": 6,
@@ -4974,7 +4988,15 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 2",
       "date": "2026-11-10",
       "icon": "🔍",
-      "blurb": "Not held yet."
+      "blurb": "Background subtraction on the DIGIT frames of Practice 3 (mean of the no-contact frames, clipped versus normalised differences), then photometric stereo: surface normals per pixel from the three LEDs with n = L⁻¹ I, shown as a normal map.",
+      "covered": true,
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 4 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       }
+      ]
      },
      {
       "n": "5",

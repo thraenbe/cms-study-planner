@@ -453,3 +453,16 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .tsp .exploded .part b { display: block; font-size: 0.92rem; }
 .tsp .exploded .arrow { color: var(--ink-3); font-size: 1.1rem; }
 @media (max-width: 600px) { .tsp .exploded .arrow { display: none; } .tsp .gel canvas { width: 100%; } }
+
+/* Practice 4 labs: image panels, per-LED intensity bars, normal swatch. */
+.tsp .p4grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 8px 0 10px; }
+.tsp .p4grid.two { grid-template-columns: repeat(2, minmax(0, 260px)); }
+.tsp .p4grid figure { margin: 0; }
+.tsp .p4grid canvas { width: 100%; aspect-ratio: 4 / 3; border-radius: 8px; border: 1px solid var(--line); background: #111; display: block; }
+.tsp .p4grid figcaption { font-size: 0.78rem; color: var(--ink-2); margin-top: 4px; line-height: 1.3; }
+.tsp .ps-row { display: grid; gap: 6px; margin: 10px 0 4px; }
+.tsp .ps-bar { position: relative; font-size: 0.88rem; font-variant-numeric: tabular-nums; padding: 3px 8px; border-radius: 6px; background: var(--surface); overflow: hidden; }
+.tsp .ps-bar span { position: absolute; left: 0; top: 0; bottom: 0; opacity: .28; border-radius: 6px; }
+.tsp .ps-bar b { position: relative; font-weight: 600; }
+.tsp .ps-sw { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; border: 1px solid var(--line); margin: 0 4px; }
+@media (max-width: 600px) { .tsp .p4grid { grid-template-columns: repeat(2, 1fr); } .tsp .p4grid.two { grid-template-columns: repeat(2, 1fr); } }

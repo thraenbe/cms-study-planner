@@ -384,9 +384,191 @@ function exercise3() {
     ${ex("What to expect, and why (our answer to the slide's question)", `<p>Each LED colour lights the gel from one side. A slope facing the red LED reflects red; turn red down and that slope goes dark while the others keep their colour, so the image loses contrast exactly on the faces that pointed at the missing light. With a single colour left the picture still shows the contact, but the direction information is one-sided: a bump and a dent lit from one side look alike, which is why Lecture 4's principle needs lights from several directions and why Lecture 5's reconstruction will use all three channels. Setting all three low makes a darker, noisier image; setting them to the maximum can saturate the flat gel to a bright grey. The default (15, 15, 15) is the calibrated one; record the settings with every dataset ${ctx}.</p>`)}
     <h2>Before the next practice (slide 17)</h2>
     ${["the OpenTouch environment runs and the DIGIT is recognised", "the datasets folder with the no-contact and the contact recordings", "the exported PNG frames, in separate directories per recording", "the script from Task 3, and the LED settings used in Task 4 noted next to the data"].map(s => `<div class="check"><span class="bx"></span><span>${s}</span></div>`).join("")}
-    <p style="margin-top:.8rem">Practice 4 (10 Nov) continues with the same sensor and data. Also still open: <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>, due 13 Nov.</p>
+    <p style="margin-top:.8rem"><a href="touch-sensing/exercise.html?n=4">Practice 4</a> (10 Nov) continues with the same sensor and data. Also still open: <a href="touch-sensing/exercise.html?n=h1">Home Exercise 1</a>, due 13 Nov.</p>
     ${why("what this practice trains", `<p>Two of Lecture 4's design axes become tangible: the <i>lighting</i> (Task 4) and the <i>electronics and bandwidth</i> (the file sizes above). The pipeline sensor → file → frames → images is the data-collection half of every ML-for-touch project, and the oral exam's portfolio variant assumes the home exercises are done with exactly this kind of data.</p>`)}
     <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>; the OpenTouch Interface is public on GitHub (lasr-lab/opentouch-interface).</p>`;
+}
+
+// ======================================================================================
+// Exercise 4 – Practice 4: background subtraction and photometric stereo on DIGIT frames
+// ======================================================================================
+// LED positions of slide 10 (mm, sensor frame). The slide puts the LEDs at z = −17 on the camera side; the labs flip z
+// so that a flat gel has the normal (0, 0, 1) pointing at the camera. S = unit source directions, rows of L.
+const LED_POS = [[17.32, 10, 17], [-17.32, 10, 17], [0, -20, 17]];
+const LED_HEX = ["#e5484d", "#30a46c", "#3e63dd"], LED_NAME = ["red", "green", "blue"];
+const S = LED_POS.map(p => { const r = Math.hypot(...p); return p.map(v => v / r); });
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const unit = v => { const r = Math.hypot(...v) || 1; return v.map(x => x / r); };
+// Inverse of L (3×3, by cofactors) so that n = L⁻¹ I.
+const LINV = (() => { const [a, b, c] = S, det = dot3(a, [b[1] * c[2] - b[2] * c[1], b[2] * c[0] - b[0] * c[2], b[0] * c[1] - b[1] * c[0]]);
+  const cr = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  const c0 = cr(b, c), c1 = cr(c, a), c2 = cr(a, b); return [0, 1, 2].map(i => [c0[i] / det, c1[i] / det, c2[i] / det]); })();
+const solveN = I => unit(LINV.map(r => dot3(r, I)));
+// Height maps in mm over a 40 × 30 mm gel (x right, y up), for the labs.
+const P4_SHAPES = [["fingertip (dome)", "dome"], ["washer (ring)", "ring"], ["edge (ridge)", "ridge"]];
+function p4Height(shape, x, y, depth) {
+  const r = Math.hypot(x, y);
+  if (shape === "ring") return depth * Math.exp(-((r - 7) ** 2) / 4);
+  if (shape === "ridge") return depth * Math.exp(-((x - 0.3 * y) ** 2) / 6);
+  return depth * Math.exp(-(r * r) / 40);
+}
+function p4Normal(shape, x, y, depth) {
+  const e = 0.2, hx = (p4Height(shape, x + e, y, depth) - p4Height(shape, x - e, y, depth)) / (2 * e), hy = (p4Height(shape, x, y + e, depth) - p4Height(shape, x, y - e, depth)) / (2 * e);
+  return unit([-hx, -hy, 1]);
+}
+// Seeded noise so the pictures do not flicker while a slider moves.
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const gauss = r => Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r());
+const P4W = 128, P4H = 96, px2mm = (i, j) => [(i / (P4W - 1) - 0.5) * 40, (0.5 - j / (P4H - 1)) * 30];
+// Clean image: per channel, the LED's falloff over the gel (brighter near the LED) times Lambert shading n·s.
+function p4Frame(shape, depth, falloff = true) {
+  const out = new Float32Array(P4W * P4H * 3);
+  for (let j = 0; j < P4H; j++) for (let i = 0; i < P4W; i++) {
+    const [x, y] = px2mm(i, j), n = shape === "flat" ? [0, 0, 1] : p4Normal(shape, x, y, depth), k = (j * P4W + i) * 3;
+    S.forEach((s, c) => { const g = falloff ? 1 / (1 + (Math.hypot(x - LED_POS[c][0], y - LED_POS[c][1]) / 28) ** 2) : 0.5;
+      out[k + c] = 300 * g * Math.max(0, dot3(n, s)); });
+  }
+  return out;
+}
+function paint(cv, buf, map = v => v) {
+  cv.width = P4W; cv.height = P4H; const ctx = cv.getContext("2d"), img = ctx.createImageData(P4W, P4H);
+  for (let p = 0; p < P4W * P4H; p++) { for (let c = 0; c < 3; c++) img.data[p * 4 + c] = Math.max(0, Math.min(255, map(buf[p * 3 + c], c))); img.data[p * 4 + 3] = 255; }
+  ctx.putImageData(img, 0, 0);
+}
+
+// Task 1 lab: background frame from N empty frames, difference image clipped or normalised.
+const BG = { shape: "ring", n: 1, sigma: 6 };
+LABS.bgsub = body => {
+  body.innerHTML = `<div class="presets">${P4_SHAPES.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === BG.shape}">${t}</button>`).join("")}</div>
+    <div class="p4grid">${["contact frame", "background (mean of N empty frames)", "difference, clipped to 0–255", "difference, normalised (min → 0, max → 255)"].map(t => `<figure><canvas aria-label="${t}"></canvas><figcaption>${t}</figcaption></figure>`).join("")}</div>
+    <div class="ctl"><label>empty frames averaged, N <input type="range" min="0" max="6" step="1" value="${Math.log2(BG.n)}" data-k="n"><output>${BG.n}</output></label>
+    <label>sensor noise σ <input type="range" min="0" max="16" step="1" value="${BG.sigma}" data-k="sigma"><output>${BG.sigma}</output></label></div><div class="ro-out"></div>`;
+  const cvs = body.querySelectorAll("canvas"), out = body.querySelector(".ro-out");
+  const draw = () => {
+    const flat = p4Frame("flat", 0), con = p4Frame(BG.shape, 2.4), r = rng(7 + BG.n), sb = BG.sigma / Math.sqrt(BG.n);
+    const bg = flat.map(v => v + sb * gauss(r)), cf = con.map(v => v + BG.sigma * gauss(r)), diff = cf.map((v, k) => v - bg[k]);
+    let lo = Infinity, hi = -Infinity; diff.forEach(v => { if (v < lo) lo = v; if (v > hi) hi = v; });
+    paint(cvs[0], cf); paint(cvs[1], bg); paint(cvs[2], diff); paint(cvs[3], diff, v => (v - lo) / (hi - lo) * 255);
+    const neg = diff.filter(v => v < -2 * BG.sigma).length / diff.length;
+    out.innerHTML = `<dl class="ro"><dt>noise in the difference</dt><dd>σ·√(1 + 1/N) = ${num(BG.sigma * Math.sqrt(1 + 1 / BG.n), 1)} grey levels (one empty frame: ${num(BG.sigma * Math.SQRT2, 1)})</dd>
+      <dt>pixels darker than the background</dt><dd>${pct(neg)}: these vanish in the clipped image and come back in the normalised one</dd>
+      <dt>difference range</dt><dd>${num(lo, 0)} to ${num(hi, 0)}, mapped to 0–255 in the normalised image</dd></dl>`;
+  };
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { BG.shape = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  body.querySelectorAll("input").forEach(rg => rg.addEventListener("input", () => { if (rg.dataset.k === "n") { BG.n = 2 ** +rg.value; rg.nextElementSibling.value = BG.n; } else { BG.sigma = +rg.value; rg.nextElementSibling.value = rg.value; } draw(); }));
+  draw();
+};
+line("noiseN", {
+  x: [1, 64], y: [0.9, 1.5], xTicks: [1, 2, 4, 8, 16, 32, 64], yTicks: [0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5], yTitle: "noise of the difference, in units of σ", labelW: 118,
+  series: [{ name: "one empty frame as background", short: "one frame", slot: 0, dash: true, f: () => Math.SQRT2 },
+    { name: "mean of N empty frames", short: "mean of N", slot: 1, dy: -8, f: n => Math.sqrt(1 + 1 / n) },
+    { name: "floor: noise of the contact frame alone", short: "floor", slot: 2, dash: true, dy: 10, f: () => 1 }],
+  aria: "Line chart: noise of the difference image in units of sigma against the number of averaged empty frames N from 1 to 64. One empty frame gives 1.41, the mean of N frames falls from 1.41 at N = 1 to 1.12 at N = 4 and 1.01 at N = 64, the floor is 1.",
+  hitLabel: "Noise against the number of averaged frames; use the arrow keys to step N", tipHead: n => `N = ${n} empty frames`, fmtY: v => num(v, 3) + " σ", focusAt: 4,
+});
+
+// Photometric stereo: intensity of each LED against the tilt of a surface patch (tilting towards +x, the red LED's side).
+CHARTS.ledCurve = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = 40, R = narrow ? 14 : 70, T = 18, B = 34, PW = W - L - R, PH = H - T - B;
+  const x = a => L + (a + 60) / 120 * PW, y = v => T + PH - v * PH, rad = a => a * Math.PI / 180;
+  const I = (c, a) => Math.max(0, dot3(S[c], [Math.sin(rad(a)), 0, Math.cos(rad(a))]));
+  const grid = [-60, -40, -20, 0, 20, 40, 60].map(a => `<line class="grid" x1="${x(a)}" x2="${x(a)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(a)}" y="${T + PH + 16}" text-anchor="middle">${a}°</text>`).join("")
+    + [0, 0.25, 0.5, 0.75, 1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${L + PW}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const angles = Array.from({ length: 121 }, (_, k) => k - 60);
+  const lines = [0, 1, 2].map(c => `<path class="line" style="stroke:${LED_HEX[c]}" d="M${angles.map(a => `${x(a).toFixed(1)},${y(I(c, a)).toFixed(1)}`).join(" L")}"/>`).join("");
+  const labels = narrow ? "" : [0, 1, 2].map(c => `<text class="lbl" x="${x(60) + 6}" y="${y(I(c, 60)) + (c === 2 ? 4 : c === 0 ? -2 : 10)}">${LED_NAME[c]}</text>`).join("");
+  const pts = Array.from({ length: 13 }, (_, k) => k * 10 - 60).map(a => `<g class="pt" tabindex="0" data-tip="${esc(`<b>tilt ${a}° ${a > 0 ? "towards the red LED's side (+x)" : a < 0 ? "towards −x" : "(flat)"}</b>${[0, 1, 2].map(c => `${LED_NAME[c]} ${num(I(c, a), 3)}`).join(" · ")}`)}"><rect class="hit" x="${x(a) - PW / 24}" y="${T}" width="${PW / 12}" height="${PH}"/>${[0, 1, 2].map(c => `<circle class="dot" style="fill:${LED_HEX[c]}" cx="${x(a)}" cy="${y(I(c, a))}" r="3.5"/>`).join("")}</g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of the Lambertian intensity seen from each LED against the tilt of a surface patch towards plus x, from minus 60 to plus 60 degrees. Flat: 0.648 for all three. Red rises then falls, green falls and hits zero at 40 degrees, blue follows the cosine.">${grid}<line class="ann dash" x1="${x(40.4)}" x2="${x(40.4)}" y1="${T}" y2="${T + PH}"/><text class="note" x="${x(40.4) - 4}" y="${T + 10}" text-anchor="end">green in shadow →</text>${lines}${labels}${pts}<text class="note" x="${L + PW / 2}" y="${H - 4}" text-anchor="middle">tilt of the surface patch towards +x</text></svg>`;
+};
+
+// Task 2 lab: one tilted patch → three intensities → n = L⁻¹ I, and the same for a whole simulated frame (normal map).
+const PS = { tilt: 20, az: 0, shape: "dome" };
+LABS.ps = body => {
+  body.innerHTML = `<div class="ctl"><label>tilt <input type="range" min="0" max="60" step="1" value="${PS.tilt}" data-k="tilt"><output>${PS.tilt}</output>°</label>
+    <label>towards <input type="range" min="0" max="355" step="5" value="${PS.az}" data-k="az"><output>${PS.az}</output>° (0 = +x)</label></div>
+    <div class="ps-out"></div>
+    <div class="presets" style="margin-top:12px">${P4_SHAPES.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === PS.shape}">${t}</button>`).join("")}</div>
+    <div class="p4grid two"><figure><canvas aria-label="Simulated tactile image under the three LEDs"></canvas><figcaption>tactile image (pure Lambert shading, no LED falloff)</figcaption></figure>
+    <figure><canvas aria-label="Recovered normal map, red is x, green is y, blue is z"></canvas><figcaption>normals from n = L⁻¹ I, shown as RGB = (n + 1) / 2</figcaption></figure></div>`;
+  const out = body.querySelector(".ps-out"), cvs = body.querySelectorAll("canvas");
+  const patch = () => {
+    const t = PS.tilt * Math.PI / 180, a = PS.az * Math.PI / 180, n = [Math.sin(t) * Math.cos(a), Math.sin(t) * Math.sin(a), Math.cos(t)];
+    const I = S.map(s => Math.max(0, dot3(n, s))), nh = solveN(I), err = Math.acos(Math.min(1, dot3(n, nh))) * 180 / Math.PI, shadow = I.some(v => v === 0);
+    const sw = v => `rgb(${v.map(c => Math.round((c + 1) / 2 * 255)).join(",")})`;
+    out.innerHTML = `<div class="ps-row">${I.map((v, c) => `<div class="ps-bar"><span style="width:${v * 100}%;background:${LED_HEX[c]}"></span><b>${LED_NAME[c]}</b> ${num(v, 3)}</div>`).join("")}</div>
+      <dl class="ro"><dt>true normal n</dt><dd>(${n.map(v => num(Math.abs(v) < 5e-4 ? 0 : v, 3)).join(", ")})</dd>
+      <dt>recovered L⁻¹ I</dt><dd>(${nh.map(v => num(Math.abs(v) < 5e-4 ? 0 : v, 3)).join(", ")}) <span class="ps-sw" style="background:${sw(nh)}"></span> ${shadow ? flag("bad", `one LED sees the back of the patch: off by ${num(err, 1)}°`) : flag("ok", "exact, every LED lights the patch")}</dd></dl>`;
+  };
+  const frame = () => {
+    const img = p4Frame(PS.shape, 3, false), nm = new Float32Array(img.length);
+    for (let p = 0; p < P4W * P4H; p++) { const n = solveN([img[p * 3], img[p * 3 + 1], img[p * 3 + 2]].map(v => v / 150)); for (let c = 0; c < 3; c++) nm[p * 3 + c] = (n[c] + 1) / 2 * 255; }
+    paint(cvs[0], img, v => v * 1.6); paint(cvs[1], nm);
+  };
+  body.querySelectorAll("input").forEach(r => r.addEventListener("input", () => { PS[r.dataset.k] = +r.value; r.nextElementSibling.value = r.value; patch(); }));
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { PS.shape = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); frame(); }));
+  patch(); frame();
+};
+const P4_CODE = `<span class="cm"># Task 1: background subtraction (our sketch, not the official solution)</span>
+empty   = np.stack([cv2.imread(f) <span class="kw">for</span> f <span class="kw">in</span> no_contact_files]).astype(np.float32)
+bg      = empty.mean(axis=<span class="nb">0</span>)                    <span class="cm"># average no-contact frame</span>
+frame   = cv2.imread(contact_file).astype(np.float32)
+diff    = frame - bg                                 <span class="cm"># float: keeps the negative values</span>
+clipped = np.clip(diff, <span class="nb">0</span>, <span class="nb">255</span>).astype(np.uint8)
+normed  = cv2.normalize(diff, <span class="kw">None</span>, <span class="nb">0</span>, <span class="nb">255</span>, cv2.NORM_MINMAX).astype(np.uint8)
+
+<span class="cm"># Task 2: photometric stereo per pixel, n = L^-1 I</span>
+P    = np.array([[<span class="nb">17.32</span>, <span class="nb">10</span>, <span class="nb">-17</span>], [<span class="nb">-17.32</span>, <span class="nb">10</span>, <span class="nb">-17</span>], [<span class="nb">0</span>, <span class="nb">-20</span>, <span class="nb">-17</span>]])
+L    = P / np.linalg.norm(P, axis=<span class="nb">1</span>, keepdims=<span class="kw">True</span>)  <span class="cm"># rows: unit source directions</span>
+I    = frame[..., ::<span class="nb">-1</span>] / <span class="nb">255</span>                     <span class="cm"># OpenCV loads BGR: reorder to R, G, B</span>
+n    = I.reshape(<span class="nb">-1</span>, <span class="nb">3</span>) @ np.linalg.inv(L).T          <span class="cm"># one solve for all pixels</span>
+n   /= np.linalg.norm(n, axis=<span class="nb">1</span>, keepdims=<span class="kw">True</span>) + <span class="nb">1e-8</span>
+vis  = ((n.reshape(I.shape) + <span class="nb">1</span>) / <span class="nb">2</span> * <span class="nb">255</span>).astype(np.uint8)  <span class="cm"># R = x, G = y, B = z</span>`;
+
+function exercise4() {
+  const r3 = v => num(v, 3);
+  return `${head(e)}
+    <p class="lead">Practice 3 recorded DIGIT frames with and without contact. Practice 4 turns them into geometry in two steps: remove the untouched gel from every contact frame so only the contact remains, then recover the <b>surface normal</b> of every pixel from the three coloured LEDs with <b>photometric stereo</b>, the method behind the first GelSight sensor.</p>
+    <h2>Goal (slide 2)</h2>
+    ${qbox("Three goals", ["Get first hands-on experience with tactile images.", "Detect changes of the elastic surface.", "Obtain the surface normals of the contact patch."])}
+
+    <h2>Task 1 · Detecting changes on the elastomer surface (slides 3–4)</h2>
+    ${qbox("The task", ["Average the intensity over the frames recorded without contact.", "Subtract that average frame from each frame recorded with contact.", "Show the results (<code>cv2.imshow</code>) or save them (<code>cv2.imwrite</code>).", "The aim is to remove the background from the contact frames. What do you expect to see?"])}
+    <p>The solution slide shows five versions of one contact frame side by side: the original, the difference to a <b>single</b> empty frame clipped, the same normalised, and the difference to the <b>mean</b> of the empty frames clipped and normalised. The clipped images are mostly black with the contact in colour; the normalised ones are mid-grey with the contact standing out in both directions.</p>
+    ${lab("bgsub", "background subtraction")}
+    ${ex("What to expect, and why (our answer to the slide's question)", `<p>The untouched gel is not uniform: each LED lights its own side more brightly, the coating has marks, the lens vignettes. All of that is the same in every frame, so subtracting the empty frame removes it and leaves only what the contact changed. The change has a <b>sign</b>: a slope facing an LED gets brighter in that colour, a slope facing away gets darker. Stored as unsigned 8-bit, the negative half is <b>clipped</b> to 0, so the clipped image shows only the brightened side of each slope on a black background. <b>Normalising</b> maps the most negative difference to 0 and the most positive to 255, so "no change" lands in the middle as grey and both halves survive. Averaging many empty frames makes the background itself almost noise-free.</p>`)}
+    ${chart("noiseN", leg([["g", "one empty frame", "ln"], [1, "mean of N empty frames", "ln"], [2, "floor", "ln"]]))}<figcaption>Noise of the difference image when the background is a single empty frame or the mean of N, in units of the per-frame noise σ ${ctx}: independent noise adds in quadrature, so σ_diff = σ·√(1 + 1/N). Hover the chart or use the arrow keys.</figcaption></figure>
+    ${tbl(["N empty frames", "noise of the difference"], [1, 2, 4, 8, 16, 32, 64].map(n => [n, `${num(Math.sqrt(1 + 1 / n), 3)} σ`]))}
+    ${ex("Worked example · one pixel", `<p>${ctx} A pixel's red value is 140 in the empty gel and 172 under contact: the difference +32 survives clipping and normalisation alike. Its neighbour on the other flank goes from 140 to 110: −30, which a <code>uint8</code> subtraction would even wrap around to 226 (hence: subtract in float). Clipped, it becomes 0, the same as "no change"; normalised with a range of, say, −60 to +60 it becomes (−30 + 60) / 120 · 255 ≈ 64, darker than the grey 128 of "no change".</p>`)}
+
+    <h2>Photometric stereo (slides 5–8)</h2>
+    <p>The assumptions: a <b>Lambertian</b> surface (it scatters light equally in all directions, as the matte coating of a GelSight gel does), a <b>known, point-like, distant</b> light source, and <b>uniform albedo</b> (the same reflectivity everywhere). The intensity the camera sees at a point is then</p>
+    <div class="formula">I = c · (ρ / π) · (J / r²) · cos θᵢ = c · (ρ / π) · k · (n · s)</div>
+    <p>with n the surface normal, s the direction to the source, θᵢ the angle between them, c the camera gain, r the distance to the source, J the source's radiant intensity and ρ the albedo. With everything constant, set c · (ρ / π) · k = 1 and the equation shrinks to <b>I = cos θᵢ = n · s</b>. One light gives one equation for the three unknowns of n; <b>three lights</b> from different directions give three, which stack into a matrix:</p>
+    <div class="matrow">${mw([["I₁"], ["I₂"], ["I₃"]], "I", "t1")}<span class="op">=</span>${mw([["s₁ₓ", "s₁ᵧ", "s₁z"], ["s₂ₓ", "s₂ᵧ", "s₂z"], ["s₃ₓ", "s₃ᵧ", "s₃z"]], "L (one LED per row)", "t2")}<span class="op">·</span>${mw([["nₓ"], ["nᵧ"], ["nz"]], "n", "t3")}<span class="op">⇒</span>${mw([["n = L⁻¹ I"]], "")}</div>
+    <p>On a DIGIT the three lights are already there: the red, green and blue LEDs shine from three sides and the colour camera separates them, so <b>one frame</b> holds all three images at once. That is why the GelSight family uses coloured LEDs.</p>
+    ${chart("ledCurve")}<figcaption>Lambertian intensity n · s seen from each LED of slide 10 as a patch tilts towards +x (the red LED's side) ${ctx}. Flat, all three read 0.648 (= sin 40.4°, the LEDs' elevation). Beyond 40.4° the green LED sees the back of the patch and reads 0: one equation is lost. Hover or focus a column.</figcaption></figure>
+
+    <h2>Task 2 · Surface normals (slides 9–11)</h2>
+    ${qbox("The task", ["Pick a frame with a nice tactile reading, for example an object with a relief.", "Compute the surface normals with the photometric stereo algorithm.", "Choose a suitable way to visualise the normals and show them as an image."])}
+    <p><b>Simplified LED directions</b> (slide 10): the slide draws the sensor's dome-shaped window with x to the right and y up, the red and green LEDs at the upper corners and the blue one at the bottom centre, and gives their positions in 3D as red (17.32, 10, −17), green (−17.32, 10, −17), blue (0, −20, −17). All three are 26.25 mm from the origin at the same angle below the gel plane, 120° apart around it. Note that the drawing places red on the left while its x coordinate is positive: check against a frame which side of your image is brighter in red before trusting the signs.</p>
+    ${ex("Worked example · one tilted patch", `<p>${ctx} Normalise the positions (and flip z so the flat gel's normal is (0, 0, 1)): s_red = (${S[0].map(r3).join(", ")}), s_green = (${S[1].map(r3).join(", ")}), s_blue = (${S[2].map(r3).join(", ")}). A patch tilted 20° towards +x has n = (sin 20°, 0, cos 20°) = (0.342, 0, 0.940). The camera sees I = L n = (${S.map(s => r3(dot3(s, [0.342, 0, 0.940]))).join(", ")}): brighter in red, darker in green, blue unchanged. Inverting, L⁻¹ = [${LINV.map(r => r.map(r3).join(", ")).join(" ; ")}], and L⁻¹ I gives back (0.342, 0, 0.940). The symmetry makes it readable: nₓ ∝ I_red − I_green, nᵧ ∝ (I_red + I_green)/2 − I_blue, n_z ∝ the mean of the three.</p>`)}
+    ${lab("ps", "photometric stereo")}
+    <p>The solution slide shows the result for a pressed object as an RGB image where the <b>red channel encodes nₓ</b>, the <b>green channel nᵧ</b> and the <b>blue channel n_z</b> (towards the camera): flat areas take one uniform colour, the slopes of the relief shift it. The lab uses the common mapping (n + 1) / 2, so a flat gel is (128, 128, 255), a light violet-blue; the slide's picture uses a different scaling, the idea is the same.</p>
+    ${why("where the simple version breaks", `<p>Each assumption fails a little on a real DIGIT: the LEDs are close, not distant (the light direction changes across the gel, the reason Task 1's background is uneven), the coating is not perfectly Lambertian, and steep slopes face away from one LED (the shadow in the chart above). That is why GelSight-style sensors usually replace L⁻¹ by a <b>lookup table or a small network</b> calibrated by pressing a ball of known radius, and why the normals are then <b>integrated</b> into a height map (Poisson integration) to get depth. Practice 11 is called "Depth Estimation".</p>`)}
+    <h3>A code sketch for both tasks</h3>
+    <pre class="code">${P4_CODE}</pre>
+    <p class="muted" style="font-size:.88rem">Our own sketch, not handed out in the practice. Whether to keep the slide's z = −17 (normals point away from the camera) or flip it is a convention; pick one and keep it for the visualisation.</p>
+
+    <h2>Before the next practice (slide 12)</h2>
+    <p>The slide asks to <b>save all files</b> for the next practice:</p>
+    ${["the averaged background frame and the subtracted frames (clipped and normalised)", "the script for Task 1 and Task 2", "the normal maps of the frames with a relief", "the LED direction matrix as used, with the sign convention noted"].map(s => `<div class="check"><span class="bx"></span><span>${s}</span></div>`).join("")}
+    <p style="margin-top:.8rem">Practice 5 (17 Nov) is Vision-based Tactile Sensors 3. Lecture to this practice: <a href="touch-sensing/lecture.html?n=4">Lecture 4</a> (principle, GelSight, retrographic sensing) and <a href="touch-sensing/lecture.html?n=5">Lecture 5</a> (newer sensors). Home Exercise 1 is due 13 Nov: <a href="touch-sensing/exercise.html?n=h1">task page</a>.</p>
+    <h2>References (slide 15)</h2>
+    <ul class="refs">
+      <li>Johnson &amp; Adelson (2009). Retrographic sensing for the measurement of surface texture and shape. CVPR, 1070–1077: photometric stereo in the first GelSight sensor.</li>
+      <li>The slide also links an in-depth video explanation of photometric stereo (a lecture series on YouTube).</li>
+    </ul>
+    <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
 function placeholder() {
@@ -398,7 +580,7 @@ function placeholder() {
       <p class="muted">${e.kind === "home" ? `The window is ${fmt(e.date)} – ${fmt(e.due)} according to Practice 0.` : `This practice is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(e.date)}, 09:20–10:50, ${esc(roomOn(e.date))}.`}<br>The write-up appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1, "3": exercise3 };
+const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1, "3": exercise3, "4": exercise4 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise "${esc(q)}".</p>`;
