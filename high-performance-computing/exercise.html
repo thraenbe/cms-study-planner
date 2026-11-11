@@ -545,6 +545,224 @@ function exercise3() {
     <p class="muted">Next: lecture 3, Shared Memory, follows this session in the same room at ${lec.start}. The next online exercise is expected in OPAL about a week before the <a href="high-performance-computing/exercise.html?n=4">11 Nov session</a>. The sheet itself may not be republished; the tasks above are restated in our own words.</p>`;
 }
 
+// ---------------- Exercise 04: Shared Memory Systems ----------------
+// Task 1: multiply (7 stages) then add (5 stages) on a 32-entry vector register, pipelined SIMD, IF/ID/WB one cycle each.
+// Same conventions as lecture 3's D = C + A·B: without chaining 14 + 2n, with chaining 14 + n cycles.
+const codeBlock = s => `<div class="formula">${esc(s).replace(/\n/g, "<br>").replace(/ {2}/g, "&nbsp;&nbsp;")}</div>`;
+const CH_N = 32;
+const CH_ROWS = [
+  { g: "without chaining", op: "MUL", ex: [3, 9 + CH_N - 1], wait: null, wb: 9 + CH_N, s: 1 },
+  { g: "without chaining", op: "ADD", ex: [10 + CH_N, 14 + 2 * CH_N - 1], wait: [4, 9 + CH_N], wb: 14 + 2 * CH_N, s: 2 },
+  { g: "with chaining", op: "MUL", ex: [3, 9 + CH_N - 1], wait: null, wb: 9 + CH_N, s: 1 },
+  { g: "with chaining", op: "ADD", ex: [10, 14 + CH_N - 1], wait: [4, 9], wb: 14 + CH_N, s: 2 },
+];
+CHARTS.chain = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 44 : 60, R = 14, T = 18, RH = 30, GAP = 22, H = T + 4 * RH + GAP + 30, PW = W - L - R, x = v => L + v / 80 * PW;
+  const ry = i => T + i * RH + (i > 1 ? GAP : 0);
+  const ticks = [0, 10, 20, 30, 40, 50, 60, 70, 80].filter(v => !narrow || v % 20 === 0).map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${ry(3) + RH}"/><text class="tick" x="${x(v)}" y="${H - 12}" text-anchor="middle">${v}</text>`).join("");
+  const rows = CH_ROWS.map((r, i) => { const y0 = ry(i) + 6, h = RH - 12, cy = y0 + h / 2, isAdd = r.op === "ADD", fetch = isAdd ? 2 : 1;
+    const box = (a, b, cls) => `<rect class="${cls}" x="${x(a - 1) + 0.5}" y="${y0}" width="${Math.max(1, x(b) - x(a - 1) - 1)}" height="${h}" rx="2"/>`;
+    const tip = `<b>${r.g}: ${r.op}</b>IF ${fetch}, ID ${fetch + 1}${r.wait ? `, waits ${r.wait[0]}–${r.wait[1]}` : ""}, execute ${r.ex[0]}–${r.ex[1]} (${r.ex[1] - r.ex[0] + 1} cycles), write-back ${r.wb}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${ry(i)}" width="${W}" height="${RH}"/>
+      ${box(fetch, fetch + 1, "stg")}${r.wait ? `<line class="ann dash" x1="${x(r.wait[0] - 1)}" x2="${x(r.wait[1])}" y1="${cy}" y2="${cy}"/>` : ""}${box(r.ex[0], r.ex[1], `bar s${r.s}`)}${box(r.wb, r.wb, "stg")}
+      <text class="cat" x="${L - 8}" y="${cy + 4}" text-anchor="end">${r.op}</text>
+      <text class="val" x="${x(r.wb) + 5}" y="${cy + 4}">${r.wb}</text></g>`; }).join("");
+  const groups = [0, 2].map(i => `<text class="lbl" x="0" y="${ry(i) - 5}">${CH_ROWS[i].g}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cycle timeline of a 32-element multiply followed by a dependent add. Without chaining the multiply executes in cycles 3 to 40 and writes back in 41; the add waits and executes 42 to 77, writing back in 78. With chaining the add starts at cycle 10 and writes back in 46.">
+    ${ticks}${groups}${rows}<text class="note" x="${L + PW / 2}" y="${H - 1}" text-anchor="middle">clock cycle</text></svg>`;
+};
+
+// Task 2: 32 elements as 8 instructions on 4-wide registers (concurrent), multiply 7 stages, add 4 stages.
+function t2Gantt() {
+  const n = 8, total = 22, rows = [];
+  for (let i = 1; i <= n; i++) {
+    const r = Array(total).fill(""), put = (t, s, txt, tip) => { r[t - 1] = `<span class="pc s${s}" title="${tip}">${txt}</span>`; };
+    put(i, 4, "IF", `fetch multiply ${i}`); put(i + 1, 4, "ID", `decode multiply ${i}`);
+    for (let k = 1; k <= 7; k++) put(i + 1 + k, 1, "×" + k, `elements ${4 * i - 3}–${4 * i}: multiply stage ${k}`);
+    put(i + 9, 4, "WB", `products ${4 * i - 3}–${4 * i} written back`);
+    for (let k = 1; k <= 4; k++) put(i + 9 + k, 2, "+" + k, `elements ${4 * i - 3}–${4 * i}: add stage ${k}`);
+    put(i + 14, 4, "WB", `sums ${4 * i - 3}–${4 * i} written back`);
+    rows.push(`<div class="rl">${4 * i - 3}–${4 * i}</div>${r.map(x => `<div class="gc">${x}</div>`).join("")}`);
+  }
+  return `<div class="gantt" style="--cols:${total}"><div class="rl"></div>${Array.from({ length: total }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${rows.join("")}</div>
+    ${leg([[1, "multiply stages ×1–×7"], [2, "add stages +1–+4"], [4, "fetch, decode, write-back"]])}`;
+}
+
+// Tasks 3–4 and 5: peak performance in Gflop/s.
+const PEAKS = [
+  { k: "Ryzen 9 9955HX, single", v: 2560, f: "16 cores × 2.5 GHz × 2 FMA units × 16 floats × 2 flop", sheet: true },
+  { k: "Core Ultra 9 285K, 8 P-cores", v: 947.2, f: "8 × 3.7 GHz × 2 FMA units × 8 floats × 2 flop", sheet: true },
+  { k: "Core Ultra 9 285K, 16 E-cores", v: 819.2, f: "16 × 3.2 GHz × 2 FMA units × 4 floats × 2 flop", sheet: true },
+  { k: "Ryzen 9 9955HX, double", v: 1280, f: "the same with 8 doubles per register: the peak behind task 5", sheet: false },
+];
+CHARTS.peak = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 0 : 196, R = narrow ? 52 : 64, T = 8, RH = narrow ? 50 : 38, H = T + PEAKS.length * RH + 26, PW = W - L - R, x = v => L + v / 2800 * PW;
+  const ticks = [0, 500, 1000, 1500, 2000, 2500].filter(v => !narrow || v % 1000 === 0).map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("");
+  const bars = PEAKS.map((d, i) => { const y0 = T + i * RH + (narrow ? 22 : 10), bh = 18;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}: ${num(d.v, 1)} Gflop/s</b>${d.f}${d.sheet ? "" : "<br>not asked on the sheet"}`)}"><rect class="hit" x="0" y="${y0 - (narrow ? 22 : 10)}" width="${W}" height="${RH}"/>
+      <path class="bar ${d.sheet ? "s1" : "gray"}" d="${hbar(x(0), x(d.v), y0, bh)}"/>
+      <text class="cat" x="${narrow ? 0 : L - 8}" y="${narrow ? y0 - 6 : y0 + 13}" text-anchor="${narrow ? "start" : "end"}">${d.k}</text><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${num(Math.round(d.v), 0)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of peak floating-point performance in Gflop/s: Ryzen 9 9955HX single precision 2,560; Core Ultra 9 285K P-cores 947 and E-cores 819; Ryzen 9 9955HX double precision 1,280 for comparison.">${ticks}${bars}</svg>`;
+};
+
+// Task 5: roofline on log-log axes. Heat stencil: 7 flop and 16 bytes per point.
+const RF = { I: 7 / 16, P: 640, peak: 1280, dram: 96, l3: 1400 };
+CHARTS.roof = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 260 : 290, L = 44, R = narrow ? 14 : 110, T = 18, B = 34, PW = W - L - R, PH = H - T - B;
+  const lx = [-2, 2], ly = [0, 3.5], x = v => L + (Math.log10(v) - lx[0]) / (lx[1] - lx[0]) * PW, y = v => T + PH - (Math.log10(v) - ly[0]) / (ly[1] - ly[0]) * PH;
+  const xt = [0.01, 0.1, 1, 10, 100].map(v => `<line class="${v === 0.01 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v)}" y="${H - 16}" text-anchor="middle">${v}</text>`).join("");
+  const yt = [1, 10, 100, 1000].map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v.toLocaleString("en-GB")}</text>`).join("");
+  const roof = bw => { const ridge = RF.P / bw; return `M${x(0.01)},${y(0.01 * bw)} L${x(ridge)},${y(RF.P)} L${x(100)},${y(RF.P)}`; };
+  const pts = [[RF.dram, 1, "DRAM, 96 GB/s (9955HX)"], [RF.l3, 2, "L3, 1.4 TB/s (9955HX3D)"]].map(([bw, s, t]) => { const v = RF.I * bw;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${t}</b>P = min(${RF.P}, ${RF.I} × ${bw}) = ${num(v, 1)} Gflop/s<br>ridge point ${num(RF.P / bw, 2)} flop/B`)}"><circle class="hit" cx="${x(RF.I)}" cy="${y(v)}" r="12"/><circle class="dot" style="fill:var(--vz-s${s})" cx="${x(RF.I)}" cy="${y(v)}" r="5.5"/><text class="vl2" x="${x(RF.I) + 9}" y="${y(v) + (s === 1 ? 16 : -8)}">${num(v, 1)}</text></g>`; }).join("");
+  const lab = narrow ? "" : `<text class="lbl" x="${W - R + 6}" y="${y(RF.P) + 4}">50 % peak, 640</text><text class="note" x="${W - R + 6}" y="${y(RF.peak) + 4}">DP peak 1,280</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Roofline chart on logarithmic axes. Memory roofs for 96 GB/s DRAM and 1.4 TB/s L3 rise with arithmetic intensity until they meet the compute roof at 640 Gflop/s, at 6.67 and 0.46 flop per byte. The heat stencil at 0.4375 flop per byte reaches 42 Gflop/s from DRAM and 612.5 from L3.">
+    <defs><clipPath id="clip-roof"><rect x="${L}" y="${T - 2}" width="${PW}" height="${PH + 2}"/></clipPath></defs>
+    ${yt}${xt}<text class="note" x="${L - 34}" y="11">Gflop/s</text><text class="note" x="${L + PW / 2}" y="${H - 1}" text-anchor="middle">arithmetic intensity (flop / byte)</text>
+    <g clip-path="url(#clip-roof)"><line class="ann dash" x1="${L}" x2="${W - R}" y1="${y(RF.peak)}" y2="${y(RF.peak)}"/>
+      <path class="line" style="stroke:var(--vz-s1)" d="${roof(RF.dram)}"/><path class="line" style="stroke:var(--vz-s2)" d="${roof(RF.l3)}"/>
+      <line class="ann" x1="${x(RF.I)}" x2="${x(RF.I)}" y1="${T}" y2="${T + PH}"/></g>
+    <text class="note" x="${x(RF.I) - 4}" y="${T + 10}" text-anchor="end">stencil, 7/16</text>${lab}${pts}</svg>`;
+};
+
+// Tasks 6–7: the Romeo node (2 × AMD EPYC 7702) as lstopo shows it. Core L#k holds PU L#2k and L#2k+1.
+const ROMEO_OPTS = [
+  { pus: [0, 1, 2, 3, 4, 5, 6, 7], t: "PU 0, 1, 2, …, 7", fit: "threads that use the core poorly and communicate a lot", why: "two hardware threads per core on 4 cores of one L3: they share L1 and L2, so communication is cheapest, and SMT fills the units that each thread leaves idle." },
+  { pus: [0, 2, 4, 6, 8, 10, 12, 14], t: "PU 0, 2, 4, …, 14", fit: "threads that use their cores efficiently and communicate", why: "8 full cores, but packed into 2 neighbouring L3 blocks of one NUMA domain: no core is shared, and communication stays inside one CCX or crosses only to the next one." },
+  { pus: [0, 8, 16, 24, 32, 40, 48, 56], t: "PU 0, 8, 16, …, 56", fit: "threads that profit from more cache and communicate somewhat", why: "one core in each of 8 L3 blocks: every thread has a whole 16 MB L3 to itself (128 MB in total), and all 8 sit in 2 NUMA domains of the same package." },
+  { pus: [0, 32, 64, 96, 128, 160, 192, 224], t: "PU 0, 32, 64, …, 224", fit: "threads that need memory bandwidth and hardly communicate", why: "one core in each of the 8 NUMA domains, both packages: 8 memory controllers' bandwidth, but any communication crosses NUMA domains or even sockets." },
+];
+const RM = { k: 1 };
+function romeoOut() {
+  const narrow = isNarrow(), opt = ROMEO_OPTS[RM.k], on = new Set(opt.pus);
+  const cs = narrow ? 16 : 14, cg = 2, l3w = 4 * cs + 3 * cg + 8, l3h = cs + 22, nw = 2 * l3w + 3 * 6, nh = 2 * l3h + 3 * 6 + 14, pw = 2 * nw + 3 * 8, ph = 2 * nh + 3 * 8 + 16;
+  const W = narrow ? pw : 2 * pw + 12, H = narrow ? 2 * ph + 12 : ph;
+  let s = "";
+  for (let pk = 0; pk < 2; pk++) {
+    const px = narrow ? 0 : pk * (pw + 12), py = narrow ? pk * (ph + 12) : 0;
+    s += `<rect class="pkg" x="${px}" y="${py}" width="${pw}" height="${ph}" rx="6"/><text class="note" x="${px + 8}" y="${py + 13}">Package ${pk}</text>`;
+    for (let nd = 0; nd < 4; nd++) {
+      const numa = pk * 4 + nd, nx = px + 8 + (nd % 2) * (nw + 8), ny = py + 20 + Math.floor(nd / 2) * (nh + 8), used = [...on].some(p => Math.floor(p / 32) === numa);
+      s += `<rect class="numa${used ? " on" : ""}" x="${nx}" y="${ny}" width="${nw}" height="${nh}" rx="4"/><text class="note" x="${nx + 5}" y="${ny + 11}">NUMA ${numa} · ${numa ? 63 : 62} GB</text>`;
+      for (let l = 0; l < 4; l++) {
+        const l3 = numa * 4 + l, lx = nx + 6 + (l % 2) * (l3w + 6), ly = ny + 16 + Math.floor(l / 2) * (l3h + 6);
+        s += `<rect class="l3box" x="${lx}" y="${ly}" width="${l3w}" height="${l3h}" rx="3"/><text class="tick" x="${lx + 4}" y="${ly + 11}">L3 16 MB</text>`;
+        for (let cI = 0; cI < 4; cI++) {
+          const core = l3 * 4 + cI, cx = lx + 4 + cI * (cs + cg), cy = ly + 15, a = on.has(2 * core), b = on.has(2 * core + 1);
+          s += `<rect class="pu${a ? " on" : ""}" x="${cx}" y="${cy}" width="${cs / 2 - 0.5}" height="${cs - 2}" rx="1.5"><title>core ${core}: PU L#${2 * core} (P#${core})</title></rect><rect class="pu${b ? " on" : ""}" x="${cx + cs / 2 + 0.5}" y="${cy}" width="${cs / 2 - 0.5}" height="${cs - 2}" rx="1.5"><title>core ${core}: PU L#${2 * core + 1} (P#${core + 128})</title></rect>`;
+        }
+      }
+    }
+  }
+  const cores = new Set(opt.pus.map(p => p >> 1)), l3s = new Set(opt.pus.map(p => p >> 3)), numas = new Set(opt.pus.map(p => p >> 5)), pkgs = new Set(opt.pus.map(p => p >> 7));
+  return `<div class="viz lab-viz romeo"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of one Romeo node: 2 packages, each with 4 NUMA domains of 4 L3 blocks with 4 cores of 2 hardware threads. Highlighted: ${opt.t}, on ${cores.size} cores, ${l3s.size} L3 blocks, ${numas.size} NUMA domains and ${pkgs.size} package${pkgs.size > 1 ? "s" : ""}.">${s}</svg></div>
+    ${leg([[1, "hardware thread (PU) used by one of the 8 threads"], ["g", "NUMA domain in use"]])}
+    <dl class="ro">
+      <dt>Spread</dt><dd>${cores.size} cores · ${l3s.size} L3 block${l3s.size > 1 ? "s" : ""} (${16 * l3s.size} MB of L3) · ${numas.size} NUMA domain${numas.size > 1 ? "s" : ""} · ${pkgs.size} package${pkgs.size > 1 ? "s" : ""}</dd>
+      <dt>Fits</dt><dd><b>${opt.fit}</b>: ${opt.why}</dd>
+    </dl>`;
+}
+function initRomeo(body) {
+  body.innerHTML = `<div class="presets">${ROMEO_OPTS.map((o, k) => `<button class="preset" data-k="${k}">${o.t}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = romeoOut(); body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.k === RM.k)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; RM.k = +b.dataset.k; draw(); });
+  addEventListener("resize", draw);
+  draw();
+}
+
+function exercise4() {
+  const st = (ok, t, why) => `<tr><td>${ok ? flag("ok", "true") : flag("bad", "false")}</td><td>${t}</td><td>${why}</td></tr>`;
+  return `${head(e)}
+    <p class="lead">The exercise on <a href="high-performance-computing/lecture.html?n=3">lecture 3</a>: cycle counts for pipelined vector units with and without chaining, the peak performance of two current desktop processors, the <b>roofline model</b> applied to the heat stencil from Exercise 02, and the topology of one node of ZIH's Romeo cluster, read from an <code>lstopo</code> picture. Seven auto-checked tasks, 18 points. The sheet in OPAL is a printout of the online test, so everything below comes from it; the answers are our own.</p>
+    <div class="tiles" aria-label="The results at a glance">
+      <div class="tile"><div class="v">78 → 46</div><div class="l">cycles for a 32-element multiply-add without / with chaining</div></div>
+      <div class="tile"><div class="v">2,560</div><div class="l">Gflop/s single-precision peak, Ryzen 9 9955HX</div></div>
+      <div class="tile"><div class="v">7 / 16</div><div class="l">flop per byte of the heat stencil</div></div>
+      <div class="tile"><div class="v">42 vs 612.5</div><div class="l">Gflop/s from DRAM vs from a large L3</div></div>
+    </div>
+
+    ${task("1", 5, "Arithmetic pipelining and chaining", `
+      <p>A core has a 7-stage floating-point multiplier and a 5-stage adder, one pipe each, so vector instructions run as pipelined SIMD (one element enters per cycle), not concurrently. Vector registers hold 32 entries. Instructions are pipelined too: IF, ID, the execute stages, WB, one cycle each. How long does the execute phase of a 32-element multiply take, and the whole instruction? A dependent 32-element add follows: total cycles without and with chaining, and the speedup to one decimal.</p>
+      ${chart("chain", leg([[1, "multiply executing"], [2, "add executing"], ["g", "fetch, decode, write-back"]]))}
+        <figcaption>The two instruction pairs on one cycle axis. The dashed line is the add waiting: for the write-back of all 32 products without chaining, only for the first product with chaining. Hover a row.</figcaption>
+      </figure>
+      ${ans([["38", "execute cycles: 7 + 31"], ["41", "cycles for the whole multiply: 1 + 1 + 38 + 1"], ["78", "multiply-add without chaining"], ["46", "multiply-add with chaining"], ["1.7", "speedup 78 / 46 = 1.696"]])}
+      ${ex("Worked answer", `<p><b>Execute phase.</b> The first element needs all 7 stages; each further element leaves the pipeline one cycle later: 7 + (32 − 1) = <b>38</b> cycles. The multiply is fetched in cycle 1, decoded in 2, executes in 3–40 and writes back in 41: <b>41</b> cycles.</p>
+        <p><b>Without chaining.</b> The add is fetched in cycle 2 and decoded in 3, but it needs the products in the vector register, which are complete only after the write-back in cycle 41. It executes in 42 to 42 + 5 + 31 − 1 = 77 and writes back in <b>78</b>. This is lecture 3's formula 14 + 2n with n = 32.</p>
+        <p><b>With chaining.</b> The first product leaves the multiplier at the end of cycle 9 and goes straight into the adder in cycle 10; the 32nd product enters it in cycle 41 and leaves stage 5 at the end of cycle 45; write-back in <b>46</b> = 14 + n. Speedup 78 / 46 = 1.696, rounded <b>1.7</b>.</p>`)}
+      ${why("Context, not on the sheet: why the speedup stays below 2", `<p>Chaining hides the add behind the multiply, but both instructions still have their own fill time and the fixed IF/ID/WB overhead. For long vectors the cycle counts approach 2n versus n, so the speedup tends to 2 (two units busy at once instead of one after the other); with n = 32 the 14 fixed cycles still weigh in. Lecture 3's explorer draws the same pair element by element.</p>`)}`)}
+
+    ${task("2", 2, "Calculation: concurrent SIMD on short registers", `
+      <p>Now a 7-stage multiplier and a 4-stage adder, vector registers of 4 entries processed concurrently, execution units pipelined, and the same 4-stage instruction pipeline. How many cycles to multiply 32 elements? And to multiply-add them, if the add of a chunk may run alongside the multiplies (superscalar) but only after that chunk's product has been written back?</p>
+      ${t2Gantt()}
+      ${ans([["17", "cycles for 32 multiplies: 8 instructions, 10 + 7"], ["22", "cycles for 32 multiply-adds"]])}
+      ${ex("Worked answer", `<p>32 elements in 4-entry registers are 8 multiply instructions. Each takes IF, ID, 7 execute stages and WB = 10 cycles; with instruction and execution pipelining a new one starts every cycle, so instruction i writes back in cycle i + 9 and the last one, i = 8, in cycle <b>17</b>.</p>
+        <p>The add of chunk i can enter the adder in the cycle after that write-back, i + 10, runs 4 stages and writes back in i + 14. The last chunk finishes in 8 + 14 = <b>22</b>. Equivalently: the last product is written in 17, and one more 4-stage add plus write-back takes 5 more cycles. The add instructions' fetch and decode happen in parallel earlier on and are not drawn.</p>`)}`)}
+
+    ${task("3", 1, "Peak performance: AMD Ryzen 9 9955HX", `
+      <p>16 cores at 2.5 GHz; per cycle each core can do either 2 multiplies and 2 adds or 2 FMAs on 512-bit registers, fully pipelined. Single-precision peak, rounded to whole Gflop/s.</p>
+      ${ans([["2,560 Gflop/s", "16 × 2.5 GHz × 64 flop per cycle"]])}
+      ${ex("Worked answer", `<p>A 512-bit register holds 512 / 32 = 16 single-precision values. Both alternatives give the same count per cycle: 2 FMAs × 16 values × 2 flop = 64, or (2 + 2) instructions × 16 values × 1 flop = 64. Per core 64 × 2.5 · 10⁹ = 160 Gflop/s; for 16 cores <b>2,560 Gflop/s</b>. In double precision (8 values per register) it is half: 1,280 Gflop/s, which task 5 needs.</p>`)}`)}
+
+    ${task("4", 2, "Peak performance: Intel Core Ultra 9 285K", `
+      <p>8 P-cores at 3.7 GHz with 2 FMA-capable SIMD units of 256 bit each; then 16 E-cores at 3.2 GHz with 2 FMA units of 128 bit. Single-precision peak of each group, rounded.</p>
+      ${chart("peak")}
+        <figcaption>The three answers of tasks 3 and 4, plus the Ryzen's double-precision peak (gray) that task 5 builds on. Despite having 24 cores, the Intel chip's two groups together (1,766 Gflop/s) stay below the 16-core Ryzen, whose AVX-512 units are twice as wide.</figcaption>
+      </figure>
+      ${ans([["947 Gflop/s", "P-cores: 8 × 3.7 × 2 × 8 × 2 = 947.2"], ["819 Gflop/s", "E-cores: 16 × 3.2 × 2 × 4 × 2 = 819.2"]])}
+      ${ex("Worked answer", `<p>P-core: 256 / 32 = 8 floats per register, 2 units, 2 flop per FMA: 32 flop per cycle; × 3.7 GHz = 118.4 Gflop/s per core; × 8 = 947.2, rounded <b>947</b>. E-core: 128 / 32 = 4 floats, 2 units, 2 flop: 16 flop per cycle; × 3.2 = 51.2 per core; × 16 = 819.2, rounded <b>819</b>. The formula is lecture 3's: values per register × instructions per cycle × flop per value × clock × cores.</p>`)}`)}
+
+    ${task("5", 6, "The roofline model", `
+      <p>The roofline bounds achievable performance by P = min(P<sub>peak</sub>, I × BW<sub>memory</sub>), where I is the arithmetic intensity in flop per byte moved from memory. Apply it to the double-buffered heat stencil of Exercise 02: flop per step on an N × N grid (the constant ALPHA·DT/(DX·DX) is computed once, before the loop), the minimum data moved per step when values are reused between neighbouring iterations, the intensity for large N, half the Ryzen's peak as the realistic compute roof (adds and multiplies are not balanced), and the expected performance for 2,500 × 2,500 grids (two of them, 100 MB) from DRAM at 96 GB/s, and from the 128 MB L3 of a Ryzen 9 9955HX3D at 1.4 TB/s.</p>
+      ${codeBlock("u_new[i][j] = u[i][j] + C * (u[i+1][j] + u[i-1][j] + u[i][j+1] + u[i][j-1] - 4*u[i][j]);")}
+      ${chart("roof", leg([[1, "DRAM roof, 96 GB/s"], [2, "L3 roof, 1.4 TB/s"], ["g", "double-precision peak"]]))}
+        <figcaption>Both axes logarithmic. Each memory roof rises with slope 1 until it meets the compute roof of 640 Gflop/s at its ridge point (6.67 flop/B for DRAM, 0.46 for L3). The stencil's intensity of 0.4375 lies left of both ridges: memory-bound either way, but the large cache moves the bound up almost to the compute roof. Hover a dot.</figcaption>
+      </figure>
+      ${ans([["7 N²", "flop per step (7 per point; 7 (N − 2)² for the interior exactly)"], ["16 N²", "bytes per step: read u, write u_new, 8 B each"], ["0.4375", "flop/B = 7 / 16"], ["640 Gflop/s", "50 % of the 1,280 double-precision peak"], ["42 Gflop/s", "from DRAM: 0.4375 × 96"], ["612.5 Gflop/s", "from L3: 0.4375 × 1,400"]])}
+      ${ex("Worked answer", `<p><b>Flop.</b> Per grid point: three additions for the four neighbours, one multiplication 4·u[i][j], one subtraction, one multiplication by the constant, one addition of u[i][j]: 5 add/sub + 2 mul = <b>7</b>. Per step 7 N² (strictly 7 (N − 2)² interior points; for large N the same).</p>
+        <p><b>Bytes.</b> If every value of u that is read is reused from cache by the neighbouring iterations (u[i][j] becomes u[i][j−1] in the next j, the rows i ± 1 stay in cache), each element of u is loaded from memory once and each element of u_new stored once: 8 + 8 = <b>16 N²</b> bytes. Intensity 7 / 16 = <b>0.4375</b> flop/B.</p>
+        <p><b>Compute roof.</b> Double precision, since the data are doubles: peak 1,280 Gflop/s; the code has 5 additions per 2 multiplications, so the add units are the bottleneck and about half the peak is usable: <b>640 Gflop/s</b>. <b>DRAM:</b> 100 MB do not fit the 9955HX's L3, so P = min(640, 0.4375 × 96) = <b>42 Gflop/s</b>, 6.6 % of the compute roof. <b>L3:</b> the 9955HX3D holds both grids in its 128 MB L3, so P = min(640, 0.4375 × 1,400) = <b>612.5 Gflop/s</b>, 14.6 times more, still just below the ridge.</p>`)}
+      ${why("Context, not on the sheet: which numbers the checker might want instead", `<p>Two conventions could differ. If the 50 % is taken of the single-precision peak (2,560 → 1,280), the compute roof doubles, but neither result changes, since both cases are memory-bound. If a write to u_new first loads its cache line (write-allocate, the default on x86 without streaming stores), the traffic is 24 N² bytes, I = 0.29 and the bounds become 28 and 408 Gflop/s; the sheet's “at least” points to 16. For the flop count, try 7N² first; if a numeric field wants a number, the grid size from the next part is meant.</p>`)}`)}
+
+    <h2>A Romeo node, as <code>lstopo</code> draws it</h2>
+    <p>The last two tasks show the output of <code>lstopo --merge --no-io --of svg</code> (from the hwloc module) for one Romeo compute node. Reading it from the outside in: Machine 503 GB in total; two <b>packages</b> (sockets; AMD EPYC 7702 processors according to ZIH's public documentation); each package has 4 <b>NUMA nodes</b> of 62 or 63 GB; each NUMA node has 4 <b>L3 caches of 16 MB</b>; each L3 is shared by 4 <b>cores</b>; each core has 2 <b>PUs</b> (hardware threads). The logical numbers count through the tree: core L#k holds PU L#2k and L#2k+1, whose physical (OS) numbers are P#k and P#k+128. So the node has 2 × 4 × 4 × 4 = 128 cores and 256 hardware threads.</p>
+    ${lab("romeo", "where do 8 threads land? (the four options of task 7)")}
+
+    ${task("6", 1, "Understanding the picture", `
+      <p>Mark the correct parts of a description of the node.</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Statements about the node">
+        <tr><th></th><th>Statement</th><th>Why</th></tr>
+        ${st(true, "one of Romeo's compute nodes", "the picture's caption says so")}
+        ${st(true, "a total of 503 GB of accessible memory", "“Machine (503GB total)”")}
+        ${st(true, "two processors (packages)", "Package L#0 and L#1")}
+        ${st(false, "each with eight NUMA domains", "four per package, eight in the whole node")}
+        ${st(false, "eight cores share one L3 cache", "four cores per L3")}
+        ${st(false, "of 8 MB size", "16 MB per L3")}
+        ${st(false, "two core blocks (L3 groups) per NUMA domain", "four L3 groups per NUMA domain, 16 cores")}
+        ${st(true, "each domain has 62 or 63 GB of memory attached", "NUMANode L#0 62 GB, the others 63 GB")}
+        ${st(false, "Hyper-Threading (hardware multithreading) is not activated", "every core shows two PUs, so SMT is on")}
+        ${st(false, "256 cores in total", "128 cores; 256 is the number of hardware threads")}
+      </table></div>
+      ${why("Context, not on the sheet: the trap in the last line", `<p>Linux tools such as <code>nproc</code> or <code>htop</code> count PUs, not cores, so they report 256 “CPUs” here. Slurm on Romeo also schedules by hardware thread unless told otherwise; lecture 3's vocabulary slide (a hardware thread, not a core, is the processing element) is exactly about this.</p>`)}`)}
+
+    ${task("7", 1, "Scheduling decision", `
+      <p>A thread-parallel program with 8 threads: match four placements (lists of logical PU numbers) to four kinds of program behaviour.</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Placement answers">
+        <tr><th>Program</th><th>PUs</th><th>Placement</th></tr>
+        ${ROMEO_OPTS.map(o => `<tr><td>${o.fit}</td><td><b>${o.t.replace("PU ", "")}</b></td><td>${o.why}</td></tr>`).join("")}
+      </table></div>
+      ${ex("How to derive it", `<p>Divide the PU number by 2 for the core, by 8 for the L3 block, by 32 for the NUMA domain, by 128 for the package. 0–7 → cores 0–3, two threads each. 0, 2, …, 14 → cores 0–7 in L3 blocks 0 and 1. 0, 8, …, 56 → cores 0, 4, …, 28, one per L3 block 0–7 (NUMA 0 and 1). 0, 32, …, 224 → one core in each NUMA domain 0–7. Then match: the tighter the placement, the cheaper the communication; the wider, the more cache and memory bandwidth per thread. SMT siblings only pay off when a thread leaves the core's units idle.</p>`)}`)}
+
+    <h2>Before and after the session</h2>
+    <ul>
+      <li><b>Enter the answers in the OPAL test</b> (it accepts the numbers above; the speedup with one decimal, peaks as whole Gflop/s).</li>
+      <li><b>Reread</b> the SIMD and peak-performance sections of <a href="high-performance-computing/lecture.html?n=3">lecture 3</a>; its D = C + A·B explorer is task 1 at n ≤ 8.</li>
+      <li><b>On Romeo</b>, <code>module load hwloc</code> and <code>lstopo --merge --no-io</code> inside a job show the same tree; <code>OMP_PLACES</code> and <code>OMP_PROC_BIND</code> (lecture 4) pin OpenMP threads to exactly such PU lists.</li>
+      <li><b>Context, not on the sheet.</b> Peak-performance arithmetic and a roofline bound from flop and byte counts are standard written-exam material for a course like this; both fit on one line once the per-cycle flop count is right.</li>
+    </ul>
+    <p class="muted">Next: Exercise 05 on <a href="high-performance-computing/lecture.html?n=4">lecture 4</a> (threads, OpenMP, loop scheduling), <a href="high-performance-computing/exercise.html?n=5">25 Nov</a>. Sheet and test: OPAL → Exercises / Übungen and Exercise Sheets and Tutorials; they may not be republished, so the tasks above are restated in our own words.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date), prev = c.lectures.find(x => x.n === e.lecture);
   return `${head(e)}
@@ -554,8 +772,8 @@ function placeholder() {
       <p class="muted">This exercise session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(e.blurb)}${prev ? ` <a href="high-performance-computing/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it will draw on.` : ""}<br>The write-up appears here once the online exercise is in OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 2: exercise2, 3: exercise3 };
-const LABS = { tree: initTree, loop: initLoop, aging: initAging };
+const WRITEUPS = { 2: exercise2, 3: exercise3, 4: exercise4 };
+const LABS = { tree: initTree, loop: initLoop, aging: initAging, romeo: initRomeo };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(q)}.</p>`;

@@ -401,3 +401,22 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .hpc .coh .coh-m { border-left: 4px solid var(--vz-s4); }
 .hpc .coh .coh-v { font: 600 1.05rem ui-monospace, "IBM Plex Mono", monospace; }
 @media (max-width: 760px) { .hpc .cmp.tri, .hpc .coh { grid-template-columns: 1fr; } }
+/* Lecture 4: fork/join graph, loop-scheduling Gantt; charts drawn inside an explorer */
+.hpc .viz.lab-viz { margin: 0 0 8px; padding: 8px 8px 4px; background: var(--surface); }
+.hpc .viz .fjn { fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.5; }
+.hpc .viz .fjn.fork { fill: color-mix(in srgb, var(--vz-s1) 30%, var(--surface)); stroke: var(--vz-s1); stroke-width: 2; }
+.hpc .viz .fjn.join { fill: color-mix(in srgb, var(--vz-s2) 30%, var(--surface)); stroke: var(--vz-s2); stroke-width: 2; }
+.hpc .viz .pt:hover .fjn, .hpc .viz .pt:focus .fjn { stroke: var(--ink); }
+.hpc .viz .chunk { fill: var(--vz-s1); fill-opacity: .55; stroke: var(--vz-s1); stroke-width: 1; }
+.hpc .viz .chunk:hover { fill-opacity: .85; }
+.hpc .viz .offband { fill: var(--vz-gray); opacity: .35; }
+/* Exercise 04: chaining timeline and the Romeo node map */
+.hpc .viz .stg { fill: var(--vz-gray); opacity: .7; }
+.hpc .viz .pkg { fill: var(--surface-2); stroke: var(--line); }
+.hpc .viz .numa { fill: var(--surface); stroke: var(--line); }
+.hpc .viz .numa.on { fill: color-mix(in srgb, var(--vz-gray) 18%, var(--surface)); stroke: var(--vz-gray); }
+.hpc .viz .l3box { fill: none; stroke: var(--vz-grid); }
+.hpc .viz .pu { fill: var(--surface-2); stroke: var(--vz-axis); stroke-width: .6; }
+.hpc .viz .pu.on { fill: var(--vz-s1); stroke: var(--vz-s1); }
+.hpc .romeo .tick { font-size: 8px; }
+.hpc .romeo .note { font-size: 9.5px; }

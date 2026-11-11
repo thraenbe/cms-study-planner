@@ -520,8 +520,8 @@ window.CMS = {
       "date": "2026-11-11",
       "icon": "🧵",
       "type": "software",
-      "covered": false,
-      "blurb": "Thread-level parallelism with PThreads and OpenMP, and how loop iterations are scheduled onto threads.",
+      "covered": true,
+      "blurb": "Threads on one node: fork/join, parbegin/parend, DOALL and DOACROSS; POSIX threads, race conditions, test-and-set, compare-and-swap and fetch-and-add locks, mutexes and deadlocks; OpenMP parallel regions, data scope, reductions and false sharing; loop scheduling from static chunks to dynamic, guided self-scheduling and factoring.",
       "files": [
        {
         "kind": "slides",
@@ -685,14 +685,27 @@ window.CMS = {
      },
      {
       "n": 4,
-      "title": null,
+      "title": "Shared Memory Systems",
       "date": "2026-11-11",
-      "published": null,
+      "published": "2026-11-09",
       "icon": "📐",
-      "covered": false,
+      "covered": true,
       "lecture": 3,
-      "points": null,
-      "blurb": "Expected to follow lecture 3 (Shared Memory: Parallelism within a Processor and on a Compute Node); the online exercise usually appears in OPAL about a week before the session."
+      "points": 18,
+      "blurb": "A 32-element multiply-add with and without chaining (78 vs 46 cycles), concurrent SIMD on 4-wide registers, single-precision peaks of a Ryzen 9 9955HX and a Core Ultra 9 285K, the roofline model on the heat stencil (7/16 flop per byte, 42 vs 612.5 Gflop/s), and reading a Romeo node from lstopo to place 8 threads.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "Exercise_04_Shared_Memory_Systems_1.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "printout of the online test, posted 9 Nov"
+       },
+       {
+        "kind": "other",
+        "name": "Exercise 04 – Shared Memory Architectures (online test)",
+        "where": "OPAL · Exercises / Übungen"
+       }
+      ]
      },
      {
       "n": 5,

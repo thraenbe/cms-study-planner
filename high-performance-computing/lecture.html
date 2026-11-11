@@ -1299,8 +1299,312 @@ function lecture3() {
       <li><b>How do multiple processors and memory influence performance?</b> Several memory controllers make access NUMA: where a thread runs relative to its data can double the latency; multi-socket nodes make it worse and coherence more expensive.</li>
     </ul>
     <h2>Exercise</h2>
-    <p>The online exercise for this lecture (<a href="high-performance-computing/exercise.html?n=4">Exercise 04</a>) is not in OPAL yet; by the course's rhythm it appears about a week before your group discusses it on <b>Wed 11 Nov, 07:30</b>.</p>
+    <p>The online exercise for this lecture is <a href="high-performance-computing/exercise.html?n=4">Exercise 04</a> (in OPAL since 9 Nov, discussed on <b>Wed 11 Nov, 07:30</b>): chaining and pipelined SIMD cycle counts, peak performance of two desktop processors, the roofline model on the heat stencil, and the topology of a Romeo node.</p>
     <p class="muted">Next: Shared Memory Programming 1, threads with PThreads and OpenMP (<a href="high-performance-computing/lecture.html?n=4">lecture 4</a>, 11 Nov). Previous: <a href="high-performance-computing/lecture.html?n=2">lecture 2</a>. Slides: OPAL → Lectures → Slides / Download (they may not be copied or republished).</p>`;
+}
+
+// ---------------- Lecture 4: Shared Memory Programming 1: Threads ----------------
+const codeBlock = s => `<div class="formula">${esc(s).replace(/\n/g, "<br>").replace(/ {2}/g, "&nbsp;&nbsp;")}</div>`;
+
+// The fork/join example of slide 9 (and its PARBEGIN version on slide 11) as a task graph.
+const FJ = {
+  T1: [260, 34, "T1; fork T3; fork T4; T2; … (T1 itself continues as T2)"], T2: [110, 110, "T2; join V3, T8; quit"], T3: [260, 110, "T3; join V3, T8; quit"],
+  T4: [430, 110, "T4; fork T6; T5; … (T4 continues as T5)"], T5: [360, 186, "T5; join V2, T7; quit"], T6: [500, 186, "T6; join V2, T7; quit"],
+  T7: [430, 262, "T7; join V3, T8; quit"], T8: [260, 338, "T8 runs once the counter V3 has gone from 3 to 0"],
+};
+const FJ_E = [["T1", "T2"], ["T1", "T3"], ["T1", "T4"], ["T4", "T5"], ["T4", "T6"], ["T5", "T7"], ["T6", "T7"], ["T2", "T8"], ["T3", "T8"], ["T7", "T8"]];
+CHARTS.forkjoin = narrow => {
+  const W = narrow ? 340 : 600, sx = v => (narrow ? 14 + v * 0.53 : v), H = 372, r = narrow ? 15 : 17;
+  const P = k => [sx(FJ[k][0]), FJ[k][1]];
+  const edges = FJ_E.map(([a, b]) => { const [x1, y1] = P(a), [x2, y2] = P(b), d = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / d, uy = (y2 - y1) / d;
+    return `<line class="ed" x1="${x1 + ux * r}" y1="${y1 + uy * r}" x2="${x2 - ux * (r + 3)}" y2="${y2 - uy * (r + 3)}" marker-end="url(#arrfj)"/>`; }).join("");
+  const nodes = Object.keys(FJ).map(k => { const [x, y] = P(k), fork = k === "T1" || k === "T4", join = k === "T7" || k === "T8";
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>${FJ[k][2]}`)}"><circle class="hit" cx="${x}" cy="${y}" r="${r + 8}"/><circle class="fjn${fork ? " fork" : join ? " join" : ""}" cx="${x}" cy="${y}" r="${r}"/><text class="jl" x="${x}" y="${y + 4}" text-anchor="middle">${k}</text></g>`; }).join("");
+  const notes = narrow ? "" : [[P("T1")[0] + 26, 38, "fork T3, fork T4"], [P("T4")[0] + 26, 114, "fork T6"], [P("T7")[0] + 26, 266, "join V2 (2 → 0)"], [P("T8")[0] + 26, 342, "join V3 (3 → 0)"]]
+    .map(([x, y, t]) => `<text class="note" x="${x}" y="${y}">${t}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Task graph of the fork-join example: T1 forks T3 and T4 and continues as T2; T4 forks T6 and continues as T5; T5 and T6 join on counter V2 before T7; T2, T3 and T7 join on counter V3 before T8.">
+    <defs><marker id="arrfj" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arr"/></marker></defs>${edges}${nodes}${notes}</svg>`;
+};
+
+// Explorer: DOACROSS (slide 13). Iteration i: a(i) = b(i) + a(i − d) (add, 1 unit), then x(i) = a(i) * 2 (multiply, 2 units).
+// wait(ev(i − d)) before the add, post(ev(i)) after it. Iterations go round-robin to p processors.
+const DAX = { d: 1, p: 4, n: 8 };
+function daSim() {
+  const { d, p, n } = DAX, free = Array(p).fill(0), endA = [], rows = Array.from({ length: p }, () => []);
+  for (let i = 1; i <= n; i++) {
+    const c = (i - 1) % p, ready = d && i - d >= 1 ? endA[i - d] : 0, s = Math.max(free[c], ready);
+    rows[c].push({ i, from: free[c], s }); endA[i] = s + 1; free[c] = s + 3;
+  }
+  return { rows, ms: Math.max(...free) };
+}
+function daOut() {
+  const { d, p, n } = DAX, { rows, ms } = daSim(), seq = 3 * n, ideal = Math.ceil(n / p) * 3;
+  const grid = rows.map((r, c) => { const row = Array(ms).fill("");
+    r.forEach(({ i, from, s }) => { for (let t = from; t < s; t++) row[t] = `<span class="pc stall" title="iteration ${i} waits for a(${i - d})">·</span>`;
+      row[s] = `<span class="pc s1" title="a(${i}) = b(${i}) + a(${i - d})">a${i}</span>`; row[s + 1] = row[s + 2] = `<span class="pc s2" title="x(${i}) = a(${i}) · 2">x${i}</span>`; });
+    return `<div class="rl">CPU ${c + 1}</div>${row.map(x => `<div class="gc">${x}</div>`).join("")}`; }).join("");
+  return `<div class="gantt" style="--cols:${ms}"><div class="rl"></div>${Array.from({ length: ms }, (_, t) => `<div class="gh">${t + 1}</div>`).join("")}${grid}</div>
+    ${leg([[1, "add: a(i) = b(i) + a(i − d), 1 unit"], [2, "multiply: x(i) = a(i) · 2, 2 units"]])}
+    <dl class="ro">
+      <dt>Run time</dt><dd><b>${ms}</b> units for ${n} iterations on ${p} CPU${p > 1 ? "s" : ""} (sequential ${seq}, speedup ${num(seq / ms, 2)})</dd>
+      <dt>Without the dependence</dt><dd>DOALL would need ${ideal} units ${ms > ideal ? flag("bad", `the chain a(i − ${d}) → a(i) costs ${ms - ideal}`) : flag("ok", "no waiting at all")}</dd>
+      <dt>Why</dt><dd>${d === 0 ? "No loop-carried dependence: every iteration starts as soon as its CPU is free." : `Only the cheap add sits on the dependence chain; the slow multiply of iteration i overlaps with the adds of later iterations. ${d === 1 ? "With distance 1 the adds form one chain of n steps." : `With distance ${d} there are ${d} independent chains, so ${d} adds can run at once.`}`}</dd>
+    </dl>`;
+}
+function initDa(body) {
+  body.innerHTML = `<div class="presets">${[[1, "slide: a(i − 1)"], [2, "slide: a(i − 2)"], [0, "no dependence (DOALL)"]].map(([v, t]) => `<button class="preset" data-d="${v}" aria-pressed="${v === DAX.d}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>CPUs p <input type="range" min="1" max="4" step="1" value="${DAX.p}"> <output>${DAX.p}</output></label>
+      <label>Iterations n <input type="range" min="4" max="12" step="1" value="${DAX.n}"> <output>${DAX.n}</output></label></div><div class="out"></div>`;
+  const [rp, rn] = body.querySelectorAll("input"), [op, on] = body.querySelectorAll("output"), out = body.querySelector(".out");
+  const draw = () => { op.textContent = DAX.p; on.textContent = DAX.n; out.innerHTML = daOut(); body.querySelectorAll("[data-d]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.d === DAX.d)); };
+  rp.addEventListener("input", () => { DAX.p = +rp.value; draw(); });
+  rn.addEventListener("input", () => { DAX.n = +rn.value; draw(); });
+  body.addEventListener("click", e => { const b = e.target.closest("[data-d]"); if (!b) return; DAX.d = +b.dataset.d; draw(); });
+  draw();
+}
+
+// Explorer: what does sum print? The quiz slides 49, 50 and 56, plus three variants added here. N = 1000, 4 threads.
+const SCQ = { k: 0 };
+const SCOPES = [
+  { t: "shared (slide 49)", code: "sum = 0;\n#pragma omp parallel shared(sum) num_threads(4)\n{\n  for (int i=0; i<N; i++)\n    sum = sum + 1;\n}", v: "undefined", l: "answer e: a race", d: "Every thread runs the whole loop, so a correct run would give 4·N = 4,000. But all four threads load, increment and store the one shared sum without protection; increments get lost, and what is printed varies from run to run (typically less than 4,000).", ok: false },
+  { t: "private (slide 50)", code: "sum = 0;\n#pragma omp parallel private(sum) num_threads(4)\n{\n  for (int i=0; i<N; i++)\n    sum = sum + 1;\n}", v: "0", l: "answer d", d: "Each thread counts in its own copy (which starts uninitialised, so even the private results are garbage). The copies are thrown away at the end of the region, and the original sum still holds 0.", ok: true },
+  { t: "firstprivate", code: "sum = 0;\n#pragma omp parallel firstprivate(sum) num_threads(4)\n{\n  for (int i=0; i<N; i++)\n    sum = sum + 1;\n}", v: "0", l: "the copies are discarded", d: "Now each copy starts at 0 and correctly reaches 1,000, but firstprivate only initialises the copies; it does not write them back. Printed: 0.", ok: true },
+  { t: "reduction, for (slide 56)", code: "sum = 0;\n#pragma omp parallel for reduction(+:sum) num_threads(4)\nfor (int i=0; i<N; i++)\n  sum += i;", v: "499,500", l: "N(N − 1) / 2", d: "The iterations are split among the threads, each adds its share into a private copy that starts at 0 (the identity of +), and the copies are added into sum at the end: 0 + 1 + … + 999 = 499,500, the same as the sequential loop.", ok: true },
+  { t: "reduction, no for", code: "sum = 0;\n#pragma omp parallel reduction(+:sum) num_threads(4)\n{\n  for (int i=0; i<N; i++)\n    sum = sum + 1;\n}", v: "4,000", l: "4 · N", d: "Without the for, the loop is not shared out: all four threads run all N iterations on their private copies, and the reduction adds four times 1,000.", ok: true },
+  { t: "critical", code: "sum = 0;\n#pragma omp parallel for num_threads(4)\nfor (int i=0; i<N; i++) {\n  #pragma omp critical\n  sum = sum + 1;\n}", v: "1,000", l: "correct, but serialised", d: "The critical section makes the update safe, so the iterations (split among the threads) add up to N. But only one thread at a time may enter it, so the loop body runs one after the other plus locking overhead: slide 52's “solution” 1.", ok: true },
+];
+function scOut4() {
+  const s = SCOPES[SCQ.k];
+  return `${codeBlock(s.code)}<div class="ans"><div class="a"><div class="v">${s.v}</div><div class="l">printed for N = 1,000 · ${s.l}</div></div></div>
+    <p class="lab-note" style="margin-top:8px">${s.d} ${s.ok ? "" : flag("bad", "data race")}</p>`;
+}
+function initScope(body) {
+  body.innerHTML = `<div class="presets">${SCOPES.map((s, k) => `<button class="preset" data-k="${k}" aria-pressed="${k === SCQ.k}">${s.t}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = scOut4(); body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.k === SCQ.k)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; SCQ.k = +b.dataset.k; draw(); });
+  draw();
+}
+
+// Chunk sizes of guided self-scheduling and factoring for N = 100 on 4 CPUs (slides 74 and 77).
+function gssChunks(N, P) { const out = []; let R = N; while (R > 0) { const x = Math.ceil(R / P); out.push(x); R -= x; } return out; }
+function factChunks(N, P) { const out = []; let R = N; while (R > 0) { const x = Math.max(1, Math.ceil(R / (2 * P))); for (let k = 0; k < P && R > 0; k++) { const y = Math.min(x, R); out.push(y); R -= y; } } return out; }
+CHARTS.chunks = narrow => {
+  const g = gssChunks(100, 4), f = factChunks(100, 4), n = Math.max(g.length, f.length);
+  const W = narrow ? 340 : 600, L = 30, R = 10, T = 24, B = 34, H = 240, PW = W - L - R, PH = H - T - B, cw = PW / n, bw = Math.max(3, (cw - 4) / 2);
+  const y = v => T + PH - v / 25 * PH;
+  const ticks = [0, 5, 10, 15, 20, 25].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const vbar = (x, v) => { const r = Math.min(3, bw / 2), y0 = y(v), yb = y(0); return `M${x},${yb} V${y0 + r} Q${x},${y0} ${x + r},${y0} H${x + bw - r} Q${x + bw},${y0} ${x + bw},${y0 + r} V${yb} Z`; };
+  const cols = Array.from({ length: n }, (_, k) => { const x0 = L + k * cw + (cw - 2 * bw - 2) / 2, gv = g[k], fv = f[k];
+    const tip = `<b>Dispatch ${k + 1}</b>${gv ? `GSS: ${gv} iterations (${100 - g.slice(0, k).reduce((a, b) => a + b, 0)} left before)` : "GSS: done after 14 dispatches"}<br>${fv ? `factoring: ${fv} iterations (batch ${Math.floor(k / 4) + 1})` : "factoring: done"}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="${L + k * cw}" y="${T}" width="${cw}" height="${PH}"/>${gv ? `<path class="bar s1" d="${vbar(x0, gv)}"/>` : ""}${fv ? `<path class="bar s2" d="${vbar(x0 + bw + 2, fv)}"/>` : ""}
+      ${narrow && (k + 1) % 5 ? "" : `<text class="tick" x="${L + k * cw + cw / 2}" y="${H - B + 16}" text-anchor="middle">${k + 1}</text>`}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Paired column chart of chunk sizes per dispatch for 100 iterations on 4 CPUs. Guided self-scheduling: 25, 19, 14, 11, 8, 6, 5, 3, 3, 2, 1, 1, 1, 1 (14 dispatches). Factoring: four chunks of 13, four of 6, four of 3, four of 2, four of 1 (20 dispatches).">
+    ${ticks}<text class="note" x="${L}" y="${T - 4}">iterations per chunk</text>${cols}<text class="note" x="${L + PW / 2}" y="${H - 4}" text-anchor="middle">dispatch number</text></svg>`;
+};
+
+// Explorer: loop scheduling of N = 100 iterations on 4 CPUs (slides 66–81). Simulation in time units of one average iteration.
+const LS = { kind: "static", work: "uniform", h: 0.1 };
+const LS_KINDS = { static: "static (25 each)", dyn1: "dynamic, chunk 1", dyn5: "dynamic, chunk 5", guided: "guided (GSS)", fact: "factoring" };
+const LS_WORK = { uniform: "equal iterations", late: "late starters (slide 71)", dec: "triangular: early iterations heavy", irq: "CPU 1 interrupted (slide 76)" };
+function lsSim() {
+  const { kind, work, h } = LS, N = 100, P = 4, cost = i => work === "dec" ? 2 * (N - i) / (N + 1) : 1;
+  const start = work === "late" ? [0, 2, 3, 8] : [0, 0, 0, 0], irq = work === "irq" ? [5, 15] : null;
+  const segs = [], free = start.slice(); let next = 0, R = N, disp = 0;
+  const run = (c, t0, a, b) => { let dur = 0; for (let i = a; i < b; i++) dur += cost(i);
+    if (irq && c === 0 && t0 < irq[1] && t0 + dur > irq[0]) { const pre = Math.max(0, irq[0] - t0); if (pre) segs.push({ c, s: t0, e: irq[0], n: b - a, a, part: true }); segs.push({ c, s: irq[1], e: irq[1] + dur - pre, n: b - a, a }); return irq[1] + dur - pre; }
+    segs.push({ c, s: t0, e: t0 + dur, n: b - a, a }); return t0 + dur; };
+  if (kind === "static") { for (let c = 0; c < P; c++) free[c] = run(c, start[c], c * 25, c * 25 + 25); disp = 0; }
+  else {
+    const fq = kind === "fact" ? factChunks(N, P) : null;
+    while (R > 0) {
+      const c = free.indexOf(Math.min(...free));
+      const x = kind === "dyn1" ? 1 : kind === "dyn5" ? 5 : kind === "guided" ? Math.ceil(R / P) : fq[disp];
+      const y = Math.min(x, R), t0 = free[c] + h; disp++;
+      free[c] = run(c, t0, next, next + y); next += y; R -= y;
+    }
+  }
+  const ms = Math.max(...free), busy = segs.reduce((s, g) => s + g.e - g.s, 0);
+  return { segs, ms, disp, start, irq, idle: 1 - busy / (P * ms - start.reduce((a, b) => a + b, 0) - (irq ? irq[1] - irq[0] : 0)) };
+}
+function lsOut() {
+  const r = lsSim(), narrow = isNarrow(), W = narrow ? 340 : 600, L = 46, Rm = 12, T = 6, RH = 30, H = T + 4 * RH + 30, PW = W - L - Rm;
+  const xmax = Math.max(40, Math.ceil(r.ms / 5) * 5), x = v => L + v / xmax * PW;
+  const ticks = Array.from({ length: xmax / 5 + 1 }, (_, k) => k * 5).filter(v => !narrow || v % 10 === 0).map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + 4 * RH}"/><text class="tick" x="${x(v)}" y="${H - 12}" text-anchor="middle">${v}</text>`).join("");
+  const rows = [0, 1, 2, 3].map(c => `<text class="cat" x="${L - 8}" y="${T + c * RH + 19}" text-anchor="end">CPU ${c + 1}</text>`).join("");
+  const off = [0, 1, 2, 3].filter(c => r.start[c] > 0).map(c => `<rect class="offband" x="${x(0)}" y="${T + c * RH + 5}" width="${x(r.start[c]) - x(0)}" height="${RH - 10}"/>`).join("")
+    + (r.irq ? `<rect class="offband" x="${x(r.irq[0])}" y="${T + 5}" width="${x(r.irq[1]) - x(r.irq[0])}" height="${RH - 10}"/>` : "");
+  const marks = r.segs.map(g => { const w = Math.max(1, x(g.e) - x(g.s) - 1.5);
+    return `<rect class="chunk" x="${x(g.s) + 0.75}" y="${T + g.c * RH + 5}" width="${w}" height="${RH - 10}" rx="${Math.min(3, w / 2)}"><title>${g.n} iteration${g.n > 1 ? "s" : ""} (${g.a}–${g.a + g.n - 1}), t = ${num(g.s, 1)} to ${num(g.e, 1)}</title></rect>${w > 18 && !g.part ? `<text class="jl" x="${x(g.s) + w / 2}" y="${T + g.c * RH + 19}" text-anchor="middle">${g.n}</text>` : ""}`; }).join("");
+  const end = `<line class="ann dash" x1="${x(r.ms)}" x2="${x(r.ms)}" y1="${T}" y2="${T + 4 * RH}"/>`;
+  return `<div class="viz lab-viz"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gantt chart of ${LS_KINDS[LS.kind]} with ${LS_WORK[LS.work]}: all 100 iterations finish at ${num(r.ms, 1)} time units.">${ticks}${rows}${off}${marks}${end}<text class="note" x="${L + PW / 2}" y="${H - 1}" text-anchor="middle">time (one unit = one average iteration)</text></svg></div>
+    ${leg([[1, "a chunk of iterations (number = size)"], ["g", "CPU not available"]])}
+    <dl class="ro">
+      <dt>Finished at</dt><dd><b>${num(r.ms, 1)}</b> units (perfect balance: ${num((100 + r.start.reduce((s, v) => s + v, 0) + (r.irq ? r.irq[1] - r.irq[0] : 0)) / 4, 2)}) · CPUs idle ${pct(Math.max(0, r.idle))} of their available time</dd>
+      <dt>Dispatches</dt><dd>${LS.kind === "static" ? "none at run time: the split is fixed before the loop starts" : `${r.disp} × ${LS.h} units of scheduling overhead = ${num(r.disp * LS.h, 1)} units spread over the CPUs`}</dd>
+    </dl>`;
+}
+function initLs(body) {
+  body.innerHTML = `<div class="presets" data-g="kind">${Object.entries(LS_KINDS).map(([k, t]) => `<button class="preset" data-kind="${k}">${t}</button>`).join("")}</div>
+    <div class="presets" data-g="work">${Object.entries(LS_WORK).map(([k, t]) => `<button class="preset" data-work="${k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Overhead per dispatch <input type="range" min="0" max="0.5" step="0.05" value="${LS.h}"> <output>${LS.h}</output> units</label></div><div class="out"></div>`;
+  const rh = body.querySelector("input"), oh = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { oh.textContent = LS.h; out.innerHTML = lsOut();
+    body.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === LS.kind));
+    body.querySelectorAll("[data-work]").forEach(b => b.setAttribute("aria-pressed", b.dataset.work === LS.work)); };
+  rh.addEventListener("input", () => { LS.h = +rh.value; draw(); });
+  body.addEventListener("click", e => { const b = e.target.closest("[data-kind],[data-work]"); if (!b) return; if (b.dataset.kind) LS.kind = b.dataset.kind; else LS.work = b.dataset.work; draw(); });
+  addEventListener("resize", () => { out.innerHTML = lsOut(); });
+  draw();
+}
+
+function lecture4() {
+  const g = gssChunks(100, 4), tbl = (h, rows) => `<details class="tbl"><summary>Table view</summary><table><tr>${h.map(x => `<th>${x}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((x, i) => `<td${i ? ' class="n"' : ""}>${x}</td>`).join("")}</tr>`).join("")}</table></details>`;
+  let R = 100; const gRows = g.map((x, k) => { const row = [`t${k + 1}`, R, x]; R -= x; return row; });
+  return `${head(l)}
+    <p class="lead">Lecture 3 showed where a compute node gets its parallelism; this one is about using the cores and hardware threads from a program. The unit of execution is now the <b>thread</b>: several flows of control inside one process that share its memory. The lecture goes from the notation of parallel control flow (fork/join, parbegin/parend, DOALL, DOACROSS) to the low-level POSIX threads, the race conditions they invite and the atomic instructions and locks that tame them, and then to <b>OpenMP</b>, where the compiler builds the threads from a few directives. The last part is the question OpenMP leaves open: which thread runs which loop iteration, from static chunks to guided self-scheduling and factoring.</p>
+    <div class="box"><p><b>Which slides.</b> OPAL has one deck for lectures 4 and 5, “Shared Memory Parallelism and Dependencies”. This page covers its thread half, slides 2–98, and the summary slides 143–144 as far as they concern threads. SIMD vectorisation and data dependencies (slides 99–141) belong to <a href="high-performance-computing/lecture.html?n=5">lecture 5</a> on 25 Nov.</p></div>
+
+    <h2>Tasks, units of execution and two ways to split work (slides 3–4)</h2>
+    <p>Recap from lecture 1: designing a parallel program starts by cutting it into <b>tasks</b>, groups of instructions that belong together logically. A task runs as a <b>unit of execution</b> (UE) on a <b>processing element</b> (PE). The PE is a core, or a hardware thread if the core has SMT (lecture 3), or a GPU core (lecture 9). The UE is a <b>thread</b> (this lecture) or a <b>process</b> with one or more threads (the distributed-memory lectures).</p>
+    <ul class="cmp" aria-label="Two parallelisation paradigms">
+      <li><b>Function partitioning</b><span class="v"><span class="sw t"></span>Different operations on shared data at the same time: heterogeneous multitasking, natural for programs made of many distinct functions. Typical tool: POSIX threads.</span></li>
+      <li><b>Data partitioning</b><span class="v"><span class="sw v"></span>Identical UEs, each on its part of the data: homogeneous multitasking, Single Program Multiple Data (SPMD). Most HPC codes fit this best. Typical tools: OpenMP, and SIMD inside a core.</span></li>
+    </ul>
+
+    <h2>Notations for parallel control flow (slides 5–13)</h2>
+    <p>Before any API, the lecture introduces four classic primitives. They are worth knowing because PThreads, OpenMP and every other model implement some subset of them.</p>
+    <ul>
+      <li><b>FORK / JOIN</b> (Conway 1963, Dennis and Van Horn 1966): <code>fork w</code> starts a new branch at label w that belongs to the same computation; <code>quit</code> ends a branch; <code>join t, w</code> decrements the counter t and continues at w once the counter reaches zero. It is unstructured, like a GOTO: nothing forces forks and joins to pair up neatly.</li>
+      <li><b>PARBEGIN / PAREND</b> (Dijkstra 1968): <code>parbegin B2; B3; …; Bn parend</code> runs the blocks in parallel and continues after all have finished. The flow graph is always properly nested.</li>
+      <li><b>DOALL</b>: every iteration of a loop becomes its own task, all independent, followed by an implicit join. The number of tasks is a run-time quantity.</li>
+      <li><b>DOACROSS</b>: a parallel loop whose iterations depend on each other in a cycle; iteration i waits for an event posted by an earlier iteration (<code>wait(ev(i−1))</code> … <code>post(ev(i))</code>), so synchronisation only runs from lower to higher iterations.</li>
+    </ul>
+    ${chart("forkjoin", leg([[1, "a fork: the task starts a new branch"], [2, "a join: waits until its counter reaches 0"]]))}
+      <figcaption>The example of slides 9 and 11 as a task graph. With FORK/JOIN, T1 forks T3 and T4 and carries on as T2; T4 forks T6 and carries on as T5. The counter V2 = 2 makes T7 wait for T5 and T6, the counter V3 = 3 makes T8 wait for T2, T3 and T7. The PARBEGIN version writes the same graph as nested blocks: <code>parbegin T2; T3; begin T4; parbegin T5; T6 parend; T7 end parend</code>. Hover a node for its code.</figcaption>
+    </figure>
+    ${ex("Worked example: the simple fork/join of slide 8", `<p>Tasks T1 to T4, counter V2 = 2. T1 runs, forks T3 and continues with T2; T2 ends with <code>join V2, T4; quit</code>, which decrements V2 to 1 and, since it is not zero, simply quits. T3 ends with the same join: V2 becomes 0, so this branch goes on to execute T4. Whichever of T2 and T3 finishes last is the one that runs T4; the counter, not the program text, decides it. On two PEs with T2 and T3 taking 4 and 6 units after a T1 of 2, T4 starts at 2 + 6 = 8.</p>`)}
+    ${lab("da", "DOACROSS: a(i) = b(i) + a(i − d); x(i) = a(i) · 2")}
+    ${why("Context, not on the slides: why DOACROSS is still worth it", `<p>A loop-carried dependence does not make a loop sequential if the dependent part of the body is short. In the slide's loop only the add needs the previous a; the multiply, which takes longer (the slide's remark), only needs this iteration's a. So iteration i+1's add can start as soon as iteration i's add is done, while i's multiply is still running. The explorer shows the effect: on 4 CPUs the 8 iterations take 10 units instead of 24. The longer the independent part and the larger the dependence distance d, the closer DOACROSS comes to DOALL. Lecture 5 picks this up with the dependence analysis that decides what a compiler may reorder.</p>`)}
+
+    <h2>What a thread is (slides 14–16)</h2>
+    <p>POSIX defines a thread as a single flow of control within a process; everything whose address a thread can find (static variables, the heap, even another thread's stack variables) is accessible to all threads of the process. Each thread owns only what it needs to run on its own: a thread ID, scheduling priority and policy, its <code>errno</code>, floating-point environment, thread-specific key/value data, and its stack and registers.</p>
+    <p>This operating-system thread maps naturally to function partitioning. Data partitioning works too (several threads call the same function with different data) but costs more: each OS thread fetches and decodes its own instructions, and the OS, not the program, decides when each runs. Some models therefore use “thread” for something much lighter, one independent phase such as a loop iteration. CUDA threads (lecture 10) share one instruction pointer in groups, each computes typically one iteration, and many of them make up one task on a PE.</p>
+
+    <h2>POSIX threads (slides 17–24)</h2>
+    <p>PThreads (<code>libpthread</code>, part of every POSIX system) is the low-level base on which other threading approaches are built, and it offers exactly one primitive: <b>fork/join</b>. A thread's life has three phases: <b>creation</b> (its characteristics are set, the OS creates it and may schedule it right away), <b>execution</b> (independent, synchronised with locks, mutexes, signals and broadcasts), and <b>finalisation</b> (the OS removes it and returns a status).</p>
+    ${codeBlock("void* c_routine(void* input) { … }\npthread_t my_thread;\nret = pthread_create(&my_thread, my_pthread_attr, c_routine, variable);\n\n// C++: std::thread my_thread(cpp_routine, variable);")}
+    <p>The new thread starts in the passed function with the passed argument; both input and return value are <code>void*</code>, so anything can be handed over through a pointer. The parent continues right after <code>pthread_create</code>. Attributes set the <b>affinity</b> (which CPUs the thread may run on), whether it is <b>detached</b> (never joined), its <b>stack size</b> and its <b>scheduling policy</b> (FIFO, round robin, other).</p>
+    ${ex("Worked example: maximum of an array with two threads (slide 24)", `<p>An array of N = 1,000,000 doubles; a struct per thread holds start, end and result. The parent sets its range to [0, 500,000) and the child's to [500,000, 1,000,000), creates the child with <code>pthread_create(&child, NULL, find_max, &child_info)</code>, then calls <code>find_max(&parent_info)</code> itself, so both halves run at once. <code>pthread_join(child, NULL)</code> waits for the child; only then is <code>child_info.result</code> safe to read, and the answer is the larger of the two results. Each thread writes only its own struct, so there is no race; on two cores the search takes about half the time, plus the cost of creating one thread (on Linux some tens of microseconds, negligible against a million comparisons).</p>`)}
+
+    <h2>Race conditions and atomic instructions (slides 25–31)</h2>
+    <p>Threads share the heap and keep a private stack; they communicate through shared memory, and that invites <b>race conditions</b>. The slide's example is <code>a = a + 1</code> on a static int: compiled, it is load, increment, store, and two threads that both load before either stores lose one increment. Three things cause races: genuinely <b>concurrent execution</b> on several cores (not even necessary), <b>preemption</b> (the OS swaps in another thread between load and store), and <b>interrupts</b> whose handler uses the same variable. The cure is to acquire resources in a way nothing can interrupt: <b>atomic operations</b>. (The step-by-step race explorer is in <a href="high-performance-computing/lecture.html?n=1">lecture 1</a>.)</p>
+    <div class="tt-wrap"><table class="tt syn" aria-label="Three atomic instructions">
+      <tr><th>Instruction</th><th>What it does atomically</th><th>Lock built from it</th><th>Fair?</th></tr>
+      <tr><td><b>Test-and-set / exchange</b> (1960s; x86 <code>xchg</code>)</td><td>write a value, return the old one</td><td>spin lock: <code>while (TAS(&locked, 1) == 1);</code> … <code>locked = 0;</code></td><td>no: any spinning thread may win, one may starve</td></tr>
+      <tr><td><b>Compare-and-swap</b> (IBM 370, 1973; C11 <code>stdatomic.h</code>; x86 <code>lock cmpxchg</code>)</td><td>write the new value only if the current one is the expected one; return what was there</td><td><code>do r = CAS(&owner, FREE, my_id); while (r != FREE);</code>, and other threads can see who holds it; also the basis of lock-free data structures</td><td>no, still busy waiting</td></tr>
+      <tr><td><b>Fetch-and-add</b> (1980s, NYU Ultracomputer, IBM RP3; C11; x86 <code>lock xadd</code>)</td><td>add to a memory word, return the old value</td><td>ticket lock: <code>my = FAA(&ticket, 1); while (my != served);</code> … <code>served++;</code></td><td>yes: served in order of arrival</td></tr>
+    </table></div>
+    ${ex("Worked example: three threads at a ticket lock", `<p>ticket = 0, served = 0. Thread A arrives: FAA returns 0, ticket becomes 1; my = served = 0, so A enters. B arrives: gets 1 (ticket 2) and spins. C arrives: gets 2 (ticket 3) and spins. A leaves and sets served = 1: B's condition holds, B enters, C keeps spinning. B leaves, served = 2: C enters. The order is exactly A, B, C. With test-and-set, after A's unlock B and C race to be first to see 0, and a thread that keeps losing can wait forever. Note that the unlock (<code>served++</code>, <code>locked = 0</code>) need not be atomic: only the lock holder writes it.</p>`)}
+
+    <h2>Mutexes, spin locks and their granularity (slides 32–33)</h2>
+    <ul class="cmp" aria-label="Mutex versus spin lock">
+      <li><b>Mutex</b><span class="v"><span class="sw t"></span><code>pthread_mutex_lock / unlock</code>: mutual exclusion independent of the implementation; a waiting thread can give its core back to the OS and sleep.</span></li>
+      <li><b>Spin lock</b><span class="v"><span class="sw v"></span><code>pthread_spin_lock / unlock</code>: always busy-waits. Good when the lock is held only for a few instructions and every thread has its own core; wasteful otherwise.</span></li>
+    </ul>
+    <p>How much one lock protects is a design decision. One mutex for a whole database keeps it locked almost permanently and does not scale; one mutex per entry costs a lot of memory and makes deadlocks likely. Linux had one <b>Big Kernel Lock</b> that was used widely and stopped the kernel from scaling to many cores; it was removed piece by piece over several years.</p>
+
+    <h2>Deadlocks (slides 34–38)</h2>
+    <p>The slide's example swaps the values of two objects and locks both objects' mutexes, a first, then b. Thread 1 calls <code>switch_content(foo, bar)</code> and locks foo; thread 2 calls <code>switch_content(bar, foo)</code> and locks bar. Now each waits for the mutex the other holds, forever. A deadlock needs all four of these conditions at once, so breaking any one prevents it:</p>
+    <div class="tt-wrap"><table class="tt syn" aria-label="Deadlock conditions and how to break them">
+      <tr><th>Condition</th><th>Meaning</th><th>Break it by</th></tr>
+      <tr><td>Mutual exclusion</td><td>one thread at a time per resource</td><td>lock-free data structures built on atomics; often impossible</td></tr>
+      <tr><td>Hold and wait</td><td>a thread holds one resource and waits for another</td><td>releasing everything and acquiring all locks in one step; needs a rollback to the state before</td></tr>
+      <tr><td>No preemption</td><td>resources are only given up voluntarily</td><td>running optimistically and rolling back when a conflict happened; risks a <b>livelock</b> (rolling back over and over)</td></tr>
+      <tr><td>Circular wait</td><td>threads wait for each other in a cycle</td><td>a global lock order</td></tr>
+    </table></div>
+    ${why("Context, not on the slides: the usual fix for the swap example", `<p>Break the circular wait with a global order: always lock the object with the lower address (or ID) first, whatever the argument order. <code>switch_content(bar, foo)</code> then also locks foo first, so the second thread blocks before it holds anything and the cycle cannot form. This is the cheapest of the four remedies and the one used in practice for a fixed small set of locks; tools such as ThreadSanitizer or Helgrind report lock-order inversions before they deadlock.</p>`)}
+
+    <h2>OpenMP: structured thread parallelism (slides 39–47)</h2>
+    <p>OpenMP (first standard 1997) began with thread parallelism and loops; 3.0 added tasks, 4.0 SIMD and offloading to GPUs, 5.0 tool and debugging interfaces, and the current 6.0 sequential loop transformations. It supports fork/join, parbegin/parend and DOALL through <b>compiler directives</b> (<code>#pragma omp …</code>) and a small <b>library</b> (<code>omp_…()</code>). The slides build it up from hello world:</p>
+    <ol>
+      <li>Add <code>#pragma omp parallel</code> before the print: still one line of output, because the compiler ignores unknown pragmas.</li>
+      <li>Compile with <code>-fopenmp</code>: one line per thread.</li>
+      <li>Print <code>omp_get_thread_num()</code> after <code>#include &lt;omp.h&gt;</code>: “says 1”, “says 0” in any order.</li>
+      <li>Guard the library calls with <code>#ifdef _OPENMP</code>, so the program still compiles without OpenMP support.</li>
+    </ol>
+    <p>A <b>parallel region</b> is executed by a team of threads. Their number comes from, in rising priority: the default (usually the number of cores), the environment variable <code>OMP_NUM_THREADS</code>, a call to <code>omp_set_num_threads()</code> before the region, or the clause <code>num_threads(n)</code>. Inside, <code>omp_get_num_threads()</code> gives the team size and <code>omp_get_thread_num()</code> the ID from 0 to size − 1. The output order is random, and since the output buffer is shared too, lines can even get mixed up mid-word.</p>
+    <p><b>Data scope</b> is fixed at the start of the region: <code>shared</code> (one copy for all, races possible; the default unless <code>default(none)</code> forces you to declare every variable), <code>private</code> (one uninitialised copy per thread; the original is unchanged afterwards), <code>firstprivate</code> (copies start with the value from before the region) and <code>lastprivate</code> (after the region the variable holds the value of the sequentially last iteration or section).</p>
+    ${lab("scope", "what does the program print? (N = 1,000, 4 threads)")}
+
+    <h2>Parallel loops and reductions (slides 51–57)</h2>
+    <p><code>#pragma omp for</code> inside a parallel region (or <code>#pragma omp parallel for</code> in one line) distributes the iterations of the next loop over the team: DOALL. The programmer promises that the iterations are independent. A vector addition is fine; a sum <code>overall_sum += input1[i] + input2[i]</code> is not, because every thread updates the same variable. The slides try two “solutions” before the real one:</p>
+    <ul>
+      <li><b><code>#pragma omp critical</code></b> around the update: correct, but only one thread at a time may run it, so the loop is sequential again.</li>
+      <li><b>An array of partial sums</b>, one slot per thread: no race, but the slots sit next to each other in memory, and neighbouring threads keep writing into the same cache line. Coherence (lecture 3) bounces that line between the cores: <b>false sharing</b>.</li>
+      <li><b><code>reduction(+:overall_sum)</code></b>: every thread gets a private copy initialised to the identity of the operator, and the copies are combined at the end. Operators: <code>+ - * & | ^ && || max min</code>, with identities 0, 0, 1, all ones, 0, 0, 1, 0, the smallest and the largest representable value.</li>
+    </ul>
+    ${ex("Worked example: how bad is false sharing?", `<p>Eight threads, <code>double overall_sums[8]</code>: 8 × 8 bytes = 64 bytes, exactly one cache line on x86. Every <code>+=</code> needs the line in the writing core's cache in modified state, so with all eight threads writing in a tight loop the line migrates on nearly every update. A cache-to-cache transfer costs on the order of 50–100 ns, against about 1 ns for an L1 hit, so the “parallel” loop can end up slower than the sequential one. Padding each slot to its own 64-byte line, or summing into a local variable and writing the slot once at the end, removes the effect; a reduction does the latter automatically. (Latencies are typical values, not from the slides.)</p>`)}
+
+    <h2>Who gets which iteration: partitioning (slides 58–65)</h2>
+    <p>The slides explain partitioning with masons building a wall. Split the wall into <b>vertical sections</b> and each mason builds their own stretch from bottom to top; split it into <b>horizontal layers</b> and they all work along the same course. The catch is <b>load balance</b>: equal lengths of wall are not equal work if some stretches contain windows or door frames. The fair measure is the number of bricks per mason, not metres of wall. And when the complexity of each piece is not known in advance (the pictures in the wall), no static split can be balanced: work has to be handed out at run time.</p>
+
+    <h2>Loop scheduling in OpenMP (slides 66–81)</h2>
+    <p>The clause <code>schedule(kind[, chunk_size])</code> decides the mapping (modifiers are not part of this lecture):</p>
+    <ul>
+      <li><b>static</b>, like <b>chunk scheduling</b>: chunks of chunk_size iterations are dealt to the threads round robin, fixed before the loop starts and the same in every run. The default chunk is N / p, one block per thread; chunk 1 gives thread 1 iterations 0, 2, 4, … and thread 2 iterations 1, 3, 5, … for two threads. Almost no overhead, but no reaction to <b>late starters</b> (slide 71: a CPU that begins its 25 iterations 8 units late finishes 8 units late) or <b>uneven iterations</b> (slide 72). An optimal chunk size can hardly be derived; it works best on a dedicated machine.</li>
+      <li><b>dynamic</b>, like <b>self-scheduling</b> when chunk_size is 1: a thread that has finished takes the next free chunk. The best possible load balance, but N dispatch operations, each of which needs synchronisation between the threads, and the assignment differs from run to run. Efficient when N is small or the iterations are large compared to the overhead.</li>
+      <li><b>guided</b>, approximately <b>guided self-scheduling</b> (GSS, Polychronopoulos and Kuck 1987): the next chunk is the remaining work divided by the number of CPUs, X<sub>n</sub> = ⌈R<sub>n</sub> / P⌉. Big chunks first (little overhead), small ones at the end (good balance). Implementations may deviate from the original algorithm.</li>
+      <li><b>auto</b> lets compiler and runtime choose; <b>runtime</b> takes the schedule from <code>OMP_SCHEDULE</code>. Outside OpenMP: <b>trapezoid self-scheduling</b>, where the chunk size decreases linearly.</li>
+    </ul>
+    <p><b>Factoring</b> (Hummel, Schonberg and Flynn 1992) hands out work in batches: each batch is P equal chunks of X = ⌈R / (2P)⌉, so each batch covers about half of what is left. For N = 100 and 4 CPUs: 4 × 13, 4 × 6, 4 × 3, 4 × 2, 4 × 1. Where GSS gives its first CPU a quarter of all the work in one piece, factoring never hands out more than an eighth, which makes it robust when early iterations are expensive (triangular loops) or when a CPU is interrupted after taking a big chunk (slides 76, 80).</p>
+    ${chart("chunks", leg([[1, "guided self-scheduling"], [2, "factoring"]]))}
+      <figcaption>Chunk sizes in dispatch order for 100 iterations on 4 CPUs, from the formulas of slides 74 and 77. GSS needs 14 dispatches and starts with 25; factoring needs 20 and starts with 13. Hover a column.</figcaption>
+    </figure>
+    ${tbl(["Dispatch", "Remaining R", "GSS chunk ⌈R / 4⌉"], gRows)}
+    ${ex("Worked example: the GSS table of slide 74", `<p>R₁ = 100: X₁ = ⌈100 / 4⌉ = 25, R₂ = 75. X₂ = ⌈18.75⌉ = 19, R₃ = 56. X₃ = 14, R₄ = 42. X₄ = ⌈10.5⌉ = 11, R₅ = 31. X₅ = ⌈7.75⌉ = 8, R₆ = 23. Then 6, 5, 3, 3, 2 and four chunks of 1: 14 chunks in total, summing to 100. Factoring on the same loop: ⌈100 / 8⌉ = 13 four times (52, R = 48), ⌈48 / 8⌉ = 6 four times (R = 24), 3 four times (R = 12), ⌈1.5⌉ = 2 four times (R = 4), and 1 four times.</p>`)}
+    ${lab("ls", "100 iterations, 4 CPUs: static, dynamic, guided, factoring")}
+    ${why("Context, not on the slides: what to try first in practice", `<p>For a loop with equal iterations on a dedicated node, <code>schedule(static)</code> is hard to beat: zero run-time overhead, and each thread touches the same block of data every time step, which keeps it in that core's cache and NUMA domain (first touch, lecture 3). Switch to <code>dynamic</code> with a chunk of a few dozen iterations, or to <code>guided</code>, when iterations differ in cost or the machine is shared; chunk 1 is only worth it for few, heavy iterations. The explorer shows the trade-off: dynamic with chunk 1 balances everything but pays 100 dispatches, guided gets close with 14. Measure rather than guess, since <code>schedule(runtime)</code> plus <code>OMP_SCHEDULE</code> lets you try them without recompiling.</p>`)}
+
+    <h2>Which loops OpenMP accepts (slides 82–91)</h2>
+    <p>C and C++ offer for, while and do-while loops, range-based for loops and iterators (C++11), lambdas with <code>std::for_each</code>, and since C++17 parallel algorithms (<code>std::for_each(std::execution::par, …)</code>), a standard-library cousin of the OpenMP parallel loop. OpenMP itself only parallelises loops in <b>canonical form</b>, because the runtime must be able to compute the iteration count before the loop starts:</p>
+    <ul>
+      <li><code>for (init; test; incr)</code> with a loop variable of integer type, pointer type (C) or random-access iterator (C++), or a range-based for over a random-access range.</li>
+      <li>The test compares the variable with a loop-invariant bound using <code>&lt; &lt;= &gt; &gt;= !=</code>; the increment is <code>++</code>, <code>--</code>, <code>+=</code> or <code>-=</code> a loop-invariant integer. The direction must match the test (<code>&lt;</code> needs an increasing variable), and with <code>!=</code> the step must be exactly ±1.</li>
+      <li>The body must not contain a <code>break</code> or anything else that leaves the loop early.</li>
+    </ul>
+    ${ex("Worked example: canonical or not?", `<p><code>for (int i = 0; i &lt; n; i += 2)</code>: canonical, ⌈n / 2⌉ iterations. <code>for (int i = n; i &gt; 0; i--)</code>: canonical. <code>for (int i = 0; i != n; i += 2)</code>: not allowed, since != needs a step of exactly 1. <code>for (p = head; p != NULL; p = p-&gt;next)</code>: not canonical, as a linked list has no computable trip count (use OpenMP tasks for it instead). A loop with <code>if (a[i] == key) break;</code> in its body: not allowed, since the iteration space would depend on the data.</p>`)}
+
+    <h2>More OpenMP: sections, tasks, synchronisation (slides 92–98)</h2>
+    <ul>
+      <li><b><code>sections</code></b> with one <code>section</code> block each: different code blocks run in parallel on the team's threads, the parbegin/parend of OpenMP.</li>
+      <li><b>Tasks</b> (not the general notion of task from slide 3): typically one thread in a <code>single</code> block creates them, they go into a queue, and any thread of the team may run them, possibly a different one than the creator; the runtime may also move them between threads. <code>depend(out: a)</code>, <code>depend(in: a, b)</code> express dependencies, so <code>baz()</code> waits for <code>foo()</code> and <code>bar()</code>. Nested parallel regions were discussed on slide 95.</li>
+      <li><b><code>single</code></b> runs a block on one thread, <b><code>masked</code></b> on the main thread (or a chosen one) without a barrier, and <code>omp_set_lock</code> / <code>omp_unset_lock</code> lock as in PThreads.</li>
+      <li><b>Barriers</b>: all threads wait until everyone has arrived, and afterwards all see the same memory. They are implicit at the end of a parallel region, a loop and sections; <code>nowait</code> removes the one after a loop when the next loop does not depend on it.</li>
+      <li><b>Environment</b>: <code>OMP_NUM_THREADS</code> (team size), <code>OMP_SCHEDULE</code> (for <code>schedule(runtime)</code>), <code>OMP_PLACES</code> (bind threads to cores or hardware threads), <code>OMP_DYNAMIC</code> (may the runtime change the team size), <code>OMP_WAIT_POLICY</code> (busy or idle waiting).</li>
+    </ul>
+
+    <h2>Summary and limits (slides 143–144)</h2>
+    <p>Shared-memory parallelism has three layers: <b>thread parallelism</b>, unstructured (PThreads) or structured (OpenMP), with a speedup up to the number of cores; <b>SIMD</b> (lecture 5), with a speedup up to the vector width; and <b>pipelining and superscalarity</b> inside the core. A node needs all three to perform. The limits: where threads are placed matters (NUMA, the number of hops between cores, two threads on one physical core with SMT), dependencies and control flow get in the way of parallel loops, and everything here needs one common address space, which ends at the node. Beyond it: distributed memory, networks and MPI, from lecture 6 on 2 Dec.</p>
+
+    <div class="tiles" aria-label="Numbers and formulas to remember">
+      <div class="tile"><div class="v">⌈R / P⌉</div><div class="l">next chunk under guided self-scheduling</div></div>
+      <div class="tile"><div class="v">P × ⌈R / 2P⌉</div><div class="l">one batch under factoring: 4×13, 4×6, 4×3, 4×2, 4×1 for N = 100</div></div>
+      <div class="tile"><div class="v">4</div><div class="l">deadlock conditions, all needed at once: exclusion, hold and wait, no preemption, circular wait</div></div>
+      <div class="tile"><div class="v">TAS · CAS · FAA</div><div class="l">atomic primitives; only FAA's ticket lock is fair</div></div>
+      <div class="tile"><div class="v">-fopenmp</div><div class="l">without it, every <code>#pragma omp</code> is silently ignored</div></div>
+    </div>
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>How do FORK/JOIN, PARBEGIN/PAREND, DOALL and DOACROSS differ?</b> Unstructured branching with counters; properly nested parallel blocks; a loop of independent iterations; a parallel loop with synchronisation from lower to higher iterations.</li>
+      <li><b>What does a thread share and what does it own?</b> It shares the whole address space of its process; it owns its ID, stack, registers, priority, errno and floating-point environment.</li>
+      <li><b>Where do race conditions come from, and what prevents them?</b> Unprotected read-modify-write of shared data under concurrency, preemption or interrupts; atomic instructions and the locks built on them.</li>
+      <li><b>When does a deadlock occur?</b> When mutual exclusion, hold-and-wait, no preemption and circular wait all hold; a fixed lock order is the usual way out.</li>
+      <li><b>What do shared, private, firstprivate, lastprivate and reduction mean?</b> One copy for all; an uninitialised copy per thread; a copy initialised from before; the last iteration's value kept; private copies combined with an operator at the end.</li>
+      <li><b>static, dynamic or guided?</b> Static for equal work on a dedicated machine, dynamic for the best balance at the highest overhead, guided (or factoring) as the compromise.</li>
+    </ul>
+    <h2>Exercise</h2>
+    <p>Today's session discussed <a href="high-performance-computing/exercise.html?n=4">Exercise 04</a> on lecture 3's material (pipelines, peak performance, the roofline model, a Romeo node's topology). The exercise on this lecture, <a href="high-performance-computing/exercise.html?n=5">Exercise 05</a>, is expected in OPAL about a week before your group discusses it on <b>Wed 25 Nov, 07:30</b>.</p>
+    <p class="muted">Next: Shared Memory Programming 2, SIMD and dependencies, from the second half of the same deck (<a href="high-performance-computing/lecture.html?n=5">lecture 5</a>, 25 Nov; no lecture on 18 Nov, Buß- und Bettag). Previous: <a href="high-performance-computing/lecture.html?n=3">lecture 3</a>. Slides: OPAL → Lectures → Slides / Download (they may not be republished; this page summarises them in our own words).</p>`;
 }
 
 function placeholder() {
@@ -1312,8 +1616,8 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the course overview: ${esc(l.blurb)}<br>The summary appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3 };
-const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham, vec: initVec, fp: initFp, coh: initCoh };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham, vec: initVec, fp: initFp, coh: initCoh, da: initDa, scope: initScope, ls: initLs };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
