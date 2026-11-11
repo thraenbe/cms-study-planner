@@ -1473,14 +1473,14 @@ window.CMS = {
       "title": "Simple Patterns for Extensibility",
       "date": "2026-11-10",
       "icon": "🧱",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic: extensibility patterns (ObjectRecursion, Decorator, Proxy, Composite, Chain of Responsibility, Observer), extension of hooks beyond binding.",
+      "covered": true,
+      "blurb": "Extending a hook instead of binding it: ObjectRecursion and its runtime lists and trees, Composite (a piece list as a fold), Decorator with a single mimicked core, Chain of Responsibility for a GUI help system, Proxy and its variants as flat extension, the *-Bridge, and Observer with pull and push models and a simple or DAG change manager.",
       "files": [
        {
         "kind": "slides",
-        "name": "#04 Simple Extensibility",
+        "name": "DPF-04-simple-extensibility.pdf",
         "where": "OPAL · Lecture Slides",
-        "note": "already up"
+        "note": "53 slides"
        },
        {
         "kind": "recording",

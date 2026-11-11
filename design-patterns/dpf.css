@@ -337,3 +337,21 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dpf .ptree .op { font-family: ui-monospace, "IBM Plex Mono", monospace; color: var(--ink); }
 .dpf .ptree .dg { color: var(--ink-3); font-size: 12px; }
 .dpf .ptree .flag { font-size: 11px; padding: 0 6px; }
+/* Lecture 4: extensibility explorers (piece list, decorator stack, help chain, change manager) */
+.dpf .ptree button.pn { font: inherit; font-size: 13px; padding: 1px 7px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dpf .ptree button.pn.sel { outline: 2px solid var(--focus); outline-offset: 1px; }
+.dpf .ptree button.pn.h { background: color-mix(in srgb, var(--vz-s2) 14%, var(--surface)); border-color: color-mix(in srgb, var(--vz-s2) 45%, var(--line)); }
+.dpf .ptree button.pn.p { background: color-mix(in srgb, var(--vz-s4) 16%, var(--surface)); border-color: color-mix(in srgb, var(--vz-s4) 45%, var(--line)); }
+.dpf .ptree .cost { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-2); margin-left: 6px; }
+.dpf .dw { display: flex; justify-content: center; padding: 6px 0 10px; }
+.dpf .dw-fr { border: 3px double var(--vz-s1); border-radius: 6px; padding: 6px; background: var(--surface); }
+.dpf .dw-sb { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+.dpf .dw-sb > .dw-bar { width: 12px; flex: none; border-left: 1px solid var(--line); background: linear-gradient(var(--vz-s2) 0 0) 2px 6px / 6px 22px no-repeat, var(--surface-2); }
+.dpf .dw-sb > .dw-in { padding: 4px; min-width: 0; }
+.dpf .dw-core { font-size: 12.5px; line-height: 1.4; color: var(--ink); background: color-mix(in srgb, var(--vz-s4) 12%, var(--surface)); border-radius: 3px; padding: 6px 8px; max-width: 15em; }
+.dpf .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; font-size: 13px; }
+.dpf .chips .lk { padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.dpf .chips .lk.on { border-color: var(--ok); box-shadow: inset 0 0 0 1px var(--ok); font-weight: 700; }
+.dpf .chips .lk.pass { color: var(--ink-3); }
+.dpf .chips .sep { color: var(--ink-3); }
+.dpf table.tt td.hit { background: color-mix(in srgb, var(--vz-s1) 16%, transparent); font-weight: 700; }
