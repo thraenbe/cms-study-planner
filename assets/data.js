@@ -961,18 +961,32 @@ window.CMS = {
       "title": "Random variate generation",
       "date": "2026-11-02",
       "icon": "🔀",
-      "covered": false,
-      "blurb": "Held on 2 Nov; the deck is not in OPAL yet (checked 6 Nov). The OPAL page maps the lecture to chapter 2 of the lecture notes: transformed random variables, generating uniform pseudo-random numbers and their practical pitfalls, and non-uniform distributions by inversion and accept–reject. Tutorial 2 works through the same material.",
-      "planned": true
+      "covered": true,
+      "blurb": "From uniform numbers to any distribution: transformed random variables and pre-images, the inversion transform X = F⁻¹(U), linear congruential generators and their cycle length, clustering against low-discrepancy (quasi-random) sequences and parallel streams, exponentials by inversion and Newton, Gaussians by the CLT sum and by Box–Muller, and accept–reject with a proposal envelope.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS2.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "21-page summary deck, posted 9 Nov"
+       }
+      ]
      },
      {
       "n": 3,
       "title": "Discrete-time Markov chains",
       "date": "2026-11-09",
       "icon": "⛓️",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic (OPAL course overview): Discrete-time stochastic processes, Markov chains and their transition matrix.",
-      "planned": true
+      "covered": true,
+      "blurb": "Stochastic processes and state spaces; from i.i.d. steps to the Markov property and the transition matrix; every chain as a recursion X(n+1) = f(X(n), U(n)) driven by uniform numbers; n-step matrices and Chapman–Kolmogorov; closed sets, absorbing states, irreducibility, periodicity, ergodicity and stationary distributions; sampling with chains and random walks.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS3.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "18-page summary deck, posted 9 Nov"
+       }
+      ]
      },
      {
       "n": 4,
@@ -1225,7 +1239,7 @@ window.CMS = {
     "selmaNote": "registration is expected to open in December",
     "exerciseNote": "The exercises are Pluto.jl notebooks (Julia): install Julia and Pluto once, open the notebook of the week, work through the interactive figures, quick checks and the exercise block at the end. No points, no hand-in; the first tutorial was on 29 Oct (no session on 22 Oct).",
     "materialsNote": "Lecture decks and tutorial notebooks are in the OPAL course (Lecture2026, Exercises2026); the course also links its own lecture notes (Sbalzarini & Zechner, TU Dresden) and a script and sample questions. Exercise setup: Julia + Pluto; a Python route (Anaconda with jupyter, numpy, scipy, matplotlib) is described on the OPAL page too.",
-    "planNote": "The OPAL course overview lists lectures 0–14 for 14 Monday slots; lectures from 2 on carry the planned topic in that order until the deck appears.",
+    "planNote": "The OPAL course overview lists lectures 0–14 for 14 Monday slots; lectures from 4 on carry the planned topic in that order until the deck appears.",
     "reading": [
      {
       "t": "Sbalzarini & Zechner – Stochastic Modeling and Simulation (lecture notes, TU Dresden)",
