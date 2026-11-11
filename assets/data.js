@@ -1500,14 +1500,14 @@ window.CMS = {
       "title": "Simple Patterns for Extensibility",
       "date": "2026-11-10",
       "icon": "🧱",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic: extensibility patterns (ObjectRecursion, Decorator, Proxy, Composite, Chain of Responsibility, Observer), extension of hooks beyond binding.",
+      "covered": true,
+      "blurb": "Extending a hook instead of binding it: ObjectRecursion and its runtime lists and trees, Composite (a piece list as a fold), Decorator with a single mimicked core, Chain of Responsibility for a GUI help system, Proxy and its variants as flat extension, the *-Bridge, and Observer with pull and push models and a simple or DAG change manager.",
       "files": [
        {
         "kind": "slides",
-        "name": "#04 Simple Extensibility",
+        "name": "DPF-04-simple-extensibility.pdf",
         "where": "OPAL · Lecture Slides",
-        "note": "already up"
+        "note": "53 slides"
        },
        {
         "kind": "recording",
@@ -3340,13 +3340,23 @@ window.CMS = {
      },
      {
       "date": "2026-11-03",
+      "label": "No lecture on 3 Nov and no tutorial on 6 Nov (ICCL calendar, updated 9 Nov)",
+      "kind": "break"
+     },
+     {
+      "date": "2026-11-10",
       "label": "Lecture 3: Local search",
       "kind": "lecture"
      },
      {
-      "date": "2026-11-06",
-      "label": "Tutorial 2 (Local search); sheet in OPAL since 30 Oct",
+      "date": "2026-11-13",
+      "label": "Tutorial 2 (Local search); sheet in OPAL since 30 Oct, revised 10 Nov",
       "kind": "exercise"
+     },
+     {
+      "date": "2026-11-17",
+      "label": "Lecture 4: Tabu search",
+      "kind": "lecture"
      },
      {
       "date": "2026-12-20",
@@ -3354,7 +3364,7 @@ window.CMS = {
       "kind": "break"
      },
      {
-      "date": "2027-01-19",
+      "date": "2027-01-26",
       "label": "Q&A session (planned, as last year)",
       "kind": "lecture"
      },
@@ -3411,7 +3421,7 @@ window.CMS = {
       "v": "J. Computer and System Sciences 64(3) · decompositions block"
      }
     ],
-    "planNote": "Lectures 3–12 are planned topics in last year's order (ICCL calendar WS2025) on the next free Tuesdays, and tutorials 2–10 on the Friday after their lecture; OPAL announces the real plan per session. Last year had two lecture-free Tuesdays in November, so dates may shift. The introduction slides announce 12 lectures and 10 tutorials.",
+    "planNote": "The ICCL calendar (updated 9 Nov) moved local search to 10 Nov and lists lectures up to CSP on 5 Jan; lectures 10–12 (structural decompositions, Q&A) and tutorials 3, 6, 7, 9, 10 of the Friday group are still assumed. The introduction slides announce 12 lectures and 10 tutorials.",
     "lectures": [
      {
       "n": 1,
@@ -3468,7 +3478,7 @@ window.CMS = {
      {
       "n": 3,
       "title": "Local search",
-      "date": "2026-11-03",
+      "date": "2026-11-10",
       "icon": "🏔️",
       "covered": true,
       "planned": false,
@@ -3485,61 +3495,61 @@ window.CMS = {
      {
       "n": 4,
       "title": "Tabu search",
-      "date": "2026-11-10",
+      "date": "2026-11-17",
       "icon": "🚫",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "Escaping local optima with memory: tabu lists, aspiration criteria, intensification and diversification."
      },
      {
       "n": 5,
       "title": "Evolutionary algorithms",
-      "date": "2026-11-17",
+      "date": "2026-11-24",
       "icon": "🧬",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "Populations, fitness, selection, crossover and mutation; genetic algorithms and evolution strategies."
      },
      {
       "n": 6,
       "title": "Answer set programming I",
-      "date": "2026-11-24",
+      "date": "2026-12-01",
       "icon": "📐",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "Logic programs under the stable-model semantics: declarative problem solving with generate-and-test rules."
      },
      {
       "n": 7,
       "title": "Answer set programming II",
-      "date": "2026-12-01",
+      "date": "2026-12-08",
       "icon": "📐",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "Modelling in ASP: choice rules, constraints, aggregates, optimisation statements and the grounding-and-solving workflow."
      },
      {
       "n": 8,
       "title": "Answer set programming III",
-      "date": "2026-12-08",
+      "date": "2026-12-15",
       "icon": "📐",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "How ASP solvers work, and the theory behind them: minimal models, reducts, unfounded sets."
      },
      {
       "n": 9,
       "title": "Constraint satisfaction problems",
-      "date": "2026-12-15",
+      "date": "2027-01-05",
       "icon": "🧩",
       "covered": false,
-      "planned": true,
+      "planned": false,
       "blurb": "Variables, domains and constraints; backtracking with constraint propagation, arc consistency and variable-ordering heuristics."
      },
      {
       "n": 10,
       "title": "Structural decompositions I",
-      "date": "2027-01-05",
+      "date": "2027-01-12",
       "icon": "🌳",
       "covered": false,
       "planned": true,
@@ -3548,7 +3558,7 @@ window.CMS = {
      {
       "n": 11,
       "title": "Structural decompositions II",
-      "date": "2027-01-12",
+      "date": "2027-01-19",
       "icon": "🕸️",
       "covered": false,
       "planned": true,
@@ -3557,7 +3567,7 @@ window.CMS = {
      {
       "n": 12,
       "title": "Questions and exam preparation",
-      "date": "2027-01-19",
+      "date": "2027-01-26",
       "icon": "❓",
       "covered": false,
       "planned": true,
@@ -3586,7 +3596,7 @@ window.CMS = {
      {
       "n": 2,
       "title": "Local search",
-      "date": "2026-11-06",
+      "date": "2026-11-13",
       "icon": "📝",
       "covered": true,
       "planned": false,
@@ -3597,41 +3607,41 @@ window.CMS = {
         "kind": "sheet",
         "name": "APSS-T2.pdf",
         "where": "OPAL · Tutorial 2 (local search)",
-        "note": "2 pages, since 30 Oct, no official solution"
+        "note": "2 pages, since 30 Oct, revised 10 Nov (task 2 parts now a–d), no official solution"
        }
       ]
      },
      {
       "n": 3,
       "title": "Tabu search",
-      "date": "2026-11-13",
-      "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on tabu search follows lecture 4 of that week. Sheet and date are announced in OPAL."
-     },
-     {
-      "n": 4,
-      "title": "Evolutionary algorithms",
       "date": "2026-11-20",
       "icon": "📝",
       "covered": false,
       "planned": true,
-      "blurb": "Planned: the sheet on evolutionary algorithms follows lecture 5 of that week. Sheet and date are announced in OPAL."
+      "blurb": "Planned: the sheet on tabu search follows lecture 4 (17 Nov). The ICCL calendar lists tutorial 3 for the Thursday and Monday groups (19 and 23 Nov); the Friday slot on 20 Nov is not listed yet. Sheet not in OPAL yet."
+     },
+     {
+      "n": 4,
+      "title": "Evolutionary algorithms",
+      "date": "2026-11-27",
+      "icon": "📝",
+      "covered": false,
+      "planned": false,
+      "blurb": "The sheet on evolutionary algorithms follows lecture 5 of that week. Date from the ICCL calendar; the sheet appears in OPAL."
      },
      {
       "n": 5,
       "title": "Answer set programming I",
-      "date": "2026-11-27",
+      "date": "2026-12-04",
       "icon": "📝",
       "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on Answer set programming I follows lecture 6 of that week. Sheet and date are announced in OPAL."
+      "planned": false,
+      "blurb": "The sheet on Answer set programming I follows lecture 6 of that week. Date from the ICCL calendar; the sheet appears in OPAL."
      },
      {
       "n": 6,
       "title": "Answer set programming II",
-      "date": "2026-12-04",
+      "date": "2026-12-11",
       "icon": "📝",
       "covered": false,
       "planned": true,
@@ -3640,7 +3650,7 @@ window.CMS = {
      {
       "n": 7,
       "title": "Answer set programming III",
-      "date": "2026-12-11",
+      "date": "2026-12-18",
       "icon": "📝",
       "covered": false,
       "planned": true,
@@ -3649,16 +3659,16 @@ window.CMS = {
      {
       "n": 8,
       "title": "Constraint satisfaction problems",
-      "date": "2026-12-18",
+      "date": "2027-01-08",
       "icon": "📝",
       "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on constraint satisfaction problems follows lecture 9 of that week. Sheet and date are announced in OPAL."
+      "planned": false,
+      "blurb": "The sheet on constraint satisfaction problems follows lecture 9 of that week. Date from the ICCL calendar; the sheet appears in OPAL."
      },
      {
       "n": 9,
       "title": "Structural decompositions I",
-      "date": "2027-01-08",
+      "date": "2027-01-15",
       "icon": "📝",
       "covered": false,
       "planned": true,
@@ -3667,7 +3677,7 @@ window.CMS = {
      {
       "n": 10,
       "title": "Structural decompositions II",
-      "date": "2027-01-15",
+      "date": "2027-01-22",
       "icon": "📝",
       "covered": false,
       "planned": true,
@@ -3675,7 +3685,7 @@ window.CMS = {
      }
     ],
     "schedule": {
-     "src": "lecture dates and the first tutorial from the ICCL course calendar (WS2026), OPAL and the introduction slides (12 lectures, 10 tutorials); later topics in last year's order (ICCL calendar WS2025); each tutorial assumed on the Friday after its lecture",
+     "src": "ICCL course calendar (WS2026, page updated 9 Nov): lectures 1–9 and the Friday tutorials 1, 2, 4, 5 and 8 with topics and dates; tutorials 3, 6, 7 assumed on the Friday after their lecture (listed for the other groups only); lectures 10–12 and tutorials 9–10 in last year's order",
      "rows": [
       [
        "2026-10-20",
@@ -3694,72 +3704,67 @@ window.CMS = {
       ],
       [
        "2026-11-03",
+       "No lecture on 3 Nov and no tutorial on 6 Nov (ICCL calendar)",
+       "off"
+      ],
+      [
+       "2026-11-10",
        "Lecture 3: Local search",
        "lec"
       ],
       [
-       "2026-11-06",
+       "2026-11-13",
        "Tutorial 2 (Friday group): Local search",
        "exe"
       ],
       [
-       "2026-11-10",
-       "Lecture 4: Tabu search (planned)",
-       "lec"
-      ],
-      [
-       "2026-11-13",
-       "Tutorial 3 (Friday group): Tabu search (planned)",
-       "exe"
-      ],
-      [
        "2026-11-17",
-       "Lecture 5: Evolutionary algorithms (planned)",
+       "Lecture 4: Tabu search",
        "lec"
       ],
       [
        "2026-11-20",
-       "Tutorial 4 (Friday group): Evolutionary algorithms (planned)",
+       "Tutorial 3 (Friday group): Tabu search (planned)",
        "exe"
       ],
       [
        "2026-11-24",
-       "Lecture 6: Answer set programming I (planned)",
+       "Lecture 5: Evolutionary algorithms",
        "lec"
       ],
       [
        "2026-11-27",
-       "Tutorial 5 (Friday group): Answer set programming I (planned)",
+       "Tutorial 4 (Friday group): Evolutionary algorithms",
        "exe"
       ],
       [
        "2026-12-01",
-       "Lecture 7: Answer set programming II (planned)",
+       "Lecture 6: Answer set programming I",
        "lec"
       ],
       [
        "2026-12-04",
-       "Tutorial 6 (Friday group): Answer set programming II (planned)",
+       "Tutorial 5 (Friday group): Answer set programming I",
        "exe"
       ],
       [
        "2026-12-08",
-       "Lecture 8: Answer set programming III (planned)",
+       "Lecture 7: Answer set programming II",
        "lec"
       ],
       [
        "2026-12-11",
-       "Tutorial 7 (Friday group): Answer set programming III (planned)",
+       "Tutorial 6 (Friday group): Answer set programming II (planned)",
        "exe"
       ],
       [
        "2026-12-15",
-       "Lecture 9: Constraint satisfaction problems (planned)",
+       "Lecture 8: Answer set programming III",
        "lec"
       ],
       [
        "2026-12-18",
-       "Tutorial 8 (Friday group): Constraint satisfaction problems (planned)",
+       "Tutorial 7 (Friday group): Answer set programming III (planned)",
        "exe"
       ],
       [
@@ -3769,42 +3774,47 @@ window.CMS = {
       ],
       [
        "2027-01-05",
-       "Lecture 10: Structural decompositions I (planned)",
+       "Lecture 9: Constraint satisfaction problems",
        "lec"
       ],
       [
        "2027-01-08",
-       "Tutorial 9 (Friday group): Structural decompositions I (planned)",
+       "Tutorial 8 (Friday group): Constraint satisfaction problems",
        "exe"
       ],
       [
        "2027-01-12",
-       "Lecture 11: Structural decompositions II (planned)",
+       "Lecture 10: Structural decompositions I (planned)",
        "lec"
       ],
       [
        "2027-01-15",
-       "Tutorial 10 (Friday group): Structural decompositions II (planned)",
+       "Tutorial 9 (Friday group): Structural decompositions I (planned)",
        "exe"
       ],
       [
        "2027-01-19",
-       "Lecture 12: Questions and exam preparation (planned)",
+       "Lecture 11: Structural decompositions II (planned)",
        "lec"
       ],
       [
        "2027-01-22",
+       "Tutorial 10 (Friday group): Structural decompositions II (planned)",
+       "exe"
+      ],
+      [
+       "2027-01-26",
+       "Lecture 12: Questions and exam preparation (planned)",
+       "lec"
+      ],
+      [
+       "2027-01-29",
        "No further tutorials expected: lecture 1 announced 10 tutorials in total",
        "off"
       ],
       [
-       "2027-01-26",
-       "Reserve Tuesday: nothing announced (lecture 1 announced 12 lectures)",
-       "off"
-      ],
-      [
        "2027-02-02",
-       "Reserve Tuesday: nothing announced",
+       "Reserve Tuesday: nothing announced (lecture 1 announced 12 lectures)",
        "off"
       ]
      ]

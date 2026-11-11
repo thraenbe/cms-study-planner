@@ -720,11 +720,353 @@ ComplexObject co = <b>new</b> ComplexObjectBuilder().s1("…").s2("…").build()
       <li><b>What is a Builder, and how does it enforce structure?</b> A factory with a protocol: a stateful director walks a grammar and calls part builders; calls outside the grammar are refused, so only well-formed products exist.</li>
       <li><b>Which lecture-2 pattern is behind each?</b> Template Method, Template Class, Template Class with state.</li>
     </ul>
-    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=2">exercise 2, Creational Patterns</a> (sheet since 30 Oct, discussed 4 Nov) applies all three to the maze game and to UML editors. Next: lecture 4, Simple Patterns for Extensibility (10 Nov). Slides, the learning video and the builder appendix: OPAL → Lectures (they may not be republished).</p>`;
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=2">exercise 2, Creational Patterns</a> (sheet since 30 Oct, discussed 4 Nov) applies all three to the maze game and to UML editors. Next: <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a> (10 Nov). Slides, the learning video and the builder appendix: OPAL → Lectures (they may not be republished).</p>`;
 }
 
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
-const LABS = { mvc: initMvc, facets: initFacets, proto: initProto };
+// ======================= Lecture 4: Simple Patterns for Extensibility (53 slides, 10 Nov) =======================
+const EROLES = leg([[1, "common superclass (the contract)"], [2, "extending class (holds the successor)"], [4, "core / leaf"], [3, "client"]]);
+// Aggregation from a class back to a superclass, drawn around the right side of both boxes (diamond at the whole).
+const backRef = (a, b, label, gapX = 22) => {
+  const x0 = a.x + a.w, y0 = a.cy, xe = b.x + b.w, y1 = b.cy, xr = Math.max(x0, xe) + gapX;
+  return `<g class="edge agg"><path class="dia" d="M${x0},${y0} L${x0 + 7},${y0 - 4} L${x0 + 14},${y0} L${x0 + 7},${y0 + 4} Z"/><path class="ln" d="M${x0 + 14},${y0} L${xr},${y0} L${xr},${y1} L${xe + 1},${y1}"/><path class="arr" d="M${xe + 8},${y1 - 5} L${xe + 1},${y1} L${xe + 8},${y1 + 5}"/>${label ? `<text class="el" x="${(xe + xr) / 2 + 2}" y="${y1 - 6}" text-anchor="middle">${esc(label)}</text>` : ""}</g>`;
+};
+// Self-association on the right side of one box (the successor of Chain of Responsibility).
+const selfRef = (b, label) => {
+  const x0 = b.x + b.w, ya = b.y + 7, yb = b.y + b.h - 7, xr = x0 + 22;
+  return `<g class="edge agg"><path class="dia" d="M${x0},${ya} L${x0 + 7},${ya - 4} L${x0 + 14},${ya} L${x0 + 7},${ya + 4} Z"/><path class="ln" d="M${x0 + 14},${ya} L${xr},${ya} L${xr},${yb} L${x0 + 1},${yb}"/><path class="arr" d="M${x0 + 8},${yb - 5} L${x0 + 1},${yb} L${x0 + 8},${yb + 5}"/>${label ? `<text class="el" x="${xr + 4}" y="${(ya + yb) / 2 + 4}" text-anchor="start">${esc(label)}</text>` : ""}</g>`;
+};
+// The recursive shape shared by ObjectRecursion, Composite and Decorator: client, abstract superclass, a leaf (core),
+// a recursing class that aggregates the superclass, optionally subclasses of the recursing class and a pseudo-code note.
+function recur(narrow, o) {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 96 });
+  const cl = D.box(0, 0, { name: "Client", role: "c", h: 24, span: narrow ? 0.75 : 0.8 });
+  const sp = D.box(narrow ? 0.85 : 1.1, 0, { ...o.sup, role: "t", abstract: true, span: narrow ? 0.9 : 1.3 });
+  const lf = D.box(0, 1.25, { ...o.leaf, role: "p", span: narrow ? 0.95 : 1.2 });
+  const rc = D.box(narrow ? 1 : 1.6, 1.25, { ...o.rec, role: "h", span: narrow ? 0.85 : 1.2 });
+  D.inh(lf, sp); D.inh(rc, sp); D.ref(cl, sp, { label: narrow ? "" : o.cl || "" });
+  (o.subs || []).forEach((s, i) => { const b = D.box(narrow ? 1 + i * 0.45 : 1.6 + i * 0.65, 2.45, { ...s, role: "h", span: narrow ? 0.42 : 0.55, sm: narrow }); D.inh(b, rc); });
+  if (!narrow && o.note) D.note(2.85, 1.25, o.note, rc, { span: 1.1 });
+  return D.svg(o.aria, backRef(rc, sp, narrow ? "" : o.label));
+}
+CHARTS.orec = narrow => recur(narrow, {
+  sup: { name: "Handler", ops: ["handleRequest()", "preHandleRequest()", "postHandleRequest()"] },
+  leaf: { name: "Terminator", ops: ["handleRequest(): work only"] },
+  rec: { name: "Recurser", ops: ["children: Handler[1 or +]", "handleRequest()"] },
+  label: "1 or +", note: ["handleRequest() {", "  preHandleRequest();", "  for all g in children", "    g.handleRequest();", "  postHandleRequest();", "}"],
+  aria: "ObjectRecursion: a client uses the abstract Handler with handleRequest, preHandleRequest and postHandleRequest; the Terminator implements handleRequest by doing the work only; the Recurser holds one or more children of type Handler and implements handleRequest as pre-handling, the recursive call on all children, and post-handling."
+});
+// Runtime nets of slide 11: 1-recursion builds a list, n-recursion a tree.
+CHARTS.runtime = narrow => {
+  const W = narrow ? 340 : 600, bw = narrow ? 50 : 56, bh = 22;
+  const obj = (x, y, t, role) => `<g class="cls ${role}"><rect x="${x - bw / 2}" y="${y - bh / 2}" width="${bw}" height="${bh}" rx="5"/><text class="cn sm" x="${x}" y="${y + 4}" text-anchor="middle" text-decoration="underline">${t}</text></g>`;
+  const arr = (x1, y1, x2, y2) => { const a = Math.atan2(y2 - y1, x2 - x1), s = 7;
+    return `<g class="edge"><path class="ln" d="M${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)}"/><path class="arr" d="M${(x2 - s * Math.cos(a - 0.45)).toFixed(1)},${(y2 - s * Math.sin(a - 0.45)).toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} L${(x2 - s * Math.cos(a + 0.45)).toFixed(1)},${(y2 - s * Math.sin(a + 0.45)).toFixed(1)}"/></g>`; };
+  const ly = narrow ? 44 : 70, lx = narrow ? [36, 112, 188, 276] : [40, 112, 184, 256];
+  const list = lx.map((x, i) => obj(x, ly, i < 3 ? ":Cons" : ":Nil", i < 3 ? "h" : "p")).join("") + lx.slice(0, 3).map((x, i) => arr(x + bw / 2, ly, lx[i + 1] - bw / 2 - 1, ly)).join("");
+  const rx = narrow ? 170 : 460, r0 = narrow ? 112 : 34, dy = narrow ? 52 : 56, d1 = narrow ? 84 : 72, d2 = narrow ? 40 : 36;
+  const T = [[rx, r0, ":Cons", "h"], [rx - d1, r0 + dy, ":Cons", "h"], [rx + d1, r0 + dy, ":Cons", "h"], [rx - d1 - d2, r0 + 2 * dy, ":Nil", "p"], [rx - d1 + d2, r0 + 2 * dy, ":Nil", "p"], [rx + d1 - d2, r0 + 2 * dy, ":Nil", "p"], [rx + d1 + d2, r0 + 2 * dy, ":Cons", "h"]];
+  const E = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 5], [2, 6]];
+  const tree = E.map(([a, b]) => arr(T[a][0], T[a][1] + bh / 2, T[b][0], T[b][1] - bh / 2 - 1)).join("") + T.map(n => obj(...n)).join("");
+  const H = narrow ? r0 + 2 * dy + 22 : r0 + 2 * dy + 26;
+  const cap = `<text class="note" x="${narrow ? 6 : 10}" y="${narrow ? 18 : 30}">1-ObjectRecursion: a list</text><text class="note" x="${narrow ? 6 : rx - 70}" y="${narrow ? 86 : H - 4}">n-ObjectRecursion: a tree (or DAG)</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Runtime nets built by ObjectRecursion: with one successor per recursing object the objects form a list of Cons cells ending in Nil; with several successors they form a tree whose leaves are Nil terminators.">${cap}${list}${tree}</svg>`;
+};
+CHARTS.comp = narrow => recur(narrow, {
+  sup: { name: "CarPart", ops: ["calculateCost(): int"] },
+  leaf: { name: "Screw", ops: ["myCost = 10", "calculateCost()"] },
+  rec: { name: "ComposedCarPart", ops: ["myCost = 5", "addPart(CarPart)", "calculateCost()"] },
+  label: "children *", note: ["calculateCost() {", "  cost = myCost;", "  for c in children:", "    cost +=", "      c.calculateCost();", "  return cost;", "}"],
+  aria: "Composite on the piece list of slide 14: the client uses the abstract CarPart with calculateCost; the leaf Screw costs 10; ComposedCarPart costs 5 itself, holds any number of CarPart children, offers addPart and sums its own cost and the costs of all children."
+});
+CHARTS.deco = narrow => recur(narrow, {
+  sup: { name: "Widget", ops: ["draw()"] },
+  leaf: { name: "TextWidget", ops: ["draw(): the text"] },
+  rec: { name: "WidgetDecorator", ops: ["mimiced: Widget", "draw(): mimiced.draw()"] },
+  subs: [{ name: "Frame", ops: ["draw()"] }, { name: "Scrollbar", ops: ["draw()"] }],
+  label: "mimiced 1", cl: "",
+  note: ["Frame.draw() {", "  super.draw(); // inner", "  drawFrame();  // own", "}"],
+  aria: "Decorator on the widget example of slides 21 and 22: Widget is the abstract class with draw; TextWidget is the core; WidgetDecorator is a Widget that holds exactly one mimiced Widget and forwards draw to it; its subclasses Frame and Scrollbar call super.draw and then add their own drawing."
+});
+// Chain of Responsibility (slide 27): the successor link sits on the abstract Worker itself.
+CHARTS.cor = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 88 });
+  const cl = D.box(0, 0, { name: "Client", role: "c", h: 24, span: narrow ? 0.75 : 0.8 });
+  const w = D.box(narrow ? 0.85 : 1.1, 0, { name: "Worker", ops: ["successor: Worker", "work()"], role: "t", abstract: true, span: narrow ? 0.9 : 1.3 });
+  const a = D.box(narrow ? 0 : 0.6, 1.2, { name: "ConcreteWorker1", ops: ["work()"], role: "h", span: narrow ? 0.95 : 1.1, sm: narrow });
+  const b = D.box(narrow ? 1 : 1.9, 1.2, { name: "ConcreteWorker2", ops: ["work()"], role: "h", span: narrow ? 0.9 : 1.1, sm: narrow });
+  D.inh(a, w); D.inh(b, w); D.ref(cl, w, {});
+  if (!narrow) D.note(3.05, 1.2, ["work() {", "  if (mine) handle();", "  else successor", "         .work();", "}"], b, { span: 0.95 });
+  return D.svg("Chain of Responsibility: the client calls work on an abstract Worker; the Worker class itself holds the successor link to another Worker; ConcreteWorker1 and ConcreteWorker2 implement work by handling the request or passing it to the successor.", selfRef(w, narrow ? "" : "successor 1"));
+};
+// Proxy (slide 34): flat extension, the reference goes to the sister class.
+CHARTS.proxy = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 88 });
+  const cl = D.box(0, 0, { name: "Client", role: "c", h: 24, span: narrow ? 0.75 : 0.8 });
+  const s = D.box(narrow ? 0.85 : 1.1, 0, { name: "Subject", ops: ["operation()"], role: "t", abstract: true, span: narrow ? 0.9 : 1.3 });
+  const r = D.box(0, 1.2, { name: "RealSubject", ops: ["operation()"], role: "p", span: narrow ? 0.85 : 1.1 });
+  const p = D.box(narrow ? 1.05 : 1.7, 1.2, { name: "Proxy", ops: [narrow ? "realSubject" : "realSubject: RealSubject", "operation()"], role: "h", span: narrow ? 0.9 : 1.2 });
+  D.inh(r, s); D.inh(p, s); D.ref(cl, s, {}); D.ref(p, r, { label: narrow ? "" : "realSubject" });
+  if (!narrow) D.note(2.95, 1.2, ["operation() {", "  check / count / load", "  realSubject", "    .operation();", "}"], p, { span: 1.05 });
+  return D.svg("Proxy: client and proxy both see the abstract Subject; RealSubject and Proxy are sister subclasses; the Proxy holds a direct reference to the RealSubject, not to the Subject superclass, and forwards operation to it after its own action.");
+};
+// From flat to recursive: where the four forwarding patterns sit (slides 32, 35, 38).
+const SPEC = [
+  { k: "Proxy", x: 0, d: "1 successor, typed as the sister class; one and only, not chainable", r: "p" },
+  { k: "Decorator", x: 1, d: "1:1 successor typed as the superclass; chains end in a core object", r: "h" },
+  { k: "Chain", x: 2, d: "1:1 successor on the superclass itself; no core object, anyone may answer", r: "h" },
+  { k: "Composite", x: 3, d: "1:n children typed as the superclass; runtime trees and graphs", r: "t" }];
+CHARTS.spectrum = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 42 : 60, R = narrow ? 42 : 60, y0 = 46, step = (W - L - R) / 3;
+  const pts = SPEC.map(s => { const x = L + s.x * step;
+    return `<g class="pt" tabindex="0" data-tip="<b>${s.k}</b>${esc(s.d)}"><circle class="dot" cx="${x}" cy="${y0}" r="8" style="fill:var(--vz-${s.r === "p" ? "s4" : s.r === "h" ? "s2" : "s1"});stroke:var(--surface);stroke-width:2"/><text class="cat" x="${x}" y="${y0 - 16}" text-anchor="middle">${s.k}</text></g>`; }).join("");
+  const ax = `<line class="axis" x1="${L - 14}" x2="${W - R + 14}" y1="${y0}" y2="${y0}"/><text class="tick" x="${L - 14}" y="${y0 + 26}" text-anchor="start">flat: points sideways</text><text class="tick" x="${W - R + 14}" y="${y0 + 26}" text-anchor="end">recursive: 1:n to the superclass</text>`;
+  return `<svg viewBox="0 0 ${W} ${y0 + 36}" role="img" aria-label="Spectrum from flat to recursive extension: Proxy (one successor of the sister class), Decorator (a 1:1 chain to the superclass ending in a core), Chain of Responsibility (a 1:1 chain without core), Composite (1:n children, trees).">${ax}${pts}</svg>`;
+};
+// Classes for k optional, freely combinable features: one subclass per combination versus one decorator per feature.
+const KF = [1, 2, 3, 4, 5, 6];
+CHARTS.explode = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 34 : 44, R = 10, T = 14, B = 30, H = narrow ? 220 : 240, PW = W - L - R, PH = H - T - B, max = 64;
+  const y = v => T + PH - v / max * PH, gw = PW / KF.length, bw = narrow ? 14 : 20;
+  const yt = [0, 16, 32, 48, 64].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = KF.map((k, i) => { const x0 = L + i * gw + gw / 2, a = 2 ** k, d = k + 2;
+    return `<g class="pt" tabindex="0" data-tip="<b>${k} optional feature${k > 1 ? "s" : ""}</b>subclassing: ${a} classes, one per combination<br>decorators: ${d} classes (core, abstract decorator, ${k} decorator${k > 1 ? "s" : ""})">
+      <path class="bar s2" d="${vbar(x0 - bw - 2, bw, y(a), y(0))}"/><path class="bar s1" d="${vbar(x0 + 2, bw, y(d), y(0))}"/>
+      <text class="cat" x="${x0}" y="${H - 10}" text-anchor="middle">k = ${k}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped bar chart: classes needed for k freely combinable optional features of a widget. Subclassing needs one class per combination, 2 to the k: 2, 4, 8, 16, 32, 64. Decorators need the core, the abstract decorator and one decorator per feature, k plus 2: 3, 4, 5, 6, 7, 8.">${yt}${bars}<text class="note" x="${L - 30}" y="10">classes</text></svg>`;
+};
+// *-Bridge (slide 40): a template class with a 1:n aggregation of hook objects.
+CHARTS.star = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 92 });
+  const t = D.box(0, 0, { name: "TemplateClass", ops: ["templateMethod()", "add(hookObj)", "remove(hookObj)"], role: "t", abstract: true, span: narrow ? 1 : 1.4 });
+  const h = D.box(narrow ? 1 : 2.4, 0, { name: "HookClass", ops: ["hookMethod()"], role: "h", abstract: true, span: narrow ? 1 : 1.4 });
+  D.ref(h, t, { kind: "agg", label: narrow ? "" : "hookObjects *" });
+  const subs = narrow ? [[0, "TemplateA", t, "t"], [0.52, "TemplateB", t, "t"], [1, "HookA", h, "h"], [1.52, "HookB", h, "h"]] : [[0, "TemplateA", t, "t"], [0.75, "TemplateB", t, "t"], [2.4, "HookA", h, "h"], [3.15, "HookB", h, "h"]];
+  subs.forEach(([c0, n, p, r]) => D.inh(D.box(c0, 1.25, { name: n, role: r, h: 24, span: narrow ? 0.48 : 0.65, sm: true }), p));
+  if (!narrow) D.note(0.9, 2.25, ["templateMethod() {", "  foreach h in hookObjects", "    h.hookMethod();", "}"], null, { span: 1.4 });
+  return D.svg("Star-Bridge: an abstract TemplateClass with templateMethod, add and remove holds any number of hook objects of the abstract HookClass; both sides have their own subclass hierarchies (TemplateA, TemplateB, HookA, HookB) that vary independently; the template method calls hookMethod on every registered hook object.");
+};
+// Observer (slide 43) and its two protocols (slides 44 and 47).
+CHARTS.obs = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 104 : 96 });
+  const s = D.box(0, 0, { name: "Subject", ops: ["register(Observer)", "unregister(Observer)", "notify()"], role: "t", abstract: true, span: narrow ? 1 : 1.4 });
+  const o = D.box(narrow ? 1 : 2.4, 0, { name: "Observer", ops: ["update()"], role: "h", abstract: true, span: narrow ? 1 : 1.4 });
+  const cs = D.box(0, 1.25, { name: "ConcreteSubject", ops: ["subjectState", "getState()", "setState()"], role: "t", span: narrow ? 1 : 1.4 });
+  const co = D.box(narrow ? 1 : 2.4, 1.25, { name: "ConcreteObserver", ops: ["observerState", "update()"], role: "h", span: narrow ? 1 : 1.4 });
+  D.ref(o, s, { kind: "agg", label: narrow ? "" : "observers *" }); D.inh(cs, s); D.inh(co, o); D.ref(co, cs, { label: narrow ? "" : "subject" });
+  if (!narrow) D.note(0.15, 2.35, ["notify() { for all b in observers", "             b.update(); }"], s, { span: 1.6, dx: 0 });
+  if (!narrow) D.note(2.4, 2.35, ["update() {", "  observerState = subject.getState(); }"], co, { span: 1.55 });
+  return D.svg("Observer: the abstract Subject holds any number of observers and offers register, unregister and notify; notify calls update on every observer; the ConcreteObserver keeps a link back to its ConcreteSubject and pulls the new state with getState inside update.");
+};
+const OPARTS = [{ name: "client", role: "c" }, { name: "aSubject", role: "t" }, { name: "observer1", role: "h" }, { name: "observer2", role: "h" }];
+CHARTS.pull = narrow => seq(narrow, OPARTS, [
+  { from: 2, to: 1, text: "register()" }, { from: 3, to: 1, text: "register()" }, { from: 0, to: 1, text: "setState()" }, { from: 1, to: 1, text: "notify()" },
+  { from: 1, to: 2, text: "update()" }, { from: 2, to: 1, text: "getState()" }, { from: 1, to: 3, text: "update()" }, { from: 3, to: 1, text: "getState()" }],
+  "Sequence diagram of the pull model: both observers register at the subject; the client calls setState; the subject calls notify on itself, which sends a data-free update to observer 1, who calls back getState, and then to observer 2, who calls getState too.");
+CHARTS.push = narrow => seq(narrow, OPARTS, [
+  { from: 2, to: 1, text: "register()" }, { from: 3, to: 1, text: "register()" }, { from: 0, to: 1, text: "setState()" }, { from: 1, to: 1, text: "notify(d)" },
+  { from: 1, to: 2, text: "update(d)" }, { from: 1, to: 3, text: "update(d)" }],
+  "Sequence diagram of the push model: both observers register; after setState the subject's notify sends update with the data d to observer 1 and to observer 2; no observer calls back, so no permanent back link is needed.");
+// Explorer 1: a piece list as a Composite; calculateCost() is a fold over the tree.
+function initParts(body) {
+  let id = 0;
+  const mk = (kind, name, kids = []) => ({ id: id++, kind, name, kids });
+  const fresh = () => mk("c", "Car", [mk("c", "Engine", [mk("l", "Screw"), mk("l", "Screw")]), mk("c", "Wheel", [mk("l", "Screw"), mk("l", "Screw"), mk("l", "Screw")]), mk("l", "Screw")]);
+  let root = fresh(), sel = root.id, log = [];
+  const cost = n => n.kind === "l" ? 10 : 5 + n.kids.reduce((s, k) => s + cost(k), 0);
+  const count = n => 1 + (n.kind === "c" ? n.kids.reduce((s, k) => s + count(k), 0) : 0);
+  const depth = n => n.kind === "l" || !n.kids.length ? 1 : 1 + Math.max(...n.kids.map(depth));
+  const find = (n, i, parent = null) => { if (n.id === i) return { n, parent }; if (n.kind === "c") for (const k of n.kids) { const r = find(k, i, n); if (r) return r; } return null; };
+  const li = n => `<li><button class="pn ${n.kind === "l" ? "p" : "h"} ${n.id === sel ? "sel" : ""}" data-id="${n.id}" aria-pressed="${n.id === sel}">${esc(n.name)}</button><span class="cost">${cost(n)}</span>${n.kind === "c" && n.kids.length ? `<ul>${n.kids.map(li).join("")}</ul>` : ""}</li>`;
+  const render = () => {
+    const s = find(root, sel).n;
+    body.innerHTML = `<p class="lab-note">Click a part to select it, then add children to it. The number after each part is its <code>calculateCost()</code>: a screw (leaf) costs 10, a composed part 5 plus the sum of its children. The client calls the method once on the root and never asks whether it holds a leaf or a composite.</p>
+      <div class="proto"><button data-a="screw">addPart(new Screw())</button><button data-a="comp">addPart(new ComposedCarPart())</button><button data-a="del">remove selected</button><button data-a="reset">reset</button></div>
+      <div class="pgrid"><ul class="ptree">${li(root)}</ul>
+        <dl class="ro"><dt>root.calculateCost()</dt><dd>${cost(root)}</dd><dt>calls in total</dt><dd>${count(root)} (one per object)</dd><dt>depth of the recursion</dt><dd>${depth(root)}</dd><dt>selected</dt><dd>${esc(s.name)} · ${s.kind === "l" ? "leaf" : "composite"}</dd></dl></div>
+      <div class="trace">${log.slice(-3).map(l => `<div>${l}</div>`).join("") || "<span class='muted'>select a part and add a child</span>"}</div>`;
+    body.querySelectorAll("button.pn").forEach(b => b.addEventListener("click", () => { sel = +b.dataset.id; render(); body.querySelector(`button.pn[data-id="${sel}"]`).focus(); }));
+    body.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => {
+      const a = b.dataset.a, f = find(root, sel);
+      if (a === "reset") { root = fresh(); sel = root.id; log = []; }
+      else if (a === "del") { if (!f.parent) log.push(`<span class="bad">✗ remove</span> the root is held by the client, not by a composite`); else { f.parent.kids = f.parent.kids.filter(k => k.id !== sel); log.push(`<span class="ok">✓ ${esc(f.parent.name)}.remove(${esc(f.n.name)})</span> total now ${cost(root)}`); sel = f.parent.id; } }
+      else if (f.n.kind === "l") log.push(`<span class="bad">✗ Screw.addPart()</span> a leaf has no children: with add() declared on every component (slide 13), the leaf has to refuse at run time`);
+      else { const k = a === "screw" ? mk("l", "Screw") : mk("c", "Part" + id); f.n.kids.push(k); log.push(`<span class="ok">✓ ${esc(f.n.name)}.addPart(${esc(k.name)})</span> +${a === "screw" ? 10 : 5}, total now ${cost(root)}`); if (a === "comp") sel = k.id; }
+      render();
+    }));
+  };
+  render();
+}
+// Explorer 2: a decorator stack around a TextWidget; the call order of draw() through the chain.
+function initDeco(body) {
+  let stack = ["Frame", "Scrollbar"]; // outermost first
+  const view = () => stack.slice().reverse().reduce((inner, d) => d === "Frame" ? `<div class="dw-fr">${inner}</div>` : `<div class="dw-sb"><div class="dw-in">${inner}</div><div class="dw-bar"></div></div>`, `<div class="dw-core">TextWidget: the plain text, unaware of any decoration.</div>`);
+  const render = () => {
+    const down = stack.map((d, i) => `<div>${"  ".repeat(i)}${i ? "→ " : "client → "}${d}.draw() → super.draw() → mimiced.draw()</div>`).join("");
+    const core = `<div>${"  ".repeat(stack.length)}→ TextWidget.draw(): <b>text</b></div>`;
+    const up = stack.slice().reverse().map((d, i) => `<div>${"  ".repeat(stack.length - 1 - i)}← ${d}: ${d === "Frame" ? "drawFrame()" : "drawScrollbar()"}</div>`).join("");
+    body.innerHTML = `<p class="lab-note">Wrap the text widget in decorators. The client holds one <code>Widget</code> reference to the outermost object and calls <code>draw()</code> once; each decorator passes the call inward first and adds its own drawing on the way back out (post-action), so the innermost decorator draws first.</p>
+      <div class="proto"><button data-a="Frame">wrap in Frame</button><button data-a="Scrollbar">wrap in Scrollbar</button><button data-a="pop" ${stack.length ? "" : "aria-disabled=\"true\""}>unwrap outermost</button><button data-a="reset">reset</button></div>
+      <div class="chips"><span class="lk on">client</span>${stack.map(d => `<span class="sep">→</span><span class="lk">:${d}</span>`).join("")}<span class="sep">→</span><span class="lk">:TextWidget</span></div>
+      <div class="dw" aria-label="rendered widget">${view()}</div>
+      <dl class="ro"><dt>objects in the chain</dt><dd>${stack.length + 1}</dd><dt>draw() calls for one client call</dt><dd>${stack.length + 1}</dd><dt>classes touched</dt><dd>none: decorators are added at run time</dd></dl>
+      <div class="trace" style="white-space:pre-wrap">${down}${core}${up}</div>`;
+    body.querySelectorAll("[data-a]").forEach(b => b.addEventListener("click", () => { const a = b.dataset.a;
+      if (a === "reset") stack = ["Frame", "Scrollbar"]; else if (a === "pop") stack.shift(); else if (stack.length < 5) stack.unshift(a); render(); }));
+  };
+  render();
+}
+// Explorer 3: the help system of slides 29 and 30 as a chain of responsibility.
+function initChain(body) {
+  const W = { pb: { name: "PrintButton", next: "pd" }, ok: { name: "OKButton", next: "sd" }, pd: { name: "PrintDialog", next: "app" }, sd: { name: "StoreDialog", next: "app" }, app: { name: "Application", next: null } };
+  const help = { pb: false, ok: true, pd: true, sd: false, app: true };
+  let start = "pb", all = false;
+  const walk = () => { const path = []; let k = start; while (k) { const h = help[k]; path.push({ k, h }); if (h && !all) break; k = W[k].next; } return path; };
+  const render = () => {
+    const p = walk(), answered = p.filter(x => x.h);
+    body.innerHTML = `<p class="lab-note">Choose where the user presses F1 and which objects have a help text. Each object either answers or passes the query to its <code>nextWorker</code>, up the widget tree to the application. The sender never learns who answered: anonymous communication.</p>
+      <div class="ctl"><label>F1 pressed on <select data-k="start">${["pb", "ok", "pd", "sd"].map(k => `<option value="${k}" ${k === start ? "selected" : ""}>${W[k].name}</option>`).join("")}</select></label>
+        <label><input type="checkbox" data-k="all" ${all ? "checked" : ""}> answering objects pass on too (the Dialog of slide 30)</label></div>
+      <div class="ctl">${Object.keys(W).map(k => `<label><input type="checkbox" data-h="${k}" ${help[k] ? "checked" : ""}> ${W[k].name} has help</label>`).join("")}</div>
+      <div class="chips">${p.map((x, i) => `${i ? '<span class="sep">→</span>' : ""}<span class="lk ${x.h ? "on" : "pass"}">${W[x.k].name}${x.h ? " ✓" : ""}</span>`).join("")}${!all && p[p.length - 1].h ? '<span class="sep">· answered, stop</span>' : ""}</div>
+      <dl class="ro"><dt>objects asked</dt><dd>${p.length}</dd><dt>answered by</dt><dd>${answered.length ? answered.map(x => W[x.k].name).join(", ") : "nobody: the query fell off the end of the chain"}</dd></dl>`;
+    body.querySelector("[data-k=start]").addEventListener("change", e => { start = e.target.value; render(); });
+    body.querySelector("[data-k=all]").addEventListener("change", e => { all = e.target.checked; render(); });
+    body.querySelectorAll("[data-h]").forEach(el => el.addEventListener("change", e => { help[e.target.dataset.h] = e.target.checked; render(); }));
+  };
+  render();
+}
+// Explorer 4: Observer with a change manager (slide 49): simple versus DAG manager when several subjects change at once.
+function initCm(body) {
+  const OBS = { O1: ["S1", "S2"], O2: ["S2", "S3"], O3: ["S1", "S2", "S3"] }, SUB = ["S1", "S2", "S3"];
+  let changed = ["S1", "S2", "S3"], dag = false;
+  const render = () => {
+    const simple = changed.flatMap(s => Object.keys(OBS).filter(o => OBS[o].includes(s)).map(o => `${o}.update(${s})`));
+    const marked = Object.keys(OBS).filter(o => OBS[o].some(s => changed.includes(s)));
+    const calls = dag ? marked.map(o => `${o}.update()`) : simple;
+    body.innerHTML = `<p class="lab-note">Three subjects, three observers; the table is the change manager's subject–observer mapping. Pick the subjects that change in one operation. The <b>simple</b> manager forwards every change on its own; the <b>DAG</b> manager first marks all affected observers and then updates each of them once.</p>
+      <div class="ctl">${SUB.map(s => `<label><input type="checkbox" data-s="${s}" ${changed.includes(s) ? "checked" : ""}> ${s} changes</label>`).join("")}
+        <label>manager <select data-k="m"><option value="s" ${dag ? "" : "selected"}>SimpleChangeManager</option><option value="d" ${dag ? "selected" : ""}>DAGChangeManager</option></select></label></div>
+      <div class="tt-wrap"><table class="tt"><tr><th></th>${SUB.map(s => `<th>${s}</th>`).join("")}</tr>${Object.keys(OBS).map(o => `<tr><td>${o}</td>${SUB.map(s => `<td class="${OBS[o].includes(s) && changed.includes(s) ? "hit" : ""}">${OBS[o].includes(s) ? "✓" : ""}</td>`).join("")}</tr>`).join("")}</table></div>
+      <dl class="ro"><dt>update() calls</dt><dd>${calls.length}</dd><dt>simple / DAG</dt><dd>${simple.length} / ${marked.length}</dd></dl>
+      <div class="trace">${calls.length ? calls.join(" · ") : "<span class='muted'>nothing changed, nothing to update</span>"}</div>`;
+    body.querySelectorAll("[data-s]").forEach(el => el.addEventListener("change", e => { const s = e.target.dataset.s; changed = e.target.checked ? SUB.filter(x => x === s || changed.includes(x)) : changed.filter(x => x !== s); render(); }));
+    body.querySelector("[data-k=m]").addEventListener("change", e => { dag = e.target.value === "d"; render(); });
+  };
+  render();
+}
+function lecture4() {
+  return `${head(l)}
+    <p class="lead">Lectures 2 and 3 varied a hook: a template calls a hook, and the hook is bound once to one hook value (a subclass, a strategy object, a factory). Lecture 4 turns to <b>extension</b>: the hook keeps taking further values while the program runs. Almost every pattern of the lecture gets this from one structural trick, an aggregation from a subclass back to its own abstract superclass, so that objects can be strung into lists, chains and trees at run time while every object honours the same contract. The deck sorts the patterns into <b>recursive extension</b> (ObjectRecursion, Composite, Decorator, Chain of Responsibility) and <b>flat extension</b> (Proxy, *-Bridge, Observer). Written from the 53-slide deck; slide numbers refer to it.</p>
+
+    <h2>Variability versus extensibility (slides 4–6)</h2>
+    <p>The variability patterns so far gave <b>static extensibility</b> (write a new subclass) and <b>dynamic exchangeability</b> (polymorphism picks the subclass at run time), but not <b>dynamic extensibility</b>: adding behaviour to a running object net without rebinding what is there. Binding a hook replaces its value; extending a hook adds another value next to the first one (slide 6). The tell-tale mark of the extensibility patterns is a <b>1:n aggregation that grows at run time</b>.</p>
+    <ul class="cmp">
+      <li><b>Binding a hook</b><span class="v">one hook value, chosen at configuration or allocation time</span><span class="v">Template Method, Strategy, Bridge, factories (lectures 2–3)</span></li>
+      <li><b>Extending a hook</b><span class="v">more hook values added and removed at run time</span><span class="v">ObjectRecursion, Composite, Decorator, Chain, *-Bridge, Observer</span></li>
+    </ul>
+    ${why("Context, not on the slides: why the aggregation has to point at the superclass", "<p>If a Recurser held a list of Recursers, the net could only grow by more of the same class. Typing the link with the abstract superclass means any present or future subclass can be plugged in, including ones written after the framework shipped: that is what makes the extension <em>unforeseen</em>. The price is that every object on the net must satisfy the superclass contract, which is why the slides keep stressing the common condition the abstract class lays down.</p>")}
+
+    <h2>ObjectRecursion, the common core (slides 7–11)</h2>
+    <p>ObjectRecursion looks like Template Method, Objectifier and Strategy, but the dependency between the classes now recurses: through inheritance and aggregation at once (slide 9). An abstract <b>Handler</b> states the contract; the <b>Terminator</b> does the work and stops; the <b>Recurser</b> pre-handles, calls the same operation on its children and post-handles. Because both subclasses fulfil the common condition, a client can treat them uniformly under one interface (slide 10). The aggregation may be 1:1 (lists, 1-recursion), 1:* (trees) or *:* (DAGs and graphs, n-recursion).</p>
+    ${chart("orec", EROLES)}<figcaption>Our drawing of slide 9. The diamond-tipped arrow around the right side is the recursion: a Recurser aggregates one or more objects of its own superclass.</figcaption></figure>
+    ${chart("runtime", leg([[2, "recursing object (Cons)"], [4, "terminator (Nil)"]]))}<figcaption>Slide 11 redrawn: 1-ObjectRecursion builds lists, n-ObjectRecursion trees, DAGs and graphs. The recursion is what lets runtime nets be built up.</figcaption></figure>
+
+    <h2>Composite (slides 12–18)</h2>
+    <p>Composite is the older, GOF-catalogued version of ObjectRecursion and slightly more concrete (slide 15): a <b>Component</b> with the common operations, <b>Leaf</b> classes, and a <b>Composite</b> that holds any number of children and implements each operation by doing it for all children. The structure on slide 13 also declares <code>add()</code> and <code>remove()</code> on the component, so leaf and inner node offer the same interface. Typical runtime structures are part–whole hierarchies, such as nested graphical objects where a Picture contains Lines, Rectangles and further Pictures, all of which can be drawn, moved, deleted and scaled (slide 16).</p>
+    ${chart("comp", EROLES)}<figcaption>The piece list of slide 14 as a class diagram: a composed part costs 5 itself plus whatever its children cost; a screw costs 10.</figcaption></figure>
+    ${ex("Worked example: the piece list of slide 14, in working Java", `<p>The slide's code sketches the idea; as written it would not run (the loop goes to <code>i &lt;= children.length</code>, one past the end; <code>curCost</code> is never initialised; and a Java array cannot grow with <code>children.length++</code>). The same Composite with those three points fixed:</p>
+<pre class="code"><b>abstract class</b> CarPart { <b>abstract int</b> <i>calculateCost</i>(); }
+<b>class</b> Screw <b>extends</b> CarPart { <b>int</b> <i>calculateCost</i>() { <b>return</b> 10; } }             <em>// leaf</em>
+<b>class</b> ComposedCarPart <b>extends</b> CarPart {
+  <b>private final</b> List&lt;CarPart&gt; children = <b>new</b> ArrayList&lt;&gt;(); <em>// n-recursion</em>
+  <b>void</b> addPart(CarPart c) { children.add(c); }
+  <b>int</b> <i>calculateCost</i>() {
+    <b>int</b> cost = 5;   <em>// own cost</em>
+    <b>for</b> (CarPart c : children) cost += c.<i>calculateCost</i>();
+    <b>return</b> cost;
+  }
+}</pre>
+<p>A car of an engine (2 screws), a wheel (3 screws) and one loose screw: engine = 5 + 2 · 10 = 25, wheel = 5 + 3 · 10 = 35, car = 5 + 25 + 35 + 10 = <b>75</b>. The client made one call; the tree made nine, one per object. That is the default state of the explorer below.</p>`)}
+    ${lab("parts", "a piece list as a Composite")}
+    <ul>
+      <li><b>Purpose</b> (slide 15): a good method for building trees and iterating over them. An iterator (map) or a fold (folding a tree with a scalar function, as <code>calculateCost</code> does with +) can treat all nodes uniformly. The Composite's secret is whether a leaf or an inner node is being worked on, and which subclass.</li>
+      <li><b>Dynamic extensibility</b> (slide 17): thanks to the n-recursion new children can always be added to a composite node. Whenever an extensible part of a framework is to be programmed, consider Composite.</li>
+      <li><b>Functional programming</b> (slide 18): recursion is the heart of functional programming and Composite is its object-oriented form; the algorithmic skeletons found there (map, fold, partition, divide and conquer, zip) all run over composites.</li>
+    </ul>
+    ${why("Context, not on the slides: transparency versus safety", "<p>Declaring <code>add()</code> and <code>remove()</code> on the component, as slide 13 does, makes leaves and composites interchangeable for the client (transparency) but forces the leaf to do something with an <code>add()</code> it cannot honour, typically throw. Declaring them only on Composite is type-safe, but the client then has to know what it holds before adding. The GOF book discusses exactly this trade-off; the explorer refuses an add on a screw at run time, which is the transparent variant.</p>")}
+
+    <h2>Decorator (slides 19–24)</h2>
+    <p>A Decorator is a skin around another object (slide 20): a subclass of a class that also contains <b>exactly one</b> object of that class as its delegatee, so it combines inheritance with aggregation, like ObjectRecursion with a single child. The core object sits at the end of the decorator chain and does not know it is decorated; the client cannot tell a decorated object from a plain one, because the abstract class defines the contract for the mimicked and the mimicking class alike. Each decorator runs a pre-action, forwards to the mimicked object, and runs a post-action (slide 21).</p>
+    ${chart("deco", EROLES)}<figcaption>Slides 21 and 22 combined: the widget example with Frame and Scrollbar as concrete decorators. Each one calls <code>super.draw()</code>, which forwards to the mimicked widget, and then draws its own addition.</figcaption></figure>
+    ${lab("deco", "a decorator stack around a text widget")}
+    ${ex("Worked example: the persistent record of slide 23", `<p>A <code>TransientRecord</code> lives only in memory. A <code>PersistentRecord</code> decorator wraps it and makes it loadable: its <code>access()</code> runs <code>if (!loaded()) load();</code> and then <code>super.access()</code>, which forwards to the wrapped record; it also offers <code>modified()</code> and <code>dump()</code> to write changes back. A <code>PersistentReadOnlyRecord</code> only loads. Three accesses to a fresh persistent record: the first triggers <b>load(), then access()</b>; the second and third find <code>loaded()</code> true and go straight to the record. The record class itself never changed, and the persistence can be removed by unwrapping.</p>`)}
+    <ul>
+      <li><b>Purpose</b> (slide 24): extensible objects whose new features are added at run time and can be removed again, instead of being put into the inheritance hierarchy, either because that hierarchy would become too complex or because it is hidden inside a library that cannot be changed.</li>
+    </ul>
+    ${chart("explode", leg([[2, "one subclass per combination (2ᵏ)"], [1, "one decorator per feature (k + 2)"]]))}<figcaption>Context, not on the slides: our count of what "too complex" means. For k optional features that can be combined freely (frame, scrollbar, border, shadow …), subclassing needs one class per subset, decorators need the core, the abstract decorator and k feature classes. Hover a group for the numbers.</figcaption></figure>
+    ${tbl(["Features k", "Subclasses 2ᵏ", "Decorator classes k + 2"], KF.map(k => [k, 2 ** k, k + 2]))}
+    ${why("Context, not on the slides: where decorators show up in everyday Java", "<p>The <code>java.io</code> streams are the standard textbook Decorator: <code>new BufferedReader(new InputStreamReader(new FileInputStream(f)))</code> wraps a byte source in a character decoder and a buffer, each of them a <code>Reader</code> or <code>InputStream</code> itself. The order matters, because each decorator sees only what the inner one hands out; for k decorators there are k! stacking orders, and not all of them make sense. That is the price of the flexibility the bar chart shows.</p>")}
+
+    <h2>Chain of Responsibility (slides 25–31)</h2>
+    <p>A request is delegated to a list of objects that try to solve it one after the other, each passing it further down the chain (slide 26). Unlike Decorator there is <b>no core object</b>: the chain may end anywhere. The successor link sits on the abstract superclass itself (slide 27), so every class in the hierarchy knows that it hides some other object. Chains can also be paths in a runtime tree, running upward to the root (slide 28).</p>
+    ${chart("cor", leg([[1, "abstract worker with the successor link"], [2, "concrete workers"], [3, "client"]]))}<figcaption>Slide 27 redrawn: the recursion is on the superclass, drawn as a self-association. Compare ObjectRecursion, where only the Recurser holds the link.</figcaption></figure>
+    ${lab("chain", "the GUI help system of slides 29 and 30")}
+    ${ex("Worked example: F1 on the OK button", `<p>The object structure of slide 29 is a tree of help workers: buttons inside dialogs inside the application, each linked to the next worker up. Press F1 on the <b>OKButton</b> with help texts on OKButton, PrintDialog and Application (the explorer's default): the OKButton has help, answers, and the query stops after <b>one</b> object. Untick its help: the query moves to the <b>StoreDialog</b>, which has none, and on to the <b>Application</b>, which answers after three objects. With the slide-30 Dialog, which shows its help and then calls <code>super.workOnHelpQuery()</code>, a query from the PrintButton is answered by both PrintDialog and Application: several receivers working on one message.</p>`)}
+    <ul>
+      <li><b>When</b> (slide 31): the receiver of a message is known neither at compile time nor at allocation time, only at run time, because it depends on the current object net. That dynamic call is the key construct of service-oriented architectures.</li>
+      <li><b>Dynamic extensibility</b>: new receivers with new behaviour can be inserted into the chain at run time, including unforeseen ones; but there is no mimicked object as in Decorator.</li>
+      <li><b>Anonymous communication</b>: the sender does not need to know, or care, which receiver handles the message, and several receivers may work on it.</li>
+    </ul>
+
+    <h2>Composite, Decorator, Chain and Proxy compared (slides 32–38)</h2>
+    <p><b>Proxy</b> is the first <em>flat</em> extensibility pattern (slides 34–35): a representative that hides the access to a real subject. It looks like a Decorator but is not derived from ObjectRecursion. It holds a direct pointer to its <b>sister class</b> RealSubject, not to the superclass, so chained proxies are impossible; a proxy is one and only. If it collects all references to the represented object, it shadows it and becomes its facade. Decorator lies between Proxy and Chain.</p>
+    ${chart("proxy", leg([[1, "abstract subject"], [2, "proxy"], [4, "real subject"], [3, "client"]]))}<figcaption>Slide 34 redrawn. The reference is typed RealSubject; type it Subject instead and the Proxy turns into a Decorator.</figcaption></figure>
+    ${chart("spectrum", leg([[4, "flat"], [2, "1:1 recursive"], [1, "1:n recursive"]]))}<figcaption>Our arrangement of the comparisons on slides 32 and 38, from flat to fully recursive. Hover a point for its successor relation.</figcaption></figure>
+    <div class="tt-wrap"><table class="tt"><tr><th>Pattern</th><th>Successor</th><th>Typed as</th><th>Chain ends in</th><th>Common contract</th></tr>
+      <tr><td>ObjectRecursion</td><td>1:1 or 1:n</td><td>superclass</td><td>Terminator</td><td>yes</td></tr>
+      <tr><td>Composite</td><td>1:n (tree, graph)</td><td>superclass</td><td>leaves</td><td>all methods</td></tr>
+      <tr><td>Decorator</td><td>1:1 (list)</td><td>superclass</td><td>the mimicked core</td><td>all methods, different features</td></tr>
+      <tr><td>Chain</td><td>1:1 (list or path in a tree)</td><td>the superclass itself</td><td>anywhere, no core</td><td>the handling method</td></tr>
+      <tr><td>Proxy</td><td>exactly 1</td><td>sister class</td><td>the real subject</td><td>all methods, shadowing</td></tr></table></div>
+    <p><b>Proxy variants</b> (slide 36): filter proxy or smart reference (extra actions on every access), protocol proxy (reference counting for garbage collection, or a synchronisation protocol such as readers and writers), indirection or facade proxy (collects all references so the object can be replaced), virtual proxy (creates expensive objects on demand), remote proxy (stands in for an object elsewhere), caching proxy, protection proxy and firewall. Some languages build the proxy in (slide 37): overloading the access operator <code>-&gt;</code> in C++ or Ada makes it invisible, Modula-3 has smart pointers, and Gilgul offers proxy objects.</p>
+    ${why("Context, not on the slides: telling the four apart in an exam answer", "<p>Three questions settle it. How many successors? (n: Composite; one: the others.) Is the link typed with the superclass? (no: Proxy.) Is there a fixed core at the end that does the real work? (yes: Decorator; no, any object may answer or pass: Chain.) The slides draw this line themselves on slides 32 and 38; the pattern names in a design document follow from the answers, not from what the class is called.</p>")}
+
+    <h2>*-Bridge, dimensional class hierarchies (slides 39–40)</h2>
+    <p>The Bridge of <a href="design-patterns/lecture.html?n=2">lecture 2</a> connects a template class to <em>one</em> hook object, so template and hook hierarchies vary independently. The *-Bridge (Star-Bridge) gives the template class a 1:n aggregation of hook objects with <code>add</code> and <code>remove</code>; the template method runs over all of them. Both hierarchies stay independent and new hooks can be registered while the program runs.</p>
+    ${chart("star", leg([[1, "template hierarchy"], [2, "hook hierarchy"]]))}<figcaption>Slide 40 redrawn: two independent class hierarchies, joined by a star (1:n) aggregation.</figcaption></figure>
+
+    <h2>Observer, the event bridge (slides 41–50)</h2>
+    <p>Observer (publisher/subscriber, event bridge) keeps several views consistent with one subject: change the data, and every registered window showing it as a table, a bar chart or a pie is notified (slide 42; the same data as the MVC explorer of <a href="design-patterns/lecture.html?n=1">lecture 1</a>). Structurally it is a *-Bridge from subject to observers, with one difference (slide 43): the hierarchies are not completely independent, because the concrete observer knows its subject and pulls the state from it.</p>
+    ${chart("obs", leg([[1, "subject side"], [2, "observer side"]]))}<figcaption>Slide 43 redrawn: subject and observer hierarchies, the 1:n observer list, and the back link from the concrete observer to its subject.</figcaption></figure>
+    ${chart("pull", leg([[3, "client"], [1, "subject"], [2, "observers"]]))}<figcaption>The default pull model of slide 44: <code>update()</code> carries no data, only the event, and each observer calls <code>getState()</code> itself. The subject neither cares nor knows what the observers do with it.</figcaption></figure>
+    ${chart("push", leg([[3, "client"], [1, "subject"], [2, "observers"]]))}<figcaption>The push variant of slides 46 and 47: <code>notify(d)</code> hands the data to <code>update(d)</code>, so the observer needs no permanent back link. For n observers: pull takes 2n messages after <code>notify</code>, push takes n.</figcaption></figure>
+    <ul>
+      <li><b>Variants</b> (slide 45): with several subjects, <code>update(Subject s)</code> tells the observer which one changed; push model; change manager.</li>
+      <li><b>Applications</b> (slide 48): loose coupling, the observers decide what happens; dynamic change of communication; anonymous, multicast and broadcast communication; cascading communication when observers are chained (stacked); and aspect-orientation by hand, when one aspect of an abstraction listens and reacts to the core.</li>
+      <li><b>Change manager</b> (slides 49–50): a Mediator between subjects and observers that keeps the subject–observer mapping. The <b>simple</b> manager forwards every notification to all observers of that subject; the <b>DAG</b> manager marks all observers to be updated and updates each marked one once. Under the name <b>event bus</b> this is the basis of many interactive application frameworks (X Windows, Java AWT, Java InfoBus).</li>
+    </ul>
+    ${lab("cm", "simple versus DAG change manager")}
+    ${ex("Worked example: one operation changes all three subjects", `<p>O1 observes S1 and S2, O2 observes S2 and S3, O3 observes all three. The simple manager forwards S1 to O1 and O3, S2 to O1, O2 and O3, S3 to O2 and O3: <b>7 update calls</b>, O3 alone gets three and redraws three times, twice with a half-updated picture. The DAG manager marks O1, O2, O3 and updates each once: <b>3 calls</b>, each seeing the final state. With only S1 changing, both managers send 2. The saving grows with how much the observers' subject sets overlap; exercise 3 shows the other job of a manager, breaking a cycle of chained observers.</p>`)}
+
+    <h2>Relations and summary (slides 51–52)</h2>
+    <p>Slide 51 maps the patterns of lectures 2 to 4 onto two axes: unconstrained patterns (Proxy, Visitor, Decorator, Bridge, *-Bridge) against recursive framework patterns (ObjectRecursion, Composite, Chain), all of them obeying the template-and-hook (T&amp;H) role model, with Observer as a connection pattern and dimensional class hierarchies as the unconstrained form of the *-Bridge. The summary (slide 52): most extensibility patterns rely on ObjectRecursion, an aggregation to the superclass; that allows runtime nets (lists, sets, graphs) to be built and hence dynamic extension, and the common superclass ensures a common contract for every object in the net.</p>
+    <div class="tiles"><div class="tile"><div class="v">1:n → super</div><div class="l">the aggregation that makes a pattern dynamically extensible</div></div><div class="tile"><div class="v">core / no core</div><div class="l">Decorator ends in one; a Chain does not</div></div><div class="tile"><div class="v">sister class</div><div class="l">where a Proxy points: flat, one and only</div></div><div class="tile"><div class="v">7 → 3</div><div class="l">update calls, simple vs DAG manager, in the example</div></div></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Binding versus extending a hook?</b> Binding sets one hook value; extending adds further values at run time through a 1:n aggregation.</li>
+      <li><b>What is ObjectRecursion?</b> An abstract superclass with a Terminator and a Recurser that aggregates objects of the superclass; it builds lists (1:1) or trees and graphs (1:n) under one contract.</li>
+      <li><b>Composite?</b> ObjectRecursion with leaves and composites, uniform part–whole trees; operations are maps and folds over the tree.</li>
+      <li><b>Decorator?</b> A wrapper with exactly one mimicked object of the same superclass; adds and removes features at run time, the chain ends in a core.</li>
+      <li><b>Chain of Responsibility?</b> The successor link on the superclass itself; a request walks the chain until someone handles it; no core, anonymous receivers.</li>
+      <li><b>Proxy?</b> A representative pointing at its sister class RealSubject; flat, not chainable; variants filter, protocol, virtual, remote, caching, protection.</li>
+      <li><b>*-Bridge and Observer?</b> A template with 1:n hook objects; Observer is that bridge from subject to observers with a back link, in a pull or push form, optionally with a change manager (event bus).</li>
+    </ul>
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=3">exercise 3, Extensibility Patterns</a> (sheet since 5 Nov, session 11 Nov) builds a Composite of polynomials, Decorators for trigonometric functions and a chained Observer whose cycle a change manager breaks. Previous: <a href="design-patterns/lecture.html?n=3">lecture 3, Creational Variability</a>. Next: <a href="design-patterns/lecture.html?n=5">lecture 5, Bridging Architectural Mismatch</a> (17 Nov). Slides and the learning video #04: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const LABS = { mvc: initMvc, facets: initFacets, proto: initProto, parts: initParts, deco: initDeco, chain: initChain, cm: initCm };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
