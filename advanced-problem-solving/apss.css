@@ -537,3 +537,22 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 /* long mono readouts (bit strings, tours) wrap inside the explorer on phones */
 .apss .ro dd { min-width: 0; overflow-wrap: anywhere; }
 .apss .ctl label { flex-wrap: wrap; max-width: 100%; }
+
+/* Tutorial 1, task 3: the V table as an explorer (clickable cells, plan badges, candidate panel) */
+.apss table.tt.vt td, .apss table.tt.cand td { padding: 5px 10px 5px 0; }
+.apss table.tt.vt td.sx { font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: .86rem; white-space: nowrap; }
+.apss table.tt.vt td.nr, .apss table.tt.vt th.nr { color: var(--ink-3); }
+.apss table.tt.vt tr.grp td { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); padding: 7px 8px 4px; }
+.apss table.tt.vt td.v { font-weight: 700; cursor: pointer; white-space: nowrap; border-radius: 4px; }
+.apss table.tt.vt td.v:hover { background: color-mix(in srgb, var(--vz-s1) 10%, transparent); }
+.apss table.tt.vt td.v.sel { outline: 2px solid var(--focus); outline-offset: -2px; }
+.apss table.tt.vt td.v:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.apss table.tt.vt td.mv { color: var(--ink-2); font-size: .85rem; white-space: nowrap; }
+.apss table.tt.vt td.dash { color: var(--ink-3); }
+.apss table.tt.vt .badge { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--vz-s1); color: #fff; font-size: 10.5px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.apss .vdet { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.apss .vdet .kicker { margin-bottom: 4px; }
+.apss table.tt.cand tr.best td { font-weight: 700; background: color-mix(in srgb, var(--vz-s1) 14%, transparent); }
+.apss table.tt.cand td.n { text-align: center; white-space: nowrap; }
+.apss table.tt.cand a.go { color: inherit; text-decoration: underline dotted; }
+@media (max-width: 600px) { .apss table.tt.vt td.nr, .apss table.tt.vt th.nr { display: none; } }

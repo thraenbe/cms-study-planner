@@ -132,10 +132,44 @@ const BRIDGE = (() => {
   // the optimal plan from the start: always take a move whose cost + V(next) equals V(now)
   const plan = []; let f = 0, t = false;
   while (f !== ALL) { const mv = moves(f, t).find(mv => mv.cost + dist[key(...mv.to)] === dist[key(f, t)]); plan.push({ who: grpName(mv.who), cost: mv.cost, back: t, far: mv.to[0] }); [f, t] = mv.to; }
-  return { V: dist, key, plan, total: dist[key(0, false)] };
+  const cands = (f, t) => moves(f, t).map(mv => ({ who: grpName(mv.who), cost: mv.cost, next: mv.to, vnext: dist[key(...mv.to)], sum: mv.cost + dist[key(...mv.to)] })).sort((x, y) => x.sum - y.sum || x.cost - y.cost);
+  const path = {}; { let f = 0, t = false; path[key(f, t)] = 0; plan.forEach((p, i) => { f = p.far; t = !p.back; path[key(f, t)] = i + 1; }); }
+  return { V: dist, key, plan, total: dist[key(0, false)], cands, path };
 })();
 const ESCORT = [{ who: "AD", cost: 10, back: false, far: 9 }, { who: "A", cost: 1, back: true, far: 8 }, { who: "AC", cost: 5, back: false, far: 13 }, { who: "A", cost: 1, back: true, far: 12 }, { who: "AB", cost: 2, back: false, far: 15 }];
 const bridgeRow = (label, plan) => { const tot = plan.reduce((s, p) => s + p.cost, 0); return `<div class="row"><div class="rl">${label}</div><div style="display:flex;align-items:center"><div class="track" style="flex:1">${plan.map(p => `<div class="seg ${p.back ? "back" : ""}" style="flex:${p.cost}" title="${p.who} ${p.back ? "back" : "across"}, ${p.cost} min">${p.who} ${p.back ? "←" : "→"} ${p.cost}</div>`).join("")}</div><span class="sum">${tot} min</span></div></div>`; };
+// The V table as an explorer: every cell is a state, click one to see the recurrence evaluated there.
+const setName = f => f ? `{${grpName(f)}}` : "∅";
+const stName = (f, t) => `${setName(f)} far, torch ${t ? "far" : "near"}`;
+function initVtable(body) {
+  const st = { f: 0, t: false };
+  const cell = (f, t) => { const v = BRIDGE.V[BRIDGE.key(f, t)], step = BRIDGE.path[BRIDGE.key(f, t)];
+    if (v === Infinity) return `<td class="n dash" title="${t ? "nobody is on the far side, so nobody could have carried the torch there" : "everyone is on the far side, so the torch cannot be on the near side"}">–</td><td class="mv dash">impossible state</td>`;
+    const best = BRIDGE.cands(f, t)[0];
+    return `<td class="n v${step != null ? " t1" : ""}" data-f="${f}" data-t="${t ? 1 : 0}" tabindex="0" role="button" aria-label="V of ${stName(f, t)} is ${v} minutes, show the recurrence">${v}${step != null ? `<span class="badge" title="${step ? `state after crossing ${step} of the optimal plan` : "start state"}">${step}</span>` : ""}</td><td class="mv">${v === 0 ? "done" : `${best.who} ${t ? "←" : "→"} ${best.cost} + ${best.vnext}`}</td>`; };
+  const rows = []; let last = -1;
+  Array.from({ length: 16 }, (_, s) => s).sort((a, b) => popc(a) - popc(b) || a - b).forEach(f => {
+    if (popc(f) !== last) { last = popc(f); rows.push(`<tr class="grp"><td colspan="6">${last === 0 ? "nobody" : last === 4 ? "everyone" : last + (last === 1 ? " person" : " people")} on the far side</td></tr>`); }
+    rows.push(`<tr><td class="sx">${setName(f)}</td><td class="sx nr">${setName(ALL & ~f)}</td>${cell(f, false)}${cell(f, true)}</tr>`);
+  });
+  body.innerHTML = `<p class="lab-note">One row per far-side set S, one column pair per torch position. A number is V(S, t): the minutes <em>still needed</em> from that state, not the time spent so far. “Best move” is the move that attains the minimum of the recurrence: who crosses (→) or returns (←), their time, plus V of the state they land in. Numbered cells are the six states of the optimal plan. Click any value to see all candidate moves of that state.</p>
+    ${leg([[1, "states on the optimal plan, numbered by crossing"]])}
+    <div class="tt-wrap"><table class="tt memo vt"><thead><tr><th>far side S</th><th class="nr">near side</th><th>torch near: V</th><th>best move</th><th>torch far: V</th><th>best move</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+    <div class="vdet"></div>`;
+  const det = body.querySelector(".vdet");
+  const render = () => {
+    const f = st.f, t = st.t, v = BRIDGE.V[BRIDGE.key(f, t)], cs = BRIDGE.cands(f, t), step = BRIDGE.path[BRIDGE.key(f, t)];
+    body.querySelectorAll("td.v").forEach(td => td.classList.toggle("sel", +td.dataset.f === f && !!+td.dataset.t === t));
+    const who = t ? "someone on the far side returns with the torch (one or two people)" : "one or two people from the near side cross";
+    det.innerHTML = `<div class="kicker">V(${stName(f, t)}) = ${v}</div>` + (v === 0 ? `<p>Everyone is across: nothing left to do, V = 0. This is the base case every other value is built from.</p>`
+      : `<p>From here ${who}; the pair walks at the slower one's pace. Each candidate costs its crossing time plus V of the state it leads to, and V(${stName(f, t)}) is the smallest sum:</p>
+      <div class="tt-wrap"><table class="tt memo cand"><thead><tr><th>move</th><th>time</th><th>lands in</th><th>V there</th><th>sum</th></tr></thead><tbody>${cs.map((c, i) => `<tr class="${i === 0 ? "best" : ""}"><td>${c.who} ${t ? "←" : "→"}</td><td class="n">${c.cost}</td><td><a href="#" class="go" data-f="${c.next[0]}" data-t="${c.next[1] ? 1 : 0}">${stName(...c.next)}</a></td><td class="n">${c.vnext === Infinity ? "–" : c.vnext}</td><td class="n">${c.vnext === Infinity ? "–" : `${c.cost} + ${c.vnext} = ${c.sum}`}${i === 0 ? " ✓" : ""}</td></tr>`).join("")}</tbody></table></div>
+      <p class="muted">${step != null ? (step ? `This state is where the optimal plan stands after crossing ${step}; the ✓ row is its next crossing.` : "This is the start state; the ✓ row is the first crossing of the optimal plan.") : "This state is not on the optimal plan, but its value is still needed: a neighbour's minimum compares against it."} Click a “lands in” state to follow the recurrence one level down.</p>`);
+    det.querySelectorAll(".go").forEach(el => el.addEventListener("click", e => { e.preventDefault(); st.f = +el.dataset.f; st.t = !!+el.dataset.t; render(); }));
+  };
+  body.querySelectorAll("td.v").forEach(td => { const pick = () => { st.f = +td.dataset.f; st.t = !!+td.dataset.t; render(); }; td.addEventListener("click", pick); td.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } }); });
+  render();
+}
 function initBridge(body) {
   const st = { i: 0, n: BRIDGE.plan.length };
   body.innerHTML = `${leg([[1, "crossing to the far side"], [2, "bringing the torch back"], [4, "ring: who holds the torch"]])}${stepBar(BRIDGE.plan.length, "one crossing per step")}<div class="out"></div>`;
@@ -294,8 +328,14 @@ function tutorial1() {
       <p class="formula">V(S, near) = min over one or two people P ⊆ near side: max(time of P) + V(S ∪ P, far)<br>V(S, far) = min over one or two people P ⊆ S: max(time of P) + V(S ∖ P, near)</p>
       <p>Optimal substructure holds by the same cut-and-paste argument as always: after the first crossing the remaining plan must be optimal for the new state, or it could be improved. Overlapping subproblems: the state {C, D} far, torch near is reached by several different first moves. One subtlety for the tutorial: the recurrence as written is <em>circular</em> (a pair can cross and come straight back), so a plain memoised recursion loops. Two fixes: (1) compute the values in order of increasing V, which is Dijkstra on the 32-state graph with crossing times as edge weights, or (2) add the crossing index as a stage and note that a useful plan has exactly 2n − 3 = 5 crossings (every return trip carries one person back, so n people need n − 1 forward trips of two plus n − 2 returns), which makes the state graph a DAG over stages. Either way the table has at most 32 states × a handful of moves, trivial to fill.</p>
       <h3>The table (values V, in minutes)</h3>
-      <div class="tt-wrap"><table class="tt memo"><thead><tr><th>far side S</th><th>torch near</th><th>torch far</th></tr></thead><tbody>${Array.from({ length: 16 }, (_, s) => s).sort((a, b) => popc(a) - popc(b) || a - b).map(s => `<tr><td>{${grpName(s)}}</td><td class="n">${BRIDGE.V[BRIDGE.key(s, false)] === Infinity ? "–" : BRIDGE.V[BRIDGE.key(s, false)]}</td><td class="n">${BRIDGE.V[BRIDGE.key(s, true)] === Infinity ? "–" : BRIDGE.V[BRIDGE.key(s, true)]}</td></tr>`).join("")}</tbody></table></div>
-      <p>Reading the table: from the start, V(∅, near) = 17. The first move AB → (2 min) leads to V({A, B}, far) = 15, and 2 + 15 = 17 is the minimum over all first moves (AD → costs 10 and leaves V({A, D}, far) = 9, total 19). Follow the equalities down and you get the plan:</p>
+      <p>A dynamic programme is its table, so it pays to be able to read every cell. The table has one row per possible far-side set S (16 subsets, grouped by how many people are across) and two value columns, one per torch position. A cell is one of the 32 states, and its number is the <b>cost-to-go</b>: the fewest minutes still needed to finish from there. It is <em>not</em> the time spent reaching the state; that is why the table is filled from the goal outwards, starting at V({A, B, C, D}, far) = 0, and why the start state V(∅, near) carries the answer, 17. Two cells are dashes because the state cannot occur: the torch always travels with people, so it cannot be on the far side while nobody is there, nor on the near side once everyone has left.</p>
+      <p>How a cell is computed: take every legal move from the state (one or two people walk from the torch's side to the other side), add the move's time to the value of the state it lands in, and keep the smallest sum. That is the recurrence above, and the “best move” next to each value shows which move won. Two cells worked by hand:</p>
+      <ul>
+        <li><b>V({C, D}, near) = ${BRIDGE.V[BRIDGE.key(12, false)]}.</b> C and D are across, A and B are near with the torch. Candidates: AB → costs 2 and lands in the goal (V = 0), so 2 + 0 = 2; A → alone costs 1 but lands in {A, C, D} far with the torch far, from where someone must come back, V = ${BRIDGE.V[BRIDGE.key(13, true)]}, so 1 + ${BRIDGE.V[BRIDGE.key(13, true)]} = ${1 + BRIDGE.V[BRIDGE.key(13, true)]}; B → gives 2 + ${BRIDGE.V[BRIDGE.key(14, true)]} = ${2 + BRIDGE.V[BRIDGE.key(14, true)]}. The minimum is 2.</li>
+        <li><b>V({A, B}, far) = ${BRIDGE.V[BRIDGE.key(3, true)]}.</b> A and B crossed first and hold the torch; C and D wait. Someone must return: A ← costs 1 and lands in {B} far, torch near, V = ${BRIDGE.V[BRIDGE.key(2, false)]}, sum ${1 + BRIDGE.V[BRIDGE.key(2, false)]}; B ← costs 2 and lands in {A} far, V = ${BRIDGE.V[BRIDGE.key(1, false)]}, sum ${2 + BRIDGE.V[BRIDGE.key(1, false)]}; AB ← costs 2 and lands back at the start, 2 + 17 = 19. So V = ${BRIDGE.V[BRIDGE.key(3, true)]} with A returning, and the start value follows: V(∅, near) = 2 + ${BRIDGE.V[BRIDGE.key(3, true)]} = 17 via AB →.</li>
+      </ul>
+      ${lab("vtable", "the whole table, with the recurrence behind every cell")}
+      <p>Reading the optimal plan off the table is following the numbered cells: from the start (0) the best move AB → leads to cell 1, V({A, B}, far) = ${BRIDGE.V[BRIDGE.key(3, true)]}; its best move A ← leads to cell 2, V({B}, near) = ${BRIDGE.V[BRIDGE.key(2, false)]}; CD → leads to cell 3, V({B, C, D}, far) = ${BRIDGE.V[BRIDGE.key(14, true)]}; B ← to cell 4, V({C, D}, near) = 2; AB → to the goal, cell 5. The times along the way, 2 + 1 + 10 + 2 + 2, add up to 17, and at every cell “time spent so far + V” stays 17, which is the check that the plan is optimal. The explorer below walks the same plan on the two river banks:</p>
       ${lab("bridge", "the optimal plan, crossing by crossing, with V of every state")}
       <div class="bridge">${bridgeRow("optimal: pair the slow ones", BRIDGE.plan)}${bridgeRow("escort: A ferries everyone", ESCORT)}</div>
       <p>The trick the DP discovers by itself: send C and D <em>together</em> (10 min, not 10 + 5) while the fast pair A, B does the torch shuttling. The intuitive escort plan, A walking everybody over one by one, costs 10 + 1 + 5 + 1 + 2 = 19.</p>
@@ -391,7 +431,7 @@ function placeholder() {
     </div>`;
 }
 const WRITEUPS = { 1: tutorial1, 2: tutorial2 };
-const LABS = { astar: initAstar, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc };
+const LABS = { astar: initAstar, vtable: initVtable, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Tutorial not found</h1><p>There is no tutorial ${esc(q)}.</p>`;
