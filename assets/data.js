@@ -5598,13 +5598,19 @@ window.CMS = {
    "end": "10:50",
    "room": "GÖR/0226/H",
    "who": "Dr. Sarah Alice Gaggl",
-   "src": "ICCL course page (20 and 27 Oct listed; later Tuesdays assumed weekly)",
+   "src": "ICCL course calendar (checked 11 Nov: no session 3 Nov; local search 10 Nov, tabu search 17 Nov)",
    "from": "2026-10-20",
    "to": "2027-02-02",
    "labels": {
     "2026-10-20": "Introduction",
-    "2026-10-27": "Informed vs uninformed search"
-   }
+    "2026-10-27": "Informed vs uninformed search",
+    "2026-11-10": "Local Search",
+    "2026-11-17": "Tabu Search",
+    "2026-11-24": "Evolutionary Algorithms"
+   },
+   "skip": [
+    "2026-11-03"
+   ]
   },
   {
    "code": "CMS-TRK-APSS",
@@ -5614,13 +5620,17 @@ window.CMS = {
    "end": "14:30",
    "room": "APB/E006/U",
    "who": "",
-   "src": "ICCL course page (group 2, Fri DS4; only 30 Oct listed, later Fridays assumed weekly)",
+   "src": "ICCL course calendar (group 2, Fri DS4; checked 11 Nov: tutorials 30 Oct, 13 Nov, 27 Nov, 4 Dec, 8 Jan listed, no tutorial 6 Nov)",
    "from": "2026-10-30",
    "to": "2027-02-05",
    "labels": {
-    "2026-10-30": "Traditional Search"
+    "2026-10-30": "Traditional Search",
+    "2026-11-13": "Tutorial 2"
    },
-   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110"
+   "roomUrl": "https://cis.tu-dresden.de/?campus=TU-DD-HAUPT&building=APB&level=0.0&feature=TU-DD-515-5421-00-2110",
+   "skip": [
+    "2026-11-06"
+   ]
   },
   {
    "code": "EXT-LLM",
