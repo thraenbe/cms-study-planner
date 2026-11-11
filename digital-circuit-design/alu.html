@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Digital Circuit Design · ALU with F2:0</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="digital-circuit-design/dcd.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="digital-circuit-design/dcd.js"></script>
+<script src="digital-circuit-design/dcd-viz.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). One meaning per colour on this
+   page: green = the wires that carry the selected function, blue = the A operand, orange = the B operand (and its
+   inverted form), yellow = the control bits F2:0. */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+
+/* Explorer: controls on top, the schematic on the left, readouts on the right; one column on phones. */
+.dcd .xp { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; margin-top: .6rem; }
+.dcd .xp svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .xp .xro { display: grid; gap: 8px; }
+.dcd .xp .xro .r { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.dcd .xp .xro .r b { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.dcd .xp .xro .r span { font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dcd .xp .xro .r code { font: 600 .98rem ui-monospace, monospace; }
+.dcd .xp .xro .r small { display: block; color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+.dcd .xp .xro .r.on { border-color: var(--vz-s3); }
+.dcd .xp .xro .r.on span, .dcd .xp .xro .r.on code { color: var(--vz-s3); }
+.dcd .xp .xro .r.warn { border-color: var(--vz-s4); }
+.dcd .ctlrow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: .4rem 0 .6rem; }
+.dcd .ctlrow .lab-t { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-right: 4px; }
+.dcd .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dcd .seg button { font: 600 12.5px system-ui, sans-serif; padding: 5px 9px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .seg button code { font: 700 12px ui-monospace, monospace; margin-right: 5px; color: var(--vz-s4); }
+.dcd .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.dcd .seg button[aria-pressed="true"] code { color: inherit; }
+.dcd .seg button + button { border-left: 1px solid var(--line); }
+.dcd .bits { display: inline-flex; gap: 4px; align-items: center; }
+.dcd .bits .inbtn { font: 600 14px ui-monospace, monospace; width: 34px; height: 32px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.dcd .bits .inbtn[aria-pressed="true"] { color: #fff; border-color: transparent; }
+.dcd .bits.a .inbtn[aria-pressed="true"] { background: var(--vz-s1); }
+.dcd .bits.b .inbtn[aria-pressed="true"] { background: var(--vz-s2); }
+.dcd .bits .dec { font-size: 13px; color: var(--ink-2); margin-left: 4px; min-width: 3.2em; }
+
+/* Schematic marks */
+.dcd .alu .wire { stroke: var(--ink-3); stroke-width: 1.6; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.dcd .alu .wire.a { stroke: var(--vz-s1); } .dcd .alu .wire.b { stroke: var(--vz-s2); } .dcd .alu .wire.f { stroke: var(--vz-s4); }
+.dcd .alu .wire.hot { stroke: var(--vz-s3); stroke-width: 3; }
+.dcd .alu .wire.dim { opacity: .45; }
+.dcd .alu .sym { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+.dcd .alu .sym.hot { stroke: var(--vz-s3); stroke-width: 2.4; }
+.dcd .alu .sym.off { stroke: var(--ink-3); }
+.dcd .alu .dot { fill: var(--ink-2); }
+.dcd .alu .dot.hot { fill: var(--vz-s3); }
+.dcd .alu .lbl { fill: var(--ink-2); font-size: 11.5px; }
+.dcd .alu .lbl.b { fill: var(--ink); font-weight: 600; font-size: 12.5px; }
+.dcd .alu .lbl.f { fill: var(--vz-s4); font-weight: 700; }
+.dcd .alu .lbl.in { fill: var(--ink-3); font-size: 10.5px; }
+.dcd .alu .mono { font-family: ui-monospace, monospace; font-size: 11px; fill: var(--ink-2); }
+.dcd .alu .mono.hot { fill: var(--vz-s3); font-weight: 700; }
+.dcd .alu .mono.a { fill: var(--vz-s1); font-weight: 700; } .dcd .alu .mono.bb { fill: var(--vz-s2); font-weight: 700; }
+.dcd .alu .big { fill: var(--ink); font-size: 22px; font-weight: 600; }
+.dcd .alu .slash { stroke: var(--ink-2); stroke-width: 1.2; }
+.dcd .alu.narrow .lbl { font-size: 17px; } .dcd .alu.narrow .lbl.b { font-size: 18px; } .dcd .alu.narrow .lbl.in { font-size: 15px; }
+.dcd .alu.narrow .mono { font-size: 15.5px; } .dcd .alu.narrow .big { font-size: 30px; }
+
+/* Function table: clickable rows, the selected one highlighted. */
+.dcd table.fn { width: 100%; border-collapse: collapse; font-size: .92rem; margin: .4rem 0 1rem; }
+.dcd table.fn th, .dcd table.fn td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.dcd table.fn th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.dcd table.fn td.code { font: 700 .95rem ui-monospace, monospace; white-space: nowrap; }
+.dcd table.fn td.code i { font-style: normal; color: var(--vz-s4); }
+.dcd table.fn tr[data-f] { cursor: pointer; }
+.dcd table.fn tr[data-f]:hover td { background: color-mix(in srgb, var(--vz-s3) 10%, transparent); }
+.dcd table.fn tr[aria-selected="true"] td { background: color-mix(in srgb, var(--vz-s3) 18%, transparent); box-shadow: inset 3px 0 var(--vz-s3); }
+.dcd table.fn tr.unused td { color: var(--ink-3); }
+.dcd .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+@media (max-width: 700px) { .dcd .xp { grid-template-columns: 1fr; } .dcd table.fn td.hide, .dcd table.fn th.hide { display: none; } }
+</style>
+</head>
+<body class="dcd">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+const { m, esc, U } = DCD;
+const { isNarrow, bin } = DCDViz;
+const page = document.getElementById("page");
+const why = (t, html) => `<div class="why"><div class="kicker">${t}</div>${html}</div>`;
+const ex = (t, html) => `<div class="ex"><div class="kicker">${t}</div>${html}</div>`;
+
+// The demo works on N = 4 bits so every bus value fits in a label; the circuit itself is the same for any N.
+const N = 4, MASK = (1 << N) - 1;
+const S = { F: 6, A: 7, B: 5 };
+const OPS = [
+  { f: "000", name: "A AND B", how: "AND gate on A and B", mux: 0 },
+  { f: "001", name: "A OR B", how: "OR gate on A and B", mux: 1 },
+  { f: "010", name: "A + B", how: "adder with carry-in 0", mux: 2 },
+  { f: "011", name: "not used", how: "would be SLT without inverting B: the sign of A + B, meaningless", mux: 3, unused: true },
+  { f: "100", name: "A AND NOT B", how: "AND gate, B inverted (clears the bits that are set in B)", mux: 0 },
+  { f: "101", name: "A OR NOT B", how: "OR gate, B inverted", mux: 1 },
+  { f: "110", name: "A − B", how: "adder with NOT B and carry-in 1: A + (−B) in two's complement", mux: 2 },
+  { f: "111", name: "SLT", how: "set if less than: Y = 1 if A < B (signed), else 0; the sign bit of A − B, zero-extended", mux: 3 },
+];
+const signed = v => v >= 1 << N - 1 ? v - (1 << N) : v;
+function calc() {
+  const F2 = S.F >> 2 & 1, F10 = S.F & 3;
+  const BB = F2 ? ~S.B & MASK : S.B;                       // B after the F2-controlled inverter mux
+  const and = S.A & BB, or = S.A | BB;
+  const full = S.A + BB + F2, sum = full & MASK, cout = full >> N & 1;
+  const slt = sum >> N - 1 & 1;                            // sign bit of the adder result, zero-extended
+  const Y = [and, or, sum, slt][F10];
+  return { F2, F10, BB, and, or, sum, cout, slt, Y, op: OPS[S.F] };
+}
+
+// ---- the schematic -------------------------------------------------------------------------------------------
+// Fixed 600 × 520 drawing (scaled to the width); on phones the labels grow and the per-unit values go to the readouts.
+function schematic(narrow) {
+  const r = calc(), W = 600, H = 520, F2 = r.F2, F10 = r.F10;
+  const sel = k => F10 === k;                                           // which unit feeds the output mux
+  const hotA = sel(0) || sel(1) || sel(2) || sel(3);                   // always: every function uses A
+  const w = (d, cls = "", hot = false) => `<path class="wire ${cls}${hot ? " hot" : ""}" d="${d}"/>`;
+  const dot = (x, y, hot) => `<circle class="dot${hot ? " hot" : ""}" cx="${x}" cy="${y}" r="3"/>`;
+  const txt = (x, y, t, cls = "lbl", anchor = "start") => `<text class="${cls}" x="${x}" y="${y}" text-anchor="${anchor}">${t}</text>`;
+  const slash = (x, y, n) => `<line class="slash" x1="${x - 5}" y1="${y + 5}" x2="${x + 5}" y2="${y - 5}"/>${txt(x + 7, y - 4, n, "lbl in")}`;
+  const hop = (x, y0, y1, yc, cls, hot) => w(`M${x},${y0} V${yc - 6} A6,6 0 0 1 ${x},${yc + 6} V${y1}`, cls, hot); // A drop hopping over the BB rail
+  const andG = (cx, y0, hot) => `<path class="sym${hot ? " hot" : ""}" d="M${cx - 30},${y0} H${cx + 30} V${y0 + 22} A30,30 0 0 1 ${cx - 30},${y0 + 22} Z"/>`;
+  const orG = (cx, y0, hot) => `<path class="sym${hot ? " hot" : ""}" d="M${cx - 30},${y0} Q${cx},${y0 + 14} ${cx + 30},${y0} Q${cx + 24},${y0 + 36} ${cx},${y0 + 52} Q${cx - 24},${y0 + 36} ${cx - 30},${y0} Z"/>`;
+  const inv = (x, y, hot) => `<path class="sym${hot ? " hot" : ""}" d="M${x - 12},${y} H${x + 12} L${x},${y + 20} Z"/><circle class="sym${hot ? " hot" : ""}" cx="${x}" cy="${y + 25}" r="5"/>`;
+  const mux = (x0, x1, y, h, hot, ins) => `<path class="sym${hot ? " hot" : ""}" d="M${x0},${y} H${x1} L${x1 - 18},${y + h} H${x0 + 18} Z"/>${ins}`;
+  const b4 = v => bin(v, N);
+  // x positions of the four units and their inputs
+  const AX = 130, BX = 470, uA = [80, 190, 310], uB = [110, 220, 350], outs = [95, 205, 330, 485];
+  const yA = 170, yB = 200;                                           // the two operand rails
+  const hotB = true;                                                  // B is used by every function too
+  let s = "";
+  // A: input, rail, drops (with hops where they cross the BB rail)
+  s += w(`M${AX},18 V${yA}`, "a", hotA) + slash(AX, 60, "N") + txt(AX - 12, 30, "A", "lbl b", "end") + txt(AX + 10, 30, b4(S.A), "mono a");
+  s += w(`M${uA[0]},${yA} H${uA[2]}`, "a", hotA) + dot(uA[1], yA, hotA) + dot(AX, yA, hotA);
+  s += w(`M${uA[0]},${yA} V235`, "a", hotA && sel(0)) + hop(uA[1], yA, 236, yB, "a", hotA && sel(1)) + hop(uA[2], yA, 235, yB, "a", hotA && (sel(2) || sel(3)));
+  // B: input, split into direct and inverted branch, 2:1 mux controlled by F2
+  s += w(`M${BX},18 V60`, "b", hotB) + slash(BX - 15, 50, "N") + txt(BX - 12, 30, "B", "lbl b", "end") + txt(BX + 10, 30, b4(S.B), "mono bb");
+  s += w(`M430,60 H510`, "b", hotB) + dot(BX, 60, hotB);
+  s += w(`M430,60 V100`, "b", !F2) + w(`M510,60 V72`, "b", F2) + inv(510, 72, F2) + w(`M510,102 V100`, "b", F2);
+  s += mux(410, 530, 100, 36, true, txt(430, 114, "0", "lbl in", "middle") + txt(510, 114, "1", "lbl in", "middle"));
+  s += w(`M580,118 H530`, "f") + txt(598, 108, "F2 = " + F2, "lbl f", "end");
+  s += w(`M${BX},136 V${yB}`, "b", hotB) + txt(BX + 8, 172, F2 ? "B̅ = " + b4(r.BB) : "B = " + b4(r.BB), "mono bb");
+  // BB rail and drops
+  s += w(`M${uB[0]},${yB} H${BX}`, "b", hotB) + dot(uB[1], yB, hotB) + dot(uB[2], yB, hotB) + dot(BX, yB, hotB);
+  s += w(`M${uB[0]},${yB} V235`, "b", sel(0)) + w(`M${uB[1]},${yB} V236`, "b", sel(1)) + w(`M${uB[2]},${yB} V235`, "b", sel(2) || sel(3));
+  // the four units
+  s += andG(95, 235, sel(0)) + txt(95, 262, "AND", "lbl b", "middle");
+  s += orG(205, 230, sel(1)) + txt(205, 262, "OR", "lbl b", "middle");
+  s += `<rect class="sym${sel(2) || sel(3) ? " hot" : ""}" x="290" y="235" width="80" height="52" rx="5"/>` + txt(330, 269, "+", "big", "middle");
+  s += txt(300, 247, "A", "lbl in") + txt(355, 247, "B", "lbl in", "middle");
+  // carry-in from F2, carry-out stub
+  s += w(`M580,118 V261 H370`, "f", F2 && (sel(2) || sel(3))) + txt(378, 257, "Cin", "lbl in") + txt(548, 256, "Cin = F2", "lbl in", "middle");
+  s += w(`M290,261 H270`, "", false) + txt(268, 256, narrow ? "Co" : "Cout", "lbl in", "end") + txt(268, 273, r.cout, "mono", "end");
+  // adder output: to the mux and, via the MSB, to the zero extender
+  const hotSum = sel(2) || sel(3);
+  s += w(`M330,287 V405`, "", sel(2)) + (hotSum && !sel(2) ? w(`M330,287 V318`, "", true) : "");
+  s += dot(330, 318, sel(3)) + w(`M330,318 H485 V330`, "", sel(3)) + slash(400, 318, "1") + txt(336, 312, "S" + (narrow ? "" : "[N−1]") + " (sign)", "lbl in");
+  s += `<rect class="sym${sel(3) ? " hot" : ""}" x="430" y="330" width="110" height="34" rx="5"/>` + txt(485, 352, narrow ? "zero ext." : "Zero extend", "lbl b", "middle");
+  s += w(`M485,364 V405`, "", sel(3));
+  // unit outputs to the 4:1 mux
+  s += w(`M95,287 V405`, "", sel(0)) + w(`M205,282 V405`, "", sel(1));
+  s += mux(60, 530, 405, 40, true, [0, 1, 2, 3].map(k => txt(outs[k], 420, k, "lbl in", "middle")).join(""));
+  s += w(`M580,425 H530`, "f") + slash(552, 425, "2") + txt(598, 450, "F1:0 = " + bin(F10, 2), "lbl f", "end");
+  // output
+  s += w(`M295,445 V500`, "", true) + `<path class="wire hot" d="M289,492 L295,500 L301,492"/>` + slash(295, 468, "N");
+  s += txt(284, 500, "Y", "lbl b", "end") + txt(305, 500, b4(r.Y) + (narrow ? "" : "  (" + r.op.name + ")"), "mono hot");
+  // per-unit values (wide only)
+  if (!narrow) s += txt(60, 306, b4(r.and), "mono" + (sel(0) ? " hot" : ""), "start") + txt(170, 306, b4(r.or), "mono" + (sel(1) ? " hot" : ""), "start")
+    + txt(296, 336, b4(r.sum), "mono" + (sel(2) ? " hot" : ""), "start") + txt(492, 382, "000" + r.slt, "mono" + (sel(3) ? " hot" : ""), "start");
+  const label = `Schematic of the ALU. Operands A and B enter at the top. B passes a 2 to 1 multiplexer that selects B or inverted B under control bit F2. A and the selected B feed an AND gate, an OR gate and an adder whose carry-in is F2. The sign bit of the sum is zero-extended for the set-less-than result. A 4 to 1 multiplexer controlled by F1 and F0 chooses between AND, OR, sum and set-less-than and drives the output Y. Currently F is ${r.op.f}, ${r.op.name}, A is ${b4(S.A)}, B is ${b4(S.B)}, Y is ${b4(r.Y)}.`;
+  return `<svg class="alu${narrow ? " narrow" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${s}</svg>`;
+}
+
+// ---- readouts and controls -----------------------------------------------------------------------------------
+function readouts() {
+  const r = calc(), b4 = v => bin(v, N);
+  const u = (k, name, v, extra = "") => `<div class="r ${r.F10 === k ? "on" : ""}"><b>${name}</b><code>${b4(v)}</code><small>${extra}</small></div>`;
+  const yVal = r.F10 === 3 ? (r.Y ? `1: A &lt; B is true (${signed(S.A)} &lt; ${signed(S.B)})` : `0: A &lt; B is false (${signed(S.A)} ≥ ${signed(S.B)})`)
+    : `unsigned ${r.Y}, signed ${signed(r.Y)}`;
+  return `<div class="r ${r.op.unused ? "warn" : ""}"><b>F2:0 = ${r.op.f}</b><span>${esc(r.op.name)}</span><small>${esc(r.op.how)}</small></div>
+    <div class="r"><b>B after the mux</b><code>${b4(r.BB)}</code><small>${r.F2 ? "F2 = 1: inverted B, and the adder's carry-in is 1" : "F2 = 0: B unchanged, carry-in 0"}</small></div>
+    ${u(0, "AND", r.and)}${u(1, "OR", r.or)}${u(2, "Adder", r.sum, `carry-out ${r.cout}${r.F2 ? ", signed result " + signed(r.sum) : ""}`)}${u(3, "SLT (zero-extended sign bit)", r.slt, `sign bit of ${b4(r.sum)}`)}
+    <div class="r on"><b>Y</b><code>${b4(r.Y)}</code><small>${yVal}</small></div>`;
+}
+function bitsCtl(k) {
+  const v = S[k];
+  return `<span class="bits ${k.toLowerCase()}" data-k="${k}">${Array.from({ length: N }, (_, i) => N - 1 - i).map(i => `<button type="button" class="inbtn" data-i="${i}" aria-pressed="${v >> i & 1 ? "true" : "false"}" aria-label="${k} bit ${i}">${v >> i & 1}</button>`).join("")}<span class="dec">= ${v}${signed(v) !== v ? ` (${signed(v)})` : ""}</span></span>`;
+}
+function fnTable() {
+  return `<table class="fn"><tr><th>F2 F1 F0</th><th>Function</th><th class="hide">How the circuit produces it</th><th>Mux input</th></tr>
+    ${OPS.map((o, i) => `<tr data-f="${i}" aria-selected="${S.F === i}" class="${o.unused ? "unused" : ""}"><td class="code"><i>${o.f[0]}</i> ${o.f.slice(1)}</td><td>${esc(o.name)}</td><td class="hide">${esc(o.how)}</td><td>${o.mux} ${["AND", "OR", "adder", "zero extend"][o.mux]}</td></tr>`).join("")}</table>`;
+}
+function render(focusSel) {
+  const x = document.getElementById("xp");
+  x.querySelector(".draw").innerHTML = schematic(isNarrow());
+  x.querySelector(".xro").innerHTML = readouts();
+  x.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.f === S.F));
+  ["A", "B"].forEach(k => { x.querySelector(`.bits[data-k="${k}"]`).outerHTML = bitsCtl(k); });
+  document.querySelectorAll("table.fn tr[data-f]").forEach(tr => tr.setAttribute("aria-selected", +tr.dataset.f === S.F));
+  if (focusSel) { const el = x.querySelector(focusSel); el && el.focus(); }
+}
+function wire() {
+  const x = document.getElementById("xp");
+  x.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.f != null) { S.F = +b.dataset.f; render(); }
+    else if (b.dataset.i != null) { const k = b.closest(".bits").dataset.k; S[k] ^= 1 << +b.dataset.i; render(`.bits[data-k="${k}"] [data-i="${b.dataset.i}"]`); }
+  });
+  document.querySelectorAll("table.fn tr[data-f]").forEach(tr => { tr.tabIndex = 0; tr.addEventListener("click", () => { S.F = +tr.dataset.f; render(); });
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); S.F = +tr.dataset.f; render(); } }); });
+  let narrow = isNarrow(); addEventListener("resize", () => { if (isNarrow() !== narrow) { narrow = isNarrow(); render(); } });
+}
+
+page.innerHTML = `
+  <a class="back" href="digital-circuit-design.html">← All lectures and exercises</a>
+  <div class="big-icon">🧮</div>
+  <h1>An ALU with a 3-bit function select F2:0</h1>
+  <p class="meta">A companion to lecture 4 of ${esc(m.name)} (the arithmetic logic unit) · the textbook ALU of Harris &amp; Harris, chapter 5 · 4-bit demo, the circuit is the same for any width N</p>
+  <p class="lead">An arithmetic logic unit computes several functions of two operands at once and lets a control word pick which one reaches the output. This one does seven useful things with only three control bits, because one bit does double duty: F2 inverts B <em>and</em> sets the adder's carry-in, which turns addition into subtraction for free. F1:0 then selects one of four result buses.</p>
+  <div class="tiles">
+    <div class="tile"><div class="v">3</div><div class="l">control bits F2:0, eight codes, seven functions used</div></div>
+    <div class="tile"><div class="v">4</div><div class="l">compute units: AND, OR, adder, zero-extender; each works on every cycle</div></div>
+    <div class="tile"><div class="v">2</div><div class="l">multiplexers: 2:1 on B (select by F2), 4:1 on the result (select by F1:0)</div></div>
+    <div class="tile"><div class="v">+1</div><div class="l">carry-in from F2: A + B̅ + 1 = A − B in two's complement</div></div>
+  </div>
+
+  <h2 id="s1">1 · The circuit</h2>
+  <p>Pick a function and set the operand bits. Green marks the wires that carry the selected result; blue is A, orange is B (or inverted B after the mux), yellow are the control bits. Bus labels show the 4-bit values.</p>
+  <div id="xp">
+    <div class="ctlrow"><span class="lab-t">F2:0</span><span class="seg">${OPS.map((o, i) => `<button type="button" data-f="${i}" aria-pressed="${S.F === i}"><code>${o.f}</code>${esc(o.name)}</button>`).join("")}</span></div>
+    <div class="ctlrow"><span class="lab-t">A</span>${bitsCtl("A")}<span class="lab-t">B</span>${bitsCtl("B")}</div>
+    <div class="xp"><figure class="viz" style="margin:0"><div class="draw"></div><figcaption>The ALU of Harris &amp; Harris (Digital Design and Computer Architecture, figure 5.15), redrawn. Every unit computes on every operation; the 4:1 multiplexer only chooses which result is visible at Y. The slash marks give the bus widths (N data bits, 2 select bits, 1 sign bit).</figcaption></figure><div class="xro"></div></div>
+  </div>
+
+  <h2 id="s2">2 · The function table</h2>
+  <p>Read F2 as "invert B and add one" and F1:0 as "which unit". Click a row to set the explorer above.</p>
+  ${fnTable()}
+  ${why("Why 011 is not used", `<p>F1:0 = 11 routes the zero-extended sign bit of the adder to Y. With F2 = 0 the adder computes A + B, and the sign of a plain sum does not answer any useful question about A and B (3 + 6 = 9 overflows a 4-bit signed word and looks "negative"). With F2 = 1 the adder computes A − B, whose sign bit is exactly "A is less than B": that is the SLT function at 111. So the eighth code is simply left undefined; a designer may reuse it later or make the control logic never emit it.</p>`)}
+
+  <h2 id="s3">3 · How each function comes out of the same hardware</h2>
+  <ul>
+    <li><b>F2 = 0, F2 = 1: plain B or inverted B.</b> The 2:1 mux on the right picks B when F2 = 0 and B̅ (every bit flipped, NOT B) when F2 = 1. The same F2 feeds the adder's carry-in, so the adder always computes A + B̅ + 1 when F2 = 1.</li>
+    <li><b>AND and OR</b> (mux inputs 0 and 1) are N parallel two-input gates on A and the selected B. "A AND NOT B" clears from A the bits that are set in B; it is the bit-mask operation that some instruction sets call ANDN or BIC.</li>
+    <li><b>Adder</b> (mux input 2). A + B with carry-in 0 is addition; A + B̅ + 1 is subtraction, because in two's complement −B = B̅ + 1. One adder, two functions, no extra hardware beyond the inverter and mux already paid for.</li>
+    <li><b>SLT, set if less than</b> (mux input 3). Only the most significant bit of the adder output, the sign of A − B, is used; the zero extender pads it with N − 1 zeros so Y is 0000…1 or 0000…0. Processors use this to build comparisons and conditional branches (the MIPS and RISC-V <code>slt</code> instructions). Strictly it is correct only when A − B does not overflow; a full comparator also looks at the overflow flag.</li>
+    <li><b>Cout and flags.</b> The carry-out of the adder is available as a status flag; real ALUs also derive a zero flag (all Y bits 0), the sign bit and an overflow flag from the top bits of the adder.</li>
+  </ul>
+
+  <h2 id="s4">4 · Worked examples (N = 4)</h2>
+  ${ex("Subtraction 7 − 5 with F2:0 = 110", `<p>A = 0111, B = 0101. F2 = 1 inverts B to 1010 and sets Cin = 1. The adder computes 0111 + 1010 + 1 = 1 0010: the leading 1 is the carry-out (Cout = 1, no borrow), the four result bits are 0010 = 2. The 4:1 mux passes the adder (F1:0 = 10), so Y = 0010.</p>`)}
+  ${ex("SLT with 3 and 5, both ways", `<p>A = 0011, B = 0101, F2:0 = 111: the adder computes 0011 + 1010 + 1 = 1110 = −2 in two's complement. Its sign bit is 1, zero-extended to 0001, so Y = 1: A &lt; B holds. Swap the operands (A = 0101, B = 0011): 0101 + 1100 + 1 = 1 0010, sign bit 0, so Y = 0000: 5 &lt; 3 is false.</p>`)}
+  ${ex("A AND NOT B as a bit clear, F2:0 = 100", `<p>A = 1111 and B = 0101 give B̅ = 1010 and A AND B̅ = 1010: every bit that was set in B is cleared in A, the rest is kept. The adder also runs (1111 + 1010 + 1 = 1 1010) but F1:0 = 00 selects the AND gate, so that result is ignored.</p>`)}
+
+  <h2 id="s5">5 · How this relates to the lecture</h2>
+  ${why("Context, not on the slides", `<p>Lecture 4 (slides 11–15) shows where the ALU sits in the execution unit and gives a VHDL description with a different 3-bit opcode table (000 add, 001 subtract, 010 decrement, 011 increment, 100 AND, 101 OR, 110 XOR, 111 NOT). Synthesis of that case statement yields the same shape as the drawing above: one adder/subtractor, a few gate arrays and an output multiplexer. The textbook table here (from the course's reading list, Harris &amp; Harris chapter 5) is the one used in the MIPS and RISC-V teaching processors; it is a good exercise to redraw this circuit for the lecture's opcode table and count what changes (hint: decrement and increment are adds with a constant, so the B mux grows).</p>`)}
+  <p>The transistor-level view of the gates and multiplexers used here is on the <a href="digital-circuit-design/basics.html">transistor basics page</a>; the adder internals (ripple carry, carry lookahead) are in <a href="digital-circuit-design/lecture.html?n=2">lecture 2</a>.</p>
+  <p class="muted" style="font-size:.85rem">Source: Harris &amp; Harris, Digital Design and Computer Architecture, chapter 5 (ALU, figure 5.15 and table 5.1), redrawn and explained in our own words; the lecture-4 opcode table from the course deck as cited on the lecture 4 page. Numbers are the 4-bit demo values.</p>
+  <div class="foot"><a class="back" href="digital-circuit-design.html">← All lectures and exercises</a></div>`;
+render(); wire();
+U.wireDone && U.wireDone(page);
+</script>
+</body>
+</html>
