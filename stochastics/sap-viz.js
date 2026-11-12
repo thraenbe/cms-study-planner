@@ -15,7 +15,8 @@ window.SAPViz = (function () {
   const CHARTS = {}, LINES = {};
   const place = (tip, wrap, x, y) => { tip.classList.add("show"); const half = tip.offsetWidth / 2; tip.style.left = Math.min(Math.max(x, half), wrap.clientWidth - half) + "px"; tip.style.top = y + "px"; };
   const chart = (name, legend = "") => `<figure class="viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div>`;
-  const lab = (name, title) => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div><div class="lab-body"></div></div>`;
+  // Optional third argument: a how-to line (what to click, what to look for) shown under the explorer title.
+  const lab = (name, title, how = "") => `<div class="lab" data-lab="${name}"><div class="lab-h">Try it <b>${title}</b></div>${how ? `<p class="lab-how">${how}</p>` : ""}<div class="lab-body"></div></div>`;
 
   // Line charts on a log₂ x axis (cfg.xlin: linear x, crosshair snapping to cfg.step): series are functions, direct labels
   // sit at the right end (or at labelAt), and a crosshair lists every series in the tooltip.

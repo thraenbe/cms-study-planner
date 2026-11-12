@@ -406,3 +406,30 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .sap .strip i { flex: 1 1 0; min-width: 0; max-width: 10px; height: 20px; border-radius: 2px; background: var(--c); }
 .sap table.tt.mx td { min-width: 4.2em; }
 @media (max-width: 480px) { .sap table.tt.mx td { min-width: 3em; } }
+
+/* Self-contained lecture write-ups: before-you-start box, glossary, plain-words lead-in, common mistakes, try-it tasks, explorer how-to */
+.sap dfn { font-style: normal; font-weight: 650; }
+.sap .before { background: var(--surface-2); border-left: 4px solid var(--c-core); border-radius: 8px; padding: 10px 14px; margin: 0.4rem 0 1rem; }
+.sap .before ul { margin: 0.2rem 0 0; }
+.sap .before p { margin: 0 0 0.2rem; }
+.sap details.terms { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 0 0 1.3rem; }
+.sap details.terms > summary { cursor: pointer; padding: 10px 14px; font-weight: 600; }
+.sap details.terms > summary .muted { font-weight: 400; font-size: 0.9rem; }
+.sap details.terms dl { margin: 0; padding: 2px 14px 14px; display: grid; grid-template-columns: minmax(8.5rem, 13rem) 1fr; gap: 8px 16px; font-size: 0.92rem; line-height: 1.4; }
+.sap details.terms dt { font-weight: 650; }
+.sap details.terms dd { margin: 0; color: var(--ink-2); }
+.sap details.terms dd a.sec { font-size: 0.82rem; }
+@media (max-width: 600px) { .sap details.terms dl { grid-template-columns: 1fr; gap: 2px; } .sap details.terms dd { margin-bottom: 8px; } }
+.sap .detail p.plain { font-size: 1.02rem; }
+.sap .plain > b:first-child { color: var(--c-core); }
+.sap .detail p.oops { font-size: 0.92rem; padding: 7px 12px; border-radius: 8px; background: color-mix(in srgb, var(--warn) 7%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); }
+.sap .try { border: 1px solid color-mix(in srgb, var(--c-trk) 40%, var(--line)); border-radius: 10px; padding: 10px 14px 6px; background: color-mix(in srgb, var(--c-trk) 6%, var(--surface)); margin: 1.2rem 0 1.6rem; }
+.sap .try ol { margin: 0.2rem 0 0.4rem; padding-left: 1.3rem; }
+.sap .try li { margin: 0.2rem 0 0.7rem; }
+.sap .try details { margin-top: 4px; }
+.sap .try summary { cursor: pointer; color: var(--ink-2); font-size: 0.9rem; }
+.sap .try details[open] { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.sap .try details[open] summary { margin-bottom: 4px; }
+.sap .try details p { margin: 0 0 0.4rem; }
+.sap .lab .lab-how { font-size: 0.88rem; color: var(--ink-2); margin: -2px 0 10px; line-height: 1.45; }
+.sap .detail h2[id], .sap .detail h3[id] { scroll-margin-top: 12px; }
