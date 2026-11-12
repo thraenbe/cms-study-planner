@@ -581,7 +581,7 @@ CHARTS.multi = narrow => {
   const last = MULTI[MULTI.length - 1];
   const lbl = narrow ? "" : `<text class="lbl" x="${W - R + 8}" y="${y(last.cla) + 4}">lookahead chain</text><text class="lbl" x="${W - R + 8}" y="${y(last.rc) + 4}">ripple chain</text><text class="lbl" x="${W - R + 8}" y="${y(last.csa) + 4}">carry-save tree</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart: carry delays to add 2 to 10 sixteen-bit operands. Ripple chain grows from 16 to 24, lookahead chain from 4 to 36, carry-save tree with a final lookahead adder from 4 to 9">
-    ${grid}${xt}<text class="axl" x="${W - R}" y="${H - 10}" text-anchor="end">operands m →</text>${ln("rc", "")}${ln("cla", "k2")}${ln("csa", "k3")}${cols}${lbl}</svg>`;
+    ${grid}${xt}<text class="axl" x="${W - R}" y="${H - 10}" text-anchor="end" dy="-14">operands m →</text>${ln("rc", "")}${ln("cla", "k2")}${ln("csa", "k3")}${cols}${lbl}</svg>`;
 };
 
 // Slides 10 and 17: reduction stages a Dadda tree needs for a given maximum column height.
@@ -611,6 +611,60 @@ CHARTS.cost = narrow => {
       + `<text class="tick" x="${cx}" y="${H - 10}" text-anchor="middle">${c.k}</text>`; }).join("");
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grouped columns: a 6 by 6 Wallace tree uses 17 full adders and 9 half adders, a Dadda tree 15 and 5">${grid}${bars}</svg>`;
 };
+
+// The three stages of every multiplier and the variants that change one of them (the backbone of the lecture-3
+// multiplier chapter). Colour = variant: slot 1 reduction schedules, 2 Baugh-Wooley, 4 multiply-accumulate,
+// 3 sequential, gray the final-adder choice. Boxes are hover/focus targets with a tooltip.
+const STG = [
+  { t: "1 Partial products", d: ["n² AND gates", "one AND delay"], tip: "<b>Stage 1: partial-product generation</b>every bit pair a<sub>j</sub>b<sub>k</sub> through one AND gate, placed at weight 2<sup>j+k</sup>: n rows, n² bits, all at once",
+    call: [[2, "Baugh-Wooley", ["signed: sign products", "inverted, two 1s added"]], [4, "Multiply-accumulate", ["accumulator joins as", "one more row"]]] },
+  { t: "2 Reduction", d: ["full and half adders", "per stage: one FA delay"], tip: "<b>Stage 2: reduction</b>full adders (3 → 2) and half adders squeeze the columns until no column holds more than two bits",
+    call: [[1, "Array, Wallace, Dadda", ["three schedules for the", "same 3 : 2 squeeze"]], [3, "Sequential", ["one row per clock", "cycle instead of a tree"]]] },
+  { t: "3 Final adder", d: ["one carry-propagate", "addition"], tip: "<b>Stage 3: final addition</b>one carry-propagate adder (ripple-carry or lookahead) turns the two rows into the 2n-bit product",
+    call: [[0, "Adder type", ["ripple: small,", "lookahead: fast"]]] },
+];
+const STG_FLOW = [["n + n", "bits"], ["n²", "bits"], ["2 rows,", "≤ 2n bits"], ["2n", "bits"]];
+CHARTS.stages = narrow => {
+  const callH = c => 16 + c[2].length * 13, gap = 8;
+  const arrow = (x1, y1, x2, y2) => { const v = x1 === x2, s = 5;
+    const head = v ? `${x2 - s},${y2 - s * 1.6} ${x2 + s},${y2 - s * 1.6} ${x2},${y2}` : `${x2 - s * 1.6},${y2 - s} ${x2 - s * 1.6},${y2 + s} ${x2},${y2}`;
+    return `<line class="stg-ar" x1="${x1}" y1="${y1}" x2="${v ? x2 : x2 - s}" y2="${v ? y2 - s : y2}"/><polygon class="stg-ah" points="${head}"/>`; };
+  const box = (s, x, y, w, h) => `<g class="pt" tabindex="0" data-tip="${esc(s.tip)}"><rect class="stg-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>
+      <text class="stg-t" x="${x + 12}" y="${y + 22}">${s.t.replace(/^(\d)/, '<tspan class="stg-k">$1</tspan>')}</text>${s.d.map((t, i) => `<text class="stg-d" x="${x + 12}" y="${y + 40 + i * 14}">${t}</text>`).join("")}</g>`;
+  const calls = (s, x, y) => { let yy = y, out = "";
+    s.call.forEach(c => { const h = callH(c);
+      out += `<rect class="${c[0] ? "f" + c[0] : "fg0"}" x="${x}" y="${yy}" width="4" height="${h}" rx="2"/><text class="stg-n" x="${x + 11}" y="${yy + 12}">${c[1]}</text>${c[2].map((t, i) => `<text class="stg-d" x="${x + 11}" y="${yy + 26 + i * 13}">${t}</text>`).join("")}`;
+      yy += h + gap; });
+    return { svg: out, h: yy - y - gap }; };
+  const aria = "Diagram of a multiplier in three stages. Two n-bit operands enter stage 1, partial-product generation with n squared AND gates, which outputs n squared bits. Stage 2, reduction with full and half adders, outputs two rows of at most 2n bits. Stage 3, one carry-propagate adder, outputs the 2n-bit product. Baugh-Wooley signed multiplication and multiply-accumulate change only stage 1; carry-save array, Wallace and Dadda trees are schedules of stage 2, and sequential multiplication replaces the stage-2 tree by one row per clock cycle; stage 3 only varies in the adder type, ripple-carry or lookahead";
+  if (narrow) {
+    const W = 340, bx = 8, bw = 150, bh = 64, cx = 172; let y = 26, svg = `<text class="stg-w" x="${bx + bw / 2 + 8}" y="13">${STG_FLOW[0].join(" ")}</text>` + arrow(bx + bw / 2, 2, bx + bw / 2, y);
+    STG.forEach((s, i) => { const c = calls(s, cx, y), rh = Math.max(bh, c.h);
+      svg += box(s, bx, y, bw, bh) + c.svg;
+      const y2 = y + rh + 34, lbl = STG_FLOW[i + 1].join(" ");
+      svg += arrow(bx + bw / 2, y + bh, bx + bw / 2, i < 2 ? y2 : y + bh + 26) + `<text class="stg-w" x="${bx + bw / 2 + 8}" y="${(i < 2 ? (y + bh + y2) / 2 : y + bh + 18) + 4}">${lbl}</text>`;
+      y = i < 2 ? y2 : y + Math.max(rh, bh + 30); });
+    return `<svg viewBox="0 0 ${W} ${y + 4}" role="img" aria-label="${aria}">${svg}</svg>`;
+  }
+  const W = 600, by = 34, bh = 72, X = [36, 236, 436], BW = [150, 150, 130];
+  let svg = "", maxc = 0;
+  STG.forEach((s, i) => { svg += box(s, X[i], by, BW[i], bh); const c = calls(s, X[i], by + bh + 22); svg += c.svg; maxc = Math.max(maxc, c.h);
+    svg += `<line class="stg-br" x1="${X[i] + 2}" x2="${X[i] + 2}" y1="${by + bh}" y2="${by + bh + 22}"/>`; });
+  const gaps = [[0, 36], [186, 236], [386, 436], [566, 600]];
+  gaps.forEach(([a, b], i) => { const mx = (a + b) / 2, anc = i === 0 ? "start" : i === 3 ? "end" : "middle", tx = i === 0 ? 1 : i === 3 ? 599 : mx;
+    svg += arrow(a + (i === 0 ? 2 : 4), by + bh / 2, b - (i === 3 ? 2 : 4), by + bh / 2) + `<text class="stg-w" x="${tx}" y="${by + bh / 2 - 9}" text-anchor="${anc}">${STG_FLOW[i][0]}</text><text class="stg-w" x="${tx}" y="${by + bh / 2 + 19}" text-anchor="${anc}">${STG_FLOW[i][1]}</text>`; });
+  svg += `<text class="stg-w" x="36" y="16">operands a, b</text><text class="stg-w" x="600" y="16" text-anchor="end">product</text>`;
+  return `<svg viewBox="0 0 ${W} ${by + bh + 22 + maxc + 4}" role="img" aria-label="${aria}">${svg}</svg>`;
+};
+// What each variant changes, stage by stage. `chg` marks the stage cell that the variant actually changes.
+const WCW = [
+  { k: "Unsigned n × n", s: 0, a: "n² AND gates, n rows", b: "array, Wallace or Dadda; Dadda: n² − 4n + 3 FA, n − 1 HA", c: "one CPA over the 2n − 2 middle columns", d: "1 AND + stages · FA + final adder", ar: "n² AND + reduction adders + one adder" },
+  { k: "Signed (Baugh-Wooley)", s: 2, chg: "a", a: "2(n − 1) products inverted (NAND), constant 1s at 2<sup>n</sup> and 2<sup>2n−1</sup>", b: "unchanged: the tallest column is still n", c: "unchanged; carries above 2<sup>2n−1</sup> are dropped", d: "same as unsigned", ar: "same, NAND instead of AND in 2(n − 1) places" },
+  { k: "Multiply-accumulate", s: 4, chg: "a", a: "plus one accumulator row (2n bits, in practice wider: guard bits)", b: "same tree; tallest column n + 1 costs one more stage only if n is a Dadda height (4, 6, 9, …), not for 8, 16, 32, 64", c: "same type, as wide as the accumulator", d: "same, or one FA delay more", ar: "about one ripple-carry adder more (8 × 8: 35 + 7 → 48 + 8 FA + HA)" },
+  { k: "Sequential", s: 3, chg: "b", a: "one row a·b<sub>i</sub> per cycle (n AND gates)", b: "no tree: the row is added in cycle i", c: "the per-cycle n-bit adder is the carry-propagate adder", d: "n cycles × one adder", ar: "one n-bit adder, n AND gates, shift registers" },
+];
+const wcwTable = () => `<table class="wcw"><thead><tr><th>Variant</th><th>Stage 1: partial products</th><th>Stage 2: reduction</th><th>Stage 3: final adder</th><th>Delay</th><th>Area</th></tr></thead><tbody>
+  ${WCW.map(r => `<tr><td data-l="Variant">${r.s ? key(r.s) + " " : ""}${r.k}</td>${[["a", "Stage 1"], ["b", "Stage 2"], ["c", "Stage 3"]].map(([f, h]) => `<td data-l="${h}" class="${r.chg === f ? "chg t" + r.s : /^(unchanged|same)/.test(r[f]) ? "same" : ""}">${r[f]}</td>`).join("")}<td data-l="Delay">${r.d}</td><td data-l="Area">${r.ar}</td></tr>`).join("")}</tbody></table>`;
 
 // Slide 27: error of the linear starting value X0 = 48/17 − 32/17·d over 0.5 ≤ d ≤ 1 (equioscillation at ±1/17).
 const NR_T1 = 48 / 17, NR_T2 = -32 / 17, NR_E0 = 1 / 17;
@@ -664,76 +718,106 @@ function csaOut() {
       ${row(`carry c = ${C}`, C, "t2")}
       ${row(`r = ${R}`, R, "")}
     </div>
-    <dl class="ro"><dt>Stage 1</dt><dd>four full adders in parallel, one full-adder delay: ${CS.a} + ${CS.b} + ${CS.c} → ${S} + ${C} (carry-save form)</dd>
-      <dt>Stage 2</dt><dd>one carry-propagate adder for s + c = ${R} ${R === CS.a + CS.b + CS.c ? flag("ok", "equals a₁ + a₂ + a₃") : flag("bad", "mismatch")}</dd></dl>`;
+    <dl class="ro"><dt>Step 1</dt><dd>four full adders in parallel, one full-adder delay: ${CS.a} + ${CS.b} + ${CS.c} → ${S} + ${C} (carry-save form)</dd>
+      <dt>Step 2</dt><dd>one carry-propagate adder for s + c = ${R} ${R === CS.a + CS.b + CS.c ? flag("ok", "equals a₁ + a₂ + a₃") : flag("bad", "mismatch")}</dd></dl>`;
 }
 function initCsa(body) { const render = () => { body.innerHTML = csaOut(); }; render(); wireBits(body, CS, render); }
 
-// Explorer: the 4 × 4 bit-product matrix, unsigned (slide 7) or two's complement rearranged (slide 14).
-const MM = { a: 6, b: 5, signed: 0 };
+// Explorer: the 4 × 4 bit-product matrix, unsigned (slide 7) or two's complement rearranged (slide 14). The readout
+// adds up what every row contributes, then the constants, and shows how r = total mod 2^(2n) is read.
+const MM = { a: 14, b: 5, signed: 1 };
+const MM_PRESETS = [["−2 × 5", 14, 5, 1], ["−3 × 5", 13, 5, 1], ["6 × 5 unsigned", 6, 5, 0]];
 function mmxOut() {
   const n = 4, cols = 2 * n, sg = MM.signed, head = Array.from({ length: cols }, (_, i) => `<div class="h">2<sup>${cols - 1 - i}</sup></div>`).join("");
   const av = sg ? tcv(MM.a, n) : MM.a, bv = sg ? tcv(MM.b, n) : MM.b;
-  const rows = [], extra = [];
+  const rows = [], extra = [], rowVal = [];
   let total = 0;
   for (let i = 0; i < n; i++) {
     const cells = Array(cols).fill(null), text = {}, cls = {};
+    let rv = 0;
     for (let j = 0; j < n; j++) {
       const p = (MM.a >> j & 1) & (MM.b >> i & 1), inv = sg && (i === n - 1) !== (j === n - 1);
       const v = inv ? 1 - p : p, col = cols - 1 - (i + j);
-      cells[col] = v; total += v << i + j;
+      cells[col] = v; rv += v << i + j;
       text[col] = `<small>${inv ? "<s>" : ""}a${SUBS[j]}b${SUBS[i]}${inv ? "</s>" : ""}</small>${v}`; cls[col] = inv ? "t2" : "t1";
     }
-    rows.push(cellRow(`row ${i}`, cells, "", { text, cls }));
+    rowVal.push(rv); total += rv;
+    rows.push(cellRow(`row ${i} = ${rv}`, cells, "", { text, cls }));
   }
-  if (sg) { const cells = Array(cols).fill(null); cells[cols - 1 - n] = 1; cells[0] = 1; total += (1 << n) + (1 << cols - 1); extra.push(cellRow("constants", cells, "t3")); }
-  const prod = total & (1 << cols) - 1, pv = sg ? tcv(prod, cols) : prod;
+  const K = (1 << n) + (1 << cols - 1);
+  if (sg) { const cells = Array(cols).fill(null); cells[cols - 1 - n] = 1; cells[0] = 1; total += K; extra.push(cellRow(`1s = ${K}`, cells, "t3")); }
+  const prod = total & (1 << cols) - 1, pv = sg ? tcv(prod, cols) : prod, nib = v => bin(v, cols).replace(/^(\d{4})/, "$1 ");
+  const preset = MM_PRESETS.map(([t, a, b, s]) => `<button type="button" class="preset" data-pa="${a}" data-pb="${b}" data-ps="${s}" aria-pressed="${MM.a === a && MM.b === b && sg === s}">${t}</button>`).join("");
   return `<div class="presets" role="group" aria-label="Operand encoding">${[["Unsigned", 0], ["Two's complement", 1]].map(([t, v]) => `<button type="button" class="preset" data-sg="${v}" aria-pressed="${sg === v}">${t}</button>`).join("")}</div>
+    <div class="presets" role="group" aria-label="Examples">${preset}</div>
     <div class="agrid mgrid"><div></div>${head}
-      <div class="rl">a = ${av}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("a", MM.a, n)}
-      <div class="rl">b = ${bv}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("b", MM.b, n)}
+      <div class="rl">a = ${fmtv(av)}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("a", MM.a, n)}
+      <div class="rl">b = ${fmtv(bv)}</div>${Array(n).fill('<div class="cell blank"></div>').join("")}${bitBtns("b", MM.b, n)}
       ${rows.join("")}${extra.join("")}
-      ${cellRow(`r = ${pv}`, bits(prod, cols), "")}
+      ${cellRow(`r = ${fmtv(pv)}`, bits(prod, cols), "")}
     </div>
-    <dl class="ro"><dt>Product</dt><dd>${av} × ${bv} = ${av * bv} ${pv === av * bv ? flag("ok", "the matrix sums to it") : flag("bad", "overflow")}</dd>
-      <dt>Column sum</dt><dd>${total} before dropping bit 2<sup>${cols}</sup> and above${sg ? ` (the two constants add ${(1 << n) + (1 << cols - 1)})` : ""}</dd></dl>`;
+    <dl class="ro"><dt>Rows</dt><dd>row 0 + row 1 + row 2 + row 3 = ${rowVal.join(" + ")} = ${rowVal.reduce((s, v) => s + v, 0)}${sg ? " (each row is a·b<sub>i</sub>·2<sup>i</sup>, with the sign products inverted)" : " (row i is a·b<sub>i</sub>·2<sup>i</sup>)"}</dd>
+      ${sg ? `<dt>Constants</dt><dd>2<sup>${n}</sup> + 2<sup>${cols - 1}</sup> = ${1 << n} + ${1 << cols - 1} = ${K}</dd>` : ""}
+      <dt>Total</dt><dd>${sg ? `${rowVal.join(" + ")} + ${K} = ` : ""}${total}</dd>
+      <dt>Result</dt><dd>total mod 2<sup>${cols}</sup> = ${total} mod ${1 << cols} = ${prod} = ${nib(prod)} → r, ${sg ? `read as two's complement: ${prod >= 1 << cols - 1 ? `${prod} − ${1 << cols} = ` : ""}${fmtv(pv)}` : `read as unsigned: ${pv}`}</dd>
+      <dt>Product</dt><dd>${fmtv(av)} × ${fmtv(bv)} = ${fmtv(av * bv)} ${pv === av * bv ? flag("ok", "the matrix sums to it") : flag("bad", "overflow")}</dd></dl>`;
 }
 function initMmx(body) {
   const render = () => { body.innerHTML = mmxOut(); }; render(); wireBits(body, MM, render);
-  body.addEventListener("click", e => { const b = e.target.closest("[data-sg]"); if (!b) return; MM.signed = +b.dataset.sg; render(); });
+  body.addEventListener("click", e => {
+    const b = e.target.closest("[data-sg]"); if (b) { MM.signed = +b.dataset.sg; render(); return; }
+    const p = e.target.closest("[data-pa]"); if (p) { MM.a = +p.dataset.pa; MM.b = +p.dataset.pb; MM.signed = +p.dataset.ps; render(); }
+  });
 }
 
-// Explorer: Dadda reduction for an n × n multiplier (slides 9–11); the counting reproduces slide 11 for n = 6.
-function daddaStages(n) {
-  let h = Array.from({ length: 2 * n }, (_, i) => Math.max(0, Math.min(i + 1, n, 2 * n - 1 - i)));
-  const stages = [{ h: [...h], fa: 0, ha: 0, t: n }];
-  DADDA_SEQ.filter(d => d < n).reverse().forEach(t => {
+// Explorer: Dadda reduction for an n × n multiplier (slides 9–11), optionally with an accumulator row of 2n bits
+// (slide 17); the counting reproduces slide 11 for n = 6. Targets start below the tallest column, so the extra row
+// costs a stage exactly when n is itself one of Dadda's heights.
+function daddaStages(n, acc = false) {
+  let h = Array.from({ length: 2 * n }, (_, i) => Math.max(0, Math.min(i + 1, n, 2 * n - 1 - i)) + (acc ? 1 : 0));
+  const top = Math.max(...h), stages = [{ h: [...h], fa: 0, ha: 0, t: top }];
+  DADDA_SEQ.filter(d => d < top).reverse().forEach(t => {
     let fa = 0, ha = 0, carry = 0; const nh = [];
-    for (let i = 0; i < h.length; i++) { let x = h[i] + carry; carry = 0; while (x > t) { if (x - t >= 2) { fa++; x -= 2; } else { ha++; x -= 1; } carry++; } nh[i] = x; }
+    for (let i = 0; i < h.length || carry; i++) { let x = (h[i] || 0) + carry; carry = 0; while (x > t) { if (x - t >= 2) { fa++; x -= 2; } else { ha++; x -= 1; } carry++; } nh[i] = x; }
     h = nh; stages.push({ h: [...h], fa, ha, t });
   });
   return stages;
 }
-const DD = { n: 6 };
+// Final carry-propagate adder after the reduction: from the lowest column that still holds two bits to the top.
+function finalAdder(st) {
+  const h = st[st.length - 1].h, lo = h.findIndex(x => x >= 2); let hi = h.length - 1; while (hi > 0 && !h[hi]) hi--;
+  return { lo, hi, w: lo < 0 ? 0 : hi - lo + 1 };
+}
+const DD = { n: 6, acc: 0 };
 function daddaOut() {
-  const n = DD.n, st = daddaStages(n), cols = 2 * n, cw = 13, dh = 11, pad = 4;
-  const narrow = isNarrow(), W = narrow ? 340 : 600, left = narrow ? 84 : 150;
+  const n = DD.n, acc = !!DD.acc, st = daddaStages(n, acc), cols = Math.max(...st.map(s => s.h.length)), cw = 13, dh = 11, pad = 4;
+  const narrow = isNarrow(), W = narrow ? 340 : 600, left = narrow ? 84 : 150, fin = finalAdder(st);
   let y = pad, svg = "";
   st.forEach((s, k) => {
     const maxh = Math.max(...s.h), H = maxh * dh;
-    const dots = s.h.map((hh, i) => Array.from({ length: hh }, (_, r) => `<circle class="f${k === 0 ? 1 : hh <= s.t ? 3 : 1}" cx="${W - pad - (cols - i) * cw + cw / 2}" cy="${y + H - r * dh - dh / 2}" r="3.6"/>`).join("")).join("");
-    const lbl = k === 0 ? `<tspan class="cat">matrix</tspan> ${n} × ${n}, tallest column ${maxh}` : `<tspan class="cat">stage ${k}</tspan> → ≤ ${s.t}: ${s.fa} FA, ${s.ha} HA`;
+    const dots = s.h.map((hh, i) => Array.from({ length: hh }, (_, r) => `<circle class="f${k === 0 ? (acc && r === 0 ? 4 : 1) : hh <= s.t ? 3 : 1}" cx="${W - pad - (cols - i) * cw + cw / 2}" cy="${y + H - r * dh - dh / 2}" r="3.6"/>`).join("")).join("");
+    const lbl = k === 0 ? `<tspan class="cat">matrix</tspan> ${n} × ${n}${acc ? " + acc." : ""}, tallest ${maxh}` : `<tspan class="cat">stage ${k}</tspan> → ≤ ${s.t}: ${s.fa} FA, ${s.ha} HA`;
     svg += `<text class="note" x="${pad}" y="${y + Math.min(H, 26) / 2 + 4}">${lbl}</text>${dots}<line class="axis" x1="${left}" x2="${W - pad}" y1="${y + H + pad}" y2="${y + H + pad}"/>`;
     y += H + 2 * pad + 2;
   });
   const fa = st.reduce((a, s) => a + s.fa, 0), ha = st.reduce((a, s) => a + s.ha, 0);
+  const sp = stagesFor(n), sa = stagesFor(n + 1), lim = DADDA_SEQ.find(d => d >= n + 1);
+  const accNote = sa > sp
+    ? `tallest column n + 1 = ${n + 1} is above the Dadda height ${n}: one stage more than the plain ${n} × ${n} (${sp} → ${sa})`
+    : `tallest column n + 1 = ${n + 1} still fits under the Dadda height ${lim}: the same ${sp} stage${sp === 1 ? "" : "s"} as the plain ${n} × ${n}`;
   return `<div class="ctl"><label>n <input type="range" min="3" max="8" value="${n}" data-n> <output>${n} × ${n}</output></label></div>
-    <svg viewBox="0 0 ${W} ${y}" role="img" aria-label="Dot diagram of the ${n} by ${n} multiplication matrix and its ${st.length - 1} Dadda reduction stages">${svg}</svg>
-    <dl class="ro"><dt>Stages</dt><dd>${st.length - 1} reduction stages (${st.slice(1).map(s => s.t).join(", ")} bits per column), then one carry-propagate adder of ${cols - 1} bits</dd>
-      <dt>Adders</dt><dd>${fa} full adders and ${ha} half adders${n === 6 ? ` ${flag("ok", "slide 11: 15 and 5")}` : ""}</dd></dl>`;
+    <div class="presets" role="group" aria-label="Matrix">${[["n × n multiplier", 0], ["+ accumulator row", 1]].map(([t, v]) => `<button type="button" class="preset" data-acc="${v}" aria-pressed="${DD.acc === v}">${t}</button>`).join("")}</div>
+    <svg viewBox="0 0 ${W} ${y}" role="img" aria-label="Dot diagram of the ${n} by ${n} multiplication matrix${acc ? " plus one accumulator row" : ""} and its ${st.length - 1} Dadda reduction stages">${svg}</svg>
+    <dl class="ro"><dt>Heights</dt><dd>columns 2<sup>0</sup> upwards: ${st[0].h.join(", ")}${acc ? " (the amber dots are the accumulator row)" : ""}</dd>
+      <dt>Stages</dt><dd>${st.length - 1} reduction stage${st.length === 2 ? "" : "s"}, targets ${st.map(s => s.t).join(" → ")}</dd>
+      <dt>Adders</dt><dd>${fa} full adders and ${ha} half adders${n === 6 && !acc ? ` ${flag("ok", "slide 11: 15 and 5")}` : ""}</dd>
+      <dt>Final adder</dt><dd>${fin.w}-bit carry-propagate adder over columns 2<sup>${fin.lo}</sup> to 2<sup>${fin.hi}</sup>; its carry-out is bit 2<sup>${fin.hi + 1}</sup>${acc ? " (a guard bit of the accumulator)" : ""}</dd>
+      <dt>Accumulator</dt><dd>${accNote}</dd>
+      <dt>Array</dt><dd>a carry-save array, one row per stage, would need ${acc ? n - 1 : n - 2} stages for the same ${acc ? n + 1 : n} rows</dd></dl>`;
 }
 function initDadda(body) {
   const render = () => { body.innerHTML = daddaOut(); body.querySelector("[data-n]").addEventListener("input", e => { DD.n = +e.target.value; render(); }); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-acc]"); if (!b) return; DD.acc = +b.dataset.acc; render(); });
   render(); addEventListener("resize", () => { if (body.dataset.narrow !== String(isNarrow())) { body.dataset.narrow = String(isNarrow()); render(); } });
 }
 
@@ -782,23 +866,78 @@ Object.assign(LABS, { csa: initCsa, mmx: initMmx, dadda: initDadda, seq: initSeq
 
 function lecture3() {
   return `${head(l)}
-    <p class="lead">The second arithmetic lecture goes from adding two numbers to adding many, which is what a multiplier does: carry-save addition, the bit-product matrix, Wallace and Dadda reduction trees, signed and multiply-accumulate variants, sequential multiplication, and finally division by restoring steps or by Newton's method. Five charts and six explorers; written from the chair's 2022/23 deck (28 pages in the file; the footer counts to 31, slides 28 to 30 are missing, which is where the deck 4 list says division continues).</p>
-    <p class="muted">Slides 3–5 recap the end of lecture 2 (number representations, addition and subtraction) before the new material starts; the structure of all three arithmetic lectures is representations → add/subtract → multiply → divide.</p>
+    <p class="lead">The second arithmetic lecture goes from adding two numbers to adding many, which is what a multiplier does, and then to division. Every multiplier in it has the same three stages: generate the partial products with AND gates, reduce them to two rows with full and half adders, and add those two rows with one carry-propagate adder. Each variant of the lecture changes exactly one stage: Baugh-Wooley's signed form and the multiply-accumulate change stage 1; the carry-save array and the Wallace and Dadda trees are three schedules for stage 2; stage 3 only varies in its adder type. Division follows, by restoring steps or by Newton's method. Six charts and six explorers; written from the chair's 2022/23 deck (28 pages in the file; the footer counts to 31, slides 28 to 30 are missing, which is where the deck 4 list says division continues).</p>
+    <p class="muted">Slides 3–5 recap the end of lecture 2 (number representations, addition and subtraction) before the new material starts; the structure of all three arithmetic lectures is representations → add/subtract → multiply → divide. The multiplier chapter below is ordered by stage rather than by slide, so the slide ranges in its headings jump.</p>
 
-    <h2>Adding multiple operands</h2>
-    <h3>The naive way and why it is slow (slide 3)</h3>
+    <h2>A multiplier in three stages</h2>
+    <p>Multiplying two n-bit numbers in hardware is always the same pipeline of three blocks, and the widths along it explain most of the lecture:</p>
+    <ol>
+      <li><b>Partial-product generation.</b> n<sup>2</sup> AND gates form every bit product a<sub>j</sub>b<sub>k</sub> at once: n rows, n<sup>2</sup> bits, one AND delay.</li>
+      <li><b>Reduction.</b> Full adders (3 bits in, 2 out: a 3 : 2 compressor) and half adders squeeze the columns of that matrix until no column holds more than two bits. Each stage of adders costs one full-adder delay. How many stages, and where the adders sit, is the schedule: carry-save array (one row at a time), Wallace tree (compress as early as possible) or Dadda tree (compress as late as possible, following the heights 2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 94, …).</li>
+      <li><b>Final addition.</b> One carry-propagate adder (ripple-carry or lookahead, from lecture 2) turns the two rows into the 2n-bit product.</li>
+    </ol>
+    ${chart("stages")}
+      <figcaption>The three stages with the widths between them. Each coloured bar is a variant from the lecture, placed under the one stage it changes: Baugh-Wooley's signed form and the multiply-accumulate change only stage 1, the three reduction schedules and sequential multiplication only stage 2, and stage 3 differs between designs only in the type of adder. Hover or focus a box for what it does.</figcaption>
+    </figure>
+    <p class="claim">Dadda is a reduction schedule, not a multiply-accumulate. A MAC can use a Dadda tree, and a Dadda multiplier need not accumulate: the accumulator is one more row in stage 1, the Dadda tree is how stage 2 is scheduled.</p>
+    <h3>What changes where</h3>
+    ${wcwTable()}
+    <p class="muted">Tinted cells are the one stage a variant changes; grey text means "same as unsigned". The Dadda adder counts n<sup>2</sup> − 4n + 3 and n − 1 and the 2n − 2 bits of the final adder match the explorer below for every n (6 × 6: 15 FA, 5 HA, 10 bits); they are the standard closed forms, the slides give the 6 × 6 numbers.</p>
+    <div class="why"><div class="kicker">Context, not on the slides: why the three-stage view is worth keeping in mind</div>
+      <p>The slides present the multiplier topic by topic (matrix, Wallace, Dadda, signed, multiply-accumulate, sequential). Read as stages, every topic answers one of three questions: which bits go into the matrix (stage 1), in which order they are squeezed (stage 2), and which adder finishes the job (stage 3). The delay is the sum along the pipeline, one AND delay + one full-adder delay per reduction stage + the final adder, and the area is the sum of the three blocks. A typical exam question names a variant and asks what it costs; the answer is always "this stage changes, the other two do not".</p></div>
+
+    <h2>Stage 1: partial-product generation</h2>
+    <h3>The AND matrix (slides 6–7)</h3>
+    <ul>
+      <li><b>Bit products.</b> Multiplying out (Σ a<sub>j</sub>2<sup>j</sup>)·(Σ b<sub>k</sub>2<sup>k</sup>) gives Σ<sub>i</sub> 2<sup>i</sup>·Σ<sub>j+k=i</sub> a<sub>j</sub>b<sub>k</sub>: every pair of bits contributes a<sub>j</sub>·b<sub>k</sub> (a single AND gate) at weight 2<sup>j+k</sup>. All n<sup>2</sup> AND gates work at once, so the whole matrix exists after one AND delay.</li>
+      <li><b>Shape.</b> Row i is a·b<sub>i</sub>·2<sup>i</sup>, the multiplicand shifted by i positions, so the matrix is a parallelogram: columns in the middle hold up to n bits, the outer columns only one. The product has 2n bits.</li>
+      <li><b>Hand-over to stage 2.</b> The matrix is just a multi-operand addition with a particular shape, so the carry-save idea of stage 2 applies, with the columns of different height taken into account.</li>
+    </ul>
+    ${lab("mmx", "4 × 4 bit-product matrix, unsigned or two's complement")}
+    <p class="muted">Blue cells are plain bit products, orange ones are inverted in the signed form, green ones are the two constant 1s. The row labels and the readout add the matrix up the way stage 2 and 3 will: each row's value, the constants, the total, and then r as the total modulo 2<sup>8</sup>. The default is the signed example −2 × 5 worked through below; the buttons switch to −3 × 5 and to an unsigned product.</p>
+
+    <h3>Signed operands: Baugh-Wooley inversion and two constants (slides 13–15)</h3>
+    <ul>
+      <li><b>Expand the two's-complement values.</b> With a = −a<sub>n−1</sub>2<sup>n−1</sup> + Σ a<sub>i</sub>2<sup>i</sup> and the same for b, the product has four parts: a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> (positive), the unsigned (n−1) × (n−1) matrix of the lower bits (positive), and two negative sums −Σ a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> and −Σ b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup>.</li>
+      <li><b>Rearranged matrix</b> (slide 14). A subtracted bit −p·2<sup>w</sup> equals (1 − p)·2<sup>w</sup> − 2<sup>w</sup>, so the negative terms become inverted bit products plus a constant. Summing the constants modulo 2<sup>2n</sup> leaves a single 1 at weight 2<sup>n</sup> and a single 1 at weight 2<sup>2n−1</sup>. The result is a matrix of the same height as the unsigned one, so stages 2 and 3 are unchanged: only stage 1 differs, by 2(n − 1) inverters (NAND instead of AND) and two constant 1s.</li>
+      <li><b>Notes</b> (slide 15). Complexity is the same as unsigned. The literature has other, equivalent rearrangements. A combined signed/unsigned multiplier extends both operands by one bit (a 0 for unsigned, a copy of the sign bit for signed) and always multiplies signed.</li>
+    </ul>
+    <div class="formula">a·b = a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> − Σ<sub>i=0…n−2</sub> a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> − Σ<sub>i=0…n−2</sub> b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup> + Σ<sub>i=0…2n−4</sub> 2<sup>i</sup> Σ<sub>j+k=i, j,k≤n−2</sub> a<sub>j</sub>b<sub>k</sub></div>
+    <div class="why"><div class="kicker">Context, not on the slides: where the two constants come from</div>
+      <p>Each of the two negative sums has n − 1 terms at the weights 2<sup>n−1</sup>, 2<sup>n</sup>, …, 2<sup>2n−3</sup>. Writing every −p·2<sup>w</sup> as (1 − p)·2<sup>w</sup> − 2<sup>w</sup> leaves, per sum, the constant −(2<sup>n−1</sup> + … + 2<sup>2n−3</sup>) = −(2<sup>2n−2</sup> − 2<sup>n−1</sup>). Both sums together give −2·(2<sup>2n−2</sup> − 2<sup>n−1</sup>) = −2<sup>2n−1</sup> + 2<sup>n</sup>. Modulo 2<sup>2n</sup>, −2<sup>2n−1</sup> is the same as +2<sup>2n−1</sup>, so the constant is 2<sup>2n−1</sup> + 2<sup>n</sup>: one 1 at the top bit and one at bit n. For n = 4: −2·(64 − 8) = −112 ≡ 256 − 112 = 144 = 128 + 16.</p></div>
+    <div class="ex"><div class="kicker">Worked example: −2 × 5 in 4 bits, row by row</div>
+      <p>a = 1110 (−2), b = 0101 (5). Row i holds a·b<sub>i</sub>·2<sup>i</sup>, with the products that involve exactly one sign bit inverted. Row 0 (b<sub>0</sub> = 1): a<sub>0</sub>, a<sub>1</sub>, a<sub>2</sub> = 0, 1, 1 at weights 1, 2, 4, and the inverted a<sub>3</sub>b<sub>0</sub> = 0 at 8 → 6. Row 1 (b<sub>1</sub> = 0): the plain products are 0, the inverted a<sub>3</sub>b<sub>1</sub> becomes 1 at weight 16 → 16. Row 2 (b<sub>2</sub> = 1): a<sub>1</sub>, a<sub>2</sub> at weights 8, 16 → 24, the inverted a<sub>3</sub>b<sub>2</sub> = 0. Row 3 (b<sub>3</sub> = 0, the sign row): the inverted a<sub>0</sub>b<sub>3</sub>, a<sub>1</sub>b<sub>3</sub>, a<sub>2</sub>b<sub>3</sub> are all 1 at weights 8, 16, 32 → 56, and a<sub>3</sub>b<sub>3</sub> = 0 at 64. Constants 16 + 128 = 144.</p>
+      <p>Total 6 + 16 + 24 + 56 + 144 = 246. The product register has 8 bits, so r = 246 mod 256 = 246 = 1111 0110, and read as two's complement that is 246 − 256 = −10 = −2 × 5. The matrix explorer above starts on exactly this example.</p></div>
+    <div class="ex"><div class="kicker">Worked example: −3 × 5, grouped by operand bits instead of rows</div>
+      <p>a = 1101 (−3), b = 0101 (5). The nine products of the low three bits of each are the plain unsigned part: 101 × 101 = 25. The products with the sign bit of a (a<sub>3</sub>b<sub>0</sub>, a<sub>3</sub>b<sub>1</sub>, a<sub>3</sub>b<sub>2</sub> at weights 8, 16, 32) are 1, 0, 1 and appear inverted: 0, 1, 0 → 16. The products with b<sub>3</sub> = 0 are all 0 and appear inverted as 1, 1, 1 at weights 8, 16, 32 → 56. a<sub>3</sub>b<sub>3</sub> = 0 at weight 64. The constants add 16 + 128 = 144. Total 25 + 16 + 56 + 0 + 144 = 241 = 1111 0001<sub>2</sub>, which in 8-bit two's complement is 241 − 256 = −15. The "−3 × 5" button in the explorer shows the same matrix, summed by rows.</p></div>
+
+    <h3>Multiply-accumulate: the accumulator row (slides 16–17)</h3>
+    <ul>
+      <li><b>Why.</b> Sums of products Σ a<sub>i</sub>b<sub>i</sub> are everywhere: FIR and IIR filters, matrix multiplication (every element c<sub>ij</sub> = Σ<sub>k</sub> a<sub>ik</sub>b<sub>kj</sub>, which is the fully-connected layer of a neural network and also every coordinate transformation), and 2-D convolution in convolutional networks. An instruction that computes a + b·c in one cycle gives software a large speedup.</li>
+      <li><b>How: one more row in stage 1.</b> Put the extra summand into the matrix as one more row and reduce as before. Nothing else in the multiplier changes: stage 2 uses the same tree, stage 3 the same kind of adder.</li>
+      <li><b>What the extra row does to stage 2.</b> It makes the tallest column n + 1 instead of n. Dadda's sequence has gaps: 9 ≥ 8 + 1, 19 ≥ 16 + 1, 42 ≥ 32 + 1, 94 ≥ 64 + 1, so an 8-, 16-, 32- or 64-bit multiply-accumulate needs no extra stage. The area overhead is comparable to one ripple-carry adder, the delay overhead is roughly zero (the stage-count chart in stage 2 shows it).</li>
+    </ul>
+    <div class="why"><div class="kicker">Context, not on the slides: when the extra row does cost a stage, and guard bits</div>
+      <p>The extra row costs a stage exactly when n itself is one of Dadda's heights (2, 3, 4, 6, 9, 13, …): then n + 1 is above that height and needs the next one. A 4 × 4 or 6 × 6 MAC pays one more full-adder delay; the 8-, 16-, 32- and 64-bit sizes that matter in practice do not. The "+ accumulator row" switch in the Dadda explorer shows both cases.</p>
+      <p>A real accumulator is also wider than 2n bits. Summing k products of 2n bits needs about log<sub>2</sub> k extra bits at the top (guard bits) so that the running sum cannot overflow: a typical 8-bit MAC for neural networks accumulates in 32 bits. The guard columns hold one accumulator bit plus incoming carries, so they widen the final adder of stage 3 but do not change the stage count of stage 2.</p></div>
+    <div class="why"><div class="kicker">Context, not on the slides: where this course goes with it</div>
+      <p>The multiply-accumulate unit is the atom of every AI accelerator: a systolic array or a GPU tensor core is a grid of them, and their energy per operation (a few picojoules in current nodes) sets the energy of inference. Lecture 14 on hardware for deep neural networks picks this up; the exercise sheets of the chair count adders and delays exactly as on slides 11 and 17.</p></div>
+
+    <h2>Stage 2: reduction</h2>
+    <p>Stage 2 is multi-operand addition, which the lecture develops before it gets to multipliers: first why a chain of ordinary adders is slow, then carry-save addition as the tool, then three schedules for applying the tool to the matrix. The stage-count rule at the end decides the delay.</p>
+    <h3>Why a chain of adders is slow (slide 3)</h3>
     <ul>
       <li><b>Chain of adders.</b> a<sub>1</sub> + a<sub>2</sub> + a<sub>3</sub> is computed as (a<sub>1</sub> + a<sub>2</sub>) + a<sub>3</sub> with two ordinary adders. With ripple-carry adders the first sum costs about n carry delays and the second only one more, because the carry path of the second adder runs one carry delay behind the first: its bit i is ready as soon as the first adder's bit i is. For m operands that is about n + m carry delays.</li>
       <li><b>Lookahead does not help as much as expected.</b> A carry-lookahead adder needs about log<sub>2</sub> n carry delays for most bits, but the second adder cannot start before the first is done, so two stages cost 2·log<sub>2</sub> n and m operands cost about m·log<sub>2</sub> n. The chain of fast adders grows linearly in m.</li>
     </ul>
-    <h3>Carry-save addition (slides 4–5)</h3>
+    <h3>The tool: carry-save addition with full adders (slides 4–5)</h3>
     <ul>
       <li><b>Idea.</b> Addition is associative and commutative, so the bits may be summed in any order. Add the three bits of the same position with one full adder: a<sub>1,i</sub> + a<sub>2,i</sub> + a<sub>3,i</sub> = 2·c<sub>i</sub> + s<sub>i</sub>. All n full adders work in parallel, nothing ripples, and after a single full-adder delay the three operands have become two: the sum word s and the carry word c shifted one position left.</li>
-      <li><b>Generalisation.</b> For m operands, form groups of three, reduce every group to two numbers in one full-adder delay, and repeat until two numbers remain. Each stage removes about a third of the operands. The last pair is in carry-save form; one fast adder (carry-lookahead) turns it into the result.</li>
+      <li><b>Generalisation.</b> For m operands, form groups of three, reduce every group to two numbers in one full-adder delay, and repeat until two numbers remain. Each stage removes about a third of the operands. The last pair is in carry-save form; one fast adder (stage 3) turns it into the result.</li>
       <li><b>Accumulators.</b> If very many numbers are summed over many cycles, the running total can stay in carry-save form (two words) and is only resolved into one number in the last cycle: one full-adder delay per cycle instead of a whole carry chain.</li>
     </ul>
     ${lab("csa", "carry-save addition of three numbers")}
-    <p class="muted">Click the bits of a<sub>1</sub>, a<sub>2</sub>, a<sub>3</sub>. Every column is one full adder: its sum bit stays in the column, its carry bit moves one column left. The carries never travel further than that, so stage 1 is exactly one full-adder delay for any width.</p>
+    <p class="muted">Click the bits of a<sub>1</sub>, a<sub>2</sub>, a<sub>3</sub>. Every column is one full adder: its sum bit stays in the column, its carry bit moves one column left. The carries never travel further than that, so one carry-save step is exactly one full-adder delay for any width.</p>
     ${chart("multi", leg([[1, "Chain of ripple-carry adders"], [2, "Chain of lookahead adders"], [3, "Carry-save tree + one lookahead adder"]]))}
       <figcaption>Carry delays to add m operands of 16 bits. The ripple chain costs 16 + (m − 2), the lookahead chain (m − 1)·4, and the carry-save tree one full-adder delay per reduction stage (Dadda's sequence, below) plus one final 4-level lookahead add. The slides round the first two to n + m and m·log<sub>2</sub> n. Hover a column to read all three.</figcaption>
     </figure>
@@ -806,68 +945,63 @@ function lecture3() {
     <div class="ex"><div class="kicker">Worked example: 11 + 7 + 13 in carry-save form</div>
       <p>Column by column (LSB first): 1+1+1 = 11<sub>2</sub> → s = 1, c = 1; 1+1+0 = 10<sub>2</sub> → s = 0, c = 1; 0+1+1 = 10<sub>2</sub> → s = 0, c = 1; 1+0+1 = 10<sub>2</sub> → s = 0, c = 1. So s = 0001 = 1 and c = 1111 shifted left = 11110 = 30, and 1 + 30 = 31 = 11 + 7 + 13. Only the final 1 + 30 needs a carry-propagating adder. This is the default setting of the explorer above.</p></div>
 
-    <h2>Multipliers</h2>
-    <h3>The multiplication matrix (slides 6–7)</h3>
-    <ul>
-      <li><b>Bit products.</b> Multiplying out (Σ a<sub>j</sub>2<sup>j</sup>)·(Σ b<sub>k</sub>2<sup>k</sup>) gives Σ<sub>i</sub> 2<sup>i</sup>·Σ<sub>j+k=i</sub> a<sub>j</sub>b<sub>k</sub>: every pair of bits contributes a<sub>j</sub>·b<sub>k</sub> (a single AND gate) at weight 2<sup>j+k</sup>. All n<sup>2</sup> AND gates work at once, so the whole matrix exists after one AND delay.</li>
-      <li><b>Shape.</b> Row i is a·b<sub>i</sub>·2<sup>i</sup>, the multiplicand shifted by i positions, so the matrix is a parallelogram: columns in the middle hold up to n bits, the outer columns only one. The product has 2n bits.</li>
-      <li><b>Reduction.</b> The matrix is just a multi-operand addition with a particular shape, so the carry-save idea applies, with the columns of different height taken into account.</li>
-    </ul>
-    ${lab("mmx", "4 × 4 bit-product matrix, unsigned or two's complement")}
-    <p class="muted">Cells show which bit product sits at which weight (orange ones are inverted in the signed form, green ones are the two constant 1s). Switch to two's complement and try a = 1101 (−3) × b = 0101 (5): the same matrix shape, only the sign-row and sign-column products are inverted and two 1s added, and it sums to −15 in 8-bit two's complement.</p>
-
-    <h3>Wallace tree (slide 8)</h3>
+    <h3>Schedule 1: carry-save array</h3>
+    <div class="why"><div class="kicker">Context, not on the slides: the array multiplier</div>
+      <p>The simplest schedule adds the matrix rows one after the other, each time with a row of full adders that keeps the running sum in carry-save form: rows 0, 1 and 2 go into the first full-adder row, every further matrix row joins in the next. n rows need n − 2 such stages, so the delay grows linearly with n (6 stages for 8 × 8, 62 for 64 × 64), but the layout is a perfectly regular grid of identical cells with short wires. It is the hardware form of the "groups of three" idea applied one group at a time; the trees below apply it to all groups at once.</p></div>
+    <h3>Schedule 2: Wallace tree, compress as early as possible (slide 8)</h3>
     <ul>
       <li>Reduce the matrix in stages, column by column: wherever a column holds three bits, a full adder turns them into one sum bit in the same column and one carry bit in the next; if two bits remain (or a carry would make a third), a half adder does the same; a single leftover bit is passed to the next stage untouched.</li>
       <li>Repeat until no column holds more than two bits, then a fast adder sums the two remaining rows. "Tree" because a tree of half and full adders leads to every bit of the final two rows.</li>
       <li>The greedy rule reduces as much as possible in every stage, which costs more adders than necessary, especially half adders.</li>
     </ul>
-    <h3>Dadda tree (slides 9–12)</h3>
+    <h3>Schedule 3: Dadda tree, compress as late as possible (slides 9–12)</h3>
     <ul>
       <li><b>Goal.</b> Minimise the number of full and half adders. The trick is to reduce no further than needed: fix a target height per stage and only use adders where a column exceeds it.</li>
       <li><b>Target heights.</b> The final adder takes 2 bits per column. A full adder reduces 3 to 2, so a stage that ends at n<sub>k</sub> bits may start from n<sub>k−1</sub> = ⌊3n<sub>k</sub>/2⌋: the sequence 2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 94, … Start from the smallest entry that is at least the tallest column, and in every stage reduce each column exactly to the next target with full adders and at most one half adder.</li>
       <li><b>Example 6 × 6</b> (slide 11). Tallest column 6, so the targets are 6 → 4 → 3 → 2: three stages with 15 full adders and 5 half adders; the Wallace tree takes 17 and 9. The price is a slightly wider final adder, which needs about 2.5 more inputs, the equivalent of two full adders and one half adder.</li>
       <li><b>Complexity</b> (slide 12). The number of stages grows with log<sub>1.5</sub> of the column height, so the delay is logarithmic in the operand width, and so is the final adder if it is a carry-lookahead type. The area of the reduction stages is minimal (no redundant operations); the final adder decides between small (ripple-carry) and fast (lookahead).</li>
     </ul>
-    ${lab("dadda", "Dadda reduction of an n × n matrix")}
-    <p class="muted">Each band is one stage: blue dots are bits still above the target, green columns already fit. The counting rule is the slide's (full adders freely, at most one half adder per column and stage); for 6 × 6 it reproduces the 15 + 5 of slide 11.</p>
+    ${lab("dadda", "Dadda reduction of an n × n matrix, with or without an accumulator row")}
+    <p class="muted">Each band is one stage: blue dots are bits still above the target, green columns already fit, amber dots are the accumulator row of a multiply-accumulate. The counting rule is the slide's (full adders freely, at most one half adder per column and stage); for 6 × 6 it reproduces the 15 + 5 of slide 11. Switch on the accumulator row at n = 4 or 6 to see the extra stage, at n = 8 to see none.</p>
     ${chart("cost", leg([[1, "Wallace tree"], [2, "Dadda tree"]]))}
       <figcaption>Adders in the reduction of a 6 × 6 multiplier, from slide 11. Dadda saves two full adders and four half adders and pays with a final adder that is about 2.5 inputs wider.</figcaption>
     </figure>
+    <div class="why"><div class="kicker">Context, not on the slides: why reduce "as little as possible"</div>
+      <p>Every adder in a reduction tree costs area and switching energy, but the delay is set by the number of stages, not by how much each stage reduces. Dadda's observation is that the heights 2, 3, 4, 6, 9, … are the latest moments at which a column may still be brought down to 2 in time, so reducing a column earlier than that wastes adders without saving a stage. Wallace and Dadda therefore need the same number of stages; they differ only in how many adders they place and where. The slide's 6 × 6 numbers are small, but in a 64 × 64 multiplier the difference is hundreds of cells.</p></div>
+
+    <h3>The stage-count rule (slides 10 and 17)</h3>
+    <p>The number of reduction stages depends only on the tallest column h: it is the position of the first Dadda height that is at least h, counting 2 as position 0. h = 3 needs one stage, h = 4 two, h = 5 or 6 three, h = 7 to 9 four, and so on. For an n × n multiplier h = n; with an accumulator row h = n + 1.</p>
     ${chart("dadda", leg([[1, "n × n multiplier"], [2, "n-bit multiply-accumulate (one more row)"]]))}
       <figcaption>Reduction stages versus the tallest column of the matrix. The staircase is Dadda's sequence: every step at 3, 4, 6, 9, 13, 19, 28, 42, 63, 94 adds one stage. The multiply-accumulate markers (one bit taller) sit on the same step as the plain multiplier for 8, 16, 32 and 64 bits.</figcaption>
     </figure>
     <details class="tbl"><summary>Table view</summary><table><tr><th>Tallest column</th><th>Stages</th><th>Tallest column</th><th>Stages</th></tr>${[8, 9, 16, 17, 32, 33, 64, 65].reduce((acc, h, i, a) => i % 2 ? acc : [...acc, [h, a[i + 1]]], []).map(([h1, h2]) => `<tr><td class="n">${h1}</td><td class="n">${stagesFor(h1)}</td><td class="n">${h2}</td><td class="n">${stagesFor(h2)}</td></tr>`).join("")}</table></details>
-    <div class="why"><div class="kicker">Context, not on the slides: why reduce "as little as possible"</div>
-      <p>Every adder in a reduction tree costs area and switching energy, but the delay is set by the number of stages, not by how much each stage reduces. Dadda's observation is that the heights 2, 3, 4, 6, 9, … are the latest moments at which a column may still be brought down to 2 in time, so reducing a column earlier than that wastes adders without saving a stage. The slide's 6 × 6 numbers are small, but in a 64 × 64 multiplier the difference is hundreds of cells.</p></div>
+    ${(() => { const p = daddaStages(4), q = daddaStages(4, true), fp = finalAdder(p), fq = finalAdder(q), sum = (s, k) => s.reduce((a, x) => a + x[k], 0);
+      const st = s => s.slice(1).map((x, i) => `${i ? "stage" : "Stage"} ${i + 1} to at most ${x.t} bits: ${x.fa} FA, ${x.ha} HA`).join("; ");
+      return `<div class="ex"><div class="kicker">Worked example: 4 × 4 Dadda, then with an accumulator row</div>
+      <p><b>Plain 4 × 4.</b> Column heights from 2<sup>0</sup> upwards: ${p[0].h.slice(0, 7).join(", ")} (column 2<sup>7</sup> only receives the final carry). The tallest column is 4, which is itself a Dadda height, so the targets are ${p.map(x => x.t).join(" → ")}: ${p.length - 1} stages. ${st(p)}. In stage 1 only column 2<sup>3</sup> is too tall; its half adder pushes a carry into 2<sup>4</sup>, which then needs a half adder of its own. In total ${sum(p, "fa")} full adders and ${sum(p, "ha")} half adders (n<sup>2</sup> − 4n + 3 = 3 and n − 1 = 3). What is left are two rows over columns 2<sup>${fp.lo}</sup> to 2<sup>${fp.hi}</sup>, so stage 3 is a ${fp.w}-bit carry-propagate adder (2n − 2), whose carry-out is product bit 2<sup>7</sup>.</p>
+      <p><b>With an accumulator row of 2n = 8 bits.</b> Every column gains one bit: ${q[0].h.join(", ")}. The tallest column is now 5, above the Dadda height 4, so the reduction starts one step higher: targets ${q.map(x => x.t).join(" → ")}, ${q.length - 1} stages. ${st(q)}. In total ${sum(q, "fa")} full adders and ${sum(q, "ha")} half adders. Two bits now sit in every column, so the final adder spans all ${fq.w} columns 2<sup>${fq.lo}</sup> to 2<sup>${fq.hi}</sup>, and its carry-out goes to 2<sup>8</sup>, a guard bit of the accumulator.</p>
+      <p>The 4 × 4 MAC is the unlucky case: one stage and ${sum(q, "fa") - sum(p, "fa")} full adders more than the plain multiplier. An 8 × 8 MAC has a tallest column of 9, which still fits under the Dadda height 9, so it keeps the ${daddaStages(8).length - 1} stages of the plain 8 × 8 (${sum(daddaStages(8), "fa")} + ${sum(daddaStages(8), "ha")} → ${sum(daddaStages(8, true), "fa")} + ${sum(daddaStages(8, true), "ha")} FA + HA). Set n and the accumulator switch in the explorer above to check each number.</p></div>`; })()}
 
-    <h3>Signed multiplication (slides 13–15)</h3>
+    <h2>Stage 3: final addition</h2>
     <ul>
-      <li><b>Expand the two's-complement values.</b> With a = −a<sub>n−1</sub>2<sup>n−1</sup> + Σ a<sub>i</sub>2<sup>i</sup> and the same for b, the product has four parts: a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> (positive), the unsigned (n−1) × (n−1) matrix of the lower bits (positive), and two negative sums −Σ a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> and −Σ b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup>.</li>
-      <li><b>Rearranged matrix</b> (slide 14). A subtracted bit −p·2<sup>w</sup> equals (1 − p)·2<sup>w</sup> − 2<sup>w</sup>, so the negative terms become inverted bit products plus a constant. Summing the constants modulo 2<sup>2n</sup> leaves a single 1 at weight 2<sup>n</sup> and a single 1 at weight 2<sup>2n−1</sup>. The result is a matrix of the same height as the unsigned one, which the Wallace or Dadda reduction handles unchanged.</li>
-      <li><b>Notes</b> (slide 15). Complexity is the same as unsigned. The literature has other, equivalent rearrangements. A combined signed/unsigned multiplier extends both operands by one bit (a 0 for unsigned, a copy of the sign bit for signed) and always multiplies signed.</li>
+      <li><b>One carry-propagate adder.</b> After stage 2 every column holds at most two bits, i.e. two rows. Only now does a carry have to travel the full width, and it does so once, in one adder. All the adders of lecture 2 qualify; the choice is the usual one between small (ripple-carry) and fast (carry-lookahead), and with a lookahead adder the whole multiplier stays logarithmic in delay (slide 12).</li>
+      <li><b>Width.</b> The two rows only overlap where stage 2 left two bits. After a Dadda tree that is the 2n − 2 middle columns (columns 2<sup>1</sup> to 2<sup>2n−2</sup>; bit 2<sup>0</sup> is a single product and bit 2<sup>2n−1</sup> is the adder's carry-out). Wallace's eager reduction leaves fewer double columns, so its final adder is narrower; slide 11 puts Dadda's extra final-adder cost at about 2.5 inputs. A multiply-accumulate needs an adder as wide as its accumulator.</li>
+      <li><b>Unchanged by the variants.</b> Signed, unsigned and multiply-accumulate all end in the same kind of adder; only its width differs.</li>
     </ul>
-    <div class="formula">a·b = a<sub>n−1</sub>b<sub>n−1</sub>2<sup>2n−2</sup> − Σ<sub>i=0…n−2</sub> a<sub>n−1</sub>b<sub>i</sub>2<sup>i+n−1</sup> − Σ<sub>i=0…n−2</sub> b<sub>n−1</sub>a<sub>i</sub>2<sup>i+n−1</sup> + Σ<sub>i=0…2n−4</sub> 2<sup>i</sup> Σ<sub>j+k=i, j,k≤n−2</sub> a<sub>j</sub>b<sub>k</sub></div>
-    <div class="ex"><div class="kicker">Worked example: −3 × 5 in 4 bits through the rearranged matrix</div>
-      <p>a = 1101 (−3), b = 0101 (5). The nine products of the low three bits of each are the plain unsigned part: 101 × 101 = 25. The products with the sign bit of a (a<sub>3</sub>b<sub>0</sub>, a<sub>3</sub>b<sub>1</sub>, a<sub>3</sub>b<sub>2</sub> at weights 8, 16, 32) are 1, 0, 1 and appear inverted: 0, 1, 0 → 16. The products with b<sub>3</sub> = 0 are all 0 and appear inverted as 1, 1, 1 at weights 8, 16, 32 → 56. a<sub>3</sub>b<sub>3</sub> = 0 at weight 64. The constants add 16 + 128 = 144. Total 25 + 16 + 56 + 0 + 144 = 241 = 11110001<sub>2</sub>, which in 8-bit two's complement is 241 − 256 = −15. Select "two's complement" in the matrix explorer and set these bits to see each cell.</p></div>
+    <div class="why"><div class="kicker">Context, not on the slides: which stage dominates the delay</div>
+      <p>For 8 × 8, stage 2 takes 4 full-adder delays. A 14-bit ripple-carry final adder would take about 14 carry delays, more than three times the whole reduction tree, while a lookahead adder takes about log<sub>2</sub> 14 ≈ 4 levels. That is why fast multipliers pair the tree with a lookahead adder, and why the multi-operand chart in stage 2 counts "tree + one lookahead add".</p></div>
 
-    <h3>Multiply-accumulate (slides 16–17)</h3>
+    <h2>Sequential multiplication: stage 2 spread over time (slides 18–19)</h2>
     <ul>
-      <li><b>Why.</b> Sums of products Σ a<sub>i</sub>b<sub>i</sub> are everywhere: FIR and IIR filters, matrix multiplication (every element c<sub>ij</sub> = Σ<sub>k</sub> a<sub>ik</sub>b<sub>kj</sub>, which is the fully-connected layer of a neural network and also every coordinate transformation), and 2-D convolution in convolutional networks. An instruction that computes a + b·c in one cycle gives software a large speedup.</li>
-      <li><b>How.</b> Put the extra summand into the matrix as one more row and reduce as before. Dadda's sequence has gaps: 9 ≥ 8 + 1, 19 ≥ 16 + 1, 42 ≥ 32 + 1, 94 ≥ 64 + 1, so an 8-, 16-, 32- or 64-bit multiply-accumulate needs no extra stage. The area overhead is comparable to one ripple-carry adder, the delay overhead is roughly zero (chart above).</li>
-    </ul>
-    <div class="why"><div class="kicker">Context, not on the slides: where this course goes with it</div>
-      <p>The multiply-accumulate unit is the atom of every AI accelerator: a systolic array or a GPU tensor core is a grid of them, and their energy per operation (a few picojoules in current nodes) sets the energy of inference. Lecture 14 on hardware for deep neural networks picks this up; the exercise sheets of the chair count adders and delays exactly as on slides 11 and 17.</p></div>
-
-    <h3>Sequential multiplication (slides 18–19)</h3>
-    <ul>
-      <li><b>One row per cycle.</b> Instead of building the whole tree, sum the matrix over several clock cycles: add one matrix row (a·b<sub>i</sub>) to the intermediate result and shift the window of the result by one position. An n-bit adder suffices (the ALU's adder can be reused); strictly n − 1 additions are needed, but the implementation starts from 0 and runs n identical iterations.</li>
+      <li><b>One row per cycle.</b> Instead of building the whole tree, sum the matrix over several clock cycles: add one matrix row (a·b<sub>i</sub>) to the intermediate result and shift the window of the result by one position. An n-bit adder suffices (the ALU's adder can be reused); strictly n − 1 additions are needed, but the implementation starts from 0 and runs n identical iterations. In stage terms: stage 1 produces one row per cycle, stage 2 disappears as a tree and becomes n repetitions of one addition, and that adder is also the carry-propagate adder of stage 3.</li>
       <li><b>Unrolling.</b> Several rows per step is possible. The design space (slide 19): a single carry-propagate adder reused every cycle gives homogeneous steps suited to iterative multi-cycle multiplication; a mix of carry-save stages and one final carry-propagate adder gives heterogeneous steps suited to pipelining, where every stage works on a different multiplication at the same time.</li>
     </ul>
     ${lab("seq", "shift-and-add multiplication, one cycle per row")}
     <div class="tiles">
+      <div class="tile"><div class="v">3 stages</div><div class="l">AND matrix → reduction to two rows → one carry-propagate adder</div></div>
       <div class="tile"><div class="v">1 FA</div><div class="l">delay to reduce three operands to two in carry-save form</div></div>
       <div class="tile"><div class="v">15 + 5</div><div class="l">full and half adders of a 6 × 6 Dadda tree (Wallace: 17 + 9)</div></div>
+      <div class="tile"><div class="v">2<sup>n</sup> + 2<sup>2n−1</sup></div><div class="l">the two Baugh-Wooley constants of a signed n × n matrix</div></div>
       <div class="tile"><div class="v">10</div><div class="l">Dadda stages for a 64 × 64 multiplier, with or without accumulate</div></div>
       <div class="tile"><div class="v">n</div><div class="l">cycles of a sequential n-bit multiplier on one adder</div></div>
     </div>
@@ -920,6 +1054,7 @@ function lecture3() {
     <ul>
       <li>Numbers have several digital representations, chosen by use case: unsigned or signed, integer or decimal, fixed or floating point.</li>
       <li>Arithmetic circuits have several implementations, chosen by constraints: combinational, iterative or pipelined; size against speed; power consumption.</li>
+      <li>A multiplier is three stages, and every variant changes one: the AND matrix (signed: Baugh-Wooley inversion and two constants; multiply-accumulate: one more row), the reduction to two rows (carry-save array, Wallace or Dadda: schedules, not different arithmetic), and one carry-propagate adder. Dadda is a reduction schedule, not a multiply-accumulate.</li>
       <li>For this lecture specifically: carry-save form postpones the carry chain to the very end; a multiplier is a shaped multi-operand addition whose reduction tree is logarithmic in depth; a divider is either n slow steps of subtract-and-shift or a few fast steps of multiply-and-square-the-error.</li>
     </ul>
     <p class="muted">Previous: <a href="digital-circuit-design/lecture.html?n=2">lecture 2, Arithmetic circuits 1</a>. Next: Arithmetic circuits 3 (<a href="digital-circuit-design/lecture.html?n=4">lecture 4</a>), which starts again at division and continues with filters, the ALU and floating-point operations. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a>.</p>`;
