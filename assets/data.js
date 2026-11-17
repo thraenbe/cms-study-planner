@@ -3359,6 +3359,11 @@ window.CMS = {
       "kind": "lecture"
      },
      {
+      "date": "2026-11-20",
+      "label": "Tutorial 3 (Tabu search), Friday slot assumed; sheet in OPAL since 12 Nov",
+      "kind": "exercise"
+     },
+     {
       "date": "2026-12-20",
       "label": "Christmas break until 3 Jan",
       "kind": "break"
@@ -3497,9 +3502,17 @@ window.CMS = {
       "title": "Tabu search",
       "date": "2026-11-17",
       "icon": "🚫",
-      "covered": false,
+      "covered": true,
       "planned": false,
-      "blurb": "Escaping local optima with memory: tabu lists, aspiration criteria, intensification and diversification."
+      "blurb": "Tabu search: always move to the best admissible neighbour, even a worse one, and forbid undoing recent moves. Recency memory for SAT (time stamps or countdowns) and the TSP (a city-pair matrix), tabu tenure (√n to n, 3n for the TSP), aspiration criteria, frequency-based long-term memory with the penalty eval − 0.7·H(i), Knox's 2-interchange implementation, and a cost and use-case comparison with simulated annealing.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture4.pdf",
+        "where": "OPAL · Lesson 4 (tabu search)",
+        "note": "31 slides (41 PDF pages with overlays)"
+       }
+      ]
      },
      {
       "n": 5,
@@ -3616,9 +3629,18 @@ window.CMS = {
       "title": "Tabu search",
       "date": "2026-11-20",
       "icon": "📝",
-      "covered": false,
-      "planned": true,
-      "blurb": "Planned: the sheet on tabu search follows lecture 4 (17 Nov). The ICCL calendar lists tutorial 3 for the Thursday and Monday groups (19 and 23 Nov); the Friday slot on 20 Nov is not listed yet. Sheet not in OPAL yet."
+      "covered": true,
+      "planned": false,
+      "blurb": "Sheet 3, from lecture 4: design a tabu search for a 3-job, 3-machine job shop (machine orders, makespan, the natural order at 16 against the optimum 10, adjacent swaps and tenure, aspiration, deadlocked neighbours), then three iterations on a weighted SAT instance: two aspiration moves and one frequency-penalty move. Our own worked solutions; the Friday slot on 20 Nov is not on the ICCL calendar yet.",
+      "sheet": "2026-11-12",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T3.pdf",
+        "where": "OPAL · Tutorial 3 (tabu search)",
+        "note": "2 pages, since 12 Nov, no official solution"
+       }
+      ]
      },
      {
       "n": 4,

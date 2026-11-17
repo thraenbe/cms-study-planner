@@ -421,6 +421,228 @@ function tutorial2() {
     <p class="muted">Previous sheet: <a href="advanced-problem-solving/exercise.html?n=1">tutorial 1</a>. Next: tutorial 3 on tabu search, after <a href="advanced-problem-solving/lecture.html?n=4">lecture 4</a>. The sheet is in OPAL → Tutorials → Tutorial 2; it is not republished here.</p>`;
 }
 
+// ---------------- Sheet 3, task 1: the 3 × 3 job shop ----------------
+// JOBS[j] = the operations of job j in their fixed order, as [machine, duration]. A solution is one job order per machine;
+// the decoder starts every operation as early as its job and its machine allow (a semi-active schedule) and reports a
+// deadlock when the machine orders and the job orders wait on each other in a cycle.
+const JOBS = { 1: [[1, 3], [2, 2], [3, 2]], 2: [[2, 2], [1, 3], [3, 1]], 3: [[1, 2], [3, 3], [2, 1]] };
+const NATURAL = { 1: [1, 2, 3], 2: [1, 2, 3], 3: [1, 2, 3] };
+function jsSched(order) {
+  const nxt = { 1: 0, 2: 0, 3: 0 }, jt = { 1: 0, 2: 0, 3: 0 }, mt = { 1: 0, 2: 0, 3: 0 }, pos = { 1: 0, 2: 0, 3: 0 }, ops = [];
+  for (let prog = true; prog;) {
+    prog = false;
+    for (const m of [1, 2, 3]) {
+      if (pos[m] > 2) continue;
+      const j = order[m][pos[m]], op = JOBS[j][nxt[j]];
+      if (op && op[0] === m) { const s = Math.max(jt[j], mt[m]), e = s + op[1]; ops.push({ j, m, k: nxt[j] + 1, s, e }); jt[j] = mt[m] = e; nxt[j]++; pos[m]++; prog = true; }
+    }
+  }
+  const ok = [1, 2, 3].every(j => nxt[j] === 3);
+  return { ms: ok ? Math.max(jt[1], jt[2], jt[3]) : null, ops };
+}
+const cloneOrd = o => ({ 1: o[1].slice(), 2: o[2].slice(), 3: o[3].slice() });
+const ordTxt = o => [1, 2, 3].map(m => `M${m}: ${o[m].map(j => `J${j}`).join(" ")}`).join(" · ");
+// The six neighbours: swap two adjacent operations on one machine. The move is named by machine and job pair.
+function jsNeighbours(o) {
+  const out = [];
+  for (const m of [1, 2, 3]) for (const k of [0, 1]) {
+    const n = cloneOrd(o), a = n[m][k], b = n[m][k + 1]; n[m][k] = b; n[m][k + 1] = a;
+    out.push({ key: `${m}:${Math.min(a, b)}${Math.max(a, b)}`, m, a, b, o: n, ms: jsSched(n).ms });
+  }
+  return out;
+}
+// Tabu search: best admissible neighbour (deadlocks skipped), the swapped pair is tabu for `tenure` iterations,
+// aspiration if the neighbour beats the best makespan so far. Ties: first in the machine order.
+function jsRun(tenure, steps) {
+  let o = cloneOrd(NATURAL), best = jsSched(o).ms, bestAt = 0; const tabu = {}, log = [];
+  for (let t = 1; t <= steps; t++) {
+    const nb = jsNeighbours(o).map(x => ({ ...x, tabu: (tabu[x.key] || 0) >= t }));
+    const adm = nb.filter(x => x.ms !== null && (!x.tabu || x.ms < best));
+    if (!adm.length) { log.push({ t, nb, pick: null }); break; }
+    const pick = adm.reduce((a, b) => b.ms < a.ms ? b : a);
+    log.push({ t, nb, pick, asp: pick.tabu, before: jsSched(o).ms, bestBefore: best });
+    o = pick.o; tabu[pick.key] = t + tenure;
+    if (pick.ms < best) { best = pick.ms; bestAt = t; }
+  }
+  return { o, best, bestAt, log, ms: jsSched(o).ms };
+}
+function gantt(o, cols = 16) {
+  const { ops } = jsSched(o);
+  const head = `<span class="rl"></span>${Array.from({ length: cols }, (_, t) => `<span class="gh">${t % 2 ? "" : t}</span>`).join("")}`;
+  const lanes = [1, 2, 3].map(m => `<span class="rl">M${m}</span><div class="lane">${ops.filter(p => p.m === m).map(p => `<span class="op j${p.j}" style="grid-column:${p.s + 1} / ${p.e + 1}" title="job ${p.j}, operation ${p.k}: ${p.s}–${p.e}">J${p.j}</span>`).join("")}</div>`).join("");
+  return `<div class="jg" style="--cols:${cols}" role="img" aria-label="Gantt chart, ${ordTxt(o)}, makespan ${jsSched(o).ms}">${head}${lanes}</div>`;
+}
+const JLEG = leg([[1, "job 1"], [2, "job 2"], [3, "job 3"]]);
+function initJss(body) {
+  const st = { ten: 2, i: 0, n: 8 };
+  body.innerHTML = `<p class="lab-note">Start: the natural order J1 J2 J3 on every machine (makespan 16). Each step evaluates the six adjacent swaps, skips deadlocked ones, and makes the best admissible swap; that job pair on that machine may not be swapped again for <b>tenure</b> iterations unless it beats the best makespan so far.</p>
+    <div class="presets" role="group" aria-label="Tabu tenure">${[0, 1, 2, 3].map(t => `<button class="preset" data-m="${t}" aria-pressed="${t === st.ten}">tenure ${t}</button>`).join("")}</div>
+    ${JLEG}${stepBar(8, "one swap per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const r = jsRun(st.ten, st.i), cur = r.o, next = jsRun(st.ten, st.i + 1).log[st.i];
+    cnt.value = st.i;
+    const rows = next ? next.nb.map(x => `<tr class="${x.ms === null ? "inf" : x.tabu ? "tabu" : ""}${next.pick && x.key === next.pick.key ? " win" : ""}"><td>M${x.m}: J${x.a} ↔ J${x.b}</td><td class="n">${x.ms === null ? "–" : x.ms}</td><td>${x.ms === null ? "deadlock, skipped" : x.tabu ? (x.ms < r.best ? "tabu, aspiration" : "tabu") : "admissible"}${next.pick && x.key === next.pick.key ? " · <b>next</b>" : ""}</td></tr>`).join("") : "";
+    const last = r.log[st.i - 1];
+    const lastTxt = last && last.pick ? `M${last.pick.m}: swapped J${last.pick.a} ↔ J${last.pick.b}, makespan ${last.before} → ${last.pick.ms}${last.asp ? " (aspiration)" : ""}` : "none yet";
+    out.innerHTML = `${gantt(cur, Math.max(16, r.ms || 16))}<div class="jss-ord">${[1, 2, 3].map(m => `<span><b>M${m}</b> ${cur[m].map(j => `J${j}`).join(" ")}</span>`).join("")}</div>
+      <dl class="ro"><dt>makespan</dt><dd>${r.ms}</dd><dt>best so far</dt><dd>${r.best}${r.bestAt ? ` (iteration ${r.bestAt})` : " (the start)"}${r.best === 10 ? " · the optimum" : ""}</dd><dt>last move</dt><dd>${lastTxt}</dd></dl>
+      <p class="lab-note" style="margin:8px 0 4px"><b>The neighbourhood of this schedule</b></p>
+      <div class="tt-wrap"><table class="tt nb"><thead><tr><th>swap</th><th>makespan</th><th>status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  };
+  body.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { st.ten = +b.dataset.m; body.querySelectorAll("[data-m]").forEach(o => o.setAttribute("aria-pressed", o === b)); render(); }));
+  wireSteps(body, st, render); render();
+}
+// Every one of the 6³ = 216 machine-order combinations, decoded: how many deadlock, how the makespans spread.
+const PERMS = [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]];
+const JS_ALL = PERMS.flatMap(a => PERMS.flatMap(b => PERMS.map(c => jsSched({ 1: a, 2: b, 3: c }).ms)));
+const JS_DEAD = JS_ALL.filter(v => v === null).length, JS_MS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+vbars("jsshist", {
+  cats: JS_MS.map(String), y: [0, 16], yTicks: [0, 4, 8, 12, 16], yTitle: "orders",
+  series: [{ slot: 1, name: "machine-order combinations", vals: JS_MS.map(v => JS_ALL.filter(x => x === v).length) }],
+  tipHead: c => `makespan ${c}`, fmtY: v => num(v, 0),
+  aria: `Bar chart of the makespans of the ${216 - JS_DEAD} deadlock-free machine-order combinations: ${JS_MS.map(v => `${JS_ALL.filter(x => x === v).length} with ${v}`).join(", ")}.`,
+});
+
+// ---------------- Sheet 3, task 2: three iterations on the weighted SAT instance ----------------
+// Clauses as [[variable, wantTrue], …] with weights; eval = weight of the satisfied clauses (maximised, at most 14).
+const WSAT = [[[[1, 1]], 3], [[[2, 1]], 3], [[[1, 0], [3, 1]], 2], [[[2, 0], [4, 1]], 2], [[[1, 1], [3, 0], [5, 1]], 1], [[[4, 0], [5, 0], [6, 1]], 1], [[[1, 0], [2, 0], [6, 0]], 1], [[[3, 1], [4, 1], [6, 0]], 1]];
+const WSAT_TXT = ["x₁", "x₂", "¬x₁ ∨ x₃", "¬x₂ ∨ x₄", "x₁ ∨ ¬x₃ ∨ x₅", "¬x₄ ∨ ¬x₅ ∨ x₆", "¬x₁ ∨ ¬x₂ ∨ ¬x₆", "x₃ ∨ x₄ ∨ ¬x₆"];
+const wsat = x => WSAT.reduce((s, [cl, w]) => s + (cl.some(([v, want]) => x[v - 1] === want) ? w : 0), 0);
+const wunsat = x => WSAT.map(([cl], i) => cl.some(([v, want]) => x[v - 1] === want) ? null : `C${i + 1}`).filter(Boolean);
+// One iteration in the order of the sheet: (a) tabu set, (b) improving non-tabu move?, (c) aspiration?, (d) frequency.
+function tsIter(s) {
+  const tabu = s.M.map(m => s.t - m <= 4), cur = wsat(s.x);
+  const flips = s.x.map((_, i) => { const y = s.x.slice(); y[i] ^= 1; return { i, y, ev: wsat(y), tabu: tabu[i], adj: wsat(y) - 0.7 * s.H[i] }; });
+  const nt = flips.filter(f => !f.tabu), imp = nt.filter(f => f.ev > cur), asp = flips.filter(f => f.tabu && f.ev > s.best);
+  let pick, mech;
+  if (imp.length) { pick = imp.reduce((a, b) => b.ev > a.ev ? b : a); mech = "improving non-tabu move"; }
+  else if (asp.length) { pick = asp.reduce((a, b) => b.ev > a.ev ? b : a); mech = "aspiration"; }
+  else { pick = nt.reduce((a, b) => b.adj > a.adj ? b : a); mech = "frequency-based memory"; }
+  const M = s.M.slice(), H = s.H.slice(); M[pick.i] = s.t; H[pick.i]++;
+  return { flips, pick, mech, cur, nt, imp, asp, next: { t: s.t + 1, x: pick.y, M, H, best: Math.max(s.best, pick.ev) } };
+}
+const TS0 = { t: 7, x: [1, 0, 1, 1, 0, 1], M: [1, 5, 4, 3, 2, 6], H: [2, 4, 6, 3, 2, 5], best: 12 };
+const TS_IT = (() => { const out = []; let s = TS0; for (let k = 0; k < 3; k++) { const r = tsIter(s); out.push({ s, r }); s = r.next; } out.push({ s }); return out; })();
+const vec = a => `(${a.join(", ")})`;
+function initTs3(body) {
+  const st = { i: 0, n: 3 };
+  body.innerHTML = `<p class="lab-note">State at the start of t = 7 as on the sheet. Each step runs one iteration in the sheet's order (a) to (e). Tabu means t − M(i) ≤ 4; the adjusted score is eval − 0.7 · H(i), used only when no non-tabu flip improves and aspiration fails.</p>
+    ${stepBar(3, "one iteration per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const { s, r } = TS_IT[st.i]; cnt.value = st.i;
+    const state = `<dl class="ro"><dt>t</dt><dd>${s.t}</dd><dt>x</dt><dd class="mono">${vec(s.x)}, eval ${wsat(s.x)}${wunsat(s.x).length ? `, unsatisfied ${wunsat(s.x).join(", ")}` : ", every clause satisfied"}</dd><dt>M</dt><dd class="mono">${vec(s.M)}</dd><dt>H</dt><dd class="mono">${vec(s.H)}</dd><dt>best</dt><dd>${s.best}</dd></dl>`;
+    if (!r) { out.innerHTML = `${state}<p class="lab-note" style="margin-top:8px">Three iterations done. The best value 14 is the sum of all weights: the search found a satisfying assignment at t = 8 and, as tabu search must, moved on at t = 9.</p>`; return; }
+    const rows = r.flips.map(f => `<tr class="${f === r.pick ? "win" : f.tabu && !r.asp.includes(f) ? "tabu" : ""}"><td>x<sub>${f.i + 1}</sub></td><td class="n">${s.t - s.M[f.i]}${f.tabu ? " · tabu" : ""}</td><td class="n">${f.ev}</td><td class="n">${r.mech === "frequency-based memory" && !f.tabu ? num(f.adj, 1) : "–"}</td><td>${f === r.pick ? `<b>chosen</b> (${r.mech === "frequency-based memory" ? "frequency" : r.mech === "aspiration" ? "aspiration" : "improving"})` : f.tabu && f.ev > s.best ? "aspires" : ""}</td></tr>`).join("");
+    out.innerHTML = `${state}<div class="tt-wrap"><table class="tt nb"><thead><tr><th>flip</th><th>t − M</th><th>eval</th><th>adj.</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="lab-note" style="margin-top:8px">(b) Non-tabu flips: ${r.nt.map(f => `x<sub>${f.i + 1}</sub> → ${f.ev}`).join(", ")} against eval(x) = ${r.cur}: ${r.imp.length ? "an improving move exists." : "none improves."} ${r.imp.length ? "" : `(c) Tabu flips above the best ${s.best}: ${r.asp.length ? r.asp.map(f => `x<sub>${f.i + 1}</sub> → ${f.ev}`).join(", ") + ", so aspiration applies." : "none, so aspiration does not apply. (d) The adjusted scores decide."}`} (e) Flip x<sub>${r.pick.i + 1}</sub>: eval ${r.pick.ev}, M(${r.pick.i + 1}) = ${s.t}, best ${r.next.best}, t = ${s.t + 1}.</p>`;
+  };
+  wireSteps(body, st, render); render();
+}
+// Iteration t = 9: raw and adjusted scores of the four non-tabu flips.
+const T9 = TS_IT[2].r.nt;
+vbars("adj9", {
+  cats: T9.map(f => `x${"₁₂₃₄₅₆"[f.i]}`), y: [0, 14], yTicks: [0, 2, 4, 6, 8, 10, 12, 14], yTitle: "score",
+  series: [{ slot: 1, name: "eval after the flip", vals: T9.map(f => f.ev) }, { slot: 2, name: "adjusted: eval − 0.7 · H(i)", vals: T9.map(f => f.adj) }],
+  tipHead: c => `flip ${c}`, fmtY: v => num(v, 1),
+  aria: `Grouped bars for the non-tabu flips at t = 9: ${T9.map(f => `x${f.i + 1} ${f.ev} raw, ${num(f.adj, 1)} adjusted`).join("; ")}. x5 is highest in both.`,
+});
+
+function tutorial3() {
+  const nat = jsSched(NATURAL), opt = { 1: [3, 1, 2], 2: [2, 1, 3], 3: [3, 1, 2] };
+  const aspA = { 1: [1, 3, 2], 2: [1, 2, 3], 3: [3, 2, 1] }, aspB = { 1: [1, 3, 2], 2: [1, 2, 3], 3: [3, 1, 2] };
+  const runs = [0, 1, 2, 3].map(t => jsRun(t, 8));
+  const [i7, i8, i9] = TS_IT.map(x => x.r);
+  return `${head(e)}
+    <p class="lead">Sheet 3 belongs to lecture 4. Task 1 is a design question like the maze on sheet 2, now for tabu search and for a scheduling problem, where feasibility becomes the interesting part: some neighbours are deadlocked schedules. Task 2 is three iterations by hand on a weighted SAT instance, with the recency memory, the aspiration criterion and the frequency penalty all in play. The sheet carries no points and there are no official solutions; everything below is our own working.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">${nat.ms}</div><div class="l">makespan of the natural order J1 J2 J3 on every machine</div></div>
+      <div class="tile"><div class="v">10</div><div class="l">the optimal makespan, found by checking all ${216 - JS_DEAD} deadlock-free machine orders; the lower bound from machine M1's load is 8</div></div>
+      <div class="tile"><div class="v">${JS_DEAD} of 216</div><div class="l">machine-order combinations that deadlock, so a neighbourhood must handle infeasible swaps</div></div>
+      <div class="tile"><div class="v">x₂, x₆, x₅</div><div class="l">the three flips of task 2 (aspiration, aspiration, frequency); best rises from 12 to 14</div></div>
+    </div>
+    <p class="muted">Date: the ICCL calendar (last edited 9 Nov) lists tutorial 3 for the Thursday group on 19 Nov and the Monday groups on 23 Nov, not for your Friday group; 20 Nov is assumed from the weekly slot.</p>
+
+    ${task(1, "Tabu search for a 3 × 3 job shop", `<p>Three jobs, three machines. Each job visits the machines in a fixed order; a machine handles one operation at a time; a job's next operation cannot start before its previous one ends. Minimise the makespan (the time at which the last job finishes). The data:</p>
+      <div class="tt-wrap"><table class="tt"><thead><tr><th></th><th>operation 1</th><th>operation 2</th><th>operation 3</th><th>total</th></tr></thead><tbody>
+        ${[1, 2, 3].map(j => `<tr><td class="rl">${key(j)}job ${j}</td>${JOBS[j].map(([m, d]) => `<td>M${m}, ${d}</td>`).join("")}<td class="n">${JOBS[j].reduce((s, o) => s + o[1], 0)}</td></tr>`).join("")}
+        <tr><td class="rl">load</td><td colspan="3">M1: 3 + 3 + 2 = 8 · M2: 2 + 2 + 1 = 5 · M3: 2 + 1 + 3 = 6</td><td></td></tr>
+      </tbody></table></div>
+      <p>Design a tabu search by answering six questions: representation, evaluation function, initial solution, neighbourhood and tabu list, aspiration criterion, and the handling of deadlocked neighbours.</p>`, `
+      <h3>1. Representation</h3>
+      <p>Once the order of the jobs on each machine is fixed, the best start times follow: start every operation as soon as its job and its machine are free (a <em>semi-active</em> schedule). So a solution is <b>one permutation of the three jobs per machine</b>, for example M1: J1 J2 J3 · M2: J1 J2 J3 · M3: J1 J2 J3. That gives 3!³ = 216 candidates, a search space small enough to enumerate here, which is how the optimum below was checked.</p>
+      <ul class="cmp two">
+        <li><b>Machine permutations</b><span class="v"><span class="sw t"></span>Compact, every real schedule has one, and neighbourhood moves are natural (reorder a machine). But not every combination is a schedule: ${JS_DEAD} of the 216 deadlock (see question 6).</span></li>
+        <li><b>Operation string with repetitions</b><span class="v"><span class="sw v"></span>A sequence of the job numbers, each three times (say 1 3 2 1 2 3 3 1 2); the k-th occurrence of job j stands for its k-th operation. Every string decodes to a feasible schedule, so no deadlocks; the price is redundancy: 9! / (3!)³ = 1 680 strings for at most 88 different schedules.</span></li>
+      </ul>
+      <p>Explicit start times as the representation would be the worst choice: almost every change violates a precedence or a machine constraint. We continue with machine permutations and the decoder above, and deal with deadlocks in the neighbourhood.</p>
+      <h3>2. Evaluation function</h3>
+      <p class="formula">C<sub>max</sub>(s) = the largest completion time over all jobs in the decoded schedule</p>
+      <p>Lecture 4 writes tabu search as a maximisation (argmax, eval(x) &gt; eval(best)). Either maximise <b>eval(s) = −C<sub>max</sub>(s)</b>, or keep C<sub>max</sub> and flip every comparison: take the neighbour with the <em>smallest</em> makespan, and let aspiration fire when C<sub>max</sub>(y) &lt; C<sub>max</sub>(best). Both are the same algorithm. (A finer evaluation, such as makespan plus a small multiple of the sum of completion times, would break the many ties between schedules with equal makespan; not needed for this size.)</p>
+      <h3>3. Initial solution</h3>
+      <p>A feasible start can come from any dispatching rule that builds the schedule forwards in time (always start an available operation, e.g. the one with the shortest duration), because such a construction can never deadlock. The natural ordering J1 J2 J3 on every machine also happens to be feasible:</p>
+      ${JLEG}${gantt(NATURAL)}
+      <p>Step by step: M1 runs J1 (0–3). J1 then needs M2 (3–5), and J2 can only start on M2 after that (5–7), so J2's second operation on M1 runs 7–10 and J3 must wait for it on M1 (10–12). M3 takes J1 (5–7), J2 (10–11) and J3 (12–15), and J3 finishes on M2 at 15–16. <b>Makespan ${nat.ms}.</b> Half of that is waiting: M1, the busiest machine with load 8, is idle from 3 to 7.</p>
+      <p>For comparison, the optimum (M1: J3 J1 J2 · M2: J2 J1 J3 · M3: J3 J1 J2) finishes at <b>10</b>:</p>
+      ${gantt(opt)}
+      ${chart("jsshist", "")}
+        <figcaption>Makespans of all ${216 - JS_DEAD} deadlock-free machine-order combinations (our enumeration, not on the sheet); the other ${JS_DEAD} deadlock. Exactly one combination reaches 10, the natural order's 16 is the most common value.</figcaption>
+      </figure>
+      <h3>4. Neighbourhood, tabu list and tenure</h3>
+      <p><b>Move:</b> swap two adjacent operations on one machine. With three jobs per machine there are two adjacent pairs per machine, so <b>six neighbours</b>. (Swapping any two jobs on a machine would give nine; adjacent swaps are the standard choice and already reach the optimum here.)</p>
+      <p><b>Tabu list:</b> the move attribute (machine, job pair). After swapping J1 and J2 on M2, swapping that pair on M2 again is tabu, which forbids the immediate undo while leaving all other machines free. Storing whole schedules would also work for 216 candidates but does not scale.</p>
+      <p><b>Tenure:</b> the neighbourhood has only six moves, so the tenure must stay well below 6: with tenure 6 or more every move would eventually be tabu. Lecture 4's guide of √n to n with n = 6 gives about 2 to 3. What the run below shows: with <b>tenure 0</b> the search reaches makespan 11 and then oscillates forever between two 11-schedules by swapping J1 and J2 on M2 back and forth (best ${runs[0].best}); <b>tenure 1</b> and <b>2</b> break the cycle and ${runs[1].bestAt === runs[2].bestAt ? `both reach 10 in iteration ${runs[1].bestAt}` : `reach 10 in iterations ${runs[1].bestAt} and ${runs[2].bestAt}`}; <b>tenure 3</b> gets there in iteration ${runs[3].bestAt}. We would choose 2 or 3.</p>
+      ${lab("jss", "tabu search on the job shop, swap by swap")}
+      <h3>5. Aspiration criterion</h3>
+      <p>The standard one: a tabu swap is allowed if the resulting schedule has a smaller makespan than the best found so far, C<sub>max</sub>(y) &lt; C<sub>max</sub>(best). The tabu list stops the search from undoing recent swaps, and a schedule better than every schedule seen cannot be a revisit.</p>
+      ${ex("Worked example: when the criterion fires", `<p>Suppose the search started from M1: J1 J2 J3 · M2: J1 J2 J3 · M3: J3 J1 J2 (makespan ${jsSched({ 1: [1, 2, 3], 2: [1, 2, 3], 3: [3, 1, 2] }).ms}), then swapped J1 and J2 on M3 (makespan ${jsSched({ 1: [1, 2, 3], 2: [1, 2, 3], 3: [3, 2, 1] }).ms}), then J2 and J3 on M1. The current schedule is ${ordTxt(aspA)} with makespan ${jsSched(aspA).ms}, which is also the best so far. Swapping J1 and J2 on M3 is tabu (it was done one iteration ago). But undoing it <em>now</em>, with M1 already changed, gives ${ordTxt(aspB)} with makespan <b>${jsSched(aspB).ms}</b> &lt; ${jsSched(aspA).ms}. The aspiration criterion admits it. It is exactly the situation the criterion is for: the same move in a different context leads to a schedule that has never been seen.</p>`)}
+      <p>A negative example from the explorer (tenure 3, after iteration 6): swapping J1 and J3 on M2 is tabu and would give makespan 10, but the best so far is already 10, so it is not strictly better and stays forbidden.</p>
+      <h3>6. Deadlocked neighbours</h3>
+      <p>From the natural order, swap J1 and J2 on M1: M1 now wants to start with J2's second operation, which needs J2's first operation on M2, which waits behind J1 on M2, whose first operation needs M1, which waits for J2. A cycle: no operation can ever start. Two of the six neighbours of the natural order deadlock this way (J1 ↔ J2 on M1 and J2 ↔ J3 on M2). Ways to handle it:</p>
+      <ul>
+        <li><b>Skip them</b> (what the explorer does): detect the deadlock when decoding, leave the neighbour out of N*(x), and do not put its move on the tabu list. Simple and correct; it only shrinks the neighbourhood.</li>
+        <li><b>Penalise them</b>: give a deadlocked neighbour a huge makespan so it is never chosen. Equivalent here, but it costs a full decode for nothing.</li>
+        <li><b>Repair them</b>: when the decoder gets stuck, start the operation that has waited longest anyway, which yields a different, feasible order. Changes the move's meaning.</li>
+        <li><b>Avoid them by construction</b>: the operation-string representation of question 1 never deadlocks.</li>
+      </ul>
+      ${why("Context, not on the sheet or the slides", `<p>The job-shop literature has a sharper answer to question 6: if you only swap two adjacent operations that both lie on a <em>critical path</em> (a chain of operations without slack that determines the makespan), the result can never contain a cycle, and every other swap cannot shorten the makespan anyway. That neighbourhood, from van Laarhoven, Aarts and Lenstra's simulated annealing for job shops, is the basis of the classic tabu searches for this problem. On a 3 × 3 instance the plain six-swap neighbourhood is fine.</p>`)}
+      ${ans([["3 permutations", "one job order per machine, decoded to the earliest start times"], ["min C<sub>max</sub>", "eval = −makespan, or flip argmax and aspiration to minimisation"], [`${nat.ms} → 10`, "natural order; the optimum, reached by tabu search with tenure 1–3"], ["(machine, pair)", "the tabu attribute; six adjacent swaps, tenure 2–3"], ["C<sub>max</sub>(y) &lt; best", "aspiration; deadlocked swaps are skipped"]])}`)}
+
+    ${task(2, "Three iterations on a weighted SAT instance", `<p>Six variables, eight clauses with weights; eval is the weight of the satisfied clauses (higher is better). The neighbourhood is all single flips. The tabu list is recency memory variant 1 (M(i) = iteration of x<sub>i</sub>'s last flip, tabu if t − M(i) ≤ tenure); when every non-tabu move is worse, the score eval(x′) − 0.7 · H(i) decides, with H(i) the number of flips of x<sub>i</sub> in the last h iterations. Tenure 4, penalty coefficient 0.7.</p>
+      <div class="tt-wrap"><table class="tt"><thead><tr><th>clause</th><th>formula</th><th>weight</th></tr></thead><tbody>${WSAT.map(([, w], i) => `<tr><td>C${i + 1}</td><td>${WSAT_TXT[i]}</td><td class="n">${w}</td></tr>`).join("")}<tr><td></td><td>all satisfied</td><td class="n">14</td></tr></tbody></table></div>
+      <p>At the start of t = 7: x = (1, 0, 1, 1, 0, 1) with eval 11, M = (1, 5, 4, 3, 2, 6), H = (2, 4, 6, 3, 2, 5), best = 12. Run iterations t = 7, 8, 9, each in the order: (a) which variables are tabu, (b) evaluate the non-tabu flips, is one improving? (c) if not, does aspiration apply? (d) if not, use the frequency memory; (e) make the move, update M and best, increment t. The sheet's hint: each iteration exercises a different mechanism.</p>`, `
+      ${ex("Check the starting value first", `<p>x = (1, 0, 1, 1, 0, 1). C1 = x₁ ✓ (3), C2 = x₂ ✗, C3 = ¬x₁ ∨ x₃ ✓ through x₃ (2), C4 = ¬x₂ ∨ x₄ ✓ (2), C5 ✓ through x₁, C6 = ¬x₄ ∨ ¬x₅ ∨ x₆ ✓ through ¬x₅ and x₆, C7 = ¬x₁ ∨ ¬x₂ ∨ ¬x₆ ✓ through ¬x₂, C8 ✓ through x₃. Everything but C2: 14 − 3 = <b>11</b>, as the sheet says.</p>`)}
+      ${lab("ts3", "the three iterations with every flip evaluated")}
+      <h3>t = 7: aspiration</h3>
+      <p>(a) t − M(i) = (6, 2, 3, 4, 5, 1): x₂, x₃, x₄ and x₆ are tabu (≤ 4), only <b>x₁ and x₅</b> are free. (b) Flipping x₁ gives ${i7.flips[0].ev} (it breaks C1, C5 and gains nothing back), flipping x₅ gives ${i7.flips[4].ev}: equal to the current 11, so <b>no improving non-tabu move</b>. (c) Among the tabu flips, x₂ gives ${i7.flips[1].ev} (C2 satisfied, C4 still satisfied through x₄, C7 now fails because x₁, x₂, x₆ are all true: 11 + 3 − 1). 13 &gt; best 12, so <b>aspiration applies</b>. The other tabu flips give x₃ → ${i7.flips[2].ev}, x₄ → ${i7.flips[3].ev}, x₆ → ${i7.flips[5].ev}. (e) Flip x₂: x = (1, 1, 1, 1, 0, 1), eval 13, M(2) = 7, so M = (1, 7, 4, 3, 2, 6), best = 13, t = 8.</p>
+      <h3>t = 8: aspiration again</h3>
+      <p>(a) t − M(i) = (7, 1, 4, 5, 6, 2): x₂, x₃, x₆ are tabu; <b>x₁, x₄, x₅</b> are free. (b) x₁ → ${i8.flips[0].ev}, x₄ → ${i8.flips[3].ev}, x₅ → ${i8.flips[4].ev}: x₅ ties with the current 13, nothing improves. (c) Tabu x₆ gives <b>${i8.flips[5].ev}</b> (C7 is fixed, C6 still holds through ¬x₅, C8 holds through x₃): 14 &gt; best 13, aspiration applies. (e) Flip x₆: x = (1, 1, 1, 1, 0, 0), eval 14, M = (1, 7, 4, 3, 2, 8), best = 14, t = 9. All eight clauses are satisfied: 14 is the maximum possible, and a real implementation would stop here.</p>
+      <h3>t = 9: frequency-based memory</h3>
+      <p>(a) t − M(i) = (8, 2, 5, 6, 7, 1): only x₂ and x₆ are tabu. (b) The four free flips all lose something: x₁ → ${i9.flips[0].ev}, x₃ → ${i9.flips[2].ev}, x₄ → ${i9.flips[3].ev}, x₅ → ${i9.flips[4].ev}, all below 14. (c) Tabu x₂ → ${i9.flips[1].ev}, x₆ → ${i9.flips[5].ev}: neither beats the best 14, no aspiration. (d) The adjusted scores with H = (2, 5, 6, 3, 2, 6):</p>
+      <p class="formula pre">x₁: ${i9.flips[0].ev} − 0.7 · 2 = ${num(i9.flips[0].adj, 1)}
+x₃: ${i9.flips[2].ev} − 0.7 · 6 = ${num(i9.flips[2].adj, 1)}
+x₄: ${i9.flips[3].ev} − 0.7 · 3 = ${num(i9.flips[3].adj, 1)}
+x₅: ${i9.flips[4].ev} − 0.7 · 2 = ${num(i9.flips[4].adj, 1)}</p>
+      <p>(e) Flip <b>x₅</b>: x = (1, 1, 1, 1, 1, 0), eval 13 (C6 = ¬x₄ ∨ ¬x₅ ∨ x₆ now fails), M = (1, 7, 4, 3, 9, 8), best stays 14, t = 10.</p>
+      ${chart("adj9", leg([[1, "eval after the flip"], [2, "adjusted: eval − 0.7 · H(i)"]]))}
+        <figcaption>t = 9, the four non-tabu flips. The penalty pushes x₃ (flipped 6 times) from joint second to last; x₅ wins with or without it, so here the frequency memory confirms the choice rather than changing it.</figcaption>
+      </figure>
+      ${why("Context, not on the sheet: the hint and two conventions", `<p><b>The hint.</b> It promises a different mechanism in each iteration, presumably an ordinary improving move, then aspiration, then frequency. Following the rules as stated we get aspiration twice: at t = 7 the only free flips are x₁ (7) and x₅ (11, a tie, not an improvement), so (b) fails and the tabu x₂ (13 &gt; 12) aspirates. If the sideways flip x₅ were counted as the step-(b) move, the search would continue differently, but best-admissible tabu search would still prefer x₂, because an aspirated move joins the admissible set and 13 beats 11. Worth asking in the session which reading the sheet intends.</p>
+        <p><b>Updating H.</b> We increase H(i) by one with every flip (H(2) = 5 after t = 7, H(6) = 6 after t = 8). It does not matter for t = 9, because both of those variables are tabu there and their adjusted scores are never needed.</p>
+        <p><b>The tabu test.</b> Variant 1 with tenure 4: at t, a variable is tabu if it was flipped in one of the last four iterations, t − 4 … t − 1. Lecture 4 used the same test with 5.</p>`)}
+      ${ans([["x₂ (t = 7)", "aspiration: 13 &gt; best 12"], ["x₆ (t = 8)", "aspiration: 14 &gt; best 13, all clauses satisfied"], ["x₅ (t = 9)", `frequency: adjusted ${num(i9.flips[4].adj, 1)} beats ${num(i9.flips[3].adj, 1)}, ${num(i9.flips[0].adj, 1)}, ${num(i9.flips[2].adj, 1)}`], ["(1, 7, 4, 3, 9, 8)", "M after the three iterations; best = 14, x = (1, 1, 1, 1, 1, 0)"]])}`)}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the natural-order Gantt chart on paper and check the makespan of 16; then try to beat it by hand before looking at the explorer.</li>
+      <li>Write down your six design answers for task 1 in a few lines each; question 6 (deadlocks) and the tenure argument are the ones to be ready to defend.</li>
+      <li>Redo the three SAT iterations with the tables hidden, and decide what you think the hint means for t = 7.</li>
+      <li>Reread the memory variants, the aspiration criteria and the frequency penalty in <a href="advanced-problem-solving/lecture.html?n=4">lecture 4</a>.</li>
+    </ul>
+    <p class="muted">Previous sheet: <a href="advanced-problem-solving/exercise.html?n=2">tutorial 2</a>. Next: tutorial 4 on evolutionary algorithms, after <a href="advanced-problem-solving/lecture.html?n=5">lecture 5</a>. The sheet is in OPAL → Tutorials → Tutorial 3 (tabu search); it is not republished here.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date);
   return `${head(e)}
@@ -430,8 +652,8 @@ function placeholder() {
       <p class="muted">${e.planned ? `Planned tutorial; the topic follows the lecture of that week and the date is assumed weekly: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.` : `This tutorial is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.`}<br>${esc(e.blurb)}<br>${e.sheet ? `The sheet is in OPAL (Tutorials → Tutorial ${e.n}) since ${U.fmtDate(e.sheet)}: work through it before the session. The write-up with worked solutions appears here after the tutorial.` : "The write-up appears here once the sheet is in OPAL and the session has taken place."}</p>
     </div>`;
 }
-const WRITEUPS = { 1: tutorial1, 2: tutorial2 };
-const LABS = { astar: initAstar, vtable: initVtable, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc };
+const WRITEUPS = { 1: tutorial1, 2: tutorial2, 3: tutorial3 };
+const LABS = { astar: initAstar, vtable: initVtable, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc, jss: initJss, ts3: initTs3 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Tutorial not found</h1><p>There is no tutorial ${esc(q)}.</p>`;

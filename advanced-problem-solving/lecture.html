@@ -775,6 +775,304 @@ function lecture3() {
     <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=4">lecture 4</a>, tabu search. Previous: <a href="advanced-problem-solving/lecture.html?n=2">lecture 2</a>. Slides: OPAL → Lectures → Lesson 3 (local search); the page numbers above are the slide numbers of the 37-slide deck (the PDF has 56 pages because of overlays).</p>`;
 }
 
+// ---------------- Lecture 4: tabu search ----------------
+// Tabu search on the lecture-3 landscape: neighbours are the positions up to three steps left or right; the search always
+// moves to the best admissible neighbour (not visited in the last `tenure` steps, or better than the best so far), even
+// downhill. Ties go to the nearer position, then to the right. Deterministic, so step k is always the same state.
+const TABU_MODES = [0, 2, 4, 5, 10, 15];
+function tabuRun(tenure, steps, byDefault) {
+  let x = 2, best = 2, stuck = false, last = null; const hist = [2];
+  for (let k = 0; k < steps; k++) {
+    const cand = []; for (let y = x - 3; y <= x + 3; y++) if (y >= 0 && y <= 60 && y !== x) cand.push(y);
+    const recent = tenure ? hist.slice(-tenure) : [];
+    const isTabu = y => recent.includes(y), asp = y => LAND[y] > LAND[best];
+    let adm = cand.filter(y => !isTabu(y) || asp(y)), how = "best admissible";
+    if (!adm.length) {
+      if (!byDefault) { stuck = true; break; }
+      // Aspiration by default: take the neighbour that became tabu longest ago.
+      const age = y => recent.length - 1 - recent.lastIndexOf(y);
+      adm = [cand.reduce((a, b) => age(b) > age(a) ? b : a)]; how = "aspiration by default (oldest tabu)";
+    }
+    const y = adm.reduce((a, b) => LAND[b] > LAND[a] || (LAND[b] === LAND[a] && (Math.abs(b - x) < Math.abs(a - x) || (Math.abs(b - x) === Math.abs(a - x) && b > a))) ? b : a);
+    if (how === "best admissible" && isTabu(y)) how = "aspiration (tabu, but better than the best so far)";
+    last = { from: x, to: y, d: LAND[y] - LAND[x], how, nTabu: cand.filter(isTabu).length, nCand: cand.length };
+    x = y; hist.push(x); if (LAND[x] > LAND[best]) best = x;
+  }
+  return { x, best, hist, stuck, last, tabu: tenure ? hist.slice(-tenure) : [] };
+}
+function tabuOut(s, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 250, L = 36, R = 12, T = 16, B = 28, PW = W - L - R, PH = H - T - B;
+  const X = x => L + x / 60 * PW, Y = v => T + PH - (v - 5) / 45 * PH;
+  const path = "M" + LAND.map((v, x) => `${X(x).toFixed(1)},${Y(v).toFixed(1)}`).join(" L");
+  const yt = [10, 20, 30, 40, 50].map(v => `<line class="${v === 10 ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="tick" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = [0, 10, 20, 30, 40, 50].map(x => `<text class="tick" x="${X(x)}" y="${H - 10}" text-anchor="middle">${x}</text>`).join("");
+  const seen = [...new Set(s.hist)].map(x => `<circle class="visit" cx="${X(x)}" cy="${Y(LAND[x])}" r="3"/>`).join("");
+  const tabu = s.tabu.map(x => `<rect class="tabu" x="${X(x) - 5}" y="${Y(LAND[x]) - 5}" width="10" height="10" rx="2"/>`).join("");
+  const trail = s.hist.length > 1 ? `<path class="trailx" d="M${s.hist.slice(-12).map(x => `${X(x).toFixed(1)},${Y(LAND[x]).toFixed(1)}`).join(" L")}"/>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Landscape over positions 0 to 60 with the tabu search's current point, its tabu positions as squares and the best point so far as a ring">${yt}${xt}
+    <text class="note" x="${L - 30}" y="10">eval</text><text class="note" x="${W - R}" y="${H - 10}" text-anchor="end">position</text>
+    <line class="ann dash" x1="${X(LAND_BEST)}" x2="${X(LAND_BEST)}" y1="${T}" y2="${Y(LAND[LAND_BEST])}"/><text class="vl2" x="${X(LAND_BEST) - 5}" y="${T + 10}" text-anchor="end">global optimum</text>
+    <path class="land" d="${path}"/>${seen}${trail}${tabu}
+    <circle class="bestpt" cx="${X(s.best)}" cy="${Y(LAND[s.best])}" r="9"/>
+    <circle class="curpt" cx="${X(s.x)}" cy="${Y(LAND[s.x])}" r="6"/></svg>`;
+}
+function initTabu(body) {
+  const st = { ten: 5, i: 0, n: 60, dflt: false };
+  body.innerHTML = `<p class="lab-note">The landscape of lecture 3. Each step scans all six neighbours (up to three positions left or right) and moves to the best <em>admissible</em> one, also when it is worse than the current point. A position is tabu while it is among the last <b>tenure</b> positions visited; the aspiration criterion lifts the ban for a neighbour better than the best so far. No randomness: every run with the same tenure is the same run.</p>
+    <div class="presets" role="group" aria-label="Tabu tenure">${TABU_MODES.map(t => `<button class="preset" data-m="${t}" aria-pressed="${t === st.ten}">tenure ${t}${t === 0 ? " (no memory)" : ""}</button>`).join("")}</div>
+    <div class="ctl"><label><input type="checkbox" data-dflt> aspiration by default: if every neighbour is tabu, take the one that became tabu longest ago</label></div>
+    ${leg([[2, "current point"], [3, "best so far (ring)"], [4, "tabu positions (squares)", "sq"], ["g", "visited"]])}
+    <div class="steps"><button class="preset" data-s="reset">↺ Reset</button><button class="preset" data-s="next">Step →</button><button class="preset" data-s="p10">+10</button><button class="preset" data-s="end">⇥ 60 steps</button><span class="scount">step <output>0</output> of 60</span></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const s = tabuRun(st.ten, st.i, st.dflt); const done = s.hist.length - 1; cnt.value = done;
+    const l = s.last, move = l ? `${l.from} → ${l.to} (${l.d >= 0 ? "+" : ""}${num(l.d, 1)}), ${l.how}; ${l.nTabu} of ${l.nCand} neighbours were tabu` : "press Step for the first move";
+    const status = s.stuck ? `<b>stuck after ${done} steps</b>: every neighbour is tabu and none beats the best, so no admissible move exists` : s.best === LAND_BEST ? `global optimum found (first reached at step ${s.hist.findIndex(x => x === LAND_BEST)})` : st.i && done >= 16 && new Set(s.hist.slice(-12)).size <= 6 ? `cycling between positions ${[...new Set(s.hist.slice(-12))].sort((a, b) => a - b).join(", ")}: the list is too short to block the way back` : st.i ? "still searching" : "";
+    out.innerHTML = `${tabuOut(s, isNarrow())}<dl class="ro"><dt>current</dt><dd>position ${s.x}, eval ${num(LAND[s.x], 1)}</dd><dt>best so far</dt><dd>position ${s.best}, eval ${num(LAND[s.best], 1)}</dd><dt>tabu list</dt><dd class="mono">${s.tabu.length ? s.tabu.join(" ") : "empty"}</dd><dt>last move</dt><dd>${move}</dd><dt>status</dt><dd>${status || "–"}</dd></dl>`;
+  };
+  body.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { st.ten = +b.dataset.m; body.querySelectorAll("[data-m]").forEach(o => o.setAttribute("aria-pressed", o === b)); render(); }));
+  body.querySelector("[data-dflt]").addEventListener("change", e => { st.dflt = e.target.checked; render(); });
+  body.querySelectorAll("[data-s]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.s; st.i = k === "reset" ? 0 : k === "next" ? Math.min(st.n, st.i + 1) : k === "p10" ? Math.min(st.n, st.i + 10) : st.n; render(); }));
+  render(); body.dataset.rerender = "tabu";
+}
+// The SAT example of slides 7–12: x = (0,1,1,1,0,0,0,1); the flips 3, 7, 1, 6, 4 (read back from M on slide 12), then 5.
+// Evaluations are only those on the slides (27, 31, 33, 32); the steps in between have none on the slides.
+const MEM_FLIPS = [3, 7, 1, 6, 4, 5], MEM_EVAL = { 0: 27, 1: 31, 5: 33, 6: 32 };
+function memState(k) {
+  const x = [0, 1, 1, 1, 0, 0, 0, 1], m1 = Array(8).fill(0), m2 = Array(8).fill(0);
+  for (let t = 1; t <= k; t++) { const b = MEM_FLIPS[t - 1] - 1; x[b] ^= 1; for (let i = 0; i < 8; i++) if (m2[i]) m2[i]--; m2[b] = 5; m1[b] = t; }
+  return { x, m1, m2 };
+}
+function memRow(label, vals, tabuOf, sub = "") {
+  return `<div class="mrow"><span class="ml">${label}${sub ? `<small>${sub}</small>` : ""}</span>${vals.map((v, i) => `<span class="cell${tabuOf(i) ? " t4" : ""}" style="--c:var(--vz-s4)" title="bit ${i + 1}${tabuOf(i) ? ", tabu" : ""}">${v}</span>`).join("")}</div>`;
+}
+function initMem(body) {
+  const st = { i: 0, n: 6 };
+  body.innerHTML = `<p class="lab-note">Eight variables, start x = (0, 1, 1, 1, 0, 0, 0, 1), information kept for 5 iterations. Each step flips one bit; both memory variants are updated side by side. Tinted cells are tabu for the <em>next</em> decision.</p>
+    ${stepBar(6, "one flip per step")}<div class="out"></div>`;
+  const out = body.querySelector(".out"), cnt = body.querySelector(".scount output");
+  const render = () => {
+    const k = st.i, s = memState(k), t = k + 1, tabu1 = i => s.m1[i] && t - s.m1[i] <= 5, tabu2 = i => s.m2[i] > 0;
+    const idx = `<div class="mrow idx"><span class="ml"></span>${s.x.map((_, i) => `<span>${i + 1}</span>`).join("")}</div>`;
+    const ev = MEM_EVAL[k] !== undefined ? `eval(x) = ${MEM_EVAL[k]}` : "eval not on the slides for this step";
+    const note = k === 0 ? "Memory all zero: nothing is tabu, the first step is an ordinary hill-climbing step (the slides: flipping bit 3 is best, 27 → 31)."
+      : k < 5 ? `Iteration ${k} flipped bit ${MEM_FLIPS[k - 1]}.`
+      : k === 5 ? "This is the state of slide 12: both variants hold the same numbers, (3, 0, 1, 5, 0, 4, 2, 0). Bits 1, 3, 4, 6, 7 are tabu, so only x₂, x₅, x₈ are admissible. The best of them, x₅, evaluates to 32: worse than 33, and tabu search takes it anyway."
+      : "Bit 5 flipped (33 → 32). Variant 1 just writes the iteration number 6 into M(5); variant 2 decrements every non-zero entry and writes 5, giving the slide's (2, 0, 0, 4, 5, 3, 1, 0): bit 3 has served its five iterations and is free again.";
+    out.innerHTML = `<div class="mem">${idx}${memRow("x", s.x, () => false)}${memRow("M, variant 1", s.m1, tabu1, `iteration of the last flip · tabu if ${t} − M(i) ≤ 5`)}${memRow("M, variant 2", s.m2, tabu2, "iterations left on the list · tabu if M(i) > 0")}</div>
+      <dl class="ro"><dt>after iteration</dt><dd>${k}${k ? `: flipped bit ${MEM_FLIPS[k - 1]}` : ""}, ${ev}</dd><dt>what happens</dt><dd>${note}</dd></dl>`;
+    cnt.value = k;
+  };
+  wireSteps(body, st, render); render();
+}
+// Slide 10: the tabu list as a window of width 4 over the trajectory s1 … s9.
+CHARTS.window = narrow => {
+  const W = narrow ? 340 : 600, n = 9, L = 12, R = 12, gap = narrow ? 4 : 8, bw = (W - L - R - gap * (n - 1)) / n, H = 112, y0 = 40;
+  const cls = i => i === 9 ? "now" : i >= 5 ? "blk" : "exp";
+  const boxes = Array.from({ length: n }, (_, k) => { const i = k + 1, x = L + k * (bw + gap), st = cls(i);
+    const tip = `<b>s${i}</b><span class="trow">${st === "now" ? "current solution (t = 9)" : st === "blk" ? `on the tabu list: t − M = ${9 - i} ≤ 4` : `expired: t − M = ${9 - i} > 4`}</span>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit anchor" x="${x}" y="${y0 - 4}" width="${bw}" height="44"/><rect class="wb ${st}" x="${x}" y="${y0}" width="${bw}" height="34" rx="5"/><text class="wt" x="${x + bw / 2}" y="${y0 + 22}" text-anchor="middle">s${i}</text></g>`; }).join("");
+  const wx0 = L + 4 * (bw + gap) - gap / 2, wx1 = L + 8 * (bw + gap) - gap / 2;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Nine solutions s1 to s9 in a row; s5 to s8 lie inside a window of width four and are tabu, s1 to s4 have expired, s9 is the current solution">
+    <path class="win" d="M${wx0},${y0 - 8} V${y0 - 16} H${wx1} V${y0 - 8}"/><text class="vl2" x="${(wx0 + wx1) / 2}" y="${y0 - 21}" text-anchor="middle">tenure = 4: blocked</text>
+    <text class="note" x="${L}" y="${y0 - 21}">expired</text>${boxes}
+    <text class="note" x="${W - R}" y="${H - 8}" text-anchor="end">each step: the window slides one to the right</text></svg>`;
+};
+// Slide 17: long-term memory after 100 iterations with horizon h = 50.
+const HVEC = [5, 7, 11, 3, 9, 8, 1, 6];
+CHARTS.hvec = narrow => {
+  const W = narrow ? 340 : 600, H = 210, L = 34, R = 10, T = 16, B = 30, PW = W - L - R, PH = H - T - B, n = 8, gw = PW / n, bw = Math.min(34, gw * 0.62), y = v => T + PH - v / 12 * PH;
+  const yt = [0, 3, 6, 9, 12].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const bars = HVEC.map((v, i) => { const x = L + i * gw + (gw - bw) / 2, rare = v <= 3;
+    const tip = `<b>bit ${i + 1}</b><span class="trow"><strong>${v}</strong>&nbsp;flips in the last 50 iterations (${Math.round(v / 50 * 100)} %)</span>${rare ? `<span class="trow">under-represented: a diversification candidate</span>` : ""}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit anchor" x="${L + i * gw}" y="${T}" width="${gw}" height="${PH}"/><path class="bar" style="fill:${rare ? "var(--vz-s3)" : "var(--vz-s1)"}" d="${vbar(x, bw, y(v), y(0))}"/>${narrow ? "" : `<text class="val" x="${x + bw / 2}" y="${y(v) - 5}" text-anchor="middle">${v}</text>`}<text class="tick" x="${x + bw / 2}" y="${H - 12}" text-anchor="middle">${i + 1}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart of the frequency memory H over bits 1 to 8: 5, 7, 11, 3, 9, 8, 1, 6 flips in the last 50 iterations; bits 4 and 7 are flipped least">${yt}<text class="note" x="${L - 30}" y="10">flips</text><text class="note" x="${W - R}" y="${H - 12}" text-anchor="end">${narrow ? "" : "bit"}</text>${bars}</svg>`;
+};
+// Slide 19: raw evaluation against penalised score eval − 0.7 · H(i) for the three non-tabu flips (slope chart: the ranking flips).
+const PEN = [{ bit: 2, ev: 30, h: 7, slot: 1 }, { bit: 3, ev: 33, h: 11, slot: 2 }, { bit: 7, ev: 31, h: 1, slot: 3 }];
+CHARTS.penalty = narrow => {
+  const W = narrow ? 340 : 600, H = 250, T = 20, B = 30, xa = narrow ? 70 : 170, xb = narrow ? 250 : 400, y = v => T + (34 - v) / 10 * (H - T - B);
+  const tx = narrow ? xa - 34 : xa - 84, yt = [24, 26, 28, 30, 32, 34].map(v => `<line class="grid" x1="${tx + 4}" x2="${xb + 30}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${tx}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const rows = PEN.map(p => { const adj = p.ev - 0.7 * p.h, c = `var(--vz-s${p.slot})`;
+    const tip = `<b>flip bit ${p.bit}</b><span class="trow">eval ${p.ev} − 0.7 · ${p.h} = <strong>${num(adj, 1)}</strong></span>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><line class="slope" style="stroke:${c}" x1="${xa}" y1="${y(p.ev)}" x2="${xb}" y2="${y(adj)}"/><circle class="dot" style="fill:${c}" cx="${xa}" cy="${y(p.ev)}" r="5"/><circle class="dot anchor" style="fill:${c}" cx="${xb}" cy="${y(adj)}" r="5"/>
+      <text class="lbl" x="${xb + 10}" y="${y(adj) + 4 + (p.bit === 3 ? -5 : p.bit === 2 ? 6 : 0)}">${narrow ? "" : `bit ${p.bit}: `}${num(adj, 1)}</text><text class="lbl" x="${xa - 10}" y="${y(p.ev) + 4}" text-anchor="end">${narrow ? "" : `bit ${p.bit}: `}${p.ev}</text></g>`; }).join("");
+  return `<svg class="slopes" viewBox="0 0 ${W} ${H}" role="img" aria-label="Slope chart: raw evaluations 30, 33 and 31 for flipping bits 2, 3 and 7 become 25.1, 25.3 and 30.3 after the frequency penalty; bit 3 drops from first to second, bit 7 rises to first">${yt}
+    <text class="note" x="${xa}" y="${H - 8}" text-anchor="middle">eval(x′)</text><text class="note" x="${xb}" y="${H - 8}" text-anchor="middle">eval(x′) − 0.7 · H(i)</text>${rows}</svg>`;
+};
+// Slide 22: recency (remaining tabu iterations) and frequency (swaps in the last 50 iterations) as upper-triangular matrices.
+const TSP_REC = { "1-4": 1, "2-6": 5, "3-7": 4, "4-5": 3, "5-8": 2 };
+const TSP_FRQ = [[0, 2, 3, 3, 0, 1, 1], [2, 1, 3, 1, 1, 0], [2, 3, 3, 4, 0], [1, 1, 2, 1], [4, 2, 1], [3, 1], [6]];
+const frq = (i, j) => TSP_FRQ[i - 1][j - i - 1];
+CHARTS.tspmem = narrow => {
+  const cs = narrow ? 18 : 30, gap = narrow ? 18 : 60, L = 8, T = 34, mw = 7 * cs, W = L + mw * 2 + gap + 30, H = T + 7 * cs + 34;
+  const grid = (ox, val, max, kind) => {
+    let out = `<text class="note" x="${ox + mw / 2}" y="12" text-anchor="middle">${kind === "rec" ? (narrow ? "recency" : "recency: iterations still tabu") : (narrow ? "frequency" : "frequency: swaps in the last 50")}</text>`;
+    for (let j = 2; j <= 8; j++) out += `<text class="tick" x="${ox + (j - 2) * cs + cs / 2}" y="${T - 6}" text-anchor="middle">${j}</text>`;
+    for (let i = 1; i <= 7; i++) {
+      out += `<text class="tick" x="${ox + mw + 6}" y="${T + (i - 1) * cs + cs / 2 + 4}">${i}</text>`;
+      for (let j = i + 1; j <= 8; j++) {
+        const v = val(i, j), x = ox + (j - 2) * cs, yy = T + (i - 1) * cs, a = v ? Math.round(18 + 70 * v / max) : 0;
+        const tip = `<b>swap cities ${i} and ${j}</b><span class="trow">${kind === "rec" ? (v ? `tabu for ${v} more iteration${v > 1 ? "s" : ""}` : "not tabu") : `swapped ${v}× in the last 50 iterations`}</span>`;
+        out += `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="mc anchor" x="${x + 1}" y="${yy + 1}" width="${cs - 2}" height="${cs - 2}" rx="3" style="fill:color-mix(in srgb, var(--vz-${kind === "rec" ? "s4" : "s1"}) ${a}%, var(--surface))"/>${narrow && !v ? "" : `<text class="mv${v ? "" : " z"}" x="${x + cs / 2}" y="${yy + cs / 2 + 4}" text-anchor="middle">${v}</text>`}</g>`;
+      }
+    }
+    return out;
+  };
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Two upper-triangular 8-city matrices from slide 22. Recency: swaps 1–4, 2–6, 3–7, 4–5 and 5–8 are tabu for 1, 5, 4, 3 and 2 more iterations. Frequency: the most used swap is 7–8 with 6, swaps 1–2, 1–6, 2–8 and 3–8 were never used">
+    ${grid(L, (i, j) => TSP_REC[`${i}-${j}`] || 0, 5, "rec")}${grid(L + mw + gap, frq, 6, "frq")}
+    <text class="note" x="${L}" y="${H - 6}">row i, column j: the swap of cities i and j (i &lt; j)</text></svg>`;
+};
+// Slides 26–27: evaluations per iteration as the problem grows. Tabu search scans the whole neighbourhood, SA samples one.
+line("evals", {
+  x: [10, 1000], y: [1, 1e6], log: true, yTicks: [1, 10, 100, 1e3, 1e4, 1e5, 1e6], fmtTick: v => v >= 1e6 ? "1M" : v >= 1e3 ? `${num(v / 1e3, 0)}k` : `${v}`,
+  xTicks: [10, 200, 400, 600, 800, 1000], xTicksN: [10, 500, 1000], yTitle: "evaluations per step", xTitle: "n",
+  series: [{ slot: 2, name: "tabu search, TSP swaps: n(n − 1)/2", short: "TS, TSP", f: n => n * (n - 1) / 2 }, { slot: 1, name: "tabu search, SAT flips: n", short: "TS, SAT", f: n => n }, { slot: 3, name: "simulated annealing: 1", short: "SA", f: () => 1, dy: -6 }],
+  tipHead: n => `n = ${n}`, fmtY: v => num(v, 0), focusAt: 1000, labelW: 70,
+  extra: g => `<line class="ann dash" x1="${g.x(1000)}" x2="${g.x(1000)}" y1="${g.y(499500)}" y2="${g.y(1)}"/><text class="vl2" x="${g.x(1000) - 6}" y="${g.y(499500) + 30}" text-anchor="end">n = 1000: 499 500 per step</text>`,
+  hitLabel: "Read the evaluations per step: arrow keys change n", aria: "Line chart on a logarithmic axis of evaluations per iteration over n from 10 to 1000: one for simulated annealing, n for tabu search on SAT, n(n − 1)/2 for tabu search on the TSP, reaching 499 500 at n = 1000.",
+});
+
+function lecture4() {
+  const pen = p => num(p.ev - 0.7 * p.h, 1);
+  return `${head(l)}
+    <p class="lead">Lecture 3 ended with two ways out of a local optimum: accept a worse neighbour by chance (the stochastic hill-climber, simulated annealing) or remember where you have been. This lecture is the second way. Tabu search keeps a short list of recent moves that it refuses to undo, and always moves to the best neighbour it is still allowed to take, even when that neighbour is worse. Everything else in the deck refines that idea: what exactly goes on the list and for how long, when a forbidden move may be taken anyway, and how a second, long-term memory steers the search into regions it has neglected. The examples are SAT and the TSP again, so the numbers carry over from lecture 3; the material follows Michalewicz &amp; Fogel, How to Solve It, chapter 5.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">N*(x)</div><div class="l">admissible neighbours: not tabu, or tabu but passing the aspiration test; the search moves to the best of them</div></div>
+      <div class="tile"><div class="v">t − M(i) ≤ tenure</div><div class="l">bit i is tabu when its last flip lies within the tenure window (variant 1 of the memory)</div></div>
+      <div class="tile"><div class="v">eval − 0.7 · H(i)</div><div class="l">frequency penalty when every non-tabu move is worse: over-used moves lose, rare ones win</div></div>
+      <div class="tile"><div class="v">n(n − 1)/2</div><div class="l">swap neighbours of an n-city tour: 28 for n = 8, 499 500 for n = 1000, all scanned in every step</div></div>
+    </div>
+
+    <h2>Where lecture 3 left off <small>(slides 2–3)</small></h2>
+    <p>The agenda puts tabu search fourth, after uninformed and informed search and local search. The recap slide lines up what is already known: hill climbing moves to a better neighbour and stops at a local optimum, and random restarts help without a guarantee. The stochastic hill-climber samples one neighbour and accepts it with p = 1 / (1 + e<sup>(eval(v<sub>c</sub>) − eval(v<sub>n</sub>))/T</sup>) at a fixed T, and simulated annealing lowers T over the run: high T explores, low T exploits. The limitation all three share is the bridge to today: they are <b>memoryless</b>. Each step depends only on the current point (and T), never on the path that led there, so nothing stops them from walking back into a local optimum they just left.</p>
+
+    <h2>The idea and the algorithm <small>(slides 4–6)</small></h2>
+    <p>Tabu search adds a memory of recently examined solutions, or of the moves that produced them, and declares them <b>tabu</b> for the next few steps. The memory forces the search into new parts of the search space. Unlike simulated annealing, the method is <b>deterministic</b>: the same start and the same (empty) tabu list always produce the same sequence of moves.</p>
+    <p class="formula pre">init x; best ← x; T ← ∅
+repeat
+  N*(x) ← { y ∈ N(x) | y ∉ T or aspiration(y) }
+  x ← argmax over y ∈ N*(x) of eval(y)
+  if eval(x) &gt; eval(best) then best ← x
+  update T (add the move, expire old entries)
+until halting criterion
+return best</p>
+    <ul>
+      <li><b>Admissible neighbourhood N*(x):</b> the neighbours that are not tabu, plus the tabu ones that pass the aspiration criterion.</li>
+      <li><b>Best admissible move:</b> always move to the best of them, even if it is worse than the current solution. This is the escape mechanism: at a local optimum the search does not stop, it steps down.</li>
+      <li><b>Aspiration criterion:</b> lift the ban for a move that leads to a solution better than the best found so far.</li>
+    </ul>
+    ${lab("tabu", "walk tabu search over the lecture-3 landscape")}
+    <p>The energy-landscape slide (6) shows the one picture to keep in mind: at a local optimum no improving move exists, but tabu search must still move, so it takes the best non-tabu neighbour; the tabu list blocks the way straight back, and the search is forced uphill (in cost) and onwards into new regions. The explorer makes the role of the list length visible. With <b>tenure 0</b> there is no memory, and best-admissible search oscillates between positions 6 and 7 forever: step down, step back up. <b>Tenure 2</b> cycles over three positions, <b>4</b> gets over the first valley but cycles around the second peak at 16. From <b>tenure 5</b> on, the list is long enough to push the search through the valley at 22 and across the plateau, and it reaches the global optimum at ${LAND_BEST} in step 28. Push it to <b>15</b> and the search reaches the optimum just the same, then walks into the right end of the landscape and stops at step 42: every neighbour has been visited recently and none beats the best, so no admissible move is left. Tick “aspiration by default” and it carries on.</p>
+    ${why("Context, not on the slides: what this explorer simplifies", `<p>Here the tabu list holds <em>positions</em> (whole solutions). The slides' SAT and TSP examples store <em>moves</em> (which bit was flipped, which pair of cities was swapped), which is the usual choice in practice: a move attribute is cheap to store and compare, and forbidding the reverse move is what stops cycling. Storing solutions is more precise but means comparing whole solutions in every step. The tie-break (nearer position first) is our own choice; the slides do not need one because their evaluations differ. Note also what the explorer cannot show: with a single run per tenure, “5 works and 4 does not” is a fact about this landscape, not a rule.</p>`)}
+    <ul class="cmp two">
+      <li><b>Simulated annealing</b><span class="v"><span class="sw t"></span>Escapes probabilistically, through the temperature. Uphill moves (in cost) can happen at any time.</span></li>
+      <li><b>Tabu search</b><span class="v"><span class="sw v"></span>Escapes deterministically, through memory. Worse moves happen only when no improving admissible move exists. Neither guarantees the global optimum.</span></li>
+    </ul>
+
+    <h2>Tabu search on SAT: recency-based memory <small>(slides 7–12)</small></h2>
+    <p>The running example is a SAT instance with n = 8 variables and a weighted evaluation: the weighted sum of satisfied clauses, where a clause's weight depends on how many variables it has. It is maximised. The random start x = (0, 1, 1, 1, 0, 0, 0, 1) has eval(x) = 27. The neighbourhood is the eight single-bit flips; all eight are evaluated and the best is taken. At this point it is exactly hill climbing: flipping bit 3 gives the best value, 31.</p>
+    <p>The memory records which bit was flipped and when, so that recent flips can be told apart from older ones. For SAT this is a vector M of eight time stamps, all zero at the start, and information is kept for at most five iterations. The slides give two ways to read the same vector:</p>
+    <ul class="cmp two">
+      <li><b>Variant 1: time stamp</b><span class="v"><span class="sw t"></span>M(i) = j means bit i was last flipped in iteration j. Needs a current iteration counter t; the entry is forgotten when t − M(i) &gt; 5. Each iteration updates one entry and the counter, which is why most implementations use it.</span></li>
+      <li><b>Variant 2: countdown</b><span class="v"><span class="sw v"></span>M(i) = j means bit i stays unavailable for j more iterations (it was flipped 5 − j iterations ago). Every non-zero entry is decreased by one in each iteration.</span></li>
+    </ul>
+    ${lab("mem", "step through the SAT example with both memory variants")}
+    ${ex("Worked example: the decision on slide 12", `<p>After the first flip and four more iterations, M = (3, 0, 1, 5, 0, 4, 2, 0) and x = (1, 1, 0, 0, 0, 1, 1, 1) with eval(x) = 33. Reading M as a countdown: bit 4 was flipped most recently (5 iterations left), bit 3 longest ago (1 left). Every non-zero entry is tabu, so bits 1, 3, 4, 6 and 7 cannot be flipped. Of the eight neighbours x<sup>1</sup> … x<sup>8</sup>, only x<sup>2</sup> = (1, 0, 0, 0, 0, 1, 1, 1), x<sup>5</sup> = (1, 1, 0, 0, 1, 1, 1, 1) and x<sup>8</sup> = (1, 1, 0, 0, 0, 1, 1, 0) are admissible. The best of them is x<sup>5</sup> with eval 32, a <b>decrease</b> from 33, and tabu search takes it. The memory becomes (2, 0, 0, 4, 5, 3, 1, 0): all old entries minus one, the new flip at 5. Bit 3 is free again.</p>`)}
+    <p>The slide ends with the obvious objection: what if a tabu neighbour, say x<sup>6</sup>, had an excellent value? Refusing it would be too restrictive. That is what the aspiration criterion is for (below).</p>
+
+    <h2>The tabu list as a sliding window, and the tenure <small>(slides 10–11)</small></h2>
+    ${chart("window", leg([[4, "on the tabu list (blocked)"], ["g", "expired"], [1, "current solution"]]))}
+      <figcaption>Slide 10 redrawn: with tenure 4 at t = 9, the moves of steps 5 to 8 are tabu (t − M(i) ≤ 4) and those of steps 1 to 4 have expired. Each step the window slides one to the right: the newest move enters, the oldest leaves.</figcaption>
+    </figure>
+    <p>The <b>tabu tenure</b> is the number of iterations a move stays forbidden after it is made, the width of the window. It is the main parameter of the method:</p>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>short tenure</th><th>long tenure</th></tr></thead><tbody>
+      <tr><td class="rl">risk of cycling</td><td>higher</td><td>lower</td></tr>
+      <tr><td class="rl">exploration</td><td>local</td><td>broad</td></tr>
+      <tr><td class="rl">exploitation</td><td>strong</td><td>weak</td></tr>
+    </tbody></table></div>
+    <p>Practical guidance from the slide: start with a tenure between √n and n, where n is the problem size. A <b>dynamic tenure</b>, drawn at random from a range in every step, can beat a fixed value because it makes cycles unpredictable. For the TSP, 3n has been found to work well empirically for n ≤ 100.</p>
+    ${ex("Worked example: tenure ranges", `<p>The SAT example has n = 8: √8 ≈ 2.8, so a tenure between 3 and 8; the slides' 5 sits in the middle. With a tenure of 8 or more, eight iterations would make every bit tabu (each iteration must flip a bit that is not yet on the list), and from then on only aspiration could move the search: for a flip neighbourhood the upper end of the range is a hard ceiling, because the list must never cover the whole neighbourhood. For a 100-city TSP the 3n rule gives a list of 300 entries.</p>`)}
+
+    <h2>Aspiration criteria <small>(slides 13–14)</small></h2>
+    <p>A tabu move is admissible despite being tabu if it satisfies an aspiration criterion, a condition that marks the move as outstanding. The common one, used in all of the lecture's examples: accept a tabu move to y if <b>eval(y) &gt; eval(best)</b>, strictly better than anything found so far. The reasoning is short: the tabu list exists to stop the search from revisiting explored regions, and a solution better than everything seen so far cannot have been visited, so the ban has no purpose there.</p>
+    <ul>
+      <li><b>Aspiration by default:</b> if all moves are tabu, take the least-recently-tabu one (the oldest), instead of getting stuck. Without it, tabu search can end up with no admissible move at all, as the tenure-15 run in the explorer does; this criterion guarantees the search can always continue.</li>
+      <li><b>Aspiration by search direction:</b> accept a tabu move if the direction it represents has kept improving over the last iterations.</li>
+      <li><b>Aspiration by influence:</b> accept a move that produces a solution structurally very different from the current one (a large distance), which diversifies the search.</li>
+    </ul>
+
+    <h2>Long-term memory <small>(slides 15–20)</small></h2>
+    <p>Slide 15 asks two questions to think about before reading on: what would a long-term memory store for SAT, and how would it help to escape local optima? The answer: count. The recency memory M answers “when was bit i last flipped?” and forgets after the tenure; a <b>frequency memory</b> H answers “how often was bit i flipped in the last h iterations?” over a much longer horizon. On slide 16's small example (flips of bit 2, bit 5 and bit 2 again within six iterations), M at t = 6 holds 5 and 3 for bits 2 and 5, while H holds 2 and 1.</p>
+    ${chart("hvec", leg([[1, "flips of each bit"], [3, "under-represented (3 or fewer)"]]))}
+      <figcaption>Slide 17: after 100 iterations with horizon h = 50, H = (5, 7, 11, 3, 9, 8, 1, 6), which adds up to the 50 flips of the horizon. Bit 3 took more than a fifth of all moves; bits 7 and 4 hardly any. Those are the directions a diversification step should try.</figcaption>
+    </figure>
+    <p>When is the long-term memory used? In special circumstances, typically when <b>all non-tabu moves lead to a worse solution</b> and a meaningful choice of direction is needed. The rule of thumb: frequent moves are less attractive. The evaluation of each candidate is reduced by a penalty that grows with its frequency, and the adjusted score decides.</p>
+    ${ex("Worked example: the frequency penalty on slide 19", `<p>The current solution has eval(x) = 35 and the best so far is 37. The non-tabu flips of bits 2, 3 and 7 give 30, 33 and 31: all worse than 35. No tabu move reaches more than 37, so aspiration does not apply either. The frequency memory takes over with score(x′) = eval(x′) − 0.7 · H(i), using H(2) = 7, H(3) = 11, H(7) = 1 from slide 17:</p>
+      <p class="formula pre">bit 2: 30 − 0.7 · 7 = 30 − 4.9 = ${pen(PEN[0])}
+bit 3: 33 − 0.7 · 11 = 33 − 7.7 = ${pen(PEN[1])}
+bit 7: 31 − 0.7 · 1 = 31 − 0.7 = ${pen(PEN[2])}</p>
+      <p>Without the penalty bit 3 would win (33), the bit that has already been flipped 11 times in 50 iterations. With it, bit 7 wins clearly: a move that is barely worse than the best raw candidate (31 against 33) but takes the search somewhere it has almost never been.</p>`)}
+    ${chart("penalty", leg([[1, "flip bit 2 (H = 7)"], [2, "flip bit 3 (H = 11)"], [3, "flip bit 7 (H = 1)"]]))}
+      <figcaption>The same three candidates before and after the penalty (slide 19). The order changes from 3, 7, 2 to 7, 3, 2: the frequency term is large enough to overturn a 2-point difference.</figcaption>
+    </figure>
+    <p>Slide 20 collects the ways to <b>diversify</b>: include frequency values in a penalty, as above, or add rules of the aspiration kind: by default (select the oldest), by search direction (remember whether recent moves improved anything), by influence (measured as the distance between old and new solution, or, for a constrained problem, the change in feasibility). The intuition behind influence: a move has more influence the larger the step it makes.</p>
+
+    <h2>Tabu search and the TSP <small>(slides 21–24)</small></h2>
+    <p>For the TSP the move is a <b>swap of two cities</b> in the tour. From the current tour (2, 4, 7, 5, 1, 8, 3, 6) there are C(8, 2) = 8 · 7 / 2 = 28 neighbours. Both memories become upper-triangular matrices: the entry in row i, column j (i &lt; j) belongs to the swap of cities i and j. The recency matrix holds the number of iterations for which that swap is still tabu; the frequency matrix holds how often it was made within the horizon h = 50.</p>
+    ${chart("tspmem", leg([[4, "recency: darker = tabu longer"], [1, "frequency: darker = swapped more often"]]))}
+      <figcaption>Slide 22 after 500 iterations: current tour (7, 3, 5, 6, 1, 2, 4, 8) of length 173, best so far 171. Hover a cell for its swap. (The slide's frequency entries add up to 52, slightly more than h = 50; the figure shows them as printed.)</figcaption>
+    </figure>
+    ${ex("Worked example: reading the two matrices", `<p><b>Recency.</b> Five swaps are tabu: 2–6 for 5 more iterations (the most recent), 3–7 for 4, 4–5 for 3, 5–8 for 2 and 1–4 for 1. The tenure is therefore 5, the same as in the SAT example. Of the 28 neighbours, 23 are admissible without aspiration. Since the tour is minimised, a tabu swap passes the aspiration test only if it yields a tour shorter than 171.</p>
+      <p><b>Frequency.</b> The swap 7–8 was made 6 times, 5–6 and 3–7 four times each; 1–2, 1–6, 2–8 and 3–8 never. If every admissible swap makes the tour longer than 173, a penalty on these counts pushes the search towards the four unused swaps.</p>`)}
+    <h3>A particular implementation (slides 23–24)</h3>
+    <p>The deck closes the TSP part with the implementation studied by Knox (1994). It uses <b>2-interchange</b> moves (the 2-opt move of lecture 3) and two nested loops: the outer loop runs MAX-TRIES times, each from a newly generated tour; the inner loop identifies the set of 2-interchange moves, makes the best admissible one, updates the tabu list, and counts iterations without a new best tour for this try, stopping at ITER. The best tour of all tries is the result. Its details:</p>
+    <ul>
+      <li>A tour is tabu if <b>both</b> edges added by the interchange are on the tabu list; the list is updated with the added edges, and when it is full the oldest entry is replaced. The algorithm examines all 2-interchange neighbours in every step.</li>
+      <li>The best results came with a tabu list of length <b>3n</b>, and an aspiration test per edge: a candidate tour may override the tabu status if its length beats the aspiration values of both added edges, where those values are the tour costs before the interchange. All aspiration values start large, and the list starts empty.</li>
+      <li>For up to 100 cities, MAX-TRIES = 4 and ITER = 0.0003 · n<sup>4</sup>.</li>
+    </ul>
+    ${ex("Worked example: Knox's parameters for 100 and 50 cities", `<p>n = 100: tabu list of 3 · 100 = 300 edges; ITER = 0.0003 · 100<sup>4</sup> = 0.0003 · 10<sup>8</sup> = 30 000 interchanges without improvement per try, with 4 tries. Each interchange scans the 100 · 97 / 2 = 4 850 two-interchange neighbours, so one try that runs to ITER needs at least 30 000 · 4 850 ≈ 1.5 · 10<sup>8</sup> tour evaluations. n = 50: ITER = 0.0003 · 6.25 · 10<sup>6</sup> = 1 875 and 1 175 neighbours per step. The n<sup>4</sup> grows quickly: halving n cuts ITER by a factor of 16.</p>`)}
+    ${why("Context, not on the slides: two details worth checking", `<p>Slide 24 says the list holds the <em>added</em> edges (deleted ones are ignored) and, one line later, that a full list replaces its oldest element by the new <em>deleted</em> edge; the first reading is the one the tabu test (“both added edges are on the list”) needs. And the ITER formula is a count of interchanges without improvement per try, not a total, so a try that keeps improving runs longer.</p>`)}
+
+    <h2>Simulated annealing against tabu search <small>(slides 25–29)</small></h2>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>simulated annealing</th><th>tabu search</th></tr></thead><tbody>
+      <tr><td class="rl">escape</td><td>accepts worse moves with a probability that falls as T cools</td><td>accepts worse moves deterministically, when no improving admissible move exists</td></tr>
+      <tr><td class="rl">determinism</td><td>stochastic: runs from the same start differ</td><td>deterministic: the same start gives the same trajectory</td></tr>
+      <tr><td class="rl">memory</td><td>none; a step depends on the current solution and T</td><td>explicit tabu list, optionally a frequency memory</td></tr>
+      <tr><td class="rl">uphill moves</td><td>at any time, controlled by T</td><td>only when stuck</td></tr>
+      <tr><td class="rl">parameters</td><td>T<sub>max</sub>, T<sub>min</sub>, cooling schedule, inner-loop length</td><td>tenure, neighbourhood, aspiration criterion, penalty coefficient</td></tr>
+      <tr><td class="rl">neighbourhood scan</td><td>one random neighbour, O(1) evaluations per step</td><td>all |N(x)| neighbours, O(|N(x)|) evaluations per step</td></tr>
+      <tr><td class="rl">memory cost</td><td>O(1): current solution and T</td><td>O(n) for a vector (SAT), O(n²) for a matrix (TSP)</td></tr>
+      <tr><td class="rl">iterations</td><td>many, to make up for single-sample noise</td><td>fewer, since every step takes the best move</td></tr>
+      <tr><td class="rl">parallelism</td><td>easy: independent restarts share nothing</td><td>harder: the tabu list is shared state</td></tr>
+    </tbody></table></div>
+    <p>Common ground: both work on complete solutions, can be stopped at any iteration with a feasible answer, have many parameters, and guarantee nothing about the global optimum. The cost driver is the size of the neighbourhood. For SAT, |N(x)| = n and a full scan is cheap. For the TSP under swaps or 2-opt, |N(x)| = C(n, 2) = O(n²): at n = 1000 tabu search evaluates about 500 000 neighbours per iteration where SA evaluates one.</p>
+    ${chart("evals", leg([[2, "tabu search, TSP: n(n − 1)/2"], [1, "tabu search, SAT: n"], [3, "simulated annealing: 1"]]))}
+      <figcaption>Evaluations per iteration (slides 26–27), on a logarithmic axis. Hover or focus the plot and use the arrow keys. The gap between the lines is the price of the best-move rule; it says nothing about how many iterations each method needs.</figcaption>
+    </figure>
+    <p>The rule of thumb on slide 27: if |N(x)| is small or moderate, the full scan pays off in solution quality per iteration; if it grows as O(n²) or faster, SA's cheap iterations are preferable, unless the neighbourhood can be pruned to a promising subset (a common remedy for tabu search).</p>
+    <ul class="cmp two">
+      <li><b>Prefer tabu search when …</b><span class="v"><span class="sw t"></span>the neighbourhood is small to moderate and can be scanned fully (SAT, TSP with moderate n); reproducibility matters (debugging, certification, fair comparison); problem structure can be exploited through memory; there is a natural move set (scheduling, graph colouring, routing).</span></li>
+      <li><b>Prefer simulated annealing when …</b><span class="v"><span class="sw v"></span>the neighbourhood is O(n²) or larger; the space is continuous or high-dimensional, where a tabu list is hard to define; several independent runs with different outcomes are wanted; simplicity counts (an evaluation function and a perturbation, no bookkeeping).</span></li>
+    </ul>
+    <p>Hybrids (slide 29) borrow from both. SA with memory: restart from the best solution found instead of a random one, or penalise frequently visited regions in the acceptance test. Tabu search with randomness: a randomised tenure drawn from [t<sub>min</sub>, t<sub>max</sub>] in each step, or periodic random restarts. The slide's key takeaway: neither method is universally better; when in doubt, try both and compare.</p>
+    ${why("Context, not on the slides: what to be able to do by hand", `<p>The deck is built around three hand computations, and tutorial 3 asks for exactly these: (1) given M, t and the tenure, say which moves are tabu, in both variants of the memory; (2) evaluate all neighbours, take the best admissible one, and check aspiration against the best so far, not against the current value; (3) when every admissible move is worse, apply the frequency penalty eval − c · H(i) and pick the highest adjusted score. A written exam can also ask for the comparison with simulated annealing in a table like the one above, so be ready to give three differences and one thing they have in common.</p>`)}
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Tabu search</b> moves to the best admissible neighbour in every step, even a worse one, and keeps a memory of recent moves that may not be undone. It is deterministic and escapes local optima through memory, not chance.</li>
+      <li><b>Recency memory:</b> for SAT a vector M, read as time stamps (tabu if t − M(i) ≤ tenure) or as countdowns (tabu while M(i) &gt; 0); for the TSP an upper-triangular matrix over city pairs.</li>
+      <li><b>Tenure:</b> short means cycling and local search, long means broad search but possibly no admissible move; start between √n and n, randomise it, 3n for the TSP with n ≤ 100.</li>
+      <li><b>Aspiration:</b> a tabu move is allowed if it beats the best so far; aspiration by default (take the oldest tabu move) keeps the search alive when everything is tabu.</li>
+      <li><b>Frequency memory:</b> H counts moves over a long horizon; when all admissible moves are worse, score = eval − c · H(i) favours rare moves and diversifies the search.</li>
+      <li><b>SA or tabu search:</b> SA samples one neighbour (cheap steps, stochastic, uphill at any time); tabu search scans all of them (O(|N(x)|) per step, deterministic, uphill only when stuck). The neighbourhood size decides.</li>
+    </ul>
+    <h2>Tutorial 3 and exam relevance</h2>
+    <p>Sheet 3 (in OPAL since 12 Nov) is this lecture turned into tasks: design a tabu search for a 3-job, 3-machine job-shop scheduling problem (representation, evaluation, initial solution, neighbourhood and tenure, aspiration, deadlocked neighbours), then run three iterations of tabu search on a weighted SAT instance in which each iteration exercises a different mechanism. See <a href="advanced-problem-solving/exercise.html?n=3">tutorial 3</a>.</p>
+    <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=5">lecture 5</a>, evolutionary algorithms. Previous: <a href="advanced-problem-solving/lecture.html?n=3">lecture 3</a>, local search. Slides: OPAL → Lectures → Lesson 4 (tabu search); the slide numbers above are those of the 31-slide deck (the PDF has 41 pages because of overlays). References on the last slide: Michalewicz &amp; Fogel, How to Solve It: Modern Heuristics (Springer 2004), and Knox, Tabu search performance on the symmetric traveling salesman problem (Computers &amp; Operations Research, 1994).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -784,8 +1082,8 @@ function placeholder() {
       <p class="muted">${l.planned ? `Planned topic in last year's order; the date is the next free Tuesday, not announced: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.` : `This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.`}<br>Topic from the course overview: ${esc(l.blurb)}<br>The write-up appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3 };
-const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins, land: initLand, gsat: initGsat, twoopt: initTwoOpt };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins, land: initLand, gsat: initGsat, twoopt: initTwoOpt, tabu: initTabu, mem: initMem };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;

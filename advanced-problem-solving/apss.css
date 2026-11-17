@@ -556,3 +556,45 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .apss table.tt.cand td.n { text-align: center; white-space: nowrap; }
 .apss table.tt.cand a.go { color: inherit; text-decoration: underline dotted; }
 @media (max-width: 600px) { .apss table.tt.vt td.nr, .apss table.tt.vt th.nr { display: none; } }
+/* ---- Lecture 4 and tutorial 3: tabu lists, memory vectors and matrices, slope chart, job-shop Gantt ---- */
+.apss .key.sq { border-radius: 2px; }
+.apss .lab .tabu { fill: color-mix(in srgb, var(--vz-s4) 55%, var(--surface-2)); stroke: var(--vz-s4); stroke-width: 1.5; }
+.apss .lab .trailx { fill: none; stroke: var(--vz-s2); stroke-width: 1.5; opacity: .55; stroke-linejoin: round; }
+.apss .mem { display: grid; gap: 4px; margin: 0 0 10px; overflow-x: auto; }
+.apss .mrow { display: grid; grid-template-columns: minmax(150px, 15rem) repeat(8, minmax(28px, 40px)); gap: 4px; align-items: center; }
+.apss .mrow .ml { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.2; }
+.apss .mrow .ml small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-3); }
+.apss .mrow.idx span:not(.ml) { text-align: center; font-size: 11px; color: var(--ink-3); }
+.apss .mrow .cell { border: 1px solid var(--line); }
+.apss .viz .wb.blk { fill: color-mix(in srgb, var(--vz-s4) 45%, var(--surface)); stroke: var(--vz-s4); stroke-width: 1.5; }
+.apss .viz .wb.exp { fill: color-mix(in srgb, var(--vz-gray) 18%, var(--surface)); stroke: var(--vz-axis); stroke-dasharray: 3 3; }
+.apss .viz .wb.now { fill: color-mix(in srgb, var(--vz-s1) 35%, var(--surface)); stroke: var(--vz-s1); stroke-width: 2; }
+.apss .viz .wt { fill: var(--ink); font-size: 12px; font-weight: 600; pointer-events: none; }
+.apss .viz .win { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.apss .viz .slope { stroke-width: 2; }
+.apss .viz .pt.on .slope { stroke-width: 3.5; }
+.apss .viz svg.slopes.hovering .pt:not(.on) { opacity: .45; }
+.apss .viz .mc { stroke: var(--line); stroke-width: 1; }
+.apss .viz .mv { fill: var(--ink); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; }
+.apss .viz .mv.z { fill: var(--ink-3); font-weight: 400; }
+.apss .viz .pt.on .mc { stroke: var(--ink); stroke-width: 2; }
+.apss .jg { display: grid; grid-template-columns: 34px repeat(var(--cols), minmax(0, 1fr)); gap: 2px 0; margin: 0 0 8px; }
+.apss .jg .rl { font-size: 12px; color: var(--ink-2); align-self: center; }
+.apss .jg .gh { font-size: 10px; color: var(--ink-3); text-align: left; font-variant-numeric: tabular-nums; border-left: 1px solid var(--vz-grid); padding-left: 2px; }
+.apss .jg .op { height: 28px; display: grid; place-items: center; border-radius: 5px; margin-right: 2px; font: 600 11.5px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink);
+  background: color-mix(in srgb, var(--c) 32%, var(--surface)); box-shadow: inset 0 -3px var(--c); overflow: hidden; white-space: nowrap; }
+.apss .jg .op.j1 { --c: var(--vz-s1); } .apss .jg .op.j2 { --c: var(--vz-s2); } .apss .jg .op.j3 { --c: var(--vz-s3); }
+.apss .jg .lane { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); background: var(--surface); border-radius: 5px; }
+.apss .jss-ord { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; font-size: 13px; }
+.apss .jss-ord b { font-weight: 600; }
+.apss table.tt.nb td { text-align: left; }
+.apss table.tt.nb tr.tabu td { color: var(--ink-3); }
+.apss table.tt.nb tr.inf td { color: var(--ink-3); font-style: italic; }
+@media (max-width: 600px) {
+  .apss .mrow { grid-template-columns: 92px repeat(8, minmax(0, 1fr)); gap: 3px; }
+  .apss .mrow .ml small { display: none; }
+  .apss .jg .op { font-size: 9.5px; }
+}
+.apss p.formula.pre { white-space: pre-wrap; }
+.apss table.tt.nb td, .apss table.tt.nb th { white-space: nowrap; }
+@media (max-width: 600px) { .apss table.tt.nb td, .apss table.tt.nb th { padding: 4px 6px; font-size: 12.5px; } }
