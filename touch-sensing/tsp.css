@@ -466,3 +466,8 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .tsp .ps-bar b { position: relative; font-weight: 600; }
 .tsp .ps-sw { display: inline-block; width: 16px; height: 16px; border-radius: 4px; vertical-align: -3px; border: 1px solid var(--line); margin: 0 4px; }
 @media (max-width: 600px) { .tsp .p4grid { grid-template-columns: repeat(2, 1fr); } .tsp .p4grid.two { grid-template-columns: repeat(2, 1fr); } }
+
+/* Lecture 6: TACTO lab, six panels in three columns (two on phones). */
+.tsp .p4grid.three { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 600px) { .tsp .p4grid.three { grid-template-columns: repeat(2, 1fr); } }
+.tsp .step .tag { font-size: 0.8rem; font-weight: 600; color: var(--ink-2); margin-left: 4px; white-space: nowrap; }
