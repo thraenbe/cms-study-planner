@@ -1390,8 +1390,359 @@ function lecture3() {
     </ul>
     <p class="muted">Tutorial 3 is on 12 Nov; its notebook was not in OPAL yet on 11 Nov. The earlier tutorials practise the tools this lecture uses: ${exeLink(1, "tutorial 1")} (random variables and distributions) and ${exeLink(2, "tutorial 2")} (random variate generation, the uniform numbers that drive every chain). Next: ${lecLink(4, "lecture 4")} (16 Nov), the law of large numbers and Monte Carlo. Previous: ${lecLink(2, "lecture 2")}. Slides: OPAL → Lecture2026 → SMS3 (they may not be republished).</p>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3 };
-const LABS = { pi: initPi, ou: initOu, count: initCount, bayes: initBayes, newton: initNewton, ar: initAr, mc: initMc, pow: initPow, rw: initRw };
+// ================= Lecture 4 · Law of large numbers and Monte Carlo (SMS4, 36 pages) =================
+const DIE_VAR = 35 / 12, DIE_SD = Math.sqrt(35 / 12);
+// Weak law for the die, ε = 0.1: Chebyshev's bound against the normal approximation of P(|mean − 3.5| > 0.1),
+// with the simulated shares the deck reports (slides 14–15).
+const WEAK = [[10, 0.78], [100, 0.54], [1000, 0.064], [10000, 0]];
+line("cheb", {
+  x: [10, 10000], y: [0, 1], xTicks: [10, 100, 1000, 10000], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "share of runs",
+  series: [{ slot: 2, name: "Chebyshev's bound σ²/(Nε²), capped at 1", short: "bound", dy: -6, f: n => Math.min(1, DIE_VAR / (n * 0.01)) },
+    { slot: 1, name: "actual share (normal approximation)", short: "actual", dy: 8, f: n => 2 * (1 - Phi(0.1 * Math.sqrt(n) / DIE_SD)) }],
+  tipHead: v => `average of N = ${Math.round(v).toLocaleString("en-GB")} die rolls`, fmtY: v => pct(v), focusAt: 128, labelW: 64,
+  extra: g => WEAK.map(([n, p]) => `<circle cx="${g.x(n)}" cy="${g.y(p)}" r="5" style="fill:var(--vz-gray);stroke:var(--surface);stroke-width:2"/>`).join(""),
+  hitLabel: "Read the share of runs whose average is more than 0.1 away from 3.5: arrow keys double or halve N",
+  aria: "Line chart over the number of die rolls N from 10 to 10,000 on a log scale. Chebyshev's bound stays at 100 % up to about N = 290 and then falls as 2.9/N·100: 29 % at 1,000 and 2.9 % at 10,000. The actual share of runs whose average misses 3.5 by more than 0.1 falls from about 85 % at N = 10 to 56 % at 100, 6.4 % at 1,000 and practically 0 at 10,000; grey dots mark the deck's simulated 78 %, 54 %, 6.4 % and 0 %.",
+});
+// Explorer: running averages of three runs, for the die, the standard normal and the Cauchy distribution (slides 11–13).
+const LL = { k: "die", seed: 1 };
+const LLD = {
+  die: { name: "fair die", mu: 3.5, draw: r => 1 + Math.floor(r() * 6), y: [1, 6], ticks: [1, 2, 3, 3.5, 4, 5, 6] },
+  normal: { name: "standard normal", mu: 0, draw: r => gauss(r), y: [-1.5, 1.5], ticks: [-1.5, -1, -0.5, 0, 0.5, 1, 1.5] },
+  cauchy: { name: "Cauchy (spinning laser)", mu: null, draw: r => Math.tan(Math.PI * (r() - 0.5)) },
+};
+const LLIDX = [...new Set(Array.from({ length: 401 }, (_, k) => Math.round(10 ** (4 * k / 400))))];
+function llnOut() {
+  const D = LLD[LL.k], N = 10000, W = 560, H = 250, L = 44, R = 26, T = 12, B = 26, PW = W - L - R, PH = H - T - B;
+  const runs = [0, 1, 2].map(s => { const r = mulberry(LL.seed * 977 + s * 131 + 5); let sum = 0; const a = new Float64Array(N + 1);
+    for (let i = 1; i <= N; i++) { sum += D.draw(r); a[i] = sum / i; } return a; });
+  let y0, y1, ticks;
+  if (D.y) { [y0, y1] = D.y; ticks = D.ticks; }
+  else { let m = 2; runs.forEach(a => { for (let i = 10; i <= N; i++) m = Math.max(m, Math.abs(a[i])); }); m = Math.ceil(m * 1.1); y0 = -m; y1 = m; ticks = [-m, -m / 2, 0, m / 2, m].map(v => Math.round(v * 10) / 10); }
+  const x = i => L + Math.log10(i) / 4 * PW, y = v => T + PH - (Math.max(y0, Math.min(y1, v)) - y0) / (y1 - y0) * PH;
+  const paths = runs.map((a, s) => `<path class="line" style="stroke:var(--vz-s${s + 1});stroke-width:1.8" d="M${LLIDX.map(i => `${x(i).toFixed(1)},${y(a[i]).toFixed(1)}`).join(" L")}"/>`).join("");
+  const mu = D.mu == null ? "" : `<line class="ann" x1="${L}" x2="${W - R}" y1="${y(D.mu)}" y2="${y(D.mu)}" stroke-dasharray="4 3"/><text class="note" x="${W - R}" y="${y(D.mu) - 5}" text-anchor="end">μ = ${D.mu}</text>`;
+  const at = [10, 100, 1000, 10000];
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Running averages of three runs of ${N.toLocaleString("en-GB")} ${D.name} samples on a log scale of N. After 10,000 samples the averages are ${runs.map(a => num(a[N], 3)).join(", ")}.">
+      ${ticks.map(v => `<line class="${v === ticks[0] ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+      ${[1, 10, 100, 1000, 10000].map(v => `<text class="tick" x="${x(v)}" y="${H - 8}" text-anchor="middle">${v.toLocaleString("en-GB")}</text>`).join("")}${mu}${paths}</svg>
+    <div class="tt-wrap"><table class="tt compact"><tr><th>run</th>${at.map(n => `<th>N = ${n.toLocaleString("en-GB")}</th>`).join("")}</tr>${runs.map((a, s) => `<tr><th>${key(s + 1)} run ${s + 1}</th>${at.map(n => `<td>${num(a[n], 3)}</td>`).join("")}</tr>`).join("")}</table></div>
+    <dl class="ro"><dt>Reading</dt><dd>${D.mu == null ? "No expectation exists, so there is nothing to settle on: every now and then one enormous sample (the laser nearly parallel to the wall) throws the average far away, however large N already is. Press <b>New runs</b> a few times." : `The three runs disagree for small N and close in on μ = ${D.mu}; by the 1/√N rule the typical distance at N = 10,000 is about ${num((LL.k === "die" ? DIE_SD : 1) / 100, 3)}.`}</dd></dl>`;
+}
+function initLln4(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${Object.entries(LLD).map(([k, D]) => `<button class="preset" type="button" data-k="${k}" aria-pressed="${k === LL.k}">${D.name}</button>`).join("")}</span><button class="preset" type="button" data-new="1">New runs</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === LL.k)); out.innerHTML = llnOut(); };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { LL.k = b.dataset.k; draw(); }));
+  body.querySelector("[data-new]").addEventListener("click", () => { LL.seed++; draw(); }); draw();
+}
+// Explorer: error against the total number of points N on log–log axes, for Monte Carlo, the trapezoid rule and
+// Simpson's rule in m dimensions (slides 21–22; rates N^(−1/2), N^(−2/m), N^(−4/m), constants set to 1).
+const DM = { m: 1 };
+const DMS = [[1, "Monte Carlo", m => 0.5], [2, "trapezoid rule", m => 2 / m], [3, "Simpson's rule", m => 4 / m]];
+const sup = k => `10<sup>${k < 0 ? "−" + -k : k}</sup>`;
+function dimsOut() {
+  const m = DM.m, W = 560, H = 250, L = 44, R = 22, T = 12, B = 26, PW = W - L - R, PH = H - T - B, X1 = 12, Y1 = -12;
+  const x = k => L + k / X1 * PW, y = e => T + (e / Y1) * PH;
+  const lines = DMS.map(([s, n, f]) => { const a = f(m), kEnd = Math.min(X1, -Y1 / a);
+    return `<path class="line" style="stroke:var(--vz-s${s});stroke-width:2.2" d="M${x(0)},${y(0)} L${x(kEnd).toFixed(1)},${y(-a * kEnd).toFixed(1)}"/>`; }).join("");
+  const need = a => 3 / a, fmtN = k => k > 300 ? "more than 10<sup>300</sup>" : sup(Math.round(k * 10) / 10);
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Error against the number of points on log–log axes in ${m} dimension${m > 1 ? "s" : ""}: Monte Carlo falls with slope 1/2, the trapezoid rule with slope ${num(2 / m, 2)}, Simpson's rule with slope ${num(4 / m, 2)}.">
+      ${[0, -3, -6, -9, -12].map(e => `<line class="${e ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(e)}" y2="${y(e)}"/><text class="tick" x="${L - 5}" y="${y(e) + 4}" text-anchor="end">${e ? `1e${e}` : "1"}</text>`).join("")}
+      ${[0, 2, 4, 6, 8, 10, 12].map(k => `<text class="tick" x="${x(k)}" y="${H - 8}" text-anchor="middle">${k ? `1e${k}` : "1"}</text>`).join("")}
+      <line class="ann" x1="${L}" x2="${W - R}" y1="${y(-3)}" y2="${y(-3)}" stroke-dasharray="4 3"/><text class="note" x="${W - R}" y="${y(-3) - 5}" text-anchor="end">target error 0.001</text>
+      ${lines}<text class="note" x="${W - R}" y="${T + 10}" text-anchor="end">error (log scale) against total points N (log scale)</text></svg>
+    <div class="tt-wrap"><table class="tt compact"><tr><th>method in m = ${m}</th><th>error falls like</th><th>points for error 0.001</th><th>10× more points give</th></tr>${DMS.map(([s, n, f]) => { const a = f(m);
+      return `<tr><th>${key(s)} ${n}</th><td>N<sup>−${num(a, 3)}</sup></td><td>${fmtN(need(a))}</td><td>${num(10 ** a, 2)}× smaller error</td></tr>`; }).join("")}</table></div>
+    <dl class="ro"><dt>Grid</dt><dd>10 points per axis need 10<sup>${m}</sup> points; with N = 10<sup>6</sup> points a grid gets only ${num(10 ** (6 / m), m > 3 ? 2 : 0)} per axis.</dd>
+      <dt>Reading</dt><dd>${m < 4 ? "In low dimension the grid rules are far ahead of Monte Carlo." : m === 4 ? "At m = 4 the trapezoid rule has fallen to Monte Carlo's rate N<sup>−1/2</sup>." : m < 8 ? "Monte Carlo now beats the trapezoid rule; Simpson's rule is still ahead (until m = 8)." : m === 8 ? "At m = 8 Simpson's rule has fallen to Monte Carlo's rate too." : "Monte Carlo beats both grid rules; its rate does not depend on m."}</dd></dl>`;
+}
+function initDims(body) {
+  body.innerHTML = `<div class="ctl"><label>Dimensions m <input type="range" min="1" max="20" step="1" value="${DM.m}"> <output>${DM.m}</output></label></div><div class="out"></div>`;
+  const r = body.querySelector("input"), o = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { o.textContent = DM.m; out.innerHTML = dimsOut(); };
+  r.addEventListener("input", () => { DM.m = +r.value; draw(); }); draw();
+}
+// What each estimator averages for ∫₀¹ x² dx: the values x² (plain), the weights x/2 (q = 2x), and x²/(2(1 − x)) (bad q).
+line("weights", {
+  xlin: true, step: 0.01, x: [0, 1], y: [0, 1], xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "averaged value", labelW: 92,
+  series: [{ slot: 1, name: "plain Monte Carlo averages f(x) = x²", short: "x² (plain)", f: v => v * v },
+    { slot: 3, name: "importance sampling with q = 2x averages x/2", short: "x/2 (q = 2x)", f: v => v / 2, dy: 4 },
+    { slot: 2, name: "bad proposal q = 2(1 − x) averages x²/(2(1 − x))", short: "bad q", f: v => Math.min(50, v * v / (2 * (1 - v) || 1e-9)), labelAt: 0.68 }],
+  tipHead: v => `x = ${num(v, 2)}`, fmtY: v => v > 1 ? `${num(v, 1)} (off the chart)` : num(v, 3), focusAt: 0.5,
+  extra: g => `<line class="ann" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(1 / 3)}" y2="${g.y(1 / 3)}" stroke-dasharray="4 3"/><text class="note" x="${g.L + 4}" y="${g.y(1 / 3) - 5}">true value 1/3</text>`,
+  hitLabel: "Read the three averaged quantities at a point x: arrow keys move x by 0.01",
+  aria: "Line chart over x from 0 to 1. Plain Monte Carlo averages x², which runs from 0 to 1. Importance sampling with q = 2x averages x/2, which only runs from 0 to 0.5 and stays close to the true value 1/3. The bad proposal averages x²/(2(1 − x)), which is small at first and shoots off to infinity near x = 1.",
+});
+// Explorer: 3,000 repeated estimates of ∫₀¹ x² dx with N samples each, plain Monte Carlo against importance sampling
+// with q = 2x, both fed with the same uniform numbers (slide 31 does the same with 5,000 runs of N = 100).
+const ISD = { N: 100, seed: 1 };
+function isdOut() {
+  const N = ISD.N, RUNS = 3000, r = mulberry(ISD.seed * 4241 + 7), a = [], b = [];
+  for (let k = 0; k < RUNS; k++) { let s1 = 0, s2 = 0; for (let i = 0; i < N; i++) { const u = r(); s1 += u * u; s2 += Math.sqrt(u) / 2; } a.push(s1 / N); b.push(s2 / N); }
+  const stat = v => { const m = v.reduce((p, c) => p + c, 0) / v.length; return [m, Math.sqrt(v.reduce((p, c) => p + (c - m) ** 2, 0) / (v.length - 1))]; };
+  const [ma, sa] = stat(a), [mb, sb] = stat(b), fa = Math.sqrt(4 / 45 / N), fb = Math.sqrt(1 / 72 / N);
+  const lo = Math.max(0, 1 / 3 - 4 * fa), hi = Math.min(1, 1 / 3 + 4 * fa), K = 48, bw = (hi - lo) / K;
+  const hist = v => { const h = new Array(K).fill(0); v.forEach(z => { const i = Math.floor((z - lo) / bw); if (i >= 0 && i < K) h[i]++; }); return h.map(c => c / RUNS); };
+  const ha = hist(a), hb = hist(b), top = Math.max(...ha, ...hb) * 1.08;
+  const W = 560, H = 230, L = 40, R = 24, T = 12, B = 26, PW = W - L - R, PH = H - T - B, x = v => L + (v - lo) / (hi - lo) * PW, y = p => T + PH - p / top * PH;
+  const area = (h, s) => `<path style="fill:var(--vz-s${s});fill-opacity:.28;stroke:var(--vz-s${s});stroke-width:1.6;stroke-linejoin:round" d="M${x(lo)},${y(0)} ${h.map((p, i) => `L${x(lo + i * bw).toFixed(1)},${y(p).toFixed(1)} L${x(lo + (i + 1) * bw).toFixed(1)},${y(p).toFixed(1)}`).join(" ")} L${x(hi)},${y(0)} Z"/>`;
+  const xt = Array.from({ length: 5 }, (_, i) => lo + (hi - lo) * i / 4);
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Histograms of ${RUNS} estimates with N = ${N}: plain Monte Carlo spreads with standard deviation ${num(sa, 4)}, importance sampling with q = 2x with ${num(sb, 4)}; both are centred on 1/3.">
+      <line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>${xt.map(v => `<text class="tick" x="${x(v)}" y="${H - 8}" text-anchor="middle">${num(v, 3)}</text>`).join("")}
+      ${area(ha, 2)}${area(hb, 3)}<line class="ann" x1="${x(1 / 3)}" x2="${x(1 / 3)}" y1="${T}" y2="${y(0)}" stroke-dasharray="4 3"/><text class="note" x="${x(1 / 3) + 4}" y="${T + 10}">1/3</text>
+      <text class="note" x="${L}" y="${T + 10}">share of the runs per bin</text></svg>
+    <div class="tt-wrap"><table class="tt compact"><tr><th>${RUNS.toLocaleString("en-GB")} runs, N = ${N}</th><th>mean of the estimates</th><th>spread (observed)</th><th>spread (formula)</th></tr>
+      <tr><th>${key(2)} plain, averages x²</th><td>${num(ma, 4)}</td><td>±${num(sa, 4)}</td><td>±√(4/(45N)) = ±${num(fa, 4)}</td></tr>
+      <tr><th>${key(3)} q = 2x, averages x/2</th><td>${num(mb, 4)}</td><td>±${num(sb, 4)}</td><td>±√(1/(72N)) = ±${num(fb, 4)}</td></tr></table></div>
+    <dl class="ro"><dt>Reading</dt><dd>Both are centred on 1/3 = 0.3333 (no bias). The importance sampler is ${num(sa / sb, 2)} times narrower (formula: √6.4 = 2.53), whatever N you pick; a larger N narrows both by √N.</dd></dl>`;
+}
+function initIsd(body) {
+  body.innerHTML = `<div class="ctl"><label>Samples per estimate N <select>${[5, 20, 100, 1000].map(n => `<option value="${n}"${n === ISD.N ? " selected" : ""}>${n}</option>`).join("")}</select></label><button class="preset" type="button">New runs</button></div><div class="out"></div>`;
+  const sel = body.querySelector("select"), out = body.querySelector(".out"), draw = () => { out.innerHTML = isdOut(); };
+  sel.addEventListener("change", () => { ISD.N = +sel.value; draw(); }); body.querySelector("button").addEventListener("click", () => { ISD.seed++; draw(); }); draw();
+}
+
+function lecture4() {
+  const H = {
+    tool: "Toolbox: a die, densities and the spread of an average", what: "What Monte Carlo methods are", pi: "A first example: π from random points",
+    lln: "The law of large numbers", cauchy: "When the law fails: the Cauchy distribution", conv: "What “converge” means: the weak and the strong law",
+    cheb: "Why it works: the spread of the average shrinks", cf: "The lecture's proof: characteristic functions", int: "Monte Carlo integration",
+    err: "How accurate: the error shrinks like 1/√N", dim: "Grids against Monte Carlo in many dimensions", is: "Importance sampling",
+    ex: "Three examples of importance sampling", bad: "A bad proposal", sum: "Lecture 4 on one page",
+  };
+  const PTS = [[0.24, 0.43], [0.09, 0.59], [0.78, 0.87], [0.33, 0.11], [0.40, 0.59], [0.25, 0.64], [0.90, 0.39], [0.48, 0.77], [0.61, 0.74], [0.51, 0.88]];
+  const U5 = [0.96, 0.21, 0.83, 0.15, 0.51];
+  const ptab = `<div class="tt-wrap"><table class="tt compact"><tr><th>point</th><th>u₁</th><th>u₂</th><th>u₁² + u₂²</th><th>inside?</th></tr>${PTS.map(([a, b], i) => { const s = a * a + b * b;
+    return `<tr><th>${i + 1}</th><td>${a.toFixed(2)}</td><td>${b.toFixed(2)}</td><td>${s.toFixed(4)}</td><td>${s <= 1 ? "yes" : "<b>no</b>"}</td></tr>`; }).join("")}</table></div>`;
+  const u5tab = `<div class="tt-wrap"><table class="tt compact"><tr><th>i</th><th>uᵢ</th><th>plain: f(uᵢ) = uᵢ²</th><th>xᵢ = √uᵢ (a sample from q = 2x)</th><th>weight xᵢ/2</th></tr>${U5.map((u, i) => `<tr><th>${i + 1}</th><td>${u.toFixed(2)}</td><td>${(u * u).toFixed(4)}</td><td>${Math.sqrt(u).toFixed(4)}</td><td>${(Math.sqrt(u) / 2).toFixed(4)}</td></tr>`).join("")}
+    <tr><th>average</th><td></td><td><b>${(U5.reduce((p, u) => p + u * u, 0) / 5).toFixed(4)}</b></td><td></td><td><b>${(U5.reduce((p, u) => p + Math.sqrt(u) / 2, 0) / 5).toFixed(4)}</b></td></tr></table></div>`;
+  return `${head(l)}
+    <p class="lead">Many quantities you want from a model are averages in disguise: the probability that a system fails, the mean waiting time in a queue, the area of an odd shape, an integral with no formula. Monte Carlo methods compute them by <em>asking a random sample</em>: write the answer as the expectation of a random quantity, let the computer draw many independent samples of it, and average. This lecture explains why that works (the law of large numbers), how accurate it is (the error shrinks like 1/√N, in any number of dimensions), and how to make it more accurate for free (importance sampling). It uses the uniform numbers and the inversion method of ${lecLink(2, "lecture 2")}; Markov chains (${lecLink(3, "lecture 3")}) return when Monte Carlo meets sampling in lectures 6–8. The deck is “SMS4” in OPAL (Lecture2026), a 36-page summary in seven parts (0–6). It is written as a simplified companion to the lecture and marks, in “Note” boxes, a handful of places where it corrects a statement in the lecture recording; these notes are kept below.</p>
+    ${tiles([[fx(String.raw`\bar X_N \to \mu`, "X̄<sub>N</sub> → μ"), "law of large numbers: averages settle"], [fx(String.raw`\sigma/\sqrt N`, "σ/√N"), "typical error of an average of N samples"], [fx(String.raw`(b-a)\,\overline{f(x_i)}`, "(b − a) · mean of f(xᵢ)"), "an integral as width × average height"], ["6.4×", "smaller variance for ∫x² with q = 2x"]])}
+    ${before([
+      `${inL(1, "Part 8 · Random variables", "Random variables")} (lecture 1): a random variable X is a number decided by chance; capital X is the variable, small x a value it can take. Discrete ones have probabilities P(X = x) per value, continuous ones a density, where probability is area. Both are explained again in ${see(H.tool)}.`,
+      `${inL(2, "The inversion transform", "The inversion transform")} (lecture 2): if U is uniform on (0, 1) and F is a cumulative distribution function, then F⁻¹(U) has distribution F. Used here to draw from the proposal q(x) = 2x; repeated in ${see(H.is)}.`,
+      `${exeLink(1, "Tutorial 1")}: mean, variance and the normal (bell) distribution, and a first running-average experiment. Everything needed is restated in ${see(H.tool)}.`,
+      `School calculus: the integral as the area under a curve, ∫₀¹ xᵏ dx = 1/(k + 1) (so ∫₀¹ x² dx = 1/3), the square root, and the tangent of an angle. Complex numbers appear only in one optional section (${see(H.cf)}), where they are explained.`,
+    ])}
+    ${terms([
+      ["Backpropagation", "The algorithm that computes the exact gradient of a neural network's loss. Deterministic, so not a Monte Carlo method; the deck corrects the recording on this.", H.dim],
+      ["Buffon's needle", "An 18th-century random experiment: a needle of length ℓ dropped on lines a distance d apart crosses a line with probability 2ℓ/(πd), so counting crossings estimates π.", H.pi],
+      ["Cauchy distribution", "The distribution of the height of a laser spot when the laser stops at a uniformly random angle: X = tan θ. Its tails are so heavy that it has no expectation.", H.cauchy],
+      ["Characteristic function φ<sub>X</sub>(t)", "The “fingerprint” E[e<sup>itX</sup>] of a distribution: each value x becomes the point at angle t·x on the unit circle, averaged with the probabilities. Different distributions have different fingerprints.", H.cf],
+      ["Chebyshev's inequality", "For any Y with finite variance: P(|Y − E[Y]| > ε) ≤ Var[Y]/ε². At most 1/k² of any distribution lies more than k standard deviations from its mean.", H.cheb],
+      ["Compound-interest limit", "(1 + a/N)<sup>N</sup> → e<sup>a</sup> as N grows. With a = 1: 2, 2.594, 2.705, 2.717, … → e = 2.718.", H.cf],
+      ["Convergence in probability", "A random sequence Y<sub>N</sub> converges in probability to c if P(|Y<sub>N</sub> − c| > ε) → 0 for every ε > 0. The weak law is this statement for the average.", H.conv],
+      ["Cumulative distribution function F(x)", "P(X ≤ x): the probability of a value at most x. For q(x) = 2x on [0, 1]: F(x) = x².", H.is],
+      ["Density p(x)", "A curve with p(x) ≥ 0 and total area 1; the probability that X lands in an interval is the area above it.", H.tool],
+      ["Dimension m", "The number of coordinates of a point. A photo of 1000 × 1000 pixels is one point in m = 10⁶ dimensions.", H.dim],
+      ["Estimator θ<sub>N</sub>", "A rule that turns N samples into a guess of the unknown number (θ, “theta”). The Monte Carlo estimator is a scaled average.", H.int],
+      ["Expectation E[X], mean μ", "The long-run average of X: Σ x P(X = x) for discrete X, ∫ x p(x) dx for continuous X. Fair die: 3.5.", H.tool],
+      ["E<sub>q</sub>[…]", "An expectation in which X is drawn from the density q rather than uniformly.", H.is],
+      ["Grid (quadrature) method", "Evaluate f on an evenly spaced grid and combine the values with fixed weights (trapezoid, Simpson). Needs (points per axis)<sup>m</sup> points in m dimensions.", H.dim],
+      ["i.i.d.", "Independent and identically distributed: every sample ignores the others and comes from the same distribution. Rolls of one fair die are i.i.d.; cards dealt without putting them back are not.", H.tool],
+      ["Importance sampling", "Draw samples from a proposal q that favours the region where f is large, and average the weights f/q instead of f. Unbiased; much more accurate when q follows the shape of f.", H.is],
+      ["Importance weight w = f/q", "The correction factor of importance sampling: where q samples twice as often as uniform, the weight is half as big.", H.is],
+      ["Indicator 1<sub>x∈Ω</sub>", "1 if x lies in the region Ω, 0 otherwise. Its average is the share of points inside Ω.", H.is],
+      ["Law of large numbers", "The average of N i.i.d. samples with a finite mean μ approaches μ as N grows.", H.lln],
+      ["Lévy's continuity theorem", "If the characteristic functions of a sequence of distributions converge to a characteristic function, the distributions converge to that distribution. It makes the lecture's proof rigorous.", H.cf],
+      ["Monte Carlo method", "Any method that computes a non-random number by averaging random samples. Named after the casino in Monaco.", H.what],
+      ["Normal distribution", "The bell-shaped distribution; the standard normal has mean 0 and standard deviation 1, and 68 % of its area lies within ±1.", H.tool],
+      ["Proposal density q", "The density importance sampling draws from. It must be positive wherever f is non-zero.", H.is],
+      ["Pseudo-random numbers, seed", "Numbers made by a fixed rule that look random; the starting value (seed) fixes the whole sequence, so a run can be repeated exactly.", H.tool],
+      ["Region Ω, volume V", "Ω (omega) is the region you integrate over and V its volume (area in 2-D). The unit square has V = 1.", H.dim],
+      ["Running average", "The average of the first N samples, recomputed after every new sample: X̄₁, X̄₂, X̄₃, …", H.lln],
+      ["Sample mean X̄<sub>N</sub>", "The average (X₁ + … + X<sub>N</sub>)/N of N samples. It is itself random.", H.tool],
+      ["Simpson's rule", "A grid rule that fits a parabola through each three neighbouring points; error like 1/N⁴ in one dimension.", H.dim],
+      ["Spread of an average (standard error)", "The standard deviation of X̄<sub>N</sub>: σ/√N for i.i.d. samples with standard deviation σ.", H.tool],
+      ["Standard deviation σ", "The square root of the variance: the typical distance from the mean, in the units of X. Fair die: 1.71.", H.tool],
+      ["Stochastic gradient descent", "Training a model with gradients estimated from small random batches of data: the Monte Carlo part of machine learning.", H.dim],
+      ["Strong law of large numbers", "With probability 1, a single run's average eventually enters the band μ ± ε and stays there, for every ε. Implies the weak law.", H.conv],
+      ["Tolerance ε", "A small positive number (epsilon), e.g. 0.1: how far from μ counts as “off”.", H.conv],
+      ["Trapezoid rule", "A grid rule that joins neighbouring points with straight lines; error like 1/N² in one dimension.", H.dim],
+      ["Unbiased", "An estimator is unbiased if its expectation equals the quantity it estimates: on average it is right, whatever N.", H.is],
+      ["Uniform distribution U(a, b)", "Every point of [a, b] equally likely; density 1/(b − a) on [a, b]. A computer's random() gives U(0, 1).", H.tool],
+      ["Variance Var[X]", "The average squared distance from the mean, E[(X − μ)²] = E[X²] − μ². Fair die: 35/12 ≈ 2.92.", H.tool],
+      ["Weak law of large numbers", "For every ε > 0 the share of runs whose average is more than ε from μ goes to 0 as N grows.", H.conv],
+      ["Zero-variance proposal", "q(x) = f(x)/F with F = ∫ f: every weight equals F exactly. Perfect, but it needs the answer F.", H.ex],
+    ])}
+
+    <h2>${H.tool} (slides 4–6)</h2>
+    ${plain("Monte Carlo replaces a number by an average of random samples. To see why that works and how well, you need three tools: the mean of a random number, its spread, and the rule for how the spread of an <em>average</em> shrinks. A fair die is enough to show all three.")}
+    <p>A <dfn>random variable</dfn> X is a number decided by chance; here the face of a fair die, each of 1 … 6 with probability 1/6. Its <dfn>expectation</dfn> (mean, μ, “mu”) is the long-run average of many rolls, each value weighted by its probability:</p>
+    <div class="formula">${fx(String.raw`\mathbb E[X] = \sum_x x\,P(X = x) = \frac{1 + 2 + 3 + 4 + 5 + 6}{6} = 3.5`, "E[X] = Σ x P(X = x) = (1 + 2 + … + 6)/6 = 3.5")}</div>
+    <p>3.5 is not a face of the die: an expectation need not be a value X can take. The <dfn>variance</dfn> measures the spread, the average squared distance from μ; the shortcut “mean of the squares minus the square of the mean” is easier to compute. The <dfn>standard deviation</dfn> σ (“sigma”) is its square root, the typical distance from μ in the units of X:</p>
+    <div class="formula">${fx(String.raw`\mathrm{Var}[X] = \mathbb E[X^2] - \mu^2 = \frac{91}{6} - 3.5^2 = \frac{35}{12} \approx 2.92, \qquad \sigma = \sqrt{2.92} \approx 1.71`, "Var[X] = E[X²] − μ² = 91/6 − 3.5² = 35/12 ≈ 2.92, σ ≈ 1.71")}</div>
+    ${ex("Worked example: the die's variance step by step", `<p>E[X²] = (1 + 4 + 9 + 16 + 25 + 36)/6 = 91/6 = 15.167. μ² = 3.5² = 12.25. Var = 15.167 − 12.25 = <b>2.917</b> = 35/12. σ = √2.917 = <b>1.708</b>. Check with the definition: the squared distances from 3.5 are 6.25, 2.25, 0.25, 0.25, 2.25, 6.25, whose average is 17.5/6 = 2.917 ✓.</p>`)}
+    <p>For a continuous X, probability is area under a <dfn>density</dfn> p(x) (p ≥ 0, total area 1), and the sum becomes an integral, E[g(X)] = ∫ g(x) p(x) dx. The <dfn>uniform distribution</dfn> U(a, b) has the flat density 1/(b − a) on [a, b]: for U(0, 1), P(0.2 ≤ X ≤ 0.5) = 0.3 × 1 = 0.3, and E[X²] = ∫₀¹ x² dx = 1/3. The <dfn>normal distribution</dfn> is the bell curve; for the standard normal (mean 0, σ = 1), 68 % of the area lies between −1 and 1.</p>
+    <p>Monte Carlo needs <dfn>i.i.d.</dfn> samples x₁, …, x<sub>N</sub>: independent (each ignores the others) and identically distributed (all from the same distribution). Repeated rolls of one die are i.i.d.; cards dealt without putting them back are not, because each card changes what is left. A computer makes <dfn>pseudo-random numbers</dfn> with a fixed rule started at a seed (${lecLink(2, "lecture 2")}): the same seed repeats a run exactly, a new seed gives a new run.</p>
+    <p>The key tool is the spread of the <dfn>sample mean</dfn> X̄<sub>N</sub> = (X₁ + … + X<sub>N</sub>)/N. Two variance rules, for a fixed number c and independent X, Y: Var[cX] = c² Var[X] and Var[X + Y] = Var[X] + Var[Y]. Applied to the average (factor 1/N, N independent terms):</p>
+    <div class="formula">${fx(String.raw`\mathrm{Var}[\bar X_N] = \frac{1}{N^2}\cdot N\sigma^2 = \frac{\sigma^2}{N}, \qquad \text{spread of } \bar X_N = \frac{\sigma}{\sqrt N}`, "Var[X̄_N] = (1/N²) · N σ² = σ²/N, spread = σ/√N")}</div>
+    ${ex("Worked example: how much the average of die rolls wobbles", `<p>σ = 1.71. Average of 100 rolls: spread 1.71/√100 = 1.71/10 = <b>0.17</b>, so such averages typically land in 3.5 ± 0.17. Average of 10,000 rolls: 1.71/100 = <b>0.017</b>. A hundred times more rolls, ten times less wobble. This 1/√N is the heart of the lecture; the slide calls it exactly that.</p>`)}
+    ${oops("Var[cX] = c Var[X]. Variance is not linear: a factor c comes out squared, Var[cX] = c² Var[X]. That is where the 1/N² comes from; the sum of the N variances then gives back one factor N.")}
+
+    <h2>${H.what} (slides 2, 7)</h2>
+    ${plain("A Monte Carlo method uses random numbers to compute something that is not random at all, like an area or an integral. It is the polling idea: you do not ask every voter, you ask a random sample and average.")}
+    <p>The deck opens with an opinion poll: to learn what share of 60 million voters likes a policy, a polling company asks 1,000 randomly chosen people. The answer is not exact but usually within a few percentage points, and asking more people makes it more precise. A <dfn>Monte Carlo method</dfn> does the same with mathematics in three steps: (1) write the answer as an average, the expectation of some random quantity; (2) draw random samples (the computer plays the voters); (3) average them. Uses named on slide 7: areas and integrals without formulas, sampling from complicated distributions, optimisation and machine learning (training on small random batches of data), and computer graphics (tracing millions of random light paths per image).</p>
+    ${why("Context: the name", `<p>Slide 7 tells the history: Stanisław Ulam invented the method in 1946 at Los Alamos and developed it with John von Neumann and Nicholas Metropolis. Its first job was simulating how neutrons travel through material for the US nuclear weapons programme. The secret project needed a code name, and Metropolis suggested “Monte Carlo”, after the casino in Monaco where Ulam's uncle liked to gamble: like roulette, the method runs on chance. Metropolis' name returns in lecture 6 with the Metropolis algorithm.</p>`)}
+
+    <h2>${H.pi} (slides 8–10)</h2>
+    ${plain("Throw random points into a square that contains a quarter circle. The share that lands inside the quarter circle is about the ratio of the two areas, π/4. Count, multiply by 4, and you have π.")}
+    <p>The unit square (sides 0 to 1) has area 1 and holds a quarter of the circle of radius 1, area π/4. A random point is two U(0, 1) numbers (u₁, u₂); by Pythagoras it lies inside the quarter circle when u₁² + u₂² ≤ 1. The share of points inside is about π/4, so</p>
+    <div class="formula">${fx(String.raw`\pi \approx 4\cdot\frac{\#\,\text{points inside the quarter circle}}{N}`, "π ≈ 4 · (number of points inside) / N")}</div>
+    <p>The slide's picture: 400 random points, 314 inside, so π ≈ 4 · 314/400 = 3.14. Slide 9 does it by hand with ten points:</p>
+    ${ptab}
+    ${ex("Worked example: the ten points", `<p>Point 1: 0.24² + 0.43² = 0.0576 + 0.1849 = 0.2425 ≤ 1, inside. Point 3: 0.78² + 0.87² = 0.6084 + 0.7569 = 1.3653 > 1, outside. Point 10 is a near miss at 1.0345. 8 of 10 inside: π ≈ 4 · 8/10 = <b>3.2</b> (true value 3.14159…). With ten points the estimate can only be 0, 0.4, 0.8, …, 4.0, so it is rough; more points give finer and more reliable answers.</p>`)}
+    <p>Slide 10 adds three remarks with four runs of growing N: every run gives a different answer (a different seed, different random numbers; the same seed repeats a run exactly); every answer is approximate (how far off is the subject of ${see(H.err)}); and more points always help: the estimate is guaranteed to approach π as N grows, which is the law of large numbers. A band of π ± 2 standard deviations narrows like 1/√N around the four runs.</p>
+    ${why("Context: Buffon's needle (a note on slide 10)", `<p>The deck notes that the recording credits the π experiment to an 18th-century French count dropping needles on a carpet with a circle. That is <dfn>Buffon's needle</dfn> problem (posed 1733, published 1777), and it uses parallel lines, not a circle: a needle of length ℓ ≤ d dropped on lines a distance d apart crosses a line with probability 2ℓ/(πd). Example: ℓ = d gives 2/π = 0.637; if 637 of 1,000 needles cross, π ≈ 2 · 1000/637 = 3.14.</p>`)}
+    ${tryit([
+      ["Eleven more points come in: (0.10, 0.20) and (0.95, 0.40). Add them to the ten above. What is the new estimate with 12 points?", `<p>0.01 + 0.04 = 0.05 ≤ 1, inside; 0.9025 + 0.16 = 1.0625 > 1, outside. Inside 8 + 1 = 9 of 12: π ≈ 4 · 9/12 = <b>3.0</b>.</p>`],
+      ["Why does multiplying by 4 appear, and what would you multiply by if you used the full circle of radius 1 inside the square [−1, 1] × [−1, 1]?", `<p>The quarter circle has area π/4 inside a square of area 1, so the share is π/4 and you multiply by 4. The full circle has area π inside a square of area 4: share π/4 again, so <b>still 4</b>.</p>`],
+    ])}
+
+    <h2>${H.lln} (slide 11)</h2>
+    ${plain("Average enough independent samples and the average settles on the true mean, whatever the distribution looks like, as long as that mean exists. This is the guarantee behind every Monte Carlo estimate.")}
+    <div class="formula">${fx(String.raw`\bar X_N = \frac{1}{N}\sum_{i=1}^N X_i \;\xrightarrow{\;N\to\infty\;}\; \mu = \mathbb E[X]`, "X̄_N = (1/N) Σ X_i → μ = E[X] as N → ∞")}</div>
+    <p>The <dfn>law of large numbers</dfn> needs i.i.d. samples X₁, X₂, … with a finite expectation μ. Slide 11 shows the <dfn>running average</dfn> of die rolls in three runs: after 10 rolls they read 3.4, 4.2 and 3.1; after 10,000 rolls 3.48, 3.52 and 3.48, all near μ = 3.5.</p>
+    ${ex("Worked example: a running average by hand", `<p>Rolls 3, 6, 1, 4, 2. Running averages: 3/1 = 3; (3 + 6)/2 = 4.5; (3 + 6 + 1)/3 = 3.33; 14/4 = 3.5; 16/5 = 3.2. Each new roll moves the average by (new roll − old average)/N: the fifth moves it by (2 − 3.5)/5 = −0.3. The same roll at N = 1,000 would move it by only 0.0015, which is why the curve calms down.</p>`)}
+    ${lab("lln4", "running averages for three distributions", "Pick a distribution; each coloured line is one run of 10,000 samples, the x axis is logarithmic (each label 10 times the previous). The table reads the three runs at N = 10, 100, 1,000 and 10,000. Press <b>New runs</b> to change the seed; then switch to Cauchy and compare.")}
+
+    <h2>${H.cauchy} (slides 12–13)</h2>
+    ${plain("The law has one condition, a finite mean, and it is not a formality. There are distributions whose rare values are so enormous that the long-run average does not exist, and then averaging never settles.")}
+    <p>The experiment: a laser stands 1 m from a long wall and is spun so that it stops at a random angle θ, every direction towards the wall equally likely (θ uniform between −90° and 90°). X is the height of the spot on the wall, X = tan θ. This X has the <dfn>Cauchy distribution</dfn>. Most spots are close: 20° gives 0.36 m, 45° gives 1.00 m, 70° gives 2.75 m. But 86° gives 14 m, and as θ approaches 90° the spot runs off to infinity.</p>
+    ${ex("Worked example: how often the spot is more than 10 m away", `<p>|X| &gt; 10 means |θ| &gt; arctan 10 = 84.29°. The angle is uniform on a range of 180°, so the chance is (180° − 2 · 84.29°)/180° = 11.42°/180° = <b>6.3 %</b>. For 100 m: arctan 100 = 89.43°, so 1.15°/180° = <b>0.64 %</b>; for 1 km: <b>0.064 %</b>. The share falls only like 1/distance. For a standard normal number, a value beyond 10 has a chance of about 10<sup>−23</sup>: it never happens.</p>`)}
+    <p>These rare giants are big enough that the expectation does not exist: the integral ∫ x p(x) dx has no value (the deck notes the recording calls the mean “infinite”; strictly it is undefined, because the positive and the negative side are both infinite). Slide 13 compares running averages: normal samples close in on 0; Cauchy averages keep jumping, one giant sample near N = 2,500 drags an average from about 0.6 to −32. In fact the average of N Cauchy numbers is again Cauchy, exactly as wild as a single one, however large N is. Try it in the explorer above.</p>
+    ${oops("“More samples always help.” Only if the mean exists. Heavy-tailed quantities (sizes of insurance claims, file sizes, some financial returns) can come close to this behaviour, and then a Monte Carlo average looks stable for a long time and then jumps.")}
+
+    <h2>${H.conv} (slide 14)</h2>
+    ${plain("The average is itself random, so “it approaches μ” needs a precise meaning. There are two: look at many runs at one fixed N (weak law), or follow one run forever (strong law).")}
+    <p>Fix a <dfn>tolerance</dfn> ε (epsilon), a small number such as 0.1. The <dfn>weak law of large numbers</dfn>: the share of runs whose average is more than ε away from μ shrinks to 0,</p>
+    <div class="formula">${fx(String.raw`P\big(|\bar X_N - \mu| > \varepsilon\big) \xrightarrow{\;N\to\infty\;} 0 \quad \text{for every } \varepsilon > 0.`, "P(|X̄_N − μ| > ε) → 0 for every ε > 0")}</div>
+    <p>This is <dfn>convergence in probability</dfn>. The slide's die example with ε = 0.1 and 20,000 runs per N: 78 % of runs are off by more than 0.1 at N = 10, 54 % at N = 100, 6.4 % at N = 1,000, about 0 % at N = 10,000. The <dfn>strong law</dfn>: with probability 1, a single run eventually enters the band μ ± ε and never leaves it again, for every ε; in the die chart each line ends up hugging 3.5. Strong implies weak, not the other way round; with i.i.d. samples and a finite mean both hold, and the lecture proves the weak law.</p>
+    ${why("Context: in probability or in distribution? (a note on slide 14)", `<p>The deck notes that the lecture calls the weak form convergence “in probability / in distribution”. In general these differ: in distribution only says the <em>histogram</em> of Y<sub>N</sub> approaches a limiting histogram, not that Y<sub>N</sub> itself gets close to anything. For a constant limit such as μ the two coincide, so for the law of large numbers either word is fine.</p>`)}
+
+    <h2>${H.cheb} (slide 15)</h2>
+    ${plain("A short proof of the weak law in three lines, if the variance is finite: the average's spread shrinks like σ/√N, and a random number is rarely far from its mean compared to its spread. So the average is rarely far from μ.")}
+    <p>Step 1 is the spread rule from the toolbox, Var[X̄<sub>N</sub>] = σ²/N. Step 2 is <dfn>Chebyshev's inequality</dfn>, true for any Y with finite variance:</p>
+    <div class="formula">${fx(String.raw`P\big(|Y - \mathbb E[Y]| > \varepsilon\big) \le \frac{\mathrm{Var}[Y]}{\varepsilon^2}`, "P(|Y − E[Y]| > ε) ≤ Var[Y]/ε²")}</div>
+    <p>For example, with ε = 2σ: at most σ²/(4σ²) = 1/4 of any distribution lies more than 2σ from its mean. Step 3 puts Y = X̄<sub>N</sub> in:</p>
+    <div class="formula">${fx(String.raw`P\big(|\bar X_N - \mu| > \varepsilon\big) \le \frac{\sigma^2}{N\varepsilon^2} \xrightarrow{\;N\to\infty\;} 0`, "P(|X̄_N − μ| > ε) ≤ σ²/(Nε²) → 0")}</div>
+    ${ex("Worked example: the bound for the die, ε = 0.1", `<p>σ² = 35/12 = 2.917, ε² = 0.01. N = 100: 2.917/(100 · 0.01) = <b>2.9</b>, useless (a probability is at most 1 anyway); simulated: 54 %. N = 1,000: 2.917/10 = <b>0.29</b>; simulated 6.4 %. N = 10,000: <b>0.029</b>; simulated ≈ 0 %. The bound is crude, but it goes to 0, and that is all the proof needs.</p>`)}
+    ${chart("cheb", leg([[2, "Chebyshev's bound"], [1, "actual share (normal approximation)"], ["g", "simulated on slide 14"]]))}${cap("Share of runs whose average of N die rolls misses 3.5 by more than ε = 0.1. The blue curve is computed here from the normal approximation 2(1 − Φ(0.1√N/1.708)), Φ the standard normal CDF; the grey dots are the deck's simulated values (20,000 runs). The bound (orange) always lies above the truth and falls like 1/N; the truth falls much faster.")}
+    ${tbl(["N", "bound σ²/(Nε²)", "actual (normal approx.)", "simulated (slide)"], WEAK.map(([n, p]) => [n.toLocaleString("en-GB"), num(DIE_VAR / (n * 0.01), 3), pct(2 * (1 - Phi(0.1 * Math.sqrt(n) / DIE_SD))), pct(p)]))}
+    ${tryit([
+      ["Use Chebyshev to find an N that guarantees that at most 5 % of die averages miss 3.5 by more than 0.1.", `<p>Need 2.917/(N · 0.01) ≤ 0.05, so N ≥ 2.917/(0.0005) = <b>5,834</b>. (In reality about N = 1,100 suffices, since the bound is crude.)</p>`],
+      ["What does Chebyshev say about the share of any distribution more than 3σ from its mean?", `<p>At most σ²/(9σ²) = <b>1/9 ≈ 11 %</b>. For a normal distribution the true share is 0.27 %.</p>`],
+    ])}
+
+    <h2>${H.cf} (slides 16–17)</h2>
+    ${plain("The lecture proves the weak law another way, which needs only a finite mean (no variance). It gives every distribution a fingerprint, computes the fingerprint of the average, and shows it turns into the fingerprint of the constant μ. This section is optional for the calculations later on, but it is the lecture's proof.")}
+    <p>The <dfn>characteristic function</dfn> (“phi”) of X is φ<sub>X</sub>(t) = E[e<sup>itX</sup>], for any real t. Here i is the imaginary unit (i² = −1) and e<sup>iθ</sup> = cos θ + i sin θ is the point at angle θ on a circle of radius 1. So: for a given t, turn each value x into the point at angle t·x on the unit circle, then average these points with the probabilities. Two examples from slide 16: X = c always gives φ(t) = e<sup>itc</sup>, a single point; a fair coin X = ±1 gives φ(t) = ½e<sup>it</sup> + ½e<sup>−it</sup> = cos t.</p>
+    <p>Three facts used: <b>identity</b>, different distributions have different fingerprints; <b>sums</b>, φ<sub>X+Y</sub>(t) = φ<sub>X</sub>(t) φ<sub>Y</sub>(t) when X and Y are independent; <b>scaling</b>, φ<sub>cX</sub>(t) = φ<sub>X</sub>(ct) for a fixed number c. The proof in four steps (slide 17):</p>
+    <ol>
+      <li><b>Fingerprint of the average.</b> Sum rule (independent samples), scaling rule (the 1/N), all factors equal (identical distribution): φ<sub>X̄<sub>N</sub></sub>(t) = [φ<sub>X</sub>(t/N)]<sup>N</sup>.</li>
+      <li><b>Zoom in near 0.</b> Close up, a smooth curve looks like its tangent line. φ<sub>X</sub>(0) = 1 and the slope at 0 is iμ (this needs the finite mean): φ<sub>X</sub>(s) ≈ 1 + isμ for small s.</li>
+      <li><b>Let N grow.</b> Put s = t/N: [1 + itμ/N]<sup>N</sup> → e<sup>itμ</sup>, by the <dfn>compound-interest limit</dfn> (1 + a/N)<sup>N</sup> → e<sup>a</sup> with a = itμ.</li>
+      <li><b>Read the fingerprint.</b> e<sup>itμ</sup> is the fingerprint of the constant μ. So for large N the average behaves like the fixed number μ: the weak law. <dfn>Lévy's continuity theorem</dfn> makes “fingerprints converge, so distributions converge” precise.</li>
+    </ol>
+    ${ex("Worked example: the fingerprint of an average of coin flips", `<p>Coin X = ±1, μ = 0, φ(t) = cos t. Take t = 1. One flip: cos 1 = 0.540. Average of 2 flips: [cos(1/2)]² = 0.8776² = 0.770. Of 10 flips: [cos 0.1]<sup>10</sup> = 0.99500<sup>10</sup> = 0.951. Of 100 flips: [cos 0.01]<sup>100</sup> = 0.99995<sup>100</sup> = 0.995. The fingerprint approaches 1 = e<sup>i·1·0</sup>, the fingerprint of the constant 0 = μ. Compound interest for comparison: 1 € at 100 % yearly interest compounded N times grows to (1 + 1/N)<sup>N</sup> €: 2.000 (N = 1), 2.594 (10), 2.705 (100), 2.717 (1,000), e = 2.718… in the limit.</p>`)}
+    ${why("Context: “if”, not “if and only if” (a note on slide 16)", `<p>The deck notes that the lecture states the sum rule “if and only if” X and Y are independent. Only “if” is true. Counter-example: X Cauchy and Y = X, completely dependent; still φ<sub>X+Y</sub>(t) = φ<sub>2X</sub>(t) = e<sup>−2|t|</sup> = e<sup>−|t|</sup> · e<sup>−|t|</sup> = φ<sub>X</sub>(t) φ<sub>Y</sub>(t), because the Cauchy fingerprint is e<sup>−|t|</sup>. The same fact explains slide 13: the average of N Cauchy numbers has fingerprint [e<sup>−|t|/N</sup>]<sup>N</sup> = e<sup>−|t|</sup>, again Cauchy. Step 2 fails for Cauchy: e<sup>−|t|</sup> has a kink at 0 and no slope there, which is the missing mean.</p>`)}
+
+    <h2>${H.int} (slides 18–19)</h2>
+    ${plain("An integral over an interval is the interval's width times the average height of the curve. The average height is an expectation, so Monte Carlo can estimate it: evaluate f at random points, average, multiply by the width.")}
+    <div class="formula">${fx(String.raw`\int_a^b f(x)\,dx = (b-a)\cdot\mathbb E\big[f(X)\big], \quad X\sim\mathcal U(a,b) \qquad\Rightarrow\qquad \theta_N = \frac{b-a}{N}\sum_{i=1}^N f(x_i),\quad x_i \text{ i.i.d.} \sim \mathcal U(a,b)`, "∫_a^b f dx = (b − a) E[f(X)], X ~ U(a, b);  θ_N = (b − a)/N · Σ f(x_i)")}</div>
+    <p>Why: the density of U(a, b) is 1/(b − a), so (b − a) E[f(X)] = (b − a) ∫ f(x) · 1/(b − a) dx = ∫ f(x) dx. The <dfn>estimator</dfn> θ<sub>N</sub> (“theta”) is the Monte Carlo guess from N samples. Slide 18's pictures: f(x) = x² on [0, 1] has average height 1/3, so area 1 × 1/3; sin x on [0, π] has average height 2/π ≈ 0.64, so area π × 2/π = 2.</p>
+    ${ex("Worked example: ∫₀¹ x² dx from five random numbers (slide 19)", `<p>a = 0, b = 1, so θ₅ is just the average of xᵢ². The five numbers 0.96, 0.21, 0.83, 0.15, 0.51 give 0.9216, 0.0441, 0.6889, 0.0225, 0.2601. Sum 1.9372, average <b>θ₅ = 0.387</b>. The exact answer is 1/3 = 0.333, so the estimate is off by 0.054. Is that bad? With 5 samples the typical error is ±0.13 (next section), so 0.05 is quite normal. The same five numbers return in ${see(H.is)}, where a smarter sampler does much better with them.</p>`)}
+    ${tryit([
+      ["Estimate ∫₀² x³ dx with the three random points 0.4, 1.0, 1.6 drawn uniformly on [0, 2]. Compare with the exact value.", `<p>f values 0.064, 1, 4.096; average 5.16/3 = 1.72; times the width 2: <b>θ₃ = 3.44</b>. Exact: 2⁴/4 = <b>4</b>.</p>`],
+      ["Write ∫₀^π sin x dx as an expectation and estimate it from the points π/6, π/2, 5π/6.", `<p>π · E[sin X] with X ~ U(0, π). sin values 0.5, 1, 0.5; average 2/3; times π: <b>2.09</b> (exact 2).</p>`],
+    ])}
+
+    <h2>${H.err} (slide 20)</h2>
+    ${plain("The estimator is an average of N i.i.d. numbers, so its spread follows the toolbox rule: the standard deviation of one f-value, divided by √N. That gives an error bar for every Monte Carlo estimate.")}
+    <div class="formula">${fx(String.raw`\mathrm{Var}[\theta_N] = (b-a)^2\,\frac{\mathrm{Var}[f(X)]}{N}, \qquad \text{typical error} = \sqrt{\mathrm{Var}[\theta_N]} = \frac{(b-a)\,\sigma_f}{\sqrt N}`, "Var[θ_N] = (b − a)² Var[f(X)]/N, typical error = (b − a) σ_f / √N")}</div>
+    <p>σ<sub>f</sub> is the standard deviation of f(X) for uniform X. For x²: Var[X²] = E[X⁴] − E[X²]² = 1/5 − 1/9 = 4/45, so σ<sub>f</sub> = √(4/45) = 0.298.</p>
+    ${ex("Worked example: error bars for x² and for π", `<p>x² with N = 5: 0.298/√5 = 0.298/2.236 = <b>±0.13</b>; N = 100: ±0.030; N = 10,000: ±0.0030; N = 10⁶: ±0.0003. π: each point gives 4 (inside, probability π/4) or 0, so E = π and Var = 16 · π/4 − π² = 4π − π² = 12.566 − 9.870 = 2.697, σ = <b>1.64</b> per point. N = 400: 1.64/20 = ±0.08, so the slide's 3.14 from 400 points came out closer than typical; N = 10,000: ±0.016; N = 10⁶: ±0.0016.</p>`)}
+    <p>100 times more samples give a 10 times smaller error: each extra correct digit costs 100 times more work. That is slow, but it is a guarantee and holds for every problem.</p>
+    ${oops("“Variance is linear, so the variances add.” The deck notes that the recording justifies this step by calling variance a linear operator. It is not (Var[cX] = c² Var[X]); the variances add because the samples are <em>independent</em>.")}
+    ${tryit([
+      ["You estimated a probability by Monte Carlo and got an error of ±0.01 with N = 2,500. How many samples for ±0.002?", `<p>The error must shrink 5 times, so N grows 5² = 25 times: <b>62,500</b>.</p>`],
+      ["Estimate π with an error bar of ±0.001. Roughly how many points?", `<p>1.64/√N = 0.001 → √N = 1,640 → <b>N ≈ 2.7 million</b>.</p>`],
+    ])}
+
+    <h2>${H.dim} (slides 21–23)</h2>
+    ${plain("In one dimension, grid rules beat Monte Carlo easily. But a grid needs points along every axis, so its cost explodes with the number of dimensions, while Monte Carlo's 1/√N does not care about dimension at all.")}
+    <p>A <dfn>grid method</dfn> puts N points on an even grid and combines the f-values with fixed weights. The <dfn>trapezoid rule</dfn> joins neighbouring points with straight lines; in one dimension its error falls like 1/N², so 10 times more points give a 100 times smaller error. <dfn>Simpson's rule</dfn> fits a parabola through each three points; error like 1/N⁴, 10 times more points give 10,000 times less error. Monte Carlo: 10 times more points give only √10 ≈ 3.2 times less. In one dimension it is the slow choice.</p>
+    <p>In m dimensions (<dfn>dimension</dfn> m = number of coordinates), a grid with 10 points per axis needs 10<sup>m</sup> points: 10, 100, 1,000 for m = 1, 2, 3; 10<sup>10</sup> (ten billion) for m = 10; 10<sup>100</sup> for m = 100, far more than the roughly 10<sup>80</sup> atoms of the observable universe. Turned around: N points in total give only N<sup>1/m</sup> points per axis, so the trapezoid error falls like (N<sup>1/m</sup>)<sup>−2</sup> = N<sup>−2/m</sup> and Simpson's like N<sup>−4/m</sup>. Monte Carlo stays at N<sup>−1/2</sup>. It beats the trapezoid rule beyond m = 4 and Simpson's rule beyond m = 8.</p>
+    ${ex("Worked example: a million points in ten dimensions", `<p>N = 10⁶, m = 10. Grid: 10<sup>6/10</sup> = 10<sup>0.6</sup> = 3.98, so <b>about 4 points per axis</b>. Trapezoid error ~ N<sup>−0.2</sup> = 10<sup>−1.2</sup> = <b>0.063</b>; Simpson ~ N<sup>−0.4</sup> = 10<sup>−2.4</sup> = 0.004; Monte Carlo ~ N<sup>−0.5</sup> = <b>0.001</b> (constants set to 1, as on the slide).</p>`)}
+    ${lab("dims", "grids against Monte Carlo as the dimension grows", "Drag <b>m</b>. Each line is an error rate on log–log axes (constants set to 1): steeper is better. Watch the trapezoid and Simpson lines flatten as m grows while the Monte Carlo line stays put; the table gives the points needed for an error of 0.001.")}
+    <p>The same recipe in m dimensions, with <dfn>region</dfn> Ω (“omega”), its volume V, and i.i.d. uniform points x<sub>i</sub> in Ω (bold <b>x</b> is a point with m coordinates):</p>
+    <div class="formula">${fx(String.raw`\int_\Omega f(\mathbf x)\,d\mathbf x \approx \frac{V}{N}\sum_{i=1}^N f(\mathbf x_i), \qquad \mathrm{Var} = V^2\,\frac{\mathrm{Var}[f]}{N}`, "∫_Ω f(x) dx ≈ (V/N) Σ f(x_i), Var = V² Var[f]/N")}</div>
+    <p>Where many dimensions come up (slide 23): an image of 1,000 × 1,000 pixels is a single point in a million-dimensional space; 100 particles in 3-D space need 300 coordinates, so averages over their positions are 300-dimensional integrals; machine-learning models have millions of parameters and training averages a loss over huge data sets.</p>
+    ${why("Context: what is Monte Carlo in machine learning (a note on slide 23)", `<p>The deck notes that the recording calls <dfn>backpropagation</dfn> a Monte Carlo method. Backpropagation computes gradients exactly. The Monte Carlo part is <dfn>stochastic gradient descent</dfn>: the true gradient is an average over the whole data set, and each step estimates it from a small random batch, an average of a few samples with the 1/√N error of this lecture. Stochastic optimisation is on the course plan for later.</p>`)}
+
+    <h2>${H.is} (slides 24–27)</h2>
+    ${plain("Uniform samples spend half their effort where f is tiny. Importance sampling draws more samples where f is large and gives each sample a weight that exactly cancels the favouritism, so the answer stays right and the error shrinks.")}
+    <p>For f(x) = x² on [0, 1], uniform sampling puts half the samples in [0, 0.5], which holds only ∫₀<sup>0.5</sup> x² dx = 1/24 of area, one eighth of the total 1/3. The deck's analogy: to count fish in a lake where almost all of them live near the shore, you fish more near the shore and correct for having favoured it. The trick is to multiply and divide by a density q:</p>
+    <div class="formula">${fx(String.raw`\int f(x)\,dx = \int \frac{f(x)}{q(x)}\,q(x)\,dx = \mathbb E_q\!\left[\frac{f(X)}{q(X)}\right] \qquad\Rightarrow\qquad \theta_N = \frac1N\sum_{i=1}^N \frac{f(x_i)}{q(x_i)},\quad x_i \text{ i.i.d.} \sim q`, "∫ f dx = ∫ (f/q) q dx = E_q[f(X)/q(X)];  θ_N = (1/N) Σ f(x_i)/q(x_i), x_i ~ q")}</div>
+    <p><dfn>Importance sampling</dfn> draws x<sub>i</sub> from a <dfn>proposal density</dfn> q and averages the <dfn>importance weights</dfn> w = f/q. <dfn>E<sub>q</sub></dfn> means X is drawn from q. Any q works as long as q(x) &gt; 0 wherever f(x) ≠ 0. Why the weight f/q: where q samples twice as often as uniform, the weight is half as big; favoured regions get more samples but smaller weights, so the estimate stays <dfn>unbiased</dfn> (its expectation is the integral, for every N). If q lives on a bigger region than Ω, multiply by the <dfn>indicator</dfn> 1<sub>x∈Ω</sub> (1 inside Ω, 0 outside): samples outside count as 0.</p>
+    ${ex("Worked example: where the weight comes from", `<p>q(x) = 2x and f(x) = x²: w = x²/(2x) = <b>x/2</b>. At x = 0.9, q = 1.8 (1.8 times as many samples as uniform near 0.9) and w = 0.45 = 0.81/1.8: the value f = 0.81 is divided by 1.8. At x = 0.2, q = 0.4 (fewer samples) and w = 0.1 = 0.04/0.4: the small value is <em>scaled up</em> by 2.5, because that region is undersampled.</p>`)}
+    <p><b>Drawing from q(x) = 2x</b> (slide 26) uses the inversion method: the <dfn>cumulative distribution function</dfn> is F<sub>q</sub>(x) = P(X ≤ x) = ∫₀<sup>x</sup> 2s ds = x². Draw u from U(0, 1) and solve x² = u: <b>x = √u</b>. Why it works: P(√U ≤ x) = P(U ≤ x²) = x², exactly F<sub>q</sub>. u = 0.25 gives x = 0.5, u = 0.81 gives x = 0.9; 20,000 such samples pile up in a histogram shaped like the line 2x.</p>
+    ${ex("Worked example: the same five random numbers, now with q = 2x (slide 27)", `${u5tab}<p>Plain Monte Carlo: <b>0.387</b>, off by 0.054, typical error with N = 5: ±0.13. Importance sampling: <b>0.345</b>, off by 0.012, typical error with N = 5: ±0.053. One run proves little, but the reason is visible: the weights xᵢ/2 range only from 0.19 to 0.49, the values xᵢ² from 0.02 to 0.92.</p>`)}
+    ${chart("weights", leg([[1, "x² (plain)"], [3, "x/2 (q = 2x)"], [2, "x²/(2(1 − x)) (bad q)"]]))}${cap("What each estimator averages, plotted over x. The closer a curve stays to the dashed true value 1/3, the less its average wobbles. x/2 stays within 0.33 ± 0.17 everywhere; x² sweeps from 0 to 1; the bad proposal's weight is tiny on the left and explodes near x = 1 (see the last example).")}
+    ${oops("Averaging q/f, or f alone, at samples drawn from q. The weight is f/q: the value divided by how much more often that region is sampled. Averaging plain f(xᵢ) at xᵢ ~ q = 2x would give E<sub>q</sub>[X²] = 1/2 instead of 1/3.")}
+
+    <h2>${H.ex} (slides 28–31)</h2>
+    ${plain("Three examples show the range: a perfect proposal that gives the exact answer with one sample (but needs the answer first), the π experiment as a disguised importance sampler, and an exam-style comparison of two estimators by their variances.")}
+    <p><b>Example 1: the perfect proposal.</b> For f ≥ 0, choose q proportional to f: q(x) = f(x)/F with F = ∫ f dx. Then every weight is f/q = F exactly, whatever sample comes out, and Var[θ<sub>N</sub>] = 0: a <dfn>zero-variance proposal</dfn>. Concrete: f(x) = x² on [0, 1], q(x) = 3x², f/q = 1/3 for every x, one sample is enough. The catch: writing the 3 in 3x² needs F = 1/3, the very integral you want. So the perfect q is never available; the rule of thumb is a q that is easy to sample and roughly follows the shape of f, like 2x for x². If f changes sign, q ∝ f is not a density; the best choice is then q ∝ |f|, and the variance is no longer zero.</p>
+    <p><b>Example 2: π again.</b> Ω is the quarter circle, and π/4 = ∬<sub>[0,1]²</sub> 1<sub>u∈Ω</sub> du₁ du₂ = E[1<sub>U∈Ω</sub>]. With the proposal q = 1 (uniform on the square), the weight f/q × indicator is 1 inside Ω and 0 outside, so averaging the weights is counting points inside and dividing by N; times 4 gives the rule of the first example. The opening experiment was importance sampling all along: the law of large numbers says why it converges, the error formula how fast, ±1.64/√N.</p>
+    <p><b>Example 3: two estimators for F = ∫₀¹ x² dx = 1/3.</b> We know the answer, so we can judge them. Plain Monte Carlo averages xᵢ² with xᵢ ~ U(0, 1); importance sampling with q = 2x averages xᵢ/2 with xᵢ ~ 2x. Their variances:</p>
+    <div class="formula">${fx(String.raw`\mathrm{Var}[\theta_N^{(1)}] = \frac1N\Big(\tfrac15 - \tfrac19\Big) = \frac{4}{45N} \approx \frac{0.0889}{N}, \qquad \mathrm{Var}[\theta_N^{(2)}] = \frac{1}{4N}\Big(\tfrac12 - \tfrac49\Big) = \frac{1}{72N} \approx \frac{0.0139}{N}`, "Var plain = (1/N)(1/5 − 1/9) = 4/(45N); Var IS = (1/(4N))(1/2 − 4/9) = 1/(72N)")}</div>
+    ${ex("Worked example: Example 3 step by step", `<p><b>Plain:</b> Var[X²] = E[X⁴] − E[X²]² with E[X²] = ∫₀¹ x² dx = 1/3 and E[X⁴] = ∫₀¹ x⁴ dx = 1/5: 1/5 − 1/9 = 9/45 − 5/45 = <b>4/45 = 0.0889</b>. <b>Importance:</b> the weight is X/2, so Var = ¼ Var<sub>q</sub>[X] = ¼(E<sub>q</sub>[X²] − E<sub>q</sub>[X]²), with E<sub>q</sub>[X] = ∫₀¹ x · 2x dx = 2/3 and E<sub>q</sub>[X²] = ∫₀¹ x² · 2x dx = 1/2: ¼(1/2 − 4/9) = ¼ · 1/18 = <b>1/72 = 0.0139</b>. Ratio (4/45)/(1/72) = 288/45 = <b>6.4</b> in variance, so √6.4 ≈ <b>2.5</b> times smaller typical error for the same N. With N = 100: ±√(0.0889/100) = ±0.0298 against ±√(0.0139/100) = ±0.0118.</p>`)}
+    <p>Slide 31 checks this by repeating each estimate 5,000 times with N = 100: plain spread ±0.0301 (formula ±0.0298), importance ±0.0117 (formula ±0.0118), both centred on 1/3. The explorer below repeats it in your browser. The deck notes that the recording gives the factor as “seven or eight”, then “six or seven”; the exact value is 6.4. It also notes that the lecture calls this type of question a favourite for the exam, and the summary slide repeats it as an exam tip: given an integral and a proposal q, compute the variance of the estimator.</p>
+    ${lab("isd", "3,000 repeated estimates of ∫x² dx", "Each run computes one estimate from N samples; the two histograms show how the 3,000 estimates scatter for plain Monte Carlo (orange) and for importance sampling with q = 2x (green). Both use the same uniform numbers. Change <b>N</b> and compare the observed spread with the formula.")}
+    ${tryit([
+      ["Compute the variance of plain Monte Carlo for ∫₀¹ x dx with N samples, and of importance sampling with q(x) = 2x.", `<p>Plain: Var[X] = 1/3 − 1/4 = 1/12, so <b>1/(12N)</b>. Importance: weight x/(2x) = 1/2, constant, so <b>variance 0</b>: q = 2x is the perfect proposal for f = x (F = 1/2, q = f/F).</p>`],
+      ["For ∫₀¹ x³ dx = 1/4, use q(x) = 2x. What is the weight, how do you draw from q, and what is the variance per sample?", `<p>Weight x³/(2x) = x²/2; draw x = √u. Var<sub>q</sub>[X²/2] = ¼(E<sub>q</sub>[X⁴] − E<sub>q</sub>[X²]²) = ¼(∫ 2x⁵ dx − (1/2)²) = ¼(1/3 − 1/4) = <b>1/48 ≈ 0.0208</b>. Plain: 1/7 − 1/16 = 9/112 ≈ 0.0804, so importance sampling wins by 3.9.</p>`],
+      ["One sample from q = 3x² is x = 0.7. What estimate of ∫₀¹ x² dx does it give?", `<p>Weight 0.49/(3 · 0.49) = <b>1/3</b>, exactly; any sample gives 1/3.</p>`],
+    ])}
+
+    <h2>${H.bad} (slide 32)</h2>
+    ${plain("Importance sampling can also hurt. If q is small where f is large, the rare samples that land there get enormous weights, the variance becomes infinite, and the estimate converges in jumps with no error bar. The deck marks this example as its own addition, not part of the lecture.")}
+    <p>Take q(x) = 2(1 − x): it favours small x, where f = x² is small. The weight is w(x) = x²/(2(1 − x)), and</p>
+    <div class="formula">${fx(String.raw`\mathbb E_q[w^2] = \int_0^1 \frac{x^4}{4(1-x)^2}\,2(1-x)\,dx = \int_0^1 \frac{x^4}{2(1-x)}\,dx = \infty`, "E_q[w²] = ∫₀¹ x⁴/(2(1 − x)) dx = ∞")}</div>
+    <p>because 1/(1 − x) is not integrable at x = 1. So the weights have infinite variance: there is no error bar. The law of large numbers still holds (the mean E<sub>q</sub>[w] = 1/3 is finite), so the estimate converges, but in jumps; slide 32 shows three runs leaping above 2 before settling, while uniform sampling is smooth.</p>
+    ${ex("Worked example: one unlucky sample", `<p>Under q a sample beyond 0.99 has probability ∫<sub>0.99</sub><sup>1</sup> 2(1 − x) dx = 0.01² = 1 in 10,000. At x = 0.99, q = 0.02 and the weight is 0.9801/0.02 = <b>49</b>. In a run of N = 100 whose other weights are around 0.3, this single sample shifts the average by about 49/100 ≈ 0.49, more than the answer 1/3 itself.</p>`)}
+    <p>Rule: q must not be much smaller than f anywhere. When unsure, pick a q more spread out than f.</p>
+
+    <h2>${H.sum} (slides 33–35)</h2>
+    <p>The recipe in four steps: a problem (an integral, an area, a probability) → rewrite it as an expectation E[g(X)] for some density → average g over N i.i.d. samples → attach the error bar σ/√N. Strengths: it only needs to evaluate the function, its error rate does not depend on the dimension, and the law of large numbers guarantees it. Weakness: the error shrinks only like 1/√N, so each digit costs 100 times more samples. Faster: importance sampling with q shaped like f, and more variance reduction next lecture, including the Rao–Blackwell method.</p>
+    <div class="tt-wrap"><table class="tt fs">
+      <tr><th>π by random points</th><td><span class="f">${fx(String.raw`\pi \approx 4\,\tfrac{\#\text{inside}}{N}`, "π ≈ 4 · inside/N")}</span></td></tr>
+      <tr><th>Law of large numbers</th><td><span class="f">${fx(String.raw`\bar X_N = \tfrac1N\textstyle\sum X_i \to \mu`, "X̄_N → μ")}</span></td></tr>
+      <tr><th>Spread of an average</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\bar X_N] = \sigma^2/N,\ \ \text{spread } \sigma/\sqrt N`, "Var[X̄_N] = σ²/N, spread σ/√N")}</span></td></tr>
+      <tr><th>Chebyshev</th><td><span class="f">${fx(String.raw`P(|\bar X_N - \mu| > \varepsilon) \le \sigma^2/(N\varepsilon^2)`, "P(|X̄_N − μ| > ε) ≤ σ²/(Nε²)")}</span></td></tr>
+      <tr><th>Integral as expectation</th><td><span class="f">${fx(String.raw`\int_a^b f\,dx = (b-a)\,\mathbb E[f(X)],\ X\sim\mathcal U(a,b)`, "∫ f dx = (b − a) E[f(X)]")}</span></td></tr>
+      <tr><th>Monte Carlo estimator</th><td><span class="f">${fx(String.raw`\theta_N = \tfrac{b-a}{N}\textstyle\sum f(x_i)`, "θ_N = (b − a)/N Σ f(x_i)")}</span></td></tr>
+      <tr><th>Its variance</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\theta_N] = (b-a)^2\,\mathrm{Var}[f(X)]/N`, "Var[θ_N] = (b − a)² Var[f(X)]/N")}</span></td></tr>
+      <tr><th>Importance sampling</th><td><span class="f">${fx(String.raw`\theta_N = \tfrac1N\textstyle\sum f(x_i)/q(x_i),\ x_i\sim q`, "θ_N = (1/N) Σ f(x_i)/q(x_i)")}</span></td></tr>
+      <tr><th>Its variance</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\theta_N] = \tfrac1N\,\mathrm{Var}_q[f(X)/q(X)]`, "Var[θ_N] = (1/N) Var_q[f/q]")}</span></td></tr>
+      <tr><th>Perfect proposal (f ≥ 0)</th><td><span class="f">${fx(String.raw`q = f/F \Rightarrow \mathrm{Var}[\theta_N] = 0`, "q = f/F ⇒ Var = 0")}</span></td></tr></table></div>
+
+    <h2>Take-home (slide 36)</h2>
+    <ul>
+      <li><b>What is Monte Carlo?</b> Write the answer as an expectation, then average i.i.d. random samples.</li>
+      <li><b>Why does it work?</b> The law of large numbers: averages of i.i.d. samples settle on the mean. It needs a finite mean; Cauchy samples (the spinning laser) break it.</li>
+      <li><b>How accurate is it?</b> The typical error is σ/√N: 100 times more samples for 10 times more accuracy.</li>
+      <li><b>When is it the right tool?</b> In many dimensions: grids need (points per axis)<sup>m</sup> points, Monte Carlo's rate does not depend on m.</li>
+      <li><b>How do you make it better?</b> Importance sampling: draw from q, average the weights f/q; a q shaped like f shrinks the error (6.4× in variance for x² with q = 2x).</li>
+      <li><b>What can go wrong?</b> q ∝ f is perfect but needs the answer; a q much smaller than f somewhere is worse than uniform (infinite variance).</li>
+    </ul>
+    <p class="muted">The tutorial on this lecture's material had no notebook in OPAL yet on 17 Nov; the tutorial of 12 Nov (${exeLink(3, "tutorial 3")}) practised Markov chains from ${lecLink(3, "lecture 3")}. Next: ${lecLink(5, "lecture 5")} (23 Nov), variance and variance reduction. Slides: OPAL → Lecture2026 → SMS4.pdf (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
+const LABS = { pi: initPi, ou: initOu, count: initCount, bayes: initBayes, newton: initNewton, ar: initAr, mc: initMc, pow: initPow, rw: initRw, lln4: initLln4, dims: initDims, isd: initIsd };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;

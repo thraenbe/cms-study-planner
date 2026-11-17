@@ -54,6 +54,9 @@
 .sap .try-a p, .sap .try-q p { margin: 0 0 .35rem; }
 .sap .lab-note { font-size: .9rem; color: var(--ink-2); margin: 0 0 10px; }
 .sap .readas { color: var(--ink-3); font-size: .92em; }
+/* Tutorial 3: state diagram next to its matrix in the chain classifier (stacked on phones). */
+.sap .cls-grid { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 14px; align-items: center; margin-bottom: 6px; }
+@media (max-width: 600px) { .sap .cls-grid { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body class="sap">
@@ -1025,8 +1028,384 @@ end`, `<p><code>Float64[]</code> is an empty vector for 64-bit decimal numbers. 
     <p class="muted">Material: OPAL → Exercises2026 → SMS_T02.jl (notebook dated 5 Nov). Lecture it belongs to: ${lecLink(2, "lecture 2")}. Previous: ${exeLink(1, "tutorial 1")}. Next tutorial: ${exeLink(3, "tutorial 3")} (12 Nov).</p>`;
 }
 
-const WRITEUPS = { 1: exercise1, 2: exercise2 };
-const LABS = { lln: initLln, clt: initClt, lcg: initLcg, pq: initPq, tr: initTr, inv: initInv, bm: initBm };
+// ================= Tutorial 3 · Discrete-time Markov chains (Pluto notebook SMS_T03, 12 Nov) =================
+// Lecture 3 sections the tutorial links to (ids follow lecture.html's heading slugs).
+Object.assign(SEC, {
+  proc: [3, "s-stochastic-processes-states-and-state-spaces", "Stochastic processes, states and state spaces"], mat: [3, "s-the-transition-matrix", "The transition matrix"],
+  rec: [3, "s-a-markov-chain-is-a-recursion-driven-by-i-i-d-noise", "A Markov chain is a recursion driven by i.i.d. noise"], ck: [3, "s-n-steps-chapman-kolmogorov", "n steps: Chapman–Kolmogorov"],
+  abs: [3, "s-closed-sets-and-absorbing-states", "Closed sets and absorbing states"], erg: [3, "s-irreducible-periodic-ergodic", "Irreducible, periodic, ergodic"],
+  stat: [3, "s-stationary-distributions", "Stationary distributions"], samp: [3, "s-sampling-with-markov-chains", "Sampling with Markov chains"],
+});
+// The notebook's chains: the bicycle between three stations, the Dresden summer weather (DWD counts 1960–2025) and the
+// small example chains of section 7 (state numbers as in the notebook).
+const BIKE = [[0.6, 0.25, 0.15], [0.35, 0.5, 0.15], [0.2, 0.2, 0.6]], BN = ["Altmarkt", "Campus", "Neustadt"], BPI = [68 / 165, 52 / 165, 45 / 165];
+const WEA = [[2993 / 4035, 1042 / 4035], [1043 / 1880, 837 / 1880]];
+const mm = (A, B) => A.map(r => B[0].map((_, j) => r.reduce((s, v, k) => s + v * B[k][j], 0)));
+const vm = (v, P) => P[0].map((_, j) => v.reduce((s, x, k) => s + x * P[k][j], 0));
+const CH3 = {
+  bike: { name: "bicycle chain", P: BIKE, S: BN },
+  weather: { name: "Dresden summer weather", P: WEA, S: ["Sun", "Rain"] },
+  A: { name: "an absorbing state", P: [[0.5, 0.3, 0.2], [0.3, 0.5, 0.2], [0, 0, 1]] },
+  A2: { name: "a closed set of two states", P: [[0.4, 0.3, 0.3], [0, 0.5, 0.5], [0, 0.6, 0.4]] },
+  B: { name: "chain B: two islands", P: [[0.7, 0.3, 0, 0], [0.4, 0.6, 0, 0], [0, 0, 0.5, 0.5], [0, 0, 0.2, 0.8]] },
+  C: { name: "chain C: 1 ⇄ 2 ⇄ 3", P: [[0, 1, 0], [0.5, 0, 0.5], [0, 1, 0]] },
+  D: { name: "chain D: no self-loops", P: [[0, 0.7, 0.3], [0.5, 0, 0.5], [0.6, 0.4, 0]] },
+  E: { name: "chain E: two periodic islands", P: [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]] },
+  swap: { name: "swap 1 ⇄ 2", P: [[0, 1], [1, 0]] },
+  cyc: { name: "cycle 1 → 2 → 3 → 1", P: [[0, 1, 0], [0, 0, 1], [1, 0, 0]] },
+};
+// Classification: communicating classes, closed classes, period of each state, stationary distribution of each closed class.
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+function classify(P) {
+  const n = P.length, reach = P.map((_, i) => { const seen = new Set([i]), st = [i]; while (st.length) { const u = st.pop(); P[u].forEach((p, v) => { if (p > 0 && !seen.has(v)) { seen.add(v); st.push(v); } }); } return seen; });
+  const cls = [], done = new Set();
+  for (let i = 0; i < n; i++) { if (done.has(i)) continue; const c = [...reach[i]].filter(j => reach[j].has(i)).sort((a, b) => a - b); c.forEach(j => done.add(j)); cls.push(c); }
+  const closed = cls.filter(c => c.every(i => P[i].every((p, j) => p === 0 || c.includes(j))));
+  let M = P.map((_, i) => P.map((_, j) => +(i === j))); const per = new Array(n).fill(0);
+  for (let k = 1; k <= 4 * n * n; k++) { M = mm(M, P); for (let i = 0; i < n; i++) if (M[i][i] > 1e-12) per[i] = gcd(per[i], k); }
+  const stat = closed.map(c => { let v = c.map(() => 1 / c.length); const Q = c.map(i => c.map(j => P[i][j]));
+    for (let k = 0; k < 4000; k++) { const w = vm(v, Q); v = v.map((x, j) => (x + w[j]) / 2); } const full = new Array(n).fill(0); c.forEach((i, k) => full[i] = v[k]); return full; });
+  return { cls, closed, per, stat, irr: cls.length === 1, aper: per.every(d => d === 1) };
+}
+// State diagram: nodes at unit positions, one curved arrow per positive entry (width grows with the probability), self-loops outward.
+const POS = { 2: [[0.25, 0.5], [0.75, 0.5]], 3: [[0.2, 0.72], [0.8, 0.72], [0.5, 0.22]], 4: [[0.2, 0.25], [0.2, 0.75], [0.8, 0.25], [0.8, 0.75]] };
+function diagram(P, names, W, H, id, posOverride, nameOff) {
+  const n = P.length, pos = (posOverride || POS[n]).map(([x, y]) => [x * W, y * H]), R = 21;
+  const cx = pos.reduce((s, p) => s + p[0], 0) / n, cy = pos.reduce((s, p) => s + p[1], 0) / n;
+  const halo = 'style="paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round"';
+  let edges = "", labels = "";
+  P.forEach((row, i) => row.forEach((p, j) => {
+    if (!(p > 0)) return;
+    const tip = esc(`<b>${names[i]} → ${names[j]}</b>P<sub>${i + 1}${j + 1}</sub> = ${num(p, 3)}`), sw = (1 + 3 * p).toFixed(1);
+    if (i === j) {
+      let dx = pos[i][0] - cx, dy = pos[i][1] - cy, L = Math.hypot(dx, dy); if (L < 1) { dx = 0; dy = -1; L = 1; } dx /= L; dy /= L;
+      const lx = pos[i][0] + dx * (R + 11), ly = pos[i][1] + dy * (R + 11);
+      edges += `<g class="pt" tabindex="0" data-tip="${tip}"><circle cx="${lx}" cy="${ly}" r="13" style="fill:none;stroke:var(--ink-3);stroke-width:${sw}"/></g>`;
+      labels += `<text class="tick" x="${pos[i][0] + dx * (R + 36)}" y="${pos[i][1] + dy * (R + 36) + 4}" text-anchor="middle" ${halo}>${num(p, 2)}</text>`;
+      return;
+    }
+    const [x1, y1] = pos[i], [x2, y2] = pos[j], d = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / d, uy = (y2 - y1) / d, px = -uy, py = ux, bend = 0.16 * d;
+    const sx = x1 + ux * R + px * 6, sy = y1 + uy * R + py * 6, ex = x2 - ux * (R + 3) + px * 6, ey = y2 - uy * (R + 3) + py * 6;
+    const qx = (x1 + x2) / 2 + px * bend, qy = (y1 + y2) / 2 + py * bend, mx = 0.25 * sx + 0.5 * qx + 0.25 * ex, my = 0.25 * sy + 0.5 * qy + 0.25 * ey;
+    edges += `<g class="pt" tabindex="0" data-tip="${tip}"><path d="M${sx.toFixed(1)},${sy.toFixed(1)} Q${qx.toFixed(1)},${qy.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}" style="fill:none;stroke:var(--ink-3);stroke-width:${sw}" marker-end="url(#ah-${id})"/></g>`;
+    labels += `<text class="tick" x="${(mx + px * 10).toFixed(1)}" y="${(my + py * 10 + 4).toFixed(1)}" text-anchor="middle" ${halo}>${num(p, 2)}</text>`;
+  }));
+  const nodes = pos.map(([x, y], i) => { const s = Math.min(i + 1, 4), o = nameOff && nameOff[i];
+    return `<circle cx="${x}" cy="${y}" r="${R}" style="fill:color-mix(in srgb, var(--vz-s${s}) 22%, var(--surface));stroke:var(--vz-s${s});stroke-width:2"/><text x="${x}" y="${y + 5}" text-anchor="middle" style="fill:var(--ink);font-size:14px;font-weight:650">${names[i].length > 2 ? names[i][0] : names[i]}</text>${o ? `<text class="cat" x="${x + o[0]}" y="${y + o[1]}" text-anchor="${o[2]}" style="fill:var(--ink-2)">${names[i]}</text>` : ""}`; }).join("");
+  return `<defs><marker id="ah-${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ink-3)"/></marker></defs>${edges}${nodes}${labels}`;
+}
+CHARTS.bike = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 300 : 320;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="State diagram of the bicycle chain. Altmarkt stays with 0.60, goes to Campus with 0.25 and to Neustadt with 0.15. Campus goes to Altmarkt with 0.35, stays with 0.50, goes to Neustadt with 0.15. Neustadt goes to Altmarkt with 0.20, to Campus with 0.20 and stays with 0.60.">${diagram(BIKE, BN, W, H, "bike", [[0.2, 0.7], [0.8, 0.7], [0.5, 0.26]], [[0, 40, "middle"], [0, 40, "middle"], [30, 5, "start"]])}</svg>`;
+};
+// Explorer: one step by inversion of the current row, and a ten-day path from the same rule (sections 3.1–3.2).
+const RW3 = { i: 0, u: 0.73, seed: 1 };
+const pick3 = (row, u) => { let c = 0; for (let j = 0; j < row.length; j++) { c += row[j]; if (u < c) return j; } return row.length - 1; };
+function rowOut() {
+  const row = BIKE[RW3.i], W = 560, H = 96, L = 10, R = 10, PW = W - L - R; let c = 0;
+  const segs = row.map((p, j) => { const x0 = L + c * PW, w = p * PW, a = c; c += p; return `<rect x="${x0 + 1}" y="22" width="${w - 2}" height="34" rx="4" style="fill:color-mix(in srgb, var(--vz-s${j + 1}) 30%, var(--surface));stroke:var(--vz-s${j + 1});stroke-width:1.5"/><text class="tick" x="${x0 + w / 2}" y="44" text-anchor="middle" style="fill:var(--ink)">${w > 90 ? BN[j] : BN[j][0]} ${num(p, 2)}</text><text class="tick" x="${x0 + 2}" y="72" text-anchor="${a ? "middle" : "start"}">${num(a, 2)}</text>`; }).join("");
+  const j = pick3(row, RW3.u), ux = L + RW3.u * PW;
+  const r = mulberry(RW3.seed * 7919 + 3); let x = RW3.i; const steps = [];
+  for (let d = 1; d <= 10; d++) { const u = r(), y = pick3(BIKE[x], u); steps.push([d, x, u, y]); x = y; }
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="The row of ${BN[RW3.i]} laid out on the interval from 0 to 1 in pieces of lengths ${row.join(", ")}; u = ${RW3.u} falls into the piece of ${BN[j]}.">${segs}<text class="tick" x="${W - R}" y="72" text-anchor="end">1</text>
+      <line x1="${ux}" x2="${ux}" y1="12" y2="62" style="stroke:var(--ink);stroke-width:2"/><text class="note" x="${Math.min(Math.max(ux, 40), W - 40)}" y="10" text-anchor="middle">u = ${num(RW3.u, 2)}</text>
+      <text class="note" x="${L}" y="${H - 6}">row of ${BN[RW3.i]}: [0, 1) cut into pieces of lengths P<tspan dy="3" font-size="9">${RW3.i + 1}j</tspan></text></svg>
+    <dl class="ro"><dt>One step</dt><dd>u = ${num(RW3.u, 2)} lies in the piece of <b>${BN[j]}</b>, so tomorrow the bicycle is at ${BN[j]}.</dd></dl>
+    <div class="tt-wrap"><table class="tt compact"><tr><th>day</th><th>today</th><th>uniform u</th><th>tomorrow</th></tr>${steps.map(([d, a, u, b]) => `<tr><th>${d}</th><td>${BN[a]}</td><td>${num(u, 3)}</td><td>${key(b + 1)} ${BN[b]}</td></tr>`).join("")}</table></div>`;
+}
+function initRow(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${BN.map((s, i) => `<button class="preset" type="button" data-i="${i}" aria-pressed="${i === RW3.i}">${s}</button>`).join("")}</span>
+      <label>u <input type="range" min="0.01" max="0.99" step="0.01" value="${RW3.u}"> <output>${RW3.u}</output></label><button class="preset" type="button" data-new="1">New path</button></div><div class="out"></div>`;
+  const r = body.querySelector("input"), o = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { o.textContent = num(RW3.u, 2); body.querySelectorAll("[data-i]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.i === RW3.i)); out.innerHTML = rowOut(); };
+  body.querySelectorAll("[data-i]").forEach(b => b.addEventListener("click", () => { RW3.i = +b.dataset.i; draw(); }));
+  r.addEventListener("input", () => { RW3.u = +r.value; draw(); }); body.querySelector("[data-new]").addEventListener("click", () => { RW3.seed++; draw(); }); draw();
+}
+// Explorer: π_n = π₀ Pⁿ for 300 bicycles over 20 days, from a chosen start (sections 5–6).
+const FL = { k: "N" };
+const FLS = { A: ["all at Altmarkt", [1, 0, 0]], C: ["all at Campus", [0, 1, 0]], N: ["all at Neustadt", [0, 0, 1]], U: ["100 at each", [1 / 3, 1 / 3, 1 / 3]] };
+function flowOut() {
+  const pis = [FLS[FL.k][1]]; for (let n = 1; n <= 20; n++) pis.push(vm(pis[n - 1], BIKE));
+  const W = 560, H = 230, L = 36, R = 74, T = 12, B = 26, PW = W - L - R, PH = H - T - B, x = n => L + n / 20 * PW, y = v => T + PH - v * PH;
+  const lines = [0, 1, 2].map(j => `<line x1="${L}" x2="${W - R}" y1="${y(BPI[j])}" y2="${y(BPI[j])}" style="stroke:var(--vz-s${j + 1});stroke-width:1;stroke-dasharray:4 3;opacity:.8"/><path class="line" style="stroke:var(--vz-s${j + 1});stroke-width:2.2" d="M${pis.map((v, n) => `${x(n).toFixed(1)},${y(v[j]).toFixed(1)}`).join(" L")}"/><text class="note" x="${W - R + 6}" y="${y(pis[20][j]) + (j === 1 ? -2 : j === 2 ? 10 : 4)}">${BN[j]}</text>`).join("");
+  const rows = [0, 1, 2, 3, 5, 10, 20];
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Probability of each station over 20 days, starting ${FLS[FL.k][0]}; all three curves settle on the dashed stationary values 0.412, 0.315 and 0.273 within about six days.">
+      ${[0, 0.25, 0.5, 0.75, 1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+      ${[0, 5, 10, 15, 20].map(n => `<text class="tick" x="${x(n)}" y="${H - 8}" text-anchor="middle">day ${n}</text>`).join("")}${lines}</svg>
+    <div class="tt-wrap"><table class="tt compact"><tr><th>day n</th>${BN.map((s, j) => `<th>${key(j + 1)} ${s}</th>`).join("")}<th>bicycles of 300</th></tr>${rows.map(n => `<tr><th>${n}</th>${pis[n].map(v => `<td>${num(v, 4)}</td>`).join("")}<td>${pis[n].map(v => num(300 * v, 1)).join(" · ")}</td></tr>`).join("")}
+      <tr><th>π</th>${BPI.map(v => `<td>${num(v, 4)}</td>`).join("")}<td>${BPI.map(v => num(300 * v, 1)).join(" · ")}</td></tr></table></div>`;
+}
+function initFlow(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${Object.entries(FLS).map(([k, [t]]) => `<button class="preset" type="button" data-k="${k}" aria-pressed="${k === FL.k}">${t}</button>`).join("")}</span></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === FL.k)); out.innerHTML = flowOut(); };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { FL.k = b.dataset.k; draw(); })); draw();
+}
+// Explorer: classify a chain (closed sets, irreducible, periods, ergodic, stationary distributions) and follow π_n from a start (section 7).
+const CLS = { k: "A", s: 0 };
+function clsOut() {
+  const ch = CH3[CLS.k], P = ch.P, n = P.length, S = ch.S || P.map((_, i) => String(i + 1)), c = classify(P), s = Math.min(CLS.s, n - 1);
+  const pis = [P.map((_, i) => +(i === s))]; for (let k = 1; k <= 20; k++) pis.push(vm(pis[k - 1], P));
+  const W = 560, H = 190, L = 36, R = 16, T = 10, B = 24, PW = W - L - R, PH = H - T - B, x = k => L + k / 20 * PW, y = v => T + PH - v * PH;
+  const plot = `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Probability of each state over 20 steps, starting in state ${S[s]}.">${[0, 0.5, 1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("")}
+      ${[0, 5, 10, 15, 20].map(k => `<text class="tick" x="${x(k)}" y="${H - 6}" text-anchor="middle">step ${k}</text>`).join("")}${P.map((_, j) => `<path class="line" style="stroke:var(--vz-s${Math.min(j + 1, 4)});stroke-width:2${j > 3 ? ";stroke-dasharray:5 4" : ""}" d="M${pis.map((v, k) => `${x(k).toFixed(1)},${y(v[j]).toFixed(1)}`).join(" L")}"/>`).join("")}</svg>`;
+  const set = a => `{${a.map(i => S[i]).join(", ")}}`, vec = v => `(${v.map(z => num(z, 3)).join(", ")})`;
+  const verdict = c.irr && c.aper ? flag("ok", "ergodic: one stationary distribution, reached from every start") : c.irr ? flag("bad", "irreducible but periodic: one stationary distribution, π<sub>n</sub> oscillates") : c.closed.length > 1 ? flag("bad", "not irreducible: several closed sets, the long run depends on the start") : flag("bad", "not irreducible: one closed set traps the chain");
+  return `<div class="cls-grid"><svg viewBox="0 0 300 220" class="lab-svg" role="img" aria-label="State diagram of ${ch.name}.">${diagram(P, S, 300, 220, "cls-" + CLS.k)}</svg>
+      <div class="tt-wrap"><table class="tt compact"><tr><th>from \\ to</th>${S.map((t, j) => `<th>${key(Math.min(j + 1, 4))} ${t}</th>`).join("")}</tr>${P.map((r, i) => `<tr><th>${S[i]}</th>${r.map(v => `<td>${v ? num(v, 3) : "·"}</td>`).join("")}</tr>`).join("")}</table></div></div>
+    <dl class="ro"><dt>Classes</dt><dd>${c.cls.map(set).join(", ")} (states that reach each other)</dd><dt>Closed sets</dt><dd>${c.closed.map(set).join(" and ")}${c.closed.some(a => a.length === 1) ? ` · absorbing: ${c.closed.filter(a => a.length === 1).map(a => S[a[0]]).join(", ")}` : ""}</dd>
+      <dt>Periods</dt><dd>${c.per.map((d, i) => `${S[i]}: ${d}`).join(" · ")}</dd><dt>Stationary</dt><dd>${c.stat.map(vec).join(" and ")}${c.stat.length > 1 ? " (and every mixture of them)" : ""}</dd><dt>Verdict</dt><dd>${verdict}</dd></dl>
+    <div class="ctl"><label>Start in state <select>${S.map((t, i) => `<option value="${i}"${i === s ? " selected" : ""}>${t}</option>`).join("")}</select></label></div>${plot}`;
+}
+function initCls(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${Object.entries(CH3).map(([k, ch]) => `<button class="preset" type="button" data-k="${k}" aria-pressed="${k === CLS.k}">${ch.name}</button>`).join("")}</span></div><div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const draw = () => { body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === CLS.k)); out.innerHTML = clsOut();
+    out.querySelector("select").addEventListener("change", ev => { CLS.s = +ev.target.value; draw(); }); };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { CLS.k = b.dataset.k; CLS.s = 0; draw(); })); draw();
+}
+// Mixing (section 8): largest gap between π_n and the limiting distribution, bicycle chain from Neustadt against the
+// notebook's six-state Chain 2 (two triangles joined by a 0.01 bridge) from state 1. Computed here.
+const CH2 = (() => { const P = Array.from({ length: 6 }, () => new Array(6).fill(0)); for (const g of [0, 3]) for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) P[g + i][g + j] = 1 / 3;
+  P[2][2] -= 0.01; P[2][3] = 0.01; P[3][3] -= 0.01; P[3][2] = 0.01; return P; })();
+const gapRun = (P, start, pi, N) => { let v = P.map((_, i) => +(i === start)); const out = [Math.max(...v.map((z, j) => Math.abs(z - pi[j])))]; for (let k = 1; k <= N; k++) { v = vm(v, P); out.push(Math.max(...v.map((z, j) => Math.abs(z - pi[j])))); } return out; };
+const GAPB = gapRun(BIKE, 2, BPI, 1024), GAP2 = gapRun(CH2, 0, new Array(6).fill(1 / 6), 1024);
+const firstBelow = a => a.findIndex(v => v < 0.01);
+line("mix", {
+  x: [1, 1024], y: [0, 0.9], xTicks: [1, 4, 16, 64, 256, 1024], yTicks: [0, 0.3, 0.6, 0.9], yTitle: "largest gap to the limit",
+  series: [{ slot: 1, name: "bicycle chain, start Neustadt", short: "bicycle", f: v => GAPB[Math.round(v)], labelAt: 3 },
+    { slot: 2, name: "Chain 2 (six states), start 1", short: "Chain 2", f: v => GAP2[Math.round(v)], labelAt: 150 }],
+  tipHead: v => `after ${Math.round(v)} step${Math.round(v) > 1 ? "s" : ""}`, fmtY: v => num(v, 4), focusAt: 4, labelW: 20,
+  extra: g => `<line class="ann" x1="${g.x(firstBelow(GAPB))}" x2="${g.x(firstBelow(GAPB))}" y1="${g.T}" y2="${g.T + g.PH}" stroke-dasharray="4 3"/><text class="note" x="${g.x(firstBelow(GAPB)) + 4}" y="${g.T + 10}">${firstBelow(GAPB)} steps</text><line class="ann" x1="${g.x(firstBelow(GAP2))}" x2="${g.x(firstBelow(GAP2))}" y1="${g.T}" y2="${g.T + g.PH}" stroke-dasharray="4 3"/><text class="note" x="${g.x(firstBelow(GAP2)) - 4}" y="${g.T + 10}" text-anchor="end">${firstBelow(GAP2)} steps</text>`,
+  hitLabel: "Read the gap between the distribution after n steps and the limiting distribution: arrow keys double or halve n",
+  aria: `Line chart of the largest gap between the distribution after n steps and the limiting distribution, n from 1 to 1024 on a log scale. The bicycle chain from Neustadt falls below 0.01 after ${firstBelow(GAPB)} steps; Chain 2 from state 1 drops to about 0.17 after one step, then shrinks only slowly and falls below 0.01 only after ${firstBelow(GAP2)} steps.`,
+});
+
+const GLOSS3 = {
+  pluto: ["Pluto notebook", "A Julia document that runs in the browser: text, code and interactive figures in one page. Tutorial 3 is the file SMS_T03.jl."],
+  julia: ["Julia", "The programming language of the notebooks. This page can be read without running anything."],
+  process: ["discrete-time stochastic process", "A sequence X₀, X₁, X₂, … of random variables, one per time step n. “Stochastic” means random."],
+  state: ["state", "The value x<sub>n</sub> of X<sub>n</sub>: where the process is at time n. x₀ is the initial state."],
+  space: ["state space S", "The set of all possible states. Discrete if the states can be listed (a die: {1, …, 6}), continuous if they fill an interval (rain in mm: [0, ∞))."],
+  memory: ["memory", "How much of the past the distribution of the next state depends on: none (i.i.d.), the present state only (Markov), or the whole past."],
+  iid: ["i.i.d. process", "Independent and identically distributed: every X<sub>n</sub> has the same distribution p and ignores the past. A path has probability p(x₀) p(x₁) ⋯ p(x<sub>n</sub>)."],
+  chainrule: ["chain rule", "P(X₀ = x₀, …, X<sub>n</sub> = x<sub>n</sub>) = P(X₀ = x₀) × the product of P(next | everything before) over all steps. True for every process."],
+  cond: ["conditional probability P(A | B)", "Read “A given B”: the probability of A once B is known, P(A ∩ B)/P(B)."],
+  markov: ["Markov chain", "A process whose next state depends only on the present state, not on how it got there (one step of memory)."],
+  tp: ["transition probability P<sub>ij</sub>", "P(X<sub>n+1</sub> = j | X<sub>n</sub> = i): the probability of moving from state i to state j in one step. Bicycle: P(Campus → Neustadt) = 0.15."],
+  path: ["probability of a path", "For a Markov chain: the start probability times the transition probabilities along the path, P(x₀) P<sub>x₀x₁</sub> ⋯ P<sub>x<sub>n−1</sub>x<sub>n</sub></sub>."],
+  diagram: ["state diagram", "A picture of a chain: one circle per state, one arrow per possible transition, labelled with its probability."],
+  matrix: ["transition matrix P", "The m × m table of all P<sub>ij</sub>: row = present state, column = next state. Every row sums to 1."],
+  rowsum: ["row sum 1", "Row i of P is the distribution of the next state given state i, so its entries add up to 1. Columns need not."],
+  twostate: ["two-state chain", "Determined by a = P₁₂ and b = P₂₁. Its stationary distribution is (b, a)/(a + b); if a + b = 1 both rows are equal and the chain is i.i.d."],
+  inversion: ["inversion (discrete)", "Cut [0, 1) into pieces of lengths P<sub>i1</sub>, P<sub>i2</sub>, …; a uniform u selects the state whose piece contains it. Each state is chosen with probability equal to its piece's length."],
+  uniform: ["uniform number u", "A random number spread evenly on [0, 1): the chance to fall into a piece is the piece's length. <code>rand()</code> in Julia."],
+  recursion: ["recursion X<sub>n+1</sub> = f(X<sub>n</sub>, U<sub>n</sub>)", "Every Markov chain can be simulated this way: f(i, u) is the inversion of row i, and the U<sub>n</sub> are fresh i.i.d. uniform numbers."],
+  cumsum: ["cumulative sum", "The running totals of a list: cumsum((0.6, 0.25, 0.15)) = (0.6, 0.85, 1.0). They are the right ends of the inversion pieces."],
+  estimate: ["estimated transition matrix P̂", "From observed counts C<sub>ij</sub> (how often i was followed by j): divide each row by its row total, P̂<sub>ij</sub> = C<sub>ij</sub> / Σ<sub>k</sub> C<sub>ik</sub>."],
+  enlarge: ["enlarged state", "Turning a process with memory of k steps into a Markov chain by taking the last k values together as the state, e.g. (yesterday, today)."],
+  total: ["law of total probability", "P(A) = Σ<sub>k</sub> P(A | B<sub>k</sub>) P(B<sub>k</sub>): split into cases, weight each by its probability, add."],
+  nstep: ["n-step transition probability P<sup>(n)</sup><sub>ij</sub>", "P(X<sub>n</sub> = j | X₀ = i): the probability of being in j exactly n steps after being in i, summed over all paths."],
+  ck: ["Chapman–Kolmogorov equation", "P<sup>(m+n)</sup> = P<sup>(m)</sup> P<sup>(n)</sup>, so P<sup>(n)</sup> = Pⁿ: n steps are a matrix power."],
+  matmul: ["matrix product", "(AB)<sub>ij</sub> = Σ<sub>k</sub> A<sub>ik</sub> B<sub>kj</sub>: row i of A times column j of B, entry by entry, added up."],
+  dist: ["distribution row vector π<sub>n</sub>", "(P(X<sub>n</sub> = 1), …, P(X<sub>n</sub> = m)): where the chain is on day n, as probabilities. Updated by π<sub>n+1</sub> = π<sub>n</sub> P."],
+  stationary: ["stationary distribution π", "A distribution with π P = π (and entries summing to 1): a chain started in π stays in π forever."],
+  limiting: ["limiting distribution Π", "The limit of (Pⁿ)<sub>jk</sub> as n → ∞ when it exists and does not depend on the start j: the chain forgets where it started."],
+  closed: ["closed set", "A set of states that no arrow leaves: once inside, the chain stays inside."],
+  absorbing: ["absorbing state", "A closed set of one state: P<sub>ii</sub> = 1. P<sub>ii</sub> = 0.99 is not absorbing."],
+  irreducible: ["irreducible", "Every state can be reached from every other state, possibly in several steps; the whole state space is the only closed set. Then there is exactly one stationary distribution."],
+  period: ["period", "The largest d such that returns to a state are possible only after multiples of d steps. A swap 1 ⇄ 2 has period 2."],
+  aperiodic: ["aperiodic", "Period 1. A self-loop (P<sub>ii</sub> > 0) makes a state aperiodic, but chains without self-loops can be aperiodic too (chain D)."],
+  ergodic: ["ergodic", "Irreducible and aperiodic. An ergodic chain has a limiting distribution, equal to its unique stationary distribution."],
+  mixing: ["mixing time", "The number of steps after which π<sub>n</sub> is within a tolerance (here 0.01 in every entry) of the limiting distribution."],
+  burnin: ["burn-in", "The first steps of a simulated chain, before the mixing time, which still depend on the start and are discarded."],
+  findfirst: ["findfirst", "Julia: <code>findfirst(>(u), v)</code> returns the position of the first entry of v greater than u, or <code>nothing</code> if there is none."],
+  missing: ["missing", "Julia's placeholder value; the exercise functions return it until you fill them in, and the checks then report “not done yet”."],
+};
+
+function exercise3() {
+  GLOSS = GLOSS3;
+  const btab = `<div class="tt-wrap"><table class="tt"><tr><th>today \\ tomorrow</th>${BN.map((s, j) => `<th>${key(j + 1)} ${s}</th>`).join("")}<th>row sum</th></tr>${BIKE.map((r, i) => `<tr><th>${BN[i]}</th>${r.map(v => `<td>${v.toFixed(2)}</td>`).join("")}<td>1</td></tr>`).join("")}<tr><th>column sum</th>${[0, 1, 2].map(j => `<td class="muted">${num(BIKE.reduce((s, r) => s + r[j], 0), 2)}</td>`).join("")}<td></td></tr></table></div>`;
+  const P2 = mm(BIKE, BIKE), p2tab = `<div class="tt-wrap"><table class="tt compact"><tr><th>P² today \\ in two days</th>${BN.map(s => `<th>${s}</th>`).join("")}</tr>${P2.map((r, i) => `<tr><th>${BN[i]}</th>${r.map(v => `<td>${num(v, 4)}</td>`).join("")}</tr>`).join("")}</table></div>`;
+  return `${head(e)}
+    <p class="lead">A rental bicycle moves between three Dresden stations, once a day; where it is tomorrow depends on where it is today, and on nothing earlier. That is a Markov chain, the subject of ${lecLink(3, "lecture 3")}, and this tutorial, a ${d("pluto")} dated 12 November (SMS_T03.jl), works through it hands-on: kinds of memory, the transition matrix, simulation with uniform numbers, several steps at once, the long run, the properties that decide whether a long run exists, and how long “long” is. Along the way it estimates a real chain from 66 summers of Dresden weather and, as optional bonuses, lets chains write text and play melodies. Eight sections with figures and quick questions, four calculation problems and four programming exercises; the notebook's reference is chapter 3 of the course's lecture notes. No sheet, no points, nothing to hand in. Every question is restated below with a full solution, so the page works without running the notebook.</p>
+    ${tiles([["(0.41, 0.32, 0.27)", "where the bicycle is in the long run"], [fx(String.raw`P^{(n)} = P^n`, "P⁽ⁿ⁾ = Pⁿ"), "n days ahead: a matrix power"], ["0.31", "Neustadt → Altmarkt in two days"], [`${firstBelow(GAPB)} vs ${firstBelow(GAP2)}`, "steps to mix: bicycle vs Chain 2"]])}
+    ${before("Before you start: what this builds on", [
+      `<b>Conditional probability and the chain rule</b>: P(A | B), “A given B”, and the product of conditionals for a sequence of events. ${sec("cond")} and ${exeLink(1, "tutorial 1")} (the weather tree). Each is restated below where it is used.`,
+      `<b>Inversion for a discrete distribution</b> (${exeLink(2, "tutorial 2")}, ${sec("invp")}): a uniform number u in [0, 1) picks a value by the piece of [0, 1) it falls into. Section 3 uses exactly this.`,
+      `<b>Matrix multiplication</b>: (AB)<sub>ij</sub> = row i of A times column j of B. Worked through with numbers in section 5.`,
+      `<b>The lecture</b>: ${lecLink(3, "lecture 3")} (9 Nov) covers the same material in slide form; every section below names the lecture part it needs.`])}
+    <div id="gloss"></div>
+
+    ${h2("t3-s1", "1 · Stochastic processes and memory")}
+    ${pw("Many quantities change randomly over time. A stochastic process is the list of their values, one per time step, and its “memory” says how much of the past matters for the next value. The memory decides how you compute the probability of a whole sequence.")}
+    <p>A ${d("process")} is a sequence of random variables X₀, X₁, X₂, …, written {X<sub>n</sub> : n ≥ 0}: the population of a country in year n, the rain on day n, the n-th roll of a die. The value x<sub>n</sub> is the ${d("state")} at time n, x₀ the initial state, and the set of all possible values the ${d("space")}: discrete (a die, S = {1, …, 6}) or continuous (rain in mm, S = [0, ∞)). This is ${sec("proc")}.</p>
+    ${nq("Question 1.1", "Which process has a continuous state space?", { ask: "The result of the n-th die roll; the time the n-th patient spends in hospital; the number of cars in a car park at hour n.", sol: "<p><b>The hospital time.</b> A duration can take any value in [0, ∞). The die has S = {1, …, 6} and the car park S = {0, 1, 2, …}: both can be listed, so both are discrete, even though the second has no upper limit.</p>" })}
+    <p>Given the observed states x₀, …, x<sub>n</sub>, the distribution of the next state may depend on none of them, on the present state only, or on all of them: the ${d("memory")} of the process. For every process the ${d("chainrule")} (${d("cond", "conditional probabilities")}, tutorial 1) writes the probability of a whole sequence with one factor per step:</p>
+    <div class="formula">${fx(String.raw`P(X_0 = x_0, \dots, X_n = x_n) = P(X_0 = x_0)\prod_{k=1}^{n} P\big(X_k = x_k \mid X_{k-1}, X_{k-2}, \dots, X_0\big)`, "P(X₀ = x₀, …, X_n = x_n) = P(X₀ = x₀) ∏ P(X_k = x_k | X_{k−1}, …, X₀)")}</div>
+    <p>Each factor is the probability of the next state given the present and the earlier past. The notebook colours them consistently: orange the next state, blue the present, grey the earlier past.</p>
+    ${h3("t3-s1-1", "1.1 No memory: i.i.d. processes")}
+    <p>Tosses of a fair coin are independent and identically distributed, an ${d("iid")}: every factor of the chain rule collapses to one distribution p, P(X<sub>n+1</sub> = x | X<sub>n</sub>, …, X₀) = p(x), and a path has probability p(x₀) p(x₁) ⋯ p(x<sub>n</sub>) (equation 1 of the notebook).</p>
+    ${nq("Questions 1.2 and 1.3", "Coins without memory", { ask: "(1.2) P(head, head, tail) for a fair coin. (1.3) After five heads in a row, what is P(head) on the next toss: less than 0.5 because tail is due, 0.5, or more because the coin is on a run?", sol: "<p><b>1.2:</b> ½ · ½ · ½ = <b>1/8 = 0.125</b>. <b>1.3:</b> <b>0.5</b>. The coin has no memory; by (1) the past does not change the probability. “Tail is due” is the gambler's fallacy.</p>" })}
+    ${h3("t3-s1-2", "1.2 Memory of the whole past")}
+    <p>A deck of 10 red and 10 black cards is dealt without putting cards back. The chance that the next card is red depends on how many reds are gone, so on every earlier card (equation 2): P(X<sub>n+1</sub> = red | X<sub>n</sub>, …, X₁) = (10 − reds among X₁ … X<sub>n</sub>)/(20 − n).</p>
+    ${ex("Worked example: the deck after three cards", `<p>The first three cards were red, red, black. Reds left: 10 − 2 = 8, cards left: 20 − 3 = 17, so P(fourth card red) = 8/17 = <b>0.471</b>. If instead they had been black, black, red: 9/17 = 0.529. The last card (black versus red) is not enough to know this: the answer depends on the whole history.</p>`)}
+    <p>Full memory is the most general case but costly: with m states there are mⁿ histories of length n, each of which may need its own next-state distribution. Two states and 20 steps already give 2²⁰ ≈ 10⁶ histories.</p>
+    ${h3("t3-s1-3", "1.3 One step of memory: Markov chains")}
+    ${pw("Between no memory and full memory lies the model used most: tomorrow depends strongly on today, and once today is known, last week adds little. A Markov chain keeps exactly one step of memory.")}
+    <p>{X<sub>n</sub>} is a ${d("markov")} if for all n and all states (the <b>Markov property</b>, equation 3):</p>
+    <div class="formula">${fx(String.raw`P\big(X_{n+1} = j \mid X_n = i,\, X_{n-1} = x_{n-1}, \dots, X_0 = x_0\big) = P\big(X_{n+1} = j \mid X_n = i\big) =: P_{ij}`, "P(X_{n+1} = j | X_n = i, X_{n−1}, …, X₀) = P(X_{n+1} = j | X_n = i) =: P_ij")}</div>
+    <p>The next state depends only on the present state, not on the path that led there. P<sub>ij</sub> is the ${d("tp")} from i to j (${sec("markov")}). The notebook's weather chain is real: daily rain at Dresden-Klotzsche in all summers (June–August) 1960–2025, from the German weather service; “rain” means at least 1 mm. Of 4,035 sunny days, 1,042 were followed by rain, so P(S → R) = 1042/4035 = <b>0.26</b> and P(S → S) = 0.74; of 1,880 rainy days, 837 were followed by rain, P(R → R) = 837/1880 = <b>0.45</b>. A ${d("diagram")} draws this as two circles with four arrows. For a Markov chain every factor of the chain rule becomes a transition probability, the ${d("path")} (equation 4):</p>
+    <div class="formula">${fx(String.raw`P(X_0 = x_0, X_1 = x_1, \dots, X_n = x_n) = P(X_0 = x_0)\,P_{x_0x_1}P_{x_1x_2}\cdots P_{x_{n-1}x_n}`, "P(X₀ = x₀, …, X_n = x_n) = P(X₀ = x₀) P_{x₀x₁} ⋯ P_{x_{n−1}x_n}")}</div>
+    ${nq("Question 1.4", "Three days of Dresden weather", { ask: "Today is sunny; P(S → S) = 0.74, P(S → R) = 0.26, P(R → R) = 0.45. What is the probability that the next three days are sun, rain, rain?", idea: "equation (4).", sol: "<p>P<sub>SS</sub> · P<sub>SR</sub> · P<sub>RR</sub> = 0.74 · 0.26 · 0.45 = 0.1924 · 0.45 = <b>0.0866</b>. Each factor depends only on the day before; today's sun is given, so it contributes no factor.</p>" })}
+    ${nq("Questions 1.5–1.8", "What the Markov property does and does not say", { ask: "(1.5) For a Markov chain: X<sub>n+1</sub> is independent of X<sub>n−1</sub>; independent of X<sub>n−1</sub> given X<sub>n</sub>; or all X<sub>n</sub> are independent? (1.6) Is an i.i.d. process a Markov chain? (1.7) Which is not a Markov chain: a gambler's capital after each fair 1-euro bet; the colour of the last card drawn from the deck of 1.2; a die rolled once a day? (1.8) Tomorrow's weather depends on today and yesterday: can a Markov chain model it?", sol: `<p><b>1.5: independent given X<sub>n</sub>.</b> Not independent outright: rain yesterday makes rain today likely, which makes rain tomorrow likely, so yesterday is informative about tomorrow, but only through today. <b>1.6: yes.</b> Condition (3) holds because both sides equal P(X<sub>n+1</sub> = j); every row of the matrix is the same distribution p (the script's Example 3.4). <b>1.7: the card colour.</b> The next card depends on all earlier cards; the capital (today ± 1) and the die (i.i.d.) are Markov. <b>1.8: yes</b>, with the pair (yesterday, today) as the state: four states SS, SR, RS, RR. The pair at time n + 1 shares “today” with the pair at time n and adds tomorrow, so it depends only on the pair at time n. This ${d("enlarge")} trick turns any finite memory into a Markov chain. Adding two matrices does not work: the rows of the sum add up to 2.</p>` })}
+    ${oops("Reading the Markov property as “the future is independent of the past”. It is independent of the past <em>given the present</em>. Without knowing today, yesterday does tell you something about tomorrow.")}
+
+    ${h2("t3-s2", "2 · The transition matrix")}
+    ${pw("Collect all transition probabilities in a table: one row per present state, one column per next state. Each row is a complete probability distribution, so it adds up to 1. This table is the whole chain.")}
+    <p>With m states the P<sub>ij</sub> form the m × m ${d("matrix")} (${sec("mat")}): row index = present state, column index = next state, every entry in [0, 1], and every row sums to 1 (equation 5, the ${d("rowsum")}). From state i the chain moves somewhere, possibly to i itself (the diagonal entry). From here on the notebook uses its running example, a rental bicycle that moves between Altmarkt, Campus and Neustadt once per day:</p>
+    ${btab}
+    ${chart("bike", leg([[1, "Altmarkt (A)"], [2, "Campus (C)"], [3, "Neustadt (N)"]]))}${cap("The bicycle chain as a state diagram: each arrow is one entry of the matrix, thicker for larger probabilities; the loops are the diagonal (staying put). Hover or focus an arrow to read it.")}
+    ${nq("Questions 2.1–2.3", "Reading the matrix", { ask: "(2.1) The bicycle is at the Campus today: P(Neustadt tomorrow)? (2.2) Why must the rows sum to 1 but not the columns? (2.3) A three-state chain has first row (0.2, ?, 0.5): the missing entry?", sol: "<p><b>2.1:</b> row Campus, column Neustadt: P₂₃ = <b>0.15</b>. <b>2.2:</b> row i is the distribution of the next state given state i, so it must sum to 1. Column j collects probabilities from <em>different</em> present states and is not a distribution: the Neustadt column (0.15, 0.15, 0.60) sums to 0.9. <b>2.3:</b> 1 − 0.2 − 0.5 = <b>0.3</b>.</p>" })}
+    ${nq("Question 2.4", "A student's matrix", { ask: "A student estimates a two-state chain and reports P = (0.9 0.3; 0.1 0.7) (rows separated by the semicolon). What is wrong?", sol: "<p>The rows sum to 1.2 and 0.8; the <b>columns</b> sum to 1. The matrix is transposed: the counts were divided by column totals instead of row totals. Correct: <b>(0.9 0.1; 0.3 0.7)</b>. (Transition matrices are not symmetric in general, so “it must be symmetric” is not the issue.)</p>" })}
+    <p><b>All two-state chains</b> are fixed by two numbers, a = P₁₂ (sun → rain) and b = P₂₁ (rain → sun): P = (1 − a, a; b, 1 − b), a ${d("twostate")}. Small a and b give long runs of the same weather; a + b close to 2 makes the chain flip almost every day.</p>
+    ${nq("Question 2.5", "a = 0.3, b = 0.7", { ask: "What kind of process is the two-state chain with a = 0.3 and b = 0.7?", sol: "<p>Both rows are (0.7, 0.3): tomorrow does not depend on today. An <b>i.i.d. process</b>, still a Markov chain (question 1.6). In general the rows coincide exactly when a + b = 1.</p>" })}
+    <p>The notebook's playground takes any matrix typed in by rows, checks condition (5), draws the diagram and simulates. Its default, rows (0, 0.7, 0.3), (0.5, 0, 0.5), (0.6, 0.4, 0), is chain D of section 7, an ergodic chain without self-loops.</p>
+
+    ${h2("t3-s3", "3 · Markov chains as recursions: simulation")}
+    ${pw("To simulate one day, take the row of today's station, cut the interval [0, 1) into pieces with those lengths, and see which piece a uniform random number falls into. Repeat with the new station's row. That is all a computer needs.")}
+    <p>The row of the present state is a discrete distribution, so ${d("inversion")} from tutorial 2 applies: [0, 1) is divided into pieces of lengths P<sub>i1</sub>, P<sub>i2</sub>, …, and the next state is the one whose piece contains a ${d("uniform")}. The piece ends are the ${d("cumsum", "cumulative sums")} of the row.</p>
+    ${ex("Worked example: the Altmarkt row", `<p>Row (0.60, 0.25, 0.15): cumulative sums 0.60, 0.85, 1.00, so Altmarkt gets [0, 0.60), Campus [0.60, 0.85), Neustadt [0.85, 1). u = 0.73 lies in [0.60, 0.85): <b>Campus</b>. u = 0.12 → Altmarkt; u = 0.91 → Neustadt. Each station is chosen with probability equal to its piece's length, which is its transition probability.</p>`)}
+    ${labN("row", "one step by inversion, then ten days", "Choose today's station and drag <b>u</b>: the black line shows which piece of the row it falls into. The table runs the same rule for ten days with fresh uniform numbers; <b>New path</b> draws new ones.")}
+    ${nq("Question 3.1", "Campus and u = 0.80", { ask: "The bicycle is at the Campus and u = 0.80. Where is it tomorrow?", sol: "<p>Campus row (0.35, 0.50, 0.15): Altmarkt [0, 0.35), Campus [0.35, 0.85), Neustadt [0.85, 1). 0.80 lies in [0.35, 0.85): <b>Campus</b>.</p>" })}
+    ${nq("Question 3.2", "Does the order of the pieces matter?", { ask: "Line 4 of the notebook's algorithm cuts (0, 1) in a fixed order; the same u then selects different stations in the order Altmarkt, Campus, Neustadt and, say, Neustadt, Campus, Altmarkt. Do both orders simulate the same chain?", sol: "<p><b>Yes.</b> A uniform number falls into a piece with probability equal to the piece's length, wherever the piece lies. The order only decides <em>which</em> u lead to which station, so individual paths differ, but every station is still chosen with probability P<sub>ij</sub>: same transition probabilities, same chain.</p>" })}
+    <p>So every chain is a ${d("recursion")} (equation 6, ${sec("rec")}):</p>
+    <div class="formula">${fx(String.raw`X_{n+1} = f(X_n, U_n), \qquad U_0, U_1, \dots \text{ i.i.d. uniform on } (0,1) \text{ and independent of } X_0`, "X_{n+1} = f(X_n, U_n), U_n i.i.d. uniform on (0, 1)")}</div>
+    <p>with f(i, u) the inversion of row i. A generator of uniform numbers is therefore enough to simulate any Markov chain. The notebook's <code>simulate(P, i0, n, rng)</code> implements it; <code>simulate(BIKE_P, 3, 10, Xoshiro(1))</code> prints an 11-entry path starting at station 3 (Neustadt), entries are station numbers.</p>
+    ${nq("Question 3.3", "Which part of P decides the next state?", { ask: "The row of the current state, its column, or the whole matrix?", sol: "<p><b>The row of the current state.</b> One row per step is enough; a column mixes probabilities from different present states.</p>" })}
+    ${nq("Question 3.4", "A wrong simulation loop", { ask: "A student draws the next state with: for each j = 1, 2, 3, if rand() &lt; P[i, j], return j. What is wrong? (The notebook shows this question with the code only; the answer below is worked out here.)", sol: `<p>It draws a <b>new</b> uniform number for each j and compares it with P<sub>ij</sub> alone instead of with the cumulative sums. Altmarkt row (0.60, 0.25, 0.15): state 1 is returned with 0.60; state 2 with 0.40 · 0.25 = <b>0.10</b> instead of 0.25; state 3 with 0.40 · 0.75 · 0.15 = <b>0.045</b> instead of 0.15; and with 0.40 · 0.75 · 0.85 = <b>0.255</b> nothing at all is returned. Fix: draw <b>one</b> u and return the first j with u &lt; P<sub>i1</sub> + … + P<sub>ij</sub>.</p>` })}
+
+    ${h2("t3-s4", "4 · (Optional) A Markov chain that writes text")}
+    ${pw("The states can be any objects from a finite list, for example letters. Count in a book which letter follows which, turn the counts into a matrix, and simulate: the result is gibberish with English-looking letter pairs.")}
+    <p>The notebook recalls that A. A. Markov counted letters in Pushkin's <i>Eugene Onegin</i> in 1913 to study such dependence, and C. E. Shannon used letter chains in 1948 in the founding paper of information theory. The state is the current character (26 letters or the space, 27 states); C<sub>ij</sub> counts how often character i is followed by j in a book (public-domain texts: <i>Alice's Adventures in Wonderland</i>, <i>Pride and Prejudice</i>, <i>Grimms' Fairy Tales</i>). The ${d("estimate")} divides each row by its total (equation 7):</p>
+    <div class="formula">${fx(String.raw`\hat P_{ij} = \frac{C_{ij}}{\sum_k C_{ik}}`, "P̂_ij = C_ij / Σ_k C_ik")}</div>
+    ${ex("Worked example: estimating from the word “banana”", `<p>Pairs: b→a, a→n, n→a, a→n, n→a. Row a: a is followed by n twice (the final a has no successor), so P̂<sub>an</sub> = 2/2 = <b>1</b>. Row n: followed by a twice, P̂<sub>na</sub> = 1. Row b: P̂<sub>ba</sub> = 1. A chain started at b writes “bananananana…” forever. With counts C = rows (2, 6, 2), (0, 5, 5), (9, 0, 3), the row totals are 10, 10, 12 and P̂ has rows (0.2, 0.6, 0.2), (0, 0.5, 0.5), (0.75, 0, 0.25).</p>`)}
+    ${nq("Questions 4.1 and 4.2", "Empty cells and few counts", { ask: "(4.1) Most cells of the letter matrix are empty: what does that imply for the generated text? (4.2) In a short text z occurs three times, each time followed by e, so P̂<sub>ze</sub> = 1. How reliable is this?", sol: "<p><b>4.1:</b> P̂<sub>ij</sub> = 0, so the chain <b>never</b> produces that pair. Some pairs do not occur in English (qz), others merely not in this book. <b>4.2: not reliable.</b> Three observations cannot estimate a distribution over 27 characters; another text would give another row, and P̂<sub>ze</sub> = 1 forbids every other continuation. Report an estimate together with its counts.</p>" })}
+    ${nq("Question 4.3", "Why so few real words?", { ask: "The generated text has plausible letter pairs but almost no words. Is the matrix wrong, is the state too small, or are the random numbers not random enough?", sol: "<p><b>The state is a single character.</b> The chain knows the last letter but not the word it is in, so nothing links letters more than one step apart. The matrix is right (it reproduces the pair frequencies), and better random numbers add no memory. Section 4.3 enlarges the state to the last k characters or words (the trick of question 1.8): with k around 4–5 characters, real words appear, and with large k the chain starts copying whole passages of the book.</p>" })}
+
+    ${h2("t3-s5", "5 · More than one step")}
+    ${pw("Where is the bicycle in two days? Consider every station it could be at tomorrow, multiply the two one-day probabilities, and add. That sum is exactly one entry of the matrix product P · P.")}
+    <p>Condition on tomorrow's station k (the ${d("total")}) and use the Markov property:</p>
+    <div class="formula">${fx(String.raw`P(X_2 = j \mid X_0 = i) = \sum_k P(X_1 = k \mid X_0 = i)\,P(X_2 = j \mid X_1 = k) = \sum_k P_{ik}P_{kj} = (P^2)_{ij}`, "P(X₂ = j | X₀ = i) = Σ_k P_ik P_kj = (P²)_ij")}</div>
+    <p>The sum Σ<sub>k</sub> P<sub>ik</sub>P<sub>kj</sub> is the ${d("matmul")}: row i of P times column j of P. Repeating the argument gives the ${d("nstep")} and the ${d("ck")} (equation 8, ${sec("ck")}): P<sup>(m+n)</sup> = P<sup>(m)</sup>P<sup>(n)</sup> and P<sup>(n)</sup> = Pⁿ.</p>
+    ${nq("Question 5.1", "Neustadt → Altmarkt in two days", { ask: "The bicycle is at Neustadt today. P(Altmarkt in two days)?", sol: "<p>Row Neustadt (0.20, 0.20, 0.60) times column Altmarkt (0.60, 0.35, 0.20): via Altmarkt 0.20 · 0.60 = 0.12, via Campus 0.20 · 0.35 = 0.07, via Neustadt 0.60 · 0.20 = 0.12; sum <b>0.31</b>.</p>" })}
+    ${p2tab}
+    ${nq("Questions 5.2 and 5.3", "Matrix power versus a single path", { ask: "(5.2) Is (P²)<sub>ij</sub> = (P<sub>ij</sub>)²? (5.3) Starting at the Campus, what is the probability of the path Campus → Campus → Altmarkt → Neustadt?", sol: "<p><b>5.2: no.</b> (P²)<sub>ij</sub> sums over all intermediate states; (P<sub>ij</sub>)² is the square of a single entry and ignores every route through another state. For Neustadt → Altmarkt: 0.31 versus 0.20² = 0.04. <b>5.3:</b> by (4) multiply along the path: P₂₂ P₂₁ P₁₃ = 0.50 · 0.35 · 0.15 = <b>0.02625</b>. That is not (P³)₂₃ = 0.2479, which adds up all paths of length 3 from Campus to Neustadt.</p>" })}
+    <p><b>The distribution after n steps.</b> When the start is uncertain, write the ${d("dist")} π<sub>n</sub> = (P(X<sub>n</sub> = 1), …, P(X<sub>n</sub> = m)) as a row vector. The same argument gives (equation 9):</p>
+    <div class="formula">${fx(String.raw`\pi_{n+1} = \pi_n P, \qquad \pi_n = \pi_0 P^n`, "π_{n+1} = π_n P, π_n = π₀ Pⁿ")}</div>
+    ${nq("Question 5.4", "A random start", { ask: "On day 0 the bicycle is at each station with probability 1/3. P(Altmarkt on day 1)?", sol: "<p>The first entry of π₀P is π₀ times the Altmarkt <b>column</b>: ⅓(0.60 + 0.35 + 0.20) = 1.15/3 = <b>0.383</b>.</p>" })}
+    ${ex("Worked example: a fleet of 300 bicycles, all at Neustadt", `<p>π₀ = (0, 0, 1). Day 1: π₁ = row Neustadt = (0.20, 0.20, 0.60), so about 60, 60 and 180 bicycles. Day 2: π₂ = π₁P: Altmarkt 0.20 · 0.60 + 0.20 · 0.35 + 0.60 · 0.20 = 0.31; Campus 0.20 · 0.25 + 0.20 · 0.50 + 0.60 · 0.20 = 0.27; Neustadt 0.20 · 0.15 + 0.20 · 0.15 + 0.60 · 0.60 = 0.42. So 93, 81 and 126 bicycles; the sum is still 300. Each bicycle follows its own random path; π<sub>n</sub> describes the fleet on average.</p>`)}
+
+    ${h2("t3-s6", "6 · The long run: stationary and limiting distributions")}
+    ${pw("Run the chain for a long time. Is there a distribution that one more step leaves unchanged, and does the chain end up there whatever its start? For the bicycle both answers are yes, and the long-run share of each station follows from a small system of equations.")}
+    <p>How many bicycles should each station hold? What fraction of summer days is rainy? Both are questions about π<sub>n</sub> for large n. A ${d("stationary")} satisfies (equation 10, ${sec("stat")}) π P = π with π<sub>i</sub> ≥ 0 and Σ π<sub>i</sub> = 1: a chain started in π stays in π. A ${d("limiting")} Π<sub>k</sub> = lim (Pⁿ)<sub>jk</sub> (equation 11) is one that the chain <em>reaches</em> from every start j. The first is preserved by the chain, the second is approached by it.</p>
+    ${ex("Worked example: the bicycle's stationary distribution", `<p>Write π = (a, c, n). The Neustadt column of πP = π: 0.15a + 0.15c + 0.60n = n, so 0.15(a + c) = 0.40n; with a + c = 1 − n: 0.15 − 0.15n = 0.40n, <b>n = 0.15/0.55 = 3/11 = 0.2727</b>. The Altmarkt column: 0.60a + 0.35c + 0.20n = a, so 0.40a = 0.35c + 0.20 · 3/11; with c = 8/11 − a: 0.75a = (2.8 + 0.6)/11 = 3.4/11, <b>a = 68/165 = 0.4121</b>, and <b>c = 8/11 − 68/165 = 52/165 = 0.3152</b>. Check the Campus column: 0.25 · 0.4121 + 0.50 · 0.3152 + 0.20 · 0.2727 = 0.1030 + 0.1576 + 0.0545 = 0.3152 ✓. A fleet of 300 bicycles settles near 124, 95 and 82.</p>`)}
+    ${labN("flow", "300 bicycles over 20 days", "Choose where the fleet starts. Each line is the probability of one station on day n; the dashed lines are the stationary values. Whatever the start, all three settle within about six days, and the table shows the same in bicycles.")}
+    <p>All rows of Pⁿ become equal, (0.412, 0.315, 0.273): the limiting distribution exists and equals the stationary one. For the Dresden weather the two-state formula gives π = (b, a)/(a + b) with a = 0.258, b = 0.555: π<sub>sun</sub> = 0.555/0.813 = <b>0.68</b>, so about 32 % of summer days have at least 1 mm of rain in the long run.</p>
+    ${oops("Solving πP = π alone. Those equations are linearly dependent (one of them follows from the others) and are also solved by π = 0; the normalisation Σ π<sub>i</sub> = 1 is what fixes the answer.")}
+
+    ${h2("t3-s7", "7 · When does the long run exist? Properties of chains")}
+    ${pw("A chain can fail to settle in three ways: it gets trapped in part of the state space, it falls apart into pieces that never meet, or it moves in a fixed rhythm. Each failure has a name, and a chain with none of them is called ergodic.")}
+    ${h3("t3-s7-1", "7.1 Traps: closed sets and absorbing states")}
+    <p>A ${d("closed")} is a set C of states that no arrow leaves; once inside, the chain never leaves (${sec("abs")}). A closed set of one state is an ${d("absorbing")}: P<sub>ii</sub> = 1. The notebook's examples: rows (0.5, 0.3, 0.2), (0.3, 0.5, 0.2), (0, 0, 1), where state 3 is absorbing; and rows (0.4, 0.3, 0.3), (0, 0.5, 0.5), (0, 0.6, 0.4), where {2, 3} is closed.</p>
+    ${nq("Questions 7.1 and 7.2", "Spotting traps", { ask: "(7.1) In the second chain, which set is closed: {1}, {2, 3} or {1, 2}? (7.2) A state has P<sub>ii</sub> = 0.99: absorbing?", sol: "<p><b>7.1: {2, 3}.</b> From 2 and 3 arrows lead only to 2 and 3; once the chain leaves 1 it never returns. {1} is not closed (arrows to 2 and 3), {1, 2} neither (2 → 3). <b>7.2: no.</b> The chain leaves it with probability 0.01 in every step; on average after 100 steps.</p>" })}
+    ${h3("t3-s7-2", "7.2 Separate parts: irreducible chains")}
+    <p>A chain is ${d("irreducible")} if S is its only closed set, equivalently if every state can be reached from every other, possibly in several steps. Chain B, rows (0.7, 0.3, 0, 0), (0.4, 0.6, 0, 0), (0, 0, 0.5, 0.5), (0, 0, 0.2, 0.8), is two islands {1, 2} and {3, 4}. A start in one island leads to a different long run than a start in the other, and the chain has more than one stationary distribution: (4/7, 3/7, 0, 0), (0, 0, 2/7, 5/7) and every mixture of them. An irreducible chain has exactly one.</p>
+    ${nq("Questions 7.3 and 7.4", "Islands and the bicycle", { ask: "(7.3) Chain B starts in state 1: does it visit all four states; does it stay in {1, 2}; is state 1 absorbing? (7.4) Is the bicycle chain irreducible?", sol: "<p><b>7.3:</b> it <b>stays in {1, 2}</b> forever: both islands are closed, so the chain is not irreducible and its long run depends on the start. State 1 is not absorbing (P₁₁ = 0.7). <b>7.4: yes.</b> Every entry of the bicycle matrix is positive, so every station is reached from every station in one step; the only closed set is S. Returning to a station does not make a closed set: a closed set is one that cannot be <em>left</em>.</p>" })}
+    ${h3("t3-s7-3", "7.3 Periodic and aperiodic states")}
+    <p>The ${d("period")} of a state i is the largest d such that returns to i are possible only after multiples of d steps; period 1 is ${d("aperiodic")}. In a periodic chain the probabilities P(X<sub>n</sub> = j) oscillate and do not converge. A self-loop (P<sub>ii</sub> &gt; 0) makes a state aperiodic. Examples: the swap 1 ⇄ 2 (period 2), the cycle 1 → 2 → 3 → 1 (period 3), and chain C, 1 ⇄ 2 ⇄ 3 with rows (0, 1, 0), (0.5, 0, 0.5), (0, 1, 0) (period 2).</p>
+    ${ex("Worked example: chain D has no self-loops but is aperiodic", `<p>Chain D, rows (0, 0.7, 0.3), (0.5, 0, 0.5), (0.6, 0.4, 0). From state 1: 1 → 2 → 1 returns in 2 steps; 1 → 3 → 2 → 1 returns in 3 steps (0.3 · 0.4 · 0.5 = 0.06 &gt; 0). gcd(2, 3) = 1, so the period is <b>1</b>. A loop is sufficient for aperiodicity but not necessary; odd and even cycles together do the job.</p>`)}
+    ${h3("t3-s7-4", "7.4 Ergodic chains")}
+    <p>A chain is ${d("ergodic")} if it is irreducible <b>and</b> aperiodic. Theorem: an ergodic chain has a limiting distribution, it is the unique stationary distribution, and the chain converges to it from every start (${sec("erg")}). The four combinations, as in the notebook's Figure 7.4:</p>
+    <div class="tt-wrap"><table class="tt"><tr><th></th><th>aperiodic</th><th>periodic</th></tr>
+      <tr><th>irreducible</th><td><b>ergodic</b> (chain D): one stationary π = (0.352, 0.361, 0.286), reached from every start</td><td>chain C: one stationary π = (0.25, 0.5, 0.25), but π<sub>n</sub> oscillates; no limit</td></tr>
+      <tr><th>not irreducible</th><td>chain B: one stationary distribution per island, infinitely many mixtures; no limit</td><td>chain E (two swapping pairs): infinitely many stationary distributions, no convergence</td></tr></table></div>
+    ${labN("cls", "classify a chain", "Choose a chain: its diagram and matrix appear, the explorer finds its communicating classes, closed sets, the period of each state and the stationary distribution of each closed set, and draws P(X<sub>n</sub> = j) from the chosen start. Compare chain C (oscillates) with chain D (settles), and the two starts of chain B.")}
+    <p>Section 7.5 of the notebook is a game: six rounds, each showing a random chain from a set of thirteen as a diagram and a matrix, to classify. The explorer above does the same with the notebook's named chains.</p>
+    ${tryit([
+      ["Classify the chain with rows (0.5, 0.5, 0), (0.5, 0.5, 0), (0.2, 0.3, 0.5).", `<p>From 3 you can go to 1 and 2, but nothing returns to 3: {1, 2} is closed, so the chain is <b>not irreducible</b>. All states have self-loops, so it is aperiodic. Stationary: (0.5, 0.5, 0); state 3 is left for good.</p>`],
+      ["Find the stationary distribution of chain C, rows (0, 1, 0), (0.5, 0, 0.5), (0, 1, 0).", `<p>π₁ = 0.5π₂, π₃ = 0.5π₂, π₂ = π₁ + π₃. With π₁ + π₂ + π₃ = 2π₂ = 1: <b>π = (0.25, 0.5, 0.25)</b>. Started in state 1, the chain is in 2 at every odd step and in {1, 3} at every even step, so π<sub>n</sub> never converges.</p>`],
+      ["For the weather chain, check that (0.682, 0.318) is stationary.", `<p>Sun: 0.682 · 0.742 + 0.318 · 0.555 = 0.506 + 0.176 = 0.682 ✓. Rain: 0.682 · 0.258 + 0.318 · 0.445 = 0.176 + 0.142 = 0.318 ✓.</p>`],
+    ])}
+
+    ${h2("t3-s8", "8 · Mixing time: how long is “long enough”?")}
+    ${pw("An ergodic chain reaches its limit only “at infinity”, but in practice it is close enough after a finite number of steps. That number, the mixing time, is what a simulation has to wait before its states can be used.")}
+    <p>The ${d("mixing")} is the number of steps after which π<sub>n</sub> is within a tolerance of the limiting distribution (the notebook: every entry within 0.01). The steps before it still depend on the start and are discarded: the ${d("burnin")}. It is rarely known in advance and is found by simulation: run many chains (the notebook uses 1,000) from the same start and watch when their distribution stops changing (${sec("samp")}). The notebook compares the bicycle chain with “Chain 2”, six states in two groups of three, all moves inside a group with probability 1/3, and a single weak bridge: state 3 moves to state 4 (and 4 to 3) with probability 0.01.</p>
+    ${chart("mix", leg([[1, "bicycle chain, start Neustadt"], [2, "Chain 2, start in state 1"]]))}${cap("Largest difference between an entry of π<sub>n</sub> and the limiting distribution, over the step n (log scale), computed here with matrix powers. Dashed lines: the first step with a gap below 0.01.")}
+    ${tbl(["step n", "bicycle (start Neustadt)", "Chain 2 (start 1)"], [1, 2, 4, 6, 16, 64, 256, firstBelow(GAP2), 1024].map(n => [n, num(GAPB[n], 4), num(GAP2[n], 4)]))}
+    ${ex("Worked example: why Chain 2 is so slow", `<p>Started in state 1, the chain mixes inside its own group within a few steps, but to reach the other group it must be in state 3 (probability about 1/3 within the group) and take the 0.01 bridge: about 0.33 · 0.01 ≈ 0.0033 per step, roughly one crossing per 300 steps. The limiting distribution gives 1/6 to every state, i.e. half the time in each group, which needs many crossings. Hence ${firstBelow(GAP2)} steps against ${firstBelow(GAPB)} for the bicycle, although both chains are ergodic.</p>`)}
+    <p>Building a chain for a <em>given</em> distribution, instead of computing the distribution of a given chain, is the basis of the sampling methods later in the course (Markov chain Monte Carlo); the properties of sections 6–8 decide whether and how fast such a chain produces correct samples.</p>
+    ${why("Context, not in the notebook: the bonus melodies", `<p>The optional bonus repeats section 4 with music: the state is the current note of a short public-domain melody (traditional tunes and the main theme of the fourth movement of Beethoven's Ninth). The note matrix is estimated with (7), simulating it generates a new melody, and with the last k notes as the state, longer passages of the original reappear. Same idea, same limits: one note of memory gives plausible steps and no tune.</p>`)}
+
+    ${h2("t3-sum", "Summary: the equations of the tutorial")}
+    <div class="tt-wrap"><table class="tt fs">
+      <tr><th>(1) i.i.d.</th><td>P(X<sub>n+1</sub> = x | X<sub>n</sub>, …, X₀) = p(x)</td></tr>
+      <tr><th>(2) whole past</th><td>P(X<sub>n+1</sub> | X<sub>n</sub>, X<sub>n−1</sub>, …, X₀) depends on every earlier state</td></tr>
+      <tr><th>(3) Markov property</th><td>P(X<sub>n+1</sub> = j | X<sub>n</sub> = i, …, X₀) = P(X<sub>n+1</sub> = j | X<sub>n</sub> = i) = P<sub>ij</sub></td></tr>
+      <tr><th>(4) path</th><td>P(X₀ = x₀, …, X<sub>n</sub> = x<sub>n</sub>) = P(X₀ = x₀) P<sub>x₀x₁</sub> ⋯ P<sub>x<sub>n−1</sub>x<sub>n</sub></sub></td></tr>
+      <tr><th>(5) rows sum to 1</th><td>Σ<sub>j</sub> P<sub>ij</sub> = 1</td></tr>
+      <tr><th>(6) recursion</th><td>X<sub>n+1</sub> = f(X<sub>n</sub>, U<sub>n</sub>), f = inversion of the row of X<sub>n</sub></td></tr>
+      <tr><th>(7) estimate</th><td>P̂<sub>ij</sub> = C<sub>ij</sub> / Σ<sub>k</sub> C<sub>ik</sub></td></tr>
+      <tr><th>(8) Chapman–Kolmogorov</th><td>P<sup>(m+n)</sup> = P<sup>(m)</sup>P<sup>(n)</sup>, P<sup>(n)</sup> = Pⁿ</td></tr>
+      <tr><th>(9) distribution update</th><td>π<sub>n+1</sub> = π<sub>n</sub>P, π<sub>n</sub> = π₀Pⁿ</td></tr>
+      <tr><th>(10) stationary</th><td>πP = π, Σ π<sub>i</sub> = 1</td></tr>
+      <tr><th>(11) limiting</th><td>Π<sub>k</sub> = lim (Pⁿ)<sub>jk</sub>, independent of j; exists for every ergodic chain</td></tr></table></div>
+
+    ${h2("t3-ex", "Calculation problems")}
+    <p>The notebook numbers its problems 1, 2, 3 and 5; there is no problem 4 in the file.</p>
+    ${task("1", 0, "Back at the Campus after two days", `<p><b>Task.</b> A bicycle starts at the Campus. P(Campus again after two days)? <b>Needs:</b> section 5.</p><p><b>Solution.</b> Row Campus (0.35, 0.50, 0.15) times column Campus (0.25, 0.50, 0.20): 0.35 · 0.25 + 0.50 · 0.50 + 0.15 · 0.20 = 0.0875 + 0.25 + 0.03 = <b>0.3675</b>. The three terms are the routes via Altmarkt, staying twice, and via Neustadt.</p>${ans([["0.3675", "(P²)₂₂"]])}`)}
+    ${task("2", 0, "A stationary distribution", `<p><b>Task.</b> P = (0.9 0.1; 0.5 0.5). The first entry π₁ of the stationary distribution? <b>Needs:</b> section 6.</p><p><b>Solution.</b> The first column of πP = π: 0.9π₁ + 0.5π₂ = π₁, so 0.1π₁ = 0.5π₂: the flow out of state 1 equals the flow into it. With π₁ + π₂ = 1: 0.1π₁ = 0.5(1 − π₁), 0.6π₁ = 0.5, <b>π₁ = 5/6 ≈ 0.833</b>, π₂ = 1/6. Two-state formula: b/(a + b) = 0.5/0.6 ✓.</p>${ans([["5/6 ≈ 0.833", "π₁"], ["1/6", "π₂"]])}`)}
+    ${task("3", 0, "Two steps in the same chain", `<p><b>Task.</b> Same chain: (P²)₂₁? <b>Needs:</b> section 5.</p><p><b>Solution.</b> Row 2 (0.5, 0.5) times column 1 (0.9, 0.5): 0.5 · 0.9 + 0.5 · 0.5 = 0.45 + 0.25 = <b>0.7</b>. Already close to π₁ = 0.833: this chain mixes fast.</p>${ans([["0.7", "(P²)₂₁"]])}`)}
+    ${task("5", 0, "Memory of two steps", `<p><b>Task.</b> X<sub>n</sub> ∈ {0, 1}; X<sub>n+1</sub> equals X<sub>n−1</sub> with probability 0.8 and the opposite value otherwise. Is X<sub>n</sub> a Markov chain, are the pairs Y<sub>n</sub> = (X<sub>n−1</sub>, X<sub>n</sub>) one, or is X<sub>n</sub> i.i.d.? <b>Needs:</b> question 1.8.</p><p><b>Solution.</b> X<sub>n</sub> is <b>not</b> Markov: the next value depends on X<sub>n−1</sub> even when X<sub>n</sub> is known. The pairs <b>are</b> a Markov chain with four states 00, 01, 10, 11. From (a, b) the next pair is (b, c) with c = a with 0.8 and c = 1 − a with 0.2. Example: from 01 → 10 with 0.8 (c = 0 = a), → 11 with 0.2. X<sub>n</sub> is not i.i.d.: consecutive values are dependent.</p>${ans([["pairs", "form a 4-state Markov chain"]])}`)}
+
+    ${h2("t3-prog", "Programming exercises")}
+    ${pw("Four short Julia functions; each has a check cell in the notebook that tests it. The solutions are given here with every line explained.")}
+    ${task("P1", 0, "From counts to a transition matrix", `<p><b>Task.</b> C[i, j] counts observed transitions i → j. Complete <code>normalise_rows(C)</code> so it returns the estimate (7). The notebook's version returns ${d("missing")}.</p>${jl(`function normalise_rows(C)
+    return C ./ sum(C, dims = 2)
+end`, `<p><code>sum(C, dims = 2)</code> sums along each row and gives a column of row totals; <code>./</code> divides element by element, each row by its own total. The check uses C with rows (2, 6, 2), (0, 5, 5), (9, 0, 3): totals 10, 10, 12, result rows (0.2, 0.6, 0.2), (0, 0.5, 0.5), (0.75, 0, 0.25). Dividing by <code>sum(C)</code> (the grand total) or by column sums (<code>dims = 1</code>) is the error of question 2.4.</p>`)}`)}
+    ${task("P2", 0, "Correcting a simulation", `<p><b>Task.</b> <code>simulate_chain(P, x0, n, rng)</code> should return a path x₀, …, x<sub>n</sub>, but has one error: depending on the matrix it fails or gives wrong transition frequencies.</p>${jl(`x[t+1] = findfirst(>(rand(rng)), cumsum(P[:, x[t]]))   # given
+x[t+1] = findfirst(>(rand(rng)), cumsum(P[x[t], :]))   # corrected`, `<p>The given line takes the <b>column</b> <code>P[:, x[t]]</code> instead of the <b>row</b> <code>P[x[t], :]</code> of the current state. ${d("findfirst")} returns the first position where the cumulative sum exceeds u: the inversion of section 3. In the check's matrix, rows (0.1, 0.9, 0), (0, 0.2, 0.8), (0.7, 0, 0.3), column 1 is (0.1, 0, 0.7) and sums to 0.8: whenever u &gt; 0.8, <code>findfirst</code> finds nothing and returns <code>nothing</code>, and storing that in an integer vector stops with an error. With a column summing to more than 1 the code runs but produces wrong frequencies, such as 1 → 3 although P₁₃ = 0.</p>`)}`)}
+    ${task("P3", 0, "Correcting the distribution after n steps", `<p><b>Task.</b> <code>distribution_after(P, π0, n)</code> should return π₀Pⁿ. Predict how the wrong result depends on n, then correct it.</p>${jl(`function distribution_after(P, π0, n)
+    π = π0
+    for _ in 1:n
+        π = π * P      # was: π = π0 * P
+    end
+    return π
+end`, `<p>The given loop multiplies the <em>start</em> distribution again in every round, so the result is π₀P for every n ≥ 1: <b>it does not depend on n</b>. The check starts at Neustadt, π₀ = (0, 0, 1): the wrong function returns (0.20, 0.20, 0.60) for n = 1, 2 and 10; the corrected one returns (0.20, 0.20, 0.60), (0.31, 0.27, 0.42) and (0.4119, 0.3151, 0.2730).</p>`)}`)}
+    ${task("P4", 0, "The stationary distribution by iteration", `<p><b>Task.</b> Complete <code>stationary_power(P)</code>: start from the uniform distribution and apply π ← πP until no entry changes by more than 10⁻¹².</p>${jl(`function stationary_power(P)
+    n = size(P, 1)
+    π = fill(1 / n, 1, n)            # a 1×n row vector
+    while maximum(abs, π * P - π) > 1e-12
+        π = π * P
+    end
+    return π
+end`, `<p><code>fill(1 / n, 1, n)</code> makes the uniform row vector; <code>maximum(abs, v)</code> is the largest absolute entry. The check runs three chains: the bicycle gives (0.4121, 0.3152, 0.2727), the weather (0.6824, 0.3176), and the chain with rows (0, 1), (0.5, 0.5) gives (1/3, 2/3) (its two-state formula: b/(a + b) = 0.5/1.5). This loop needs an aperiodic chain: for the swap (0 1; 1 0) started anywhere but at (½, ½) it would never stop, which is why the uniform start matters there.</p>`)}`)}
+
+    ${why("Context, not in the notebook: what this tutorial sets up", `<p>Lecture 4 (${lecLink(4, "Law of large numbers and Monte Carlo")}) averages i.i.d. samples. The Markov chain Monte Carlo lectures later replace the i.i.d. samples by the states of an ergodic chain built so that its stationary distribution is the target: then the burn-in, the mixing time and ergodicity from sections 6–8 decide whether the averages are right and how many steps they need.</p>`)}
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What makes a Markov chain?</b> The next state depends only on the present state; then a path's probability is a product of transition probabilities.</li>
+      <li><b>How to read P?</b> Row = today, column = tomorrow; rows sum to 1, columns need not.</li>
+      <li><b>How to simulate?</b> One uniform number per step, inverted on the current row: X<sub>n+1</sub> = f(X<sub>n</sub>, U<sub>n</sub>).</li>
+      <li><b>n steps ahead?</b> Pⁿ, and π<sub>n</sub> = π₀Pⁿ; (P²)<sub>ij</sub> adds all two-step routes, it is not (P<sub>ij</sub>)².</li>
+      <li><b>Long run?</b> Solve πP = π with Σπ = 1; bicycle (0.412, 0.315, 0.273).</li>
+      <li><b>When does it exist and get reached?</b> Ergodic = irreducible + aperiodic: unique stationary distribution, reached from every start. Traps, islands and rhythms break it.</li>
+      <li><b>How long is long?</b> The mixing time: ${firstBelow(GAPB)} steps for the bicycle, ${firstBelow(GAP2)} for a chain with a bottleneck.</li>
+    </ul>
+    <p class="muted">Material: OPAL → Exercises2026 → SMS_T03.jl (notebook dated 12 Nov). Lecture it belongs to: ${lecLink(3, "lecture 3")}. Previous: ${exeLink(2, "tutorial 2")}. Next tutorial: ${exeLink(4, "tutorial 4")} (19 Nov).</p>`;
+}
+
+const WRITEUPS = { 1: exercise1, 2: exercise2, 3: exercise3 };
+const LABS = { lln: initLln, clt: initClt, lcg: initLcg, pq: initPq, tr: initTr, inv: initInv, bm: initBm, row: initRow, flow: initFlow, cls: initCls };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!e) {
   page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;
