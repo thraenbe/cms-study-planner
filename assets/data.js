@@ -2514,8 +2514,17 @@ window.CMS = {
       "title": "CMOS logic 1",
       "date": "2026-11-16",
       "icon": "🔀",
-      "covered": false,
-      "blurb": "The CMOS inverter, transistor switch models, pull-up and pull-down networks, static characteristics and sizing."
+      "covered": true,
+      "blurb": "Transistors as ideal pull-up and pull-down switches (0/1/z tables), the one recipe behind every static CMOS gate (NMOS pull-down: AND = series, OR = parallel; PMOS pull-up as its dual) with AND3 and AOI examples, the standard-cell layouts of inverter, buffer, NAND2, NOR2, AND2 and AOI, the 28-transistor mirror full adder, NMOS, PMOS and transfer-gate switches, and storage: the transfer-gate D latch with keeper, the master-slave D flip-flop and the JK latch.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_06_Logik1_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 7,
@@ -2663,13 +2672,19 @@ window.CMS = {
         "kind": "sheet",
         "name": "DSTUebung3_2025de_Aufgaben.pdf",
         "where": "OPAL · Exercises/Übungen",
-        "note": "German, your group; solution not posted yet"
+        "note": "German, your group; German solution not posted yet"
        },
        {
         "kind": "sheet",
         "name": "DSTUebung3_2025en_taskdescription.pdf",
         "where": "OPAL · Exercises/Übungen",
         "note": "English version"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung3_2025en_solution.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "English solution, posted with the Wednesday group; not compared with this page yet"
        }
       ]
      },

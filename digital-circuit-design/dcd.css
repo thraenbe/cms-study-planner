@@ -398,3 +398,50 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
   .dcd .wcw td:first-child { background: var(--surface-2); padding: 7px 10px; }
   .dcd .wcw td:not(:first-child)::before { content: attr(data-l); display: block; font-size: 11px; color: var(--ink-3); font-weight: 600; }
 }
+/* Lecture 6: switch-level gate explorer, switch tables, transfer-gate chart, latch/flip-flop waveforms. */
+.dcd .l6ov { text-decoration: overline; }
+.dcd .l6g { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 14px 22px; align-items: start; }
+.dcd .l6g .tt-wrap table.tt { margin-top: 10px; }
+.dcd .l6sch { display: block; width: 100%; height: auto; margin: 0 auto; font-family: system-ui, sans-serif; }
+.dcd .l6sch .w { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.dcd .l6sch .w.up { stroke: var(--vz-s2); stroke-width: 3; }
+.dcd .l6sch .w.dn { stroke: var(--vz-s1); stroke-width: 3; }
+.dcd .l6sch .tx-c { stroke: var(--ink); stroke-width: 2.5; }
+.dcd .l6sch .tx.off .tx-c { stroke: var(--ink-3); stroke-dasharray: 3 3; }
+.dcd .l6sch .tx-g { stroke: var(--ink-2); stroke-width: 1.5; }
+.dcd .l6sch .tx-b { fill: var(--surface-2); stroke: var(--ink-2); stroke-width: 1.5; }
+.dcd .l6sch .tx-l { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dcd .l6sch .tx.off .tx-l { fill: var(--ink-3); font-weight: 500; }
+.dcd .l6sch .rail { stroke: var(--ink-2); stroke-width: 3; stroke-linecap: round; }
+.dcd .l6sch .rl { fill: var(--ink-2); font-size: 12px; }
+.dcd .l6sch .zl { fill: var(--ink); font-size: 13px; font-weight: 700; }
+.dcd .l6sch .zd { fill: var(--ink); }
+.dcd .l6in { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.dcd .l6in .bit { padding: 0 12px; min-width: 70px; }
+.dcd table.l6tt tr[data-row] { cursor: pointer; }
+.dcd table.l6tt tr[data-row]:hover td { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+.dcd table.l6tt tr.cur td { background: color-mix(in srgb, var(--focus) 18%, transparent); }
+.dcd table.l6tt tr[data-row]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.dcd .l6two { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.dcd table.tt td.l6weak { color: var(--ink); font-weight: 700; background: color-mix(in srgb, var(--vz-s2) 20%, transparent); box-shadow: inset 0 -2px var(--vz-s2); }
+.dcd .viz .xd { opacity: 0; }
+.dcd .viz .pt.on .xd, .dcd .viz .pt:focus .xd { opacity: 1; }
+.dcd .viz .xcol { stroke: var(--ink-3); stroke-width: 1; opacity: 0; }
+.dcd .viz .pt.on .xcol, .dcd .viz .pt:focus .xcol { opacity: 1; }
+.dcd .viz .line.thick { stroke-width: 3; }
+.dcd .l6wf svg { display: block; width: 100%; height: auto; font-family: system-ui, sans-serif; }
+.dcd .l6wf .wv { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.dcd .l6wf .wv.d { stroke: var(--vz-s1); }
+.dcd .l6wf .hi { fill: var(--vz-grid); }
+.dcd .l6wf .edge { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+.dcd .l6wf .rl { fill: var(--ink-2); font-size: 12px; }
+.dcd .l6wf .dc { fill: transparent; cursor: pointer; }
+.dcd .l6wf .dc:hover, .dcd .l6wf .dc:focus { fill: color-mix(in srgb, var(--vz-s1) 20%, transparent); outline: none; }
+.dcd .l6wf .dc:focus-visible { stroke: var(--focus); stroke-width: 2; }
+.dcd .l6wf .diff { fill: color-mix(in srgb, var(--vz-s2) 24%, transparent); }
+.dcd .cmp.l6one li { grid-template-columns: 190px 1fr; }
+@media (max-width: 760px) {
+  .dcd .l6g { grid-template-columns: 1fr; }
+  .dcd .cmp.l6one li { grid-template-columns: 1fr; }
+  .dcd .l6g .l6sch { max-width: 300px !important; }
+}
