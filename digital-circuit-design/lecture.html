@@ -1635,7 +1635,7 @@ function lecture5() {
       <li><b>Saturation</b><span class="v"><span class="sw t"></span>V<sub>DS</sub> ≥ V<sub>GS</sub> − V<sub>th,N</sub></span><span class="v"><span class="sw v"></span>V<sub>DS</sub> ≤ V<sub>GS</sub> − V<sub>th,P</sub></span></li>
       <li><b>Parameters</b><span class="v"><span class="sw t"></span>µ<sub>N</sub> &gt; 0, λ<sub>N</sub> &gt; 0</span><span class="v"><span class="sw v"></span>µ<sub>P</sub> &lt; 0, λ<sub>P</sub> &lt; 0 (so that I<sub>D</sub> comes out negative: the current flows the other way)</span></li>
     </ul>
-    ${l5box("why", "Context, not on the slides: the PMOS is the weaker transistor", "<p>The PMOS conducts with holes, whose mobility in silicon is roughly two to three times lower than that of electrons. With the same W/L, β<sub>P</sub> is therefore only a third to a half of β<sub>N</sub>. That is why PMOS transistors in standard cells are usually drawn wider than their NMOS partners, and why NAND gates (PMOS in parallel, NMOS in series) are preferred over NOR gates (PMOS in series). The inverter explorer below shows what an unequal pair does to the switching point; sizing itself is the topic of <a href=\"digital-circuit-design/lecture.html?n=6\">lecture 6</a>.</p>")}
+    ${l5box("why", "Context, not on the slides: the PMOS is the weaker transistor", "<p>The PMOS conducts with holes, whose mobility in silicon is roughly two to three times lower than that of electrons. With the same W/L, β<sub>P</sub> is therefore only a third to a half of β<sub>N</sub>. That is why PMOS transistors in standard cells are usually drawn wider than their NMOS partners, and why NAND gates (PMOS in parallel, NMOS in series) are preferred over NOR gates (PMOS in series). The inverter explorer below shows what an unequal pair does to the switching point; <a href=\"digital-circuit-design/lecture.html?n=6\">lecture 6</a> shows the same asymmetry in NAND versus NOR gates.</p>")}
 
     <h2>The inverter transfer curve (slide 18)</h2>
     <p>Sweeping the input of an inverter from 0 to V<sub>DD</sub> gives its transfer curve V<sub>Z</sub>(V<sub>A</sub>). For V<sub>A</sub> below V<sub>th,N</sub> the NMOS is in cutoff and Z sits at V<sub>DD</sub>; above V<sub>DD</sub> + V<sub>th,P</sub> the PMOS is off and Z sits at 0. In both shaded bands one transistor is off, so <b>no static current</b> flows, except leakage and sub-threshold current. In between, both transistors conduct for a moment while the output swings: the <b>short-circuit current</b> during switching, the bump in the lower panel.</p>
@@ -1699,6 +1699,332 @@ function lecture5() {
     </div>
     <p class="muted">No exercise sheet on this lecture yet (sheet 3, <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a>, is still arithmetic). Previous: <a href="digital-circuit-design/lecture.html?n=4">lecture 4, Arithmetic circuits 3</a>. Next: <a href="digital-circuit-design/lecture.html?n=6">lecture 6, CMOS logic 1</a> (16 Nov), which builds gates and sizing on the inverter and the transistor models of this lecture. Background: <a href="digital-circuit-design/basics.html">basics page</a>. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a> (password from lecture 1; not for republication).</p>`;
 }
+// ===== Lecture 6: CMOS logic 1 (2022/23 deck, 18 slides) =====
+// Switch-level networks: T = one transistor on input v, S = series, P = parallel. A pull-down network (NMOS) is given;
+// the pull-up network (PMOS) is its dual (series <-> parallel) unless the gate is drawn as a mirror (slide 12).
+const T6 = v => ({ t: "x", v }), S6 = (...c) => ({ t: "s", c }), P6 = (...c) => ({ t: "p", c });
+const dual6 = n => n.t === "x" ? n : { t: n.t === "s" ? "p" : "s", c: n.c.map(dual6) };
+const cond6 = (n, on) => n.t === "x" ? on(n.v) : n.t === "s" ? n.c.every(k => cond6(k, on)) : n.c.some(k => cond6(k, on));
+const size6 = n => { if (n.t === "x") return { w: 1, h: 1 }; const z = n.c.map(size6);
+  return n.t === "s" ? { w: Math.max(...z.map(q => q.w)), h: z.reduce((a, q) => a + q.h, 0) } : { w: z.reduce((a, q) => a + q.w, 0), h: Math.max(...z.map(q => q.h)) }; };
+const count6 = n => n.t === "x" ? 1 : n.c.reduce((a, k) => a + count6(k), 0);
+const hName = s => s === "Ci" ? "C<sub>in</sub>" : s.replace(/^([A-Z])(\d)$/, "$1<sub>$2</sub>");
+const sName = s => s === "Ci" ? `C<tspan baseline-shift="sub" font-size="9">in</tspan>` : s.replace(/^([A-Z])(\d)$/, `$1<tspan baseline-shift="sub" font-size="9">$2</tspan>`);
+const ov6 = s => `<span class="l6ov">${s}</span>`;
+// Boolean expression of a network: series = AND (·), parallel = OR (+); parentheses only where a sum sits in a product.
+const expr6 = (n, f, parent = "") => n.t === "x" ? f(n.v) : n.t === "s" ? n.c.map(k => expr6(k, f, "s")).join("·")
+  : (parent === "s" ? "(" : "") + n.c.map(k => expr6(k, f, "p")).join(" + ") + (parent === "s" ? ")" : "");
+const GATES6 = [
+  { k: "inv", name: "INV", src: "slides 2 and 8", ins: ["A"], pdn: T6("A") },
+  { k: "nand2", name: "NAND2", src: "slide 9", ins: ["A1", "A2"], pdn: S6(T6("A1"), T6("A2")) },
+  { k: "nor2", name: "NOR2", src: "slide 9", ins: ["A1", "A2"], pdn: P6(T6("A1"), T6("A2")) },
+  { k: "nand3", name: "NAND3", src: "first stage of the AND3 on slide 5", ins: ["A1", "A2", "A3"], pdn: S6(T6("A1"), T6("A2"), T6("A3")) },
+  { k: "aoi21", name: "AOI21", src: "slides 6 and 11", ins: ["A1", "A2", "A3"], pdn: P6(T6("A1"), S6(T6("A2"), T6("A3"))) },
+  { k: "oai21", name: "OAI21", src: "our example", ins: ["A1", "A2", "A3"], pdn: S6(P6(T6("A1"), T6("A2")), T6("A3")) },
+  { k: "aoi22", name: "AOI22", src: "our example", ins: ["A1", "A2", "A3", "A4"], pdn: P6(S6(T6("A1"), T6("A2")), S6(T6("A3"), T6("A4"))) },
+  { k: "carry", name: "Adder carry (mirror)", src: "slide 12", ins: ["A", "B", "Ci"], pdn: P6(S6(T6("A"), T6("B")), S6(T6("Ci"), P6(T6("A"), T6("B")))), mirror: true },
+];
+const G6 = { k: "aoi21", v: { A1: 0, A2: 1, A3: 1 } };
+const pun6 = g => g.mirror ? g.pdn : dual6(g.pdn);
+const zOf6 = (g, v) => cond6(g.pdn, x => v[x] === 1) ? 0 : 1;
+function gateSVG(g, v) {
+  const U = 64, R = 58, pun = pun6(g), on = { n: x => v[x] === 1, p: x => v[x] === 0 };
+  const sN = size6(g.pdn), sP = size6(pun), W = Math.max(sN.w, sP.w) * U, X0 = 44, Y0 = 26, yZ = Y0 + sP.h * R, yS = yZ + sN.h * R, VW = X0 + W + 74, VH = yS + 22;
+  const upOn = cond6(pun, on.p), dnOn = cond6(g.pdn, on.n), z = upOn ? 1 : 0, cx0 = X0 + W / 2;
+  const draw = (n, kind, x, y, w, h, act) => {
+    const sz = size6(n), live = act && cond6(n, on[kind]), hc = kind === "p" ? "up" : "dn";
+    if (n.t === "x") {
+      const cx = x + w / 2, cy = y + h / 2, xc = cx - 7, xg = cx - 13, isOn = on[kind](n.v), hl = act && isOn;
+      const lead = kind === "p" ? `<circle class="tx-b" cx="${xg - 4.5}" cy="${cy}" r="4"/><line class="tx-g" x1="${xg - 8.5}" y1="${cy}" x2="${xg - 18}" y2="${cy}"/>` : `<line class="tx-g" x1="${xg}" y1="${cy}" x2="${xg - 18}" y2="${cy}"/>`;
+      return `<g class="tx ${isOn ? "on" : "off"}"><path class="w ${hl ? hc : ""}" d="M${cx},${y} V${cy - 10} H${xc} M${xc},${cy + 10} H${cx} V${y + h}"/><line class="tx-c" x1="${xc}" y1="${cy - 13}" x2="${xc}" y2="${cy + 13}"/><line class="tx-g" x1="${xg}" y1="${cy - 9}" x2="${xg}" y2="${cy + 9}"/>${lead}<text class="tx-l" x="${xg - 21}" y="${cy + 4}" text-anchor="end">${sName(n.v)}</text></g>`;
+    }
+    if (n.t === "s") { let yy = y; return n.c.map(k => { const ch = h * size6(k).h / sz.h, s = draw(k, kind, x, yy, w, ch, live); yy += ch; return s; }).join(""); }
+    let xx = x; const cs = [];
+    const inner = n.c.map(k => { const cw = w * size6(k).w / sz.w; cs.push(xx + cw / 2); const s = draw(k, kind, xx, y, cw, h, act && cond6(k, on[kind])); xx += cw; return s; }).join("");
+    return `<path class="w ${live ? hc : ""}" d="M${cs[0]},${y} H${cs[cs.length - 1]} M${cs[0]},${y + h} H${cs[cs.length - 1]}"/>${inner}`;
+  };
+  const sub = s => `<tspan baseline-shift="sub" font-size="9">${s}</tspan>`;
+  return `<svg class="l6sch" viewBox="0 0 ${VW} ${VH}" style="max-width:${VW}px" role="img" aria-label="Transistor schematic of the ${g.name}: a pull-up network of ${count6(pun)} PMOS transistors between VDD and the output and a pull-down network of ${count6(g.pdn)} NMOS transistors between the output and VSS. With ${g.ins.map(i => `${i} = ${v[i]}`).join(", ")} the ${upOn ? "pull-up" : "pull-down"} network conducts and the output is ${z}">
+    ${draw(pun, "p", X0, Y0, W, yZ - Y0, true)}${draw(g.pdn, "n", X0, yZ, W, yS - yZ, true)}
+    <line class="rail" x1="${X0 - 6}" x2="${X0 + W + 6}" y1="${Y0}" y2="${Y0}"/><text class="rl" x="${X0 + W + 12}" y="${Y0 + 4}">V${sub("DD")}</text>
+    <line class="rail" x1="${X0 - 6}" x2="${X0 + W + 6}" y1="${yS}" y2="${yS}"/><text class="rl" x="${X0 + W + 12}" y="${yS + 4}">V${sub("SS")}</text>
+    <path class="w ${upOn ? "up" : "dn"}" d="M${cx0},${yZ} H${X0 + W + 14}"/><circle class="zd" cx="${cx0}" cy="${yZ}" r="3"/><text class="zl" x="${X0 + W + 18}" y="${yZ + 4}">${g.k === "carry" ? `C̄${sub("out")}` : "Z"} = ${z}</text></svg>`;
+}
+function gateOut() {
+  const g = GATES6.find(q => q.k === G6.k), v = G6.v, pun = pun6(g), n = g.ins.length;
+  g.ins.forEach(i => { if (v[i] == null) v[i] = 0; });
+  const dnOn = cond6(g.pdn, x => v[x] === 1), upOn = cond6(pun, x => v[x] === 0), z = upOn ? 1 : 0;
+  const zh = g.k === "carry" ? `${ov6("C")}<sub>out</sub>` : "Z", zbar = g.k === "carry" ? "C<sub>out</sub>" : ov6("Z");
+  const onList = (net, isOn) => { const r = []; const walk = q => q.t === "x" ? (isOn(q.v) && !r.includes(q.v) && r.push(q.v)) : q.c.forEach(walk); walk(net); return r.length ? r.map(hName).join(", ") : "none"; };
+  const rows = Array.from({ length: 2 ** n }, (_, k) => { const vv = {}; g.ins.forEach((i, j) => vv[i] = k >> (n - 1 - j) & 1); return { k, vv, z: zOf6(g, vv) }; });
+  const cur = rows.find(r => g.ins.every(i => r.vv[i] === v[i])).k;
+  const table = `<table class="tt l6tt"><tr>${g.ins.map(i => `<th>${hName(i)}</th>`).join("")}<th>${zh}</th></tr>${rows.map(r => `<tr data-row="${r.k}" tabindex="0" class="${r.k === cur ? "cur" : ""}" aria-label="set inputs to ${g.ins.map(i => r.vv[i]).join("")}">${g.ins.map(i => `<td>${r.vv[i]}</td>`).join("")}<td class="${r.z ? "one" : ""}">${r.z}</td></tr>`).join("")}</table>`;
+  return `<div class="presets" role="group" aria-label="Gate">${GATES6.map(q => `<button type="button" class="preset" data-g="${q.k}" aria-pressed="${q.k === G6.k}">${q.name}</button>`).join("")}</div>
+    <div class="l6g"><div>${gateSVG(g, v)}</div><div>
+      <div class="l6in" role="group" aria-label="Inputs">${g.ins.map(i => `<button type="button" class="bit${v[i] ? " on" : ""}" data-in="${i}" aria-pressed="${!!v[i]}">${hName(i)} = ${v[i]}</button>`).join("")}</div>
+      <dl class="ro">
+        <dt>Pull-down</dt><dd>${zbar} = ${expr6(g.pdn, hName)}: NMOS on for ${onList(g.pdn, x => v[x] === 1)} → ${dnOn ? flag("ok", "conducts to V<sub>SS</sub>") : "blocked"}</dd>
+        <dt>Pull-up</dt><dd>${zh} = ${expr6(pun, x => ov6(hName(x)))}: PMOS on for ${onList(pun, x => v[x] === 0)} → ${upOn ? flag("ok", "conducts to V<sub>DD</sub>") : "blocked"}</dd>
+        <dt>Output</dt><dd><b>${zh} = ${z}</b>, driven to ${z ? "V<sub>DD</sub>" : "V<sub>SS</sub>"}; exactly one network conducts, so no static current</dd>
+        <dt>Size</dt><dd>${count6(g.pdn)} NMOS + ${count6(pun)} PMOS = ${count6(g.pdn) + count6(pun)} transistors · ${g.src}${g.mirror ? "; the pull-up is drawn with the same topology as the pull-down (a mirror), not as its dual" : ""}</dd>
+      </dl>
+      <div class="tt-wrap">${table}</div></div></div>`;
+}
+function initGate(body) {
+  const draw = focus => { body.innerHTML = gateOut(); if (focus) body.querySelector(focus)?.focus(); };
+  body.addEventListener("click", e => {
+    const b = e.target.closest("[data-g],[data-in],[data-row]"); if (!b) return;
+    const g = GATES6.find(q => q.k === G6.k);
+    if (b.dataset.g) { G6.k = b.dataset.g; draw(`[data-g="${G6.k}"]`); }
+    else if (b.dataset.in) { G6.v[b.dataset.in] ^= 1; draw(`[data-in="${b.dataset.in}"]`); }
+    else { const k = +b.dataset.row, n = g.ins.length; g.ins.forEach((i, j) => G6.v[i] = k >> (n - 1 - j) & 1); draw(`[data-row="${k}"]`); }
+  });
+  body.addEventListener("keydown", e => { const r = e.target.closest("[data-row]"); if (r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); r.click(); } });
+  draw();
+}
+
+// Chart (slides 5, 8-12, 15-16): transistors per cell, counted from the slides' schematics.
+const TCOUNT = [
+  ["Inverter", 2, "slide 8", 1], ["Buffer", 4, "slide 8: two inverters", 1], ["NAND2", 4, "slide 9", 1], ["NOR2", 4, "slide 9", 1], ["AND2", 6, "slide 10: NAND2 + inverter", 1],
+  ["AOI21", 6, "slides 6 and 11", 1], ["AND3", 8, "slide 5: NAND3 + inverter", 1], ["D latch", 10, "slide 15: 2 transfer gates, 2 inverters, clock inverter", 2],
+  ["D flip-flop", 18, "slide 16: 4 transfer gates, 4 inverters, clock inverter", 2], ["Full adder", 28, "slide 12: mirror adder, 24 + 2 output inverters", 1],
+];
+CHARTS.tcount = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 0 : 112, R = 34, T = 4, RH = narrow ? 40 : 28, H = T + TCOUNT.length * RH + 22, PW = W - L - R;
+  const x = v => L + v / 30 * PW, bh = 14;
+  const grid = [0, 10, 20, 30].map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 20}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="${v || !narrow ? "middle" : "start"}">${v}</text>`).join("");
+  const rows = TCOUNT.map(([nm, v, src, s], i) => { const y0 = T + i * RH + (narrow ? 20 : 7);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${nm}: ${v} transistors</b>${src}`)}"><rect class="hit" x="0" y="${y0 - (narrow ? 18 : 6)}" width="${W}" height="${RH}"/>
+      <text class="cat" x="${narrow ? 0 : L - 8}" y="${narrow ? y0 - 5 : y0 + 11}" text-anchor="${narrow ? "start" : "end"}">${nm}</text>
+      <path class="bar s${s}" d="${barPathH(x(0), x(v), y0, bh)}"/><text class="val" x="${x(v) + 6}" y="${y0 + 11}">${v}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Transistors per cell, counted from the slides: inverter 2, buffer 4, NAND2 4, NOR2 4, AND2 6, AOI21 6, AND3 8, transfer-gate D latch 10, transfer-gate D flip-flop 18, mirror full adder 28">${grid}${rows}</svg>`;
+};
+// Horizontal bar with rounded data end (right), square at the baseline.
+const barPathH = (x0, x1, y, h) => { const r = Math.min(4, (x1 - x0) / 2, h / 2); return `M${x0},${y} H${x1 - r} Q${x1},${y} ${x1},${y + r} V${y + h - r} Q${x1},${y + h} ${x1 - r},${y + h} H${x0} Z`; };
+
+// Chart + explorer (context, not on the slides): logical effort of NAND-n and NOR-n. Each gate is sized so that its
+// worst-case pull-down and pull-up match a reference inverter (NMOS width 1, PMOS width r = µn/µp); the input
+// capacitance relative to that inverter is the logical effort g. Standard result (Sutherland, Sproull, Harris).
+const EF = { r: 2 };
+const gNand = n => (n + EF.r) / (1 + EF.r), gNor = n => (1 + n * EF.r) / (1 + EF.r);
+CHARTS.effort = narrow => {
+  const W = narrow ? 340 : 600, H = 240, L = 38, R = narrow ? 16 : 70, T = 24, B = 30, PW = W - L - R, PH = H - T - B;
+  const ymax = Math.max(2, Math.ceil(gNor(4) * 2) / 2), x = n => L + (n - 1) / 3 * PW, y = g => T + PH - g / ymax * PH;
+  const step = ymax > 2.5 ? 1 : 0.5, yt = []; for (let v = 0; v <= ymax + 1e-9; v += step) yt.push(v);
+  const grid = yt.map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${f2(v, 1)}</text>`).join("")
+    + [1, 2, 3, 4].map(n => `<text class="tick" x="${x(n)}" y="${H - 10}" text-anchor="${narrow && n === 1 ? "start" : narrow && n === 4 ? "end" : "middle"}">${n} input${n > 1 ? "s" : ""}</text>`).join("")
+    + `<text class="axl" x="${L - 30}" y="12">logical effort g</text>`;
+  const ln = (f, k) => `<path class="line ${k} nohit" d="M${[1, 2, 3, 4].map(n => `${x(n).toFixed(1)},${y(f(n)).toFixed(1)}`).join(" L")}"/>`;
+  const pts = [1, 2, 3, 4].map(n => [[gNand, "k1", "NAND", `NMOS ${f2(n, 0)} × width ${n}, PMOS width ${f2(EF.r)}`, n * (n + EF.r)], [gNor, "k2", "NOR", `NMOS width 1, PMOS ${n} × width ${f2(n * EF.r)}`, n * (1 + n * EF.r)]].map(([f, k, nm, sz, area]) =>
+    `<g class="pt" tabindex="0" data-tip="${esc(`<b>${n === 1 ? "inverter" : nm + n}: g = ${f2(f(n))}</b>${sz}<br>total width ${f2(area, 1)} (inverter: ${f2(1 + EF.r, 1)})`)}"><circle class="hit" cx="${x(n)}" cy="${y(f(n))}" r="12"/><circle class="dot ${k}" cx="${x(n)}" cy="${y(f(n))}" r="4.5"/></g>`).join("")).join("");
+  const labels = narrow ? "" : `<text class="lbl" x="${x(4) + 10}" y="${y(gNor(4)) + 4}">NOR</text><text class="lbl" x="${x(4) + 10}" y="${y(gNand(4)) + 4}">NAND</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Logical effort over the number of inputs with a mobility ratio of ${f2(EF.r)}: NAND rises from 1 to ${f2(gNand(4))} at four inputs, NOR rises faster from 1 to ${f2(gNor(4))}">${grid}${ln(gNor, "k2")}${ln(gNand, "")}${pts}${labels}</svg>`;
+};
+function effOut() {
+  return `<dt>Inverter</dt><dd>NMOS 1, PMOS ${f2(EF.r)}: input capacitance ${f2(1 + EF.r)} units, g = 1 by definition</dd>
+    <dt>NAND2</dt><dd>NMOS 2 + 2 in series (each twice as wide), PMOS ${f2(EF.r)} in parallel: (2 + ${f2(EF.r)}) / ${f2(1 + EF.r)} = <b>${f2(gNand(2))}</b></dd>
+    <dt>NOR2</dt><dd>NMOS 1 in parallel, PMOS ${f2(2 * EF.r)} + ${f2(2 * EF.r)} in series: (1 + ${f2(2 * EF.r)}) / ${f2(1 + EF.r)} = <b>${f2(gNor(2))}</b></dd>
+    <dt>NOR2 / NAND2</dt><dd>${f2(gNor(2) / gNand(2))}× the load on whatever drives it${EF.r === 1 ? " (equal mobilities: no difference)" : ""}</dd>`;
+}
+function initEff(body) {
+  body.innerHTML = `<div class="ctl"><label>mobility ratio µ<sub>n</sub>/µ<sub>p</sub> <input type="range" data-k="r" min="1" max="3" step="0.1" value="${EF.r}"> <output>${f2(EF.r)}</output></label></div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), o = body.querySelector("output");
+  const render = () => { ro.innerHTML = effOut(); o.textContent = f2(EF.r); mountCharts(); };
+  body.querySelector("input").addEventListener("input", e => { EF.r = +e.target.value; render(); });
+  ro.innerHTML = effOut();
+}
+
+// Chart + explorer (slides 13-14): on-conductance of an NMOS, a PMOS and the transfer gate while passing a voltage V_A.
+// Small-signal linear-region model at V_DS ≈ 0 (g = β·(V_GS − V_th)), V_DD = 1 V, β_N = 1 mA/V², no body effect: ours.
+const TG = { k: 1, vth: 0.3 }, TG_VDD = 1.0;
+const gN6 = va => Math.max(0, TG_VDD - va - TG.vth), gP6 = va => TG.k * Math.max(0, va - TG.vth);
+CHARTS.tg = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 230 : 250, L = 44, R = narrow ? 12 : 92, T = 14, B = 30, PW = W - L - R, PH = H - T - B;
+  const peak = Math.max(...Array.from({ length: 101 }, (_, i) => gN6(i / 100) + gP6(i / 100))), ymax = Math.max(0.5, Math.ceil(peak * 4) / 4);
+  const x = v => L + v / TG_VDD * PW, y = g => T + PH - g / ymax * PH;
+  const yt = [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].filter(v => v <= ymax + 1e-9 && (ymax <= 1 || v * 4 % 2 === 0));
+  const grid = yt.map((v, i) => `<line class="${i ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${f2(v)}</text>`).join("")
+    + [0, 0.2, 0.4, 0.6, 0.8, 1].map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${f2(v, 1)}${v === 1 ? " V" : ""}</text>`).join("")
+    + `<text class="axl" x="${L + 4}" y="${T + 10}">conductance in mS</text>`;
+  const bands = `<rect class="band" x="${x(0)}" y="${T}" width="${x(TG.vth) - x(0)}" height="${PH}"/><rect class="band" x="${x(TG_VDD - TG.vth)}" y="${T}" width="${x(TG_VDD) - x(TG_VDD - TG.vth)}" height="${PH}"/>`
+    + (narrow ? "" : `<text class="note" x="${x(TG.vth / 2)}" y="${T + PH - 6}" text-anchor="middle">PMOS off</text><text class="note" x="${x(TG_VDD - TG.vth / 2)}" y="${T + 14}" text-anchor="middle">NMOS off</text>`);
+  const path = f => { const p = []; for (let i = 0; i <= 100; i++) p.push(`${x(i / 100).toFixed(1)},${y(f(i / 100)).toFixed(1)}`); return "M" + p.join(" L"); };
+  const cw = PW / 20;
+  const cols = Array.from({ length: 21 }, (_, i) => { const va = i / 20, a = gN6(va), b = gP6(va), t = a + b;
+    const row = (k, nm, g) => `<span class="trow"><i style="--c:var(--vz-s${k})"></i><strong>${f2(g)} mS</strong> ${nm}${g > 0 ? ` (${f2(1 / g, 1)} kΩ)` : " (off)"}</span>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>V<sub>A</sub> = ${f2(va)} V</b>${row(1, "NMOS", a)}${row(2, "PMOS", b)}${row(3, "transfer gate", t)}`)}"><rect class="hit" x="${x(va) - cw / 2}" y="${T}" width="${cw}" height="${PH}"/><line class="xcol" x1="${x(va)}" x2="${x(va)}" y1="${T}" y2="${T + PH}"/><circle class="dot k3 xd" cx="${x(va)}" cy="${y(t)}" r="4.5"/></g>`; }).join("");
+  const labels = narrow ? "" : `<text class="lbl" x="${x(1) + 8}" y="${y(gN6(1) + gP6(1)) + 4}">transfer gate</text><text class="lbl" x="${x(1) + 8}" y="${y(gP6(1)) + 18}">PMOS</text><text class="lbl" x="${x(1) + 8}" y="${y(0) - 4}">NMOS</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="On-conductance over the passed voltage from 0 to 1 volt with thresholds of ${f2(TG.vth)} volts and a PMOS ${f2(TG.k)} times as strong as the NMOS: the NMOS conducts well near 0 and turns off above ${f2(TG_VDD - TG.vth)} volts, the PMOS is off below ${f2(TG.vth)} volts and conducts well near 1 volt, and the transfer gate, their sum, stays between ${f2(Math.min(...Array.from({ length: 101 }, (_, i) => gN6(i / 100) + gP6(i / 100))))} and ${f2(peak)} millisiemens">${bands}${grid}<path class="line nohit" d="${path(gN6)}"/><path class="line k2 nohit" d="${path(gP6)}"/><path class="line k3 thick nohit" d="${path(va => gN6(va) + gP6(va))}"/>${cols}${labels}</svg>`;
+};
+function tgOut() {
+  const s = Array.from({ length: 101 }, (_, i) => gN6(i / 100) + gP6(i / 100)), mn = Math.min(...s), mx = Math.max(...s);
+  return `<dt>NMOS alone</dt><dd>passes 0 V strongly, but a high input only up to V<sub>DD</sub> − V<sub>th,N</sub> = <b>${f2(TG_VDD - TG.vth)} V</b> (it turns off there)</dd>
+    <dt>PMOS alone</dt><dd>passes 1 V strongly, but a low input only down to |V<sub>th,P</sub>| = <b>${f2(TG.vth)} V</b></dd>
+    <dt>Transfer gate</dt><dd>${mn > 0 ? `conducts over the whole range: ${f2(mn)} to ${f2(mx)} mS, i.e. ${f2(1 / mx, 1)} to ${f2(1 / mn, 1)} kΩ, a spread of ${f2(mx / mn, 1)}×` : `a gap with no conduction around the middle: the thresholds add up to more than V<sub>DD</sub>`}</dd>`;
+}
+function initTg(body) {
+  body.innerHTML = `<div class="ctl"><label>β<sub>P</sub>/β<sub>N</sub> <input type="range" data-k="k" min="0.3" max="1.5" step="0.05" value="${TG.k}"> <output data-o="k">${f2(TG.k)}</output></label>
+    <label>|V<sub>th</sub>| <input type="range" data-k="vth" min="0.15" max="0.55" step="0.05" value="${TG.vth}"> <output data-o="vth">${f2(TG.vth)} V</output></label></div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), render = () => { ro.innerHTML = tgOut(); body.querySelector('[data-o="k"]').textContent = f2(TG.k); body.querySelector('[data-o="vth"]').textContent = f2(TG.vth) + " V"; mountCharts(); };
+  body.querySelectorAll("[data-k]").forEach(i => i.addEventListener("input", e => { TG[e.target.dataset.k] = +e.target.value; render(); }));
+  ro.innerHTML = tgOut();
+}
+
+// Explorer (slides 15-17): one clock, a D input you can edit, and what a latch, a master-slave flip-flop and a
+// toggling JK stage make of it. 16 quarter-period slots; C is low in the first half of each period, high in the second.
+const FF6_PRESETS = [["like slide 16, plus a pulse", [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0]], ["D changes only while C = 0", [0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]], ["short pulses while C = 1", [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]]];
+const FF6 = { d: FF6_PRESETS[0][1].slice(), p: 0 };
+function ffSim() {
+  const n = 16, C = [], QL = [], QM = [], Q = [], QT = []; let ql = 0, qm = 0, q = 0, qt = 0;
+  for (let t = 0; t < n; t++) { const c = t % 4 >= 2 ? 1 : 0, d = FF6.d[t];
+    if (c && t % 4 === 2) qt ^= 1;            // rising edge: the J = K = 1 stage toggles
+    if (c) { ql = d; q = qm; } else qm = d;   // latch and slave transparent while C = 1; master while C = 0
+    C.push(c); QL.push(ql); QM.push(qm); Q.push(q); QT.push(qt); }
+  return { C, D: FF6.d, QL, QM, Q, QT };
+}
+function ffSVG(narrow) {
+  const s = ffSim(), n = 16, L = narrow ? 58 : 132, R = 8, W = narrow ? 340 : 600, RH = narrow ? 30 : 32, T = 8, sw = (W - L - R) / n, H = T + 6 * RH + 6;
+  const x = t => L + t * sw;
+  const rows = [["C", "clock C", s.C], ["D", "data D (click)", s.D], ["QL", "latch Q (sl. 15)", s.QL], ["QM", "master Q<tspan baseline-shift='sub' font-size='8'>M</tspan>", s.QM], ["Q", "flip-flop Q (sl. 16)", s.Q], ["QT", "JK toggle (sl. 17)", s.QT]];
+  const short = { C: "C", D: "D", QL: "latch", QM: "Q<tspan baseline-shift='sub' font-size='8'>M</tspan>", Q: "FF Q", QT: "toggle" };
+  const hi = s.C.map((c, t) => c ? `<rect class="hi" x="${x(t)}" y="${T - 4}" width="${sw}" height="${6 * RH}"/>` : "").join("");
+  const edges = s.C.map((c, t) => c && t % 4 === 2 ? `<line class="edge" x1="${x(t)}" x2="${x(t)}" y1="${T - 4}" y2="${T + 6 * RH - 4}"/>` : "").join("");
+  const diff = s.QL.map((v, t) => v !== s.Q[t] ? `<rect class="diff" x="${x(t)}" y="${T + 2 * RH}" width="${sw}" height="${RH - 8}"/>` : "").join("");
+  const wave = (arr, r, cls) => { const yb = T + r * RH + RH - 10, yt = T + r * RH + 4, yv = v => v ? yt : yb;
+    let d = `M${x(0)},${yv(arr[0])}`; arr.forEach((v, t) => { d += ` V${yv(v)} H${x(t + 1)}`; }); return `<path class="wv ${cls}" d="${d}"/>`; };
+  const body = rows.map(([k, label, arr], r) => `<text class="rl" x="${L - 8}" y="${T + r * RH + RH / 2 + 2}" text-anchor="end">${narrow ? short[k] : label}</text>${wave(arr, r, k === "D" ? "d" : "")}`).join("");
+  const cells = s.D.map((v, t) => `<rect class="dc" data-t="${t}" tabindex="0" role="button" aria-pressed="${!!v}" aria-label="D in slot ${t + 1} of 16 is ${v}; press to toggle" x="${x(t) + 1}" y="${T + RH}" width="${sw - 2}" height="${RH - 4}" rx="3"/>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timing diagram over four clock periods: clock, data, latch output, master output, flip-flop output and toggle output; shaded slots are the halves where the clock is high">${hi}${edges}${diff}${body}${cells}</svg>`;
+}
+function ffOut() {
+  const s = ffSim(), ch = a => a.reduce((k, v, t) => k + (t && v !== a[t - 1] ? 1 : 0), 0), smp = [2, 6, 10, 14].map(t => s.D[t - 1]);
+  const differ = s.QL.filter((v, t) => v !== s.Q[t]).length;
+  return `<dl class="ro"><dt>At the edges</dt><dd>D just before each rising edge: ${smp.join(", ")} → the flip-flop shows ${[2, 6, 10, 14].map(t => s.Q[t]).join(", ")} for the next period</dd>
+    <dt>Changes</dt><dd>latch Q ${ch(s.QL)} times, flip-flop Q ${ch(s.Q)} times; ${differ ? `they differ in ${differ} of 16 slots (tinted): there D moved while C = 1 and the transparent latch passed it on` : "identical: D never moved while C = 1, so the latch had nothing extra to pass"}</dd>
+    <dt>Toggle</dt><dd>the J = K = 1 stage changes on every rising edge: 4 clock periods give 2 output periods, a divide-by-2</dd></dl>`;
+}
+function initFf(body) {
+  const render = focus => { body.dataset.narrow = String(isNarrow());
+    body.innerHTML = `<div class="presets" role="group" aria-label="D pattern">${FF6_PRESETS.map(([t], i) => `<button type="button" class="preset" data-p="${i}" aria-pressed="${FF6.p === i}">${t}</button>`).join("")}</div>
+      <div class="l6wf">${ffSVG(isNarrow())}</div>${ffOut()}`;
+    if (focus) body.querySelector(focus)?.focus(); };
+  body.addEventListener("click", e => { const p = e.target.closest("[data-p]"), c = e.target.closest("[data-t]");
+    if (p) { FF6.p = +p.dataset.p; FF6.d = FF6_PRESETS[FF6.p][1].slice(); render(`[data-p="${FF6.p}"]`); }
+    else if (c) { FF6.d[+c.dataset.t] ^= 1; FF6.p = -1; render(`[data-t="${c.dataset.t}"]`); } });
+  body.addEventListener("keydown", e => { const c = e.target.closest("[data-t]"); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); c.dispatchEvent(new MouseEvent("click", { bubbles: true })); } });
+  addEventListener("resize", () => { if (body.dataset.narrow !== String(isNarrow())) render(); });
+  render();
+}
+Object.assign(LABS, { gate: initGate, eff: initEff, tg: initTg, ff: initFf });
+
+function lecture6() {
+  const sw = (h, b) => `<div class="tile"><div class="v">${h}</div><div class="l">${b}</div></div>`;
+  return `${head(l)}
+    <p class="l5-start">New to transistors? The <a href="digital-circuit-design/basics.html">basics page</a> explains NMOS, PMOS, the CMOS inverter, V<sub>DD</sub> and V<sub>SS</sub>, and has a NAND/NOR explorer (<a href="digital-circuit-design/basics.html#s5">section 5</a>). The transistor curves and the inverter's transfer curve are on the <a href="digital-circuit-design/lecture.html?n=5">lecture 5 page</a>. This page builds on both.</p>
+    <p class="lead">Lecture 5 ended with one inverter; this one builds everything else a digital chip needs out of the same two transistors. It first reduces NMOS and PMOS to ideal switches, then shows the one recipe behind every static CMOS gate (a pull-down network of NMOS, a pull-up network of PMOS that is its mirror image), walks through the standard-cell layouts of inverter, buffer, NAND, NOR, AND and AOI and the 28-transistor full adder, and finally turns to switches that pass signals instead of driving them: the transfer gate, and the latches and flip-flops made from it. Static behaviour only; how fast these circuits switch is lecture 7. Written from the chair's 2022/23 deck (18 slides); three explorers and three charts.</p>
+
+    <h2>The inverter once more (slide 2)</h2>
+    <p>The inverter is the basic element of CMOS logic. Its <b>static</b> characteristics, the switching level and the transistor sizing, were last lecture's topic (the transfer curve and the V<sub>M</sub> formula are on the <a href="digital-circuit-design/lecture.html?n=5">lecture 5 page</a>). Its <b>dynamic</b> characteristics, such as how long the output takes for a 0 → 1 transition, belong to the timing lecture. The slide repeats the saturation-region currents of both transistors, which is where they sit for most of a switching event:</p>
+    <div class="formula">Saturation: V<sub>DS</sub> ≥ V<sub>GS</sub> − V<sub>th,N</sub><br>NMOS: I<sub>D</sub> = β<sub>N</sub>/2 · (V<sub>GS</sub> − V<sub>th,N</sub>)² · (1 + λ<sub>N</sub>·(V<sub>DS</sub> − V<sub>GS</sub> + V<sub>th,N</sub>))<br>PMOS: I<sub>D</sub> = β<sub>P</sub>/2 · (V<sub>GS</sub> − V<sub>th,P</sub>)² · (1 + λ<sub>P</sub>·(V<sub>DS</sub> − V<sub>GS</sub> + V<sub>th,P</sub>))</div>
+    <p>For logic design these equations are more detail than needed. The rest of the lecture replaces them with switches.</p>
+
+    <h2>Transistors as ideal switches (slides 3–4)</h2>
+    <p>The <b>switch-level model</b> is the ideal version of the switching behaviour, made to describe logic. It assumes two things: the only levels are V<sub>SS</sub> (written 1'b0) and V<sub>DD</sub> (1'b1), and no static currents flow. Then each transistor is a switch between drain and source that its gate opens or closes:</p>
+    <ul class="cmp l6one" aria-label="PMOS versus NMOS switch">
+      <li><b>PMOS, the pull-up switch</b><span class="v"><span class="sw v"></span>Closed (V<sub>DS</sub> = 0) if V<sub>G</sub> − V<sub>S</sub> &lt; V<sub>th,P</sub>, i.e. the gate is at least a threshold below the source. Otherwise the channel is high-ohmic: 1'bz. Its source sits at 1'b1, so with A = 0 it pulls Z up: Z = Ā.</span></li>
+      <li><b>NMOS, the pull-down switch</b><span class="v"><span class="sw t"></span>Closed if V<sub>G</sub> − V<sub>S</sub> &gt; V<sub>th,N</sub>, otherwise 1'bz. Its source sits at 1'b0, so with A = 1 it pulls Z down: Z̄ = A.</span></li>
+    </ul>
+    <p>The two tables on the slides give the drain value for every combination of gate G and source S:</p>
+    <div class="l6two">
+      <table class="tt"><tr><th>PMOS</th><th>G = 0</th><th>G = 1</th></tr><tr><th>S = 0</th><td class="l6weak">0 (weak)</td><td>z</td></tr><tr><th>S = 1</th><td class="one">1</td><td>z</td></tr></table>
+      <table class="tt"><tr><th>NMOS</th><th>G = 0</th><th>G = 1</th></tr><tr><th>S = 0</th><td>z</td><td class="one">0</td></tr><tr><th>S = 1</th><td>z</td><td class="l6weak">1 (weak)</td></tr></table>
+    </div>
+    <p class="muted">z = high impedance, the switch is open and the drain floats. The two entries the slides mark in red are tinted here.</p>
+    ${l5box("why", "Context, not on the slides: why two entries are red", "<p>A closed switch is only ideal while the transistor stays on. An NMOS passing a 1 has its source rising towards V<sub>DD</sub>; once V<sub>G</sub> − V<sub>S</sub> drops to V<sub>th,N</sub> it turns off, so the 1 arrives as V<sub>DD</sub> − V<sub>th,N</sub>, a <b>weak 1</b>. The PMOS passing a 0 stops at |V<sub>th,P</sub>| above ground, a <b>weak 0</b>. Slide 13 draws exactly this, and it is the reason for the rule of the next section: NMOS only ever pull down, PMOS only ever pull up. The notation 1'b0, 1'b1, 1'bz is Verilog's; Verilog even has switch-level primitives (<code>nmos</code>, <code>pmos</code>, <code>cmos</code>) and signal strengths that model weak values.</p>")}
+
+    <h2>One recipe for every static CMOS gate (slides 5–7)</h2>
+    <p>Every static CMOS gate has the shape of the inverter: a <b>pull-up network</b> of PMOS transistors between V<sub>DD</sub> and the output, a <b>pull-down network</b> of NMOS transistors between the output and V<sub>SS</sub>, and every input drives one NMOS and one PMOS gate. The two networks are complementary: for every input combination exactly one of them conducts. The recipe:</p>
+    <ol>
+      <li>Write the function as Z̄ = f(A<sub>1</sub>, A<sub>2</sub>, …) with uninverted inputs. That is the <b>pull-down network</b>: an AND becomes NMOS in <b>series</b>, an OR becomes NMOS in <b>parallel</b>.</li>
+      <li>The <b>pull-up network</b> is its dual: swap series and parallel and use PMOS. By De Morgan it computes Z = f̄ written with inverted inputs, and it conducts exactly when the pull-down does not.</li>
+      <li>If the function is not inverting (AND, OR), add an inverter behind it.</li>
+    </ol>
+    <p>Slide 5 applies this to <b>AND3</b>, Z = A<sub>1</sub>A<sub>2</sub>A<sub>3</sub>. One stage can only produce the inverted function, so it builds the NAND3 first: pull-down Z̄ = A<sub>1</sub>A<sub>2</sub>A<sub>3</sub> (three NMOS in series), pull-up Z = Ā<sub>1</sub> + Ā<sub>2</sub> + Ā<sub>3</sub> (three PMOS in parallel), then an inverter. Slide 6 builds a gate with no inverter at all: Z̄ = A<sub>1</sub> + A<sub>2</sub>A<sub>3</sub>, pull-down A<sub>1</sub> in parallel with the series pair A<sub>2</sub>, A<sub>3</sub>; pull-up Z = Ā<sub>1</sub> · (Ā<sub>2</sub> + Ā<sub>3</sub>), the PMOS A<sub>1</sub> in series with the parallel pair A<sub>2</sub>, A<sub>3</sub>. That is an <b>AND-OR-INVERT</b> gate; the deck calls it AOI12 on slide 6 and AOI2 on slide 11, libraries usually AOI21 (a 2-input AND and a single input into the NOR).</p>
+    ${lab("gate", "switch-level gates: pick a gate, flip the inputs, watch which network conducts")}
+    <p class="muted">Drawn from the pull-down network by the recipe above: the pull-up is generated as its dual (except for the adder carry, see below). Closed switches are solid, open ones dashed; the conducting path is coloured, blue to V<sub>SS</sub> and orange to V<sub>DD</sub>. The truth-table rows are clickable.</p>
+    ${l5box("ex", "Worked example: the AOI21 of slide 6, one row at a time", `<p>Take A<sub>1</sub> = 0, A<sub>2</sub> = 1, A<sub>3</sub> = 1 (the explorer's start). Pull-down: the NMOS A<sub>1</sub> is open, but A<sub>2</sub> and A<sub>3</sub> are both closed, so the series branch conducts and Z is pulled to 0. Pull-up: the PMOS A<sub>1</sub> is closed (its gate is 0), but the parallel pair below it needs Ā<sub>2</sub> or Ā<sub>3</sub>, and both PMOS are open; no path to V<sub>DD</sub>. Check with the formula: Z = ¬(0 + 1·1) = 0. Now set A<sub>3</sub> = 0: the series NMOS branch breaks, the A<sub>3</sub> PMOS closes, and the path V<sub>DD</sub> → A<sub>1</sub> → A<sub>3</sub> → Z appears: Z = ¬(0 + 1·0) = 1. Of the 8 rows, Z = 1 in exactly three (A<sub>1</sub> = 0 and not both A<sub>2</sub>, A<sub>3</sub>).</p>`)}
+    ${l5box("ex", "Worked example: design Z = ¬((A₁ + A₂) · A₃) yourself (OAI21)", `<p>Step 1, pull-down for Z̄ = (A<sub>1</sub> + A<sub>2</sub>)·A<sub>3</sub>: the OR is a parallel pair A<sub>1</sub> ∥ A<sub>2</sub>, the AND puts it in series with A<sub>3</sub>. Step 2, pull-up as the dual: series pair A<sub>1</sub> – A<sub>2</sub>, in parallel with A<sub>3</sub>; by De Morgan Z = Ā<sub>1</sub>Ā<sub>2</sub> + Ā<sub>3</sub>, which is the same function. That is 3 + 3 = <b>6 transistors</b> in one stage. Built from library gates instead (an OR2 = NOR2 + inverter, then a NAND2) it would take 6 + 4 = 10 transistors and two stages of delay. Compare your drawing with the OAI21 in the explorer.</p>`)}
+    <p>Slide 7 shows how this maps onto silicon. In a standard cell the <b>V<sub>DD</sub> rail</b> runs along the top edge and the <b>V<sub>SS</sub> rail</b> along the bottom. The PMOS pull-up network sits in the n-well right under the V<sub>DD</sub> rail, the NMOS pull-down network above the V<sub>SS</sub> rail, and the output joins them in the middle. Every cell has the same height, so cells placed next to each other in a row share their rails.</p>
+    ${l5box("why", "Context, not on the slides: the limits of one stage", "<p>A single static CMOS stage is always <b>inverting</b> (it is monotonically falling in every input): raising an input can only close an NMOS and open a PMOS, which can only pull the output down. That is why AND and OR need a second stage, and why the most efficient cells are the inverting ones (NAND, NOR, AOI, OAI). The other limit is the series stack: every transistor in series adds resistance, so stacks are kept to about four. A gate with more inputs is split into a tree of smaller ones.</p>")}
+
+    <h2>Layouts of the basic cells (slides 8–11)</h2>
+    <p>The four layout slides draw real standard cells next to their schematics. The <b>inverter</b> (slide 8) is one vertical poly line crossing the p-diffusion at the top (the PMOS) and the n-diffusion at the bottom (the NMOS); the drains are joined by a metal strip that is the output Z. The <b>buffer</b> is two inverters in a row, the first driving the second. <b>NAND2</b> and <b>NOR2</b> (slide 9) have two poly lines, one per input: in the NAND2 the two NMOS share one strip of diffusion in series while the PMOS sit in parallel with a shared drain; the NOR2 is the mirror image, series PMOS and parallel NMOS. The <b>AND2</b> (slide 10) is a NAND2 followed by an inverter, three poly lines. The <b>AOI</b> of slide 11 uses three poly lines with the NMOS of A<sub>2</sub> and A<sub>3</sub> in series and A<sub>1</sub> beside them.</p>
+    ${chart("tcount", leg([[1, "combinational cell"], [2, "storage element"]]))}
+      <figcaption>Transistors per cell, counted from the schematics on the slides named in the tooltips. A static CMOS gate with n inputs in one stage always has 2n transistors; every added inverter costs 2 more.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th>Cell</th><th>Transistors</th><th>Source</th></tr>${TCOUNT.map(([nm, v, src]) => `<tr><td>${nm}</td><td class="n">${v}</td><td>${src}</td></tr>`).join("")}</table></details>
+    ${l5box("why", "Context, not on the slides: why layouts share diffusion", "<p>Transistors in series share a node, so in the layout one strip of diffusion runs under several poly lines and the region between two gates is at once the source of one transistor and the drain of the next. No contact is needed there, which saves area and capacitance. Ordering the poly lines so that as many neighbours as possible share diffusion (an Euler path through the network) is the classic trick behind compact cells, and the deck's take-home lists \"compact layouts\" for that reason.</p>")}
+    <p>Why libraries contain far more NAND than NOR variants follows from the weaker PMOS (lecture 5): a NOR puts the slow transistors in series. The standard way to quantify that is the <b>logical effort</b> of a gate, how much more input capacitance it has than an inverter that delivers the same current.</p>
+    ${lab("eff", "NAND versus NOR, sized for equal drive")}
+    ${chart("effort", leg([[1, "NAND-n", "ln"], [2, "NOR-n", "ln"]]))}
+      <figcaption>Context, not on the slides: logical effort g = input capacitance of the gate ÷ that of an inverter with equal drive (NMOS width 1, PMOS width µ<sub>n</sub>/µ<sub>p</sub>). n transistors in series must each be n times as wide to keep the stack's resistance. Values from this standard sizing rule (Sutherland, Sproull and Harris, <i>Logical Effort</i>); the default ratio 2 is a typical figure.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: sizing a NAND2 and a NOR2 for equal drive", `<p>Reference inverter: NMOS width 1, PMOS width 2 (holes half as mobile), 3 units of input capacitance. <b>NAND2</b>: two NMOS in series must together be as strong as one of width 1, so each gets width 2; the parallel PMOS each keep width 2 (one alone must be as strong as the inverter's). Each input sees 2 + 2 = 4 units: g = 4/3 ≈ 1.33. <b>NOR2</b>: the parallel NMOS keep width 1, the two series PMOS get width 4 each. Each input sees 1 + 4 = 5 units: g = 5/3 ≈ 1.67, and the NOR2 has 1 + 1 + 4 + 4 = 10 units of transistor width against 2 + 2 + 2 + 2 = 8 for the NAND2. At four inputs the gap is 2 against 3.</p>`)}
+
+    <h2>The mirror full adder (slide 12)</h2>
+    <p>The full adder of lecture 2 is the standard example of a cell that is built as one compound gate rather than from NANDs. Its first stage computes the inverted carry, C̄<sub>out</sub> = ¬(A·B + C<sub>in</sub>·(A + B)): in the pull-down, A and B in series, in parallel with C<sub>in</sub> in series with A ∥ B. The second stage reuses that signal for the sum: S̄ = ¬(A·B·C<sub>in</sub> + C̄<sub>out</sub>·(A + B + C<sub>in</sub>)). Two output inverters restore the true polarities. The slide's three points: a <b>more compact</b> implementation than the textbook equations (S = A ⊕ B ⊕ C<sub>in</sub> needs XORs), a <b>symmetric circuit</b> because the truth table is symmetric, and a <b>short carry path</b>: C<sub>in</sub> passes through one gate and one inverter, which matters in a ripple chain (lecture 2).</p>
+    ${l5box("ex", "Worked example: A = 1, B = 0, carry-in 1 through the mirror adder", `<p>Carry stage: A·B = 0, but C<sub>in</sub>·(A + B) = 1·1 = 1, so the pull-down conducts through C<sub>in</sub> and A: C̄<sub>out</sub> = 0, and the inverter gives C<sub>out</sub> = 1. Sum stage: A·B·C<sub>in</sub> = 0, and C̄<sub>out</sub>·(A + B + C<sub>in</sub>) = 0·1 = 0, so the pull-down is blocked and S̄ = 1; the inverter gives S = 0. Check: 1 + 0 + 1 = 2 = binary 10, so C<sub>out</sub> = 1, S = 0. Why the sum formula works: S is 1 when all three inputs are 1 (A·B·C<sub>in</sub>), or when at least one input is 1 but there is no carry (C̄<sub>out</sub>·(A + B + C<sub>in</sub>)), which is exactly one input being 1. Counting: carry stage 5 + 5, sum stage 7 + 7, two inverters 4: <b>28 transistors</b>.</p>`)}
+    ${l5box("why", "Context, not on the slides: why the pull-up can be a mirror", "<p>Normally the pull-up is the dual of the pull-down. The carry is special: it is a majority function, and majority is <i>self-dual</i>: inverting all three inputs inverts the result. So the pull-up may use the same series-parallel topology as the pull-down (with PMOS), and it still conducts exactly when the pull-down does not. Hence the name <b>mirror adder</b>, and the symmetric picture on the slide. Pick \"Adder carry (mirror)\" in the gate explorer above and try all eight rows: exactly one network conducts each time. The mirror version also puts at most two transistors in series in the pull-up, where the dual would need three on one branch.</p>")}
+
+    <h2>Switches that pass signals: the transfer gate (slides 13–14)</h2>
+    <p>So far each transistor connected the output to a rail. Slide 13 asks for something else: a <b>switch</b> that connects two signal nets A and Z, controlled by a third signal S. A single transistor can do it, but not over the whole range:</p>
+    <ul class="cmp l6one" aria-label="NMOS, PMOS and transfer gate as switches">
+      <li><b>NMOS switch (gate S<sub>N</sub> = V<sub>DD</sub>)</b><span class="v"><span class="sw t"></span>Low-ohmic from V<sub>SS</sub> up to V<sub>DD</sub> − V<sub>th,N</sub>; above that it turns off and Z stops following A.</span></li>
+      <li><b>PMOS switch (gate S<sub>P</sub> = V<sub>SS</sub>)</b><span class="v"><span class="sw v"></span>Low-ohmic from −V<sub>th,P</sub> up to V<sub>DD</sub>; below −V<sub>th,P</sub> it turns off.</span></li>
+      <li><b>Transfer gate (slide 14)</b><span class="v"><span class="sw t"></span>Both in parallel, driven by S and its inverse. In the middle both conduct, at each end one of them does: low-ohmic from V<sub>SS</sub> to V<sub>DD</sub>.</span></li>
+    </ul>
+    ${lab("tg", "on-conductance of the three switches")}
+    ${chart("tg", leg([[1, "NMOS", "ln"], [2, "PMOS", "ln"], [3, "transfer gate (sum)", "ln"]]))}
+      <figcaption>Our model of slides 13–14: each closed switch in its linear region with V<sub>DS</sub> ≈ 0, so g = β·(V<sub>GS</sub> − |V<sub>th</sub>|), with V<sub>DD</sub> = 1 V and β<sub>N</sub> = 1 mA/V²; the body effect, which raises the thresholds further near the far rail, is left out. Shaded: one transistor off, as on slide 14. Hover a column for the three values.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: passing 0.2, 0.5 and 0.8 V (thresholds 0.3 V, PMOS as strong as NMOS)", `<p>At V<sub>A</sub> = 0.2 V the NMOS sees V<sub>GS</sub> = 1 − 0.2 = 0.8 V, so g<sub>N</sub> = 1 · (0.8 − 0.3) = 0.5 mS; the PMOS sees |V<sub>GS</sub>| = 0.2 V, below threshold: off. At 0.5 V both see 0.5 V: 0.2 + 0.2 = 0.4 mS. At 0.8 V the picture flips: 0 + 0.5 mS. The transfer gate stays between 0.4 and 0.7 mS (1.4 to 2.5 kΩ) over the whole range, while the NMOS alone goes to zero above 0.7 V. That 0.7 V is the weak 1 of slide 4: a downstream inverter with V<sub>th,P</sub> = −0.3 V sees its PMOS with V<sub>GS</sub> = 0.7 − 1 = −0.3 V, right at threshold, so it never quite turns off and draws static current.</p>`)}
+    <p>The slide adds an important caveat: a transfer gate is <b>not a logic gate</b>. A logic gate actively drives its output from the rails; a transfer gate only connects. Signal A must be driven by an upstream gate, through the transfer gate's resistance, to reach Z.</p>
+
+    <h2>Storage: the D latch with transfer gates (slide 15)</h2>
+    <p>Two inverters in a ring hold a value forever: each drives the other's input to the rail. The D latch adds two transfer gates to that ring. While the clock C = 1, the <b>input transfer gate</b> is closed and writes D onto the internal <b>storage node</b>; the feedback transfer gate (the <b>keeper</b>) is open, so nothing fights the write. Q follows D: the latch is <b>transparent</b>. While C = 0 the roles swap: the input is cut off and the keeper closes the ring, which holds the last value (Q<sub>i−1</sub>). Because the positive feedback keeps driving both inverter outputs to the rails, this is <b>static memory</b>: it compensates leakage and noise currents for as long as the supply is on. One extra inverter makes the inverse clock CN for the PMOS halves of the transfer gates.</p>
+    <table class="tt"><tr><th>D</th><th>C</th><th>Q</th></tr><tr><td>0</td><td>1</td><td>0</td></tr><tr><td>1</td><td>1</td><td class="one">1</td></tr><tr><td>X</td><td>0</td><td>Q<sub>i−1</sub></td></tr></table>
+    ${l5box("why", "Context, not on the slides: why the keeper is switched", "<p>If the feedback were always connected, the input transfer gate would have to overpower the second inverter to write a new value: a ratioed fight that only works with carefully sized transistors. Opening the keeper while writing removes the fight. Leave the keeper out entirely and the stored value sits only on the node capacitance, a <i>dynamic</i> latch that leaks away within microseconds to milliseconds; that is how DRAM stores bits, and why it needs refresh (lecture 12).</p>")}
+
+    <h2>The master-slave D flip-flop (slide 16)</h2>
+    <p>A latch is transparent for half the clock period, so anything D does during that half reaches Q. The flip-flop chains two latches with opposite clock phases. While C = 0 the <b>master</b> is transparent and follows D, and the slave holds. When C rises, the master closes and holds the value D had at that moment, and the <b>slave</b> opens and passes it to Q. While C = 1, D can do anything; the master is closed. The result is <b>edge triggered</b>: Q takes D's value at the rising edge (D, ↑ → Q = D; on the falling edge Q keeps Q<sub>i−1</sub>).</p>
+    ${lab("ff", "latch, flip-flop and toggle stage on the same D")}
+    <p class="muted">Shaded slots: C = 1 (latch and slave transparent); dashed lines: rising edges. Click or press Enter on the D waveform to flip D in one quarter period. Tinted cells in the latch row: where the latch and the flip-flop disagree.</p>
+    ${l5box("ex", "Worked example: the default pattern, slot by slot", `<p>Quarter slots 1–4 are the first clock period (C = 0, 0, 1, 1). D goes to 1 in slot 2, while C = 0: the master follows (Q<sub>M</sub> = 1), the latch holds its initial 0. At the edge (slot 3) the flip-flop's Q becomes 1, and the latch, now transparent, also shows 1. In slot 8 D falls to 0 while C = 1: the latch passes it at once, the flip-flop keeps 1 until the next edge. In slot 12 D rises while C = 1 and falls again in slot 14, before the edge in slot 15: the latch shows a 1 from slot 12 to 14; the flip-flop never sees it, because at its edge D is 0 again. Two latches cost 2 × 8 transistors, plus 2 for the shared clock inverter: <b>18</b>.</p>`)}
+
+    <h2>The JK latch (slide 17)</h2>
+    <p>The JK latch extends the RS latch of lecture 1 by a <b>toggle</b> state. J sets, K resets, and the input combination that is forbidden in the RS latch (both active) now inverts the output. Built from four NAND gates: two cross-coupled NANDs store the state, two input NANDs gate J and K with the clock and with the opposite output.</p>
+    <table class="tt"><tr><th>C</th><th>J</th><th>K</th><th>Q<sub>j+1</sub></th><th>Name</th></tr><tr><td>X</td><td>0</td><td>0</td><td>Q<sub>j</sub></td><td>hold</td></tr><tr><td>pulse</td><td>0</td><td>1</td><td>0</td><td>reset</td></tr><tr><td>pulse</td><td>1</td><td>0</td><td class="one">1</td><td>set</td></tr><tr><td>pulse</td><td>1</td><td>1</td><td>Q̄<sub>j</sub></td><td>toggle</td></tr><tr><td>0</td><td>X</td><td>X</td><td>Q<sub>j</sub></td><td>hold</td></tr></table>
+    <p>Because every input combination is allowed, the JK latch can <b>compute</b> through its toggle state, for example as a clock divider. The clock input is typically a short pulse derived from the clock edge.</p>
+    ${l5box("why", "Context, not on the slides: why a pulse and not the clock level", "<p>With J = K = 1 and C held high, the output toggles, the new output reaches the input NANDs, and it toggles again: the latch oscillates for as long as C stays high (the classic race-around problem). A pulse shorter than the loop delay allows exactly one toggle. The master-slave construction of slide 16 is the other cure, and that is how JK and T flip-flops are usually built.</p>")}
+    ${l5box("ex", "Worked example: a divide-by-8 from three toggle stages", `<p>Tie J = K = 1 and feed the clock pulses in: the output changes on every pulse, so its period is two clock periods. A 100 MHz clock gives 50 MHz. Use that output as the pulse source of a second stage: 25 MHz; a third: <b>12.5 MHz</b>. Read the three outputs as a binary number and it counts 0 to 7: a ripple counter. The bottom row of the flip-flop explorer above shows the first stage.</p>`)}
+
+    <div class="tiles">
+      ${sw("2n", "transistors in a one-stage static CMOS gate with n inputs")}
+      ${sw("AND → series", "in the pull-down; OR → parallel; the pull-up is the dual")}
+      ${sw("V<sub>DD</sub> − V<sub>th,N</sub>", "the highest level an NMOS switch passes: a weak 1")}
+      ${sw("28 · 18", "transistors in the mirror full adder · in the transfer-gate D flip-flop")}
+    </div>
+    <h2>Take-home message (slide 18)</h2>
+    <ul>
+      <li><b>What is the paradigm for simple CMOS logic?</b> A PMOS pull-up and an NMOS pull-down network that are complementary: AND = series and OR = parallel in the pull-down, the dual in the pull-up, so exactly one conducts and no static current flows.</li>
+      <li><b>What does this lecture cover?</b> Static behaviour only: which network conducts. The dynamic behaviour, how long it takes, is the timing lecture next.</li>
+      <li><b>How are the ideal logic elements of lecture 1 realised?</b> Combinational gates (INV, NAND, NOR, AND, AOI, the mirror full adder) as compound CMOS stages; sequential elements (D latch, master-slave flip-flop, JK latch) from transfer gates and inverter rings, or NAND gates.</li>
+      <li><b>Why the layouts?</b> Standard cells share rails and diffusion, which is what makes them compact; a cell's area grows with its transistor count, so compound gates like the AOI and the mirror adder save area as well as delay.</li>
+      <li><b>When is a switch not a gate?</b> A transfer gate passes signals in both directions with low resistance from V<sub>SS</sub> to V<sub>DD</sub>, but it does not drive: something upstream must.</li>
+    </ul>
+    <p class="muted">No exercise sheet on CMOS logic yet: <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a> is arithmetic, and sheet 4 (<a href="digital-circuit-design/exercise.html?n=4">exercise 4, 3 Dec</a>) was not in OPAL on 17 Nov. Previous: <a href="digital-circuit-design/lecture.html?n=5">lecture 5, semiconductor technology</a>. Next: <a href="digital-circuit-design/lecture.html?n=7">lecture 7, timing of CMOS logic</a> (23 Nov), the dynamic side of the same gates. Background: <a href="digital-circuit-design/basics.html">basics page</a>. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a> (password from lecture 1; not for republication).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -1708,7 +2034,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {
