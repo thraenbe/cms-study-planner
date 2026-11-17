@@ -1006,9 +1006,16 @@ window.CMS = {
       "title": "Law of large numbers and Monte Carlo",
       "date": "2026-11-16",
       "icon": "🎯",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic (OPAL course overview): Law of large numbers, Monte Carlo methods, Monte Carlo integration as the example, importance sampling.",
-      "planned": true
+      "covered": true,
+      "blurb": "Monte Carlo as expectation plus average; π from random points; the law of large numbers, its failure for the Cauchy distribution, weak and strong form, proofs via Chebyshev and characteristic functions; Monte Carlo integration and its 1/√N error in any dimension against grid rules; importance sampling, the perfect and a bad proposal, and the exam-style variance comparison for ∫x² with q = 2x.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS4.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "36-page summary deck, posted 16 Nov"
+       }
+      ]
      },
      {
       "n": 5,
@@ -1139,13 +1146,22 @@ window.CMS = {
      },
      {
       "n": 3,
-      "title": null,
+      "title": "Discrete-time Markov chains",
       "date": "2026-11-12",
-      "icon": "🎛️",
-      "covered": false,
-      "lecture": null,
+      "published": "2026-11-12",
+      "icon": "🚲",
+      "covered": true,
+      "lecture": 3,
       "points": null,
-      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+      "blurb": "A Pluto notebook (Julia) on lecture 3: kinds of memory, a rental bicycle between three Dresden stations and real Dresden summer weather as Markov chains, the transition matrix, simulation by inversion, letter chains that write text, n-step probabilities and π_n = π₀Pⁿ, stationary and limiting distributions, closed sets, irreducibility, periods, ergodicity and mixing time; four calculation problems and four programming exercises.",
+      "files": [
+       {
+        "kind": "notebook",
+        "name": "SMS_T03.jl",
+        "where": "OPAL · Exercises2026",
+        "note": "Pluto notebook, posted 12 Nov"
+       }
+      ]
      },
      {
       "n": 4,
