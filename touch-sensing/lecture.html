@@ -914,6 +914,281 @@ function lecture5() {
     <p class="muted">Next: <a href="touch-sensing/lecture.html?n=6">Lecture 6, Simulating Touch</a> (16 Nov). The practice to this lecture's topic is <a href="touch-sensing/exercise.html?n=4">Practice 4</a> (background subtraction and photometric stereo on DIGIT images). Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
+// ======================================================================================
+// Lecture 6 – simulating touch: contact dynamics and sensor response, the cost/accuracy trade-off, TACTO
+// ======================================================================================
+// The two sides of touch simulation (slide 5) as a pipeline; TACTO's four steps (slide 16) sit under the side they belong to.
+function twoSidesSVG(narrow) {
+  if (narrow) {
+    const box = (y, t, s, c) => `<rect x="20" y="${y}" width="300" height="46" rx="10" style="fill:var(--surface-2);stroke:${c};stroke-width:${c === "var(--line)" ? 1 : 2}"/><text class="lbl" x="170" y="${y + 20}" text-anchor="middle">${t}</text><text class="note" x="170" y="${y + 37}" text-anchor="middle">${s}</text>`;
+    const arr = y => `<path d="M170 ${y} v14" style="stroke:var(--ink-3);stroke-width:1.5"/><path d="M165 ${y + 9} l5 6 l5 -6" style="fill:none;stroke:var(--ink-3);stroke-width:1.5"/>`;
+    return `<svg viewBox="0 0 340 330" role="img" aria-label="Pipeline of touch simulation: the scene goes into contact dynamics, which produces the deformation of the gel; that goes into the sensor response, which produces the tactile image">
+      ${box(4, "Scene", "objects, poses, forces", "var(--line)")}${arr(52)}${box(68, "1 · Contact dynamics", "how gel and object push into each other", "var(--vz-s1)")}${arr(116)}
+      ${box(132, "Deformation", "penetration / height map of the gel", "var(--line)")}${arr(180)}${box(196, "2 · Sensor response", "what the camera makes of that deformation", "var(--vz-s2)")}${arr(244)}
+      ${box(260, "Tactile image", "what a real sensor would output", "var(--line)")}</svg>`;
+  }
+  const box = (x, w, t, s, c) => `<rect x="${x}" y="30" width="${w}" height="62" rx="10" style="fill:var(--surface-2);stroke:${c};stroke-width:${c === "var(--line)" ? 1 : 2}"/><text class="lbl" x="${x + w / 2}" y="56" text-anchor="middle">${t}</text><text class="note" x="${x + w / 2}" y="74" text-anchor="middle">${s}</text>`;
+  const arr = x => `<path d="M${x} 61 h14" style="stroke:var(--ink-3);stroke-width:1.5"/><path d="M${x + 9} 56 l6 5 l-6 5" style="fill:none;stroke:var(--ink-3);stroke-width:1.5"/>`;
+  const brace = (x0, x1, c, t) => `<path d="M${x0} 104 v8 H${x1} v-8" style="fill:none;stroke:${c};stroke-width:2"/><text class="note" x="${(x0 + x1) / 2}" y="130" text-anchor="middle">${t}</text>`;
+  return `<svg viewBox="0 0 600 140" role="img" aria-label="Pipeline of touch simulation: the scene goes into contact dynamics, which produces the deformation of the gel; that goes into the sensor response, which produces the tactile image. TACTO's steps 1 and 2 belong to contact dynamics, steps 3 and 4 to the sensor response.">
+    <text class="note" x="4" y="16">the two sides of slide 5, left to right</text>
+    ${box(4, 92, "Scene", "objects, poses", "var(--line)")}${arr(98)}${box(116, 120, "Contact dynamics", "gel ↔ object", "var(--vz-s1)")}${arr(238)}
+    ${box(256, 92, "Deformation", "penetration map", "var(--line)")}${arr(350)}${box(368, 120, "Sensor response", "light, camera", "var(--vz-s2)")}${arr(490)}${box(508, 88, "Image", "tactile frame", "var(--line)")}
+    ${brace(116, 236, "var(--vz-s1)", "TACTO steps 1–2")}${brace(368, 488, "var(--vz-s2)", "TACTO steps 3–4")}</svg>`;
+}
+
+CHARTS.twoSides = narrow => twoSidesSVG(narrow);
+
+// Slide 12 draws one convex curve: accuracy against computational cost. The four modelling options of slides 7–10 are
+// placed on it here as our qualitative reading (the slide shows the bare curve); the axes carry no units.
+const TRADE = [
+  { k: "single rigid body", x: 0.08, slot: 3, t: "one contact force for the whole sensor: almost free, but no image-level detail (slide 7; detail ours)" },
+  { k: "learned model", x: 0.3, slot: 4, t: "cheap at run time once trained, accuracy limited by the training data; underexplored for touch (slide 10)" },
+  { k: "many rigid bodies", x: 0.55, slot: 1, t: "one rigid contact point per taxel: fine for low-dimensional skins, impractical beyond 1000+ points (slide 8)" },
+  { k: "compliant contact (FEM, particles)", x: 0.88, slot: 2, t: "the elastomer as a real deformable body: most faithful, very time-consuming, needs the compliance characterised (slide 9)" },
+];
+const tradeY = x => 0.06 + 0.86 * x ** 2.2;
+CHARTS.tradeoff = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 250 : 270, L = 34, R = narrow ? 14 : 150, T = 14, B = 34, PW = W - L - R, PH = H - T - B;
+  const X = v => L + v * PW, Y = v => T + PH - v * PH;
+  const d = "M" + Array.from({ length: 61 }, (_, k) => k / 60).map(v => `${X(v).toFixed(1)},${Y(tradeY(v)).toFixed(1)}`).join(" L");
+  const pts = TRADE.map(p => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${p.k}</b>${p.t}`)}"><circle class="hit" cx="${X(p.x)}" cy="${Y(tradeY(p.x))}" r="16"/>
+    <circle class="dot" cx="${X(p.x)}" cy="${Y(tradeY(p.x))}" r="6.5" style="fill:var(--vz-s${p.slot});stroke:var(--surface);stroke-width:2"/>
+    ${narrow ? "" : `<text class="lbl" x="${X(p.x) + (p.x > 0.8 ? 12 : 10)}" y="${Y(tradeY(p.x)) + (p.x > 0.8 ? 4 : 16)}">${p.k}</text>`}</g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trade-off curve after slide 12: accuracy rises with computational cost, slowly at first and steeply at the expensive end. Placed on it from cheap to expensive: single rigid body, learned model, many rigid bodies, truly compliant contact with FEM or particles.">
+    <line class="axis" x1="${L}" x2="${L + PW}" y1="${T + PH}" y2="${T + PH}"/><line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + PH}"/>
+    <text class="note" x="${L + PW}" y="${H - 8}" text-anchor="end">computational cost →</text>
+    <text class="note" x="${L - 8}" y="${T + PH / 2}" text-anchor="middle" transform="rotate(-90 ${L - 14} ${T + PH / 2})">accuracy →</text>
+    <path class="line" style="stroke:var(--vz-gray)" d="${d}"/>${pts}</svg>`;
+};
+
+// TACTO lab: a toy version of the pipeline and of slide 17's realism trick, on 128×96 canvases.
+// Contact dynamics: a Hertz-like toy law, penetration ∝ F^(2/3) (1.5 mm at 3 N); sensor response: TSPViz.gelRender.
+// The "real" no-contact frame is a stand-in drawn here (other tint, vignette, a stray reflection, noise), not sensor data.
+const TC = { shape: "dome", F: 1.2, real: true };
+const TC_SHAPES = [["sphere", "dome"], ["edge", "ridge"], ["washer", "ring"], ["screw head", "screw"]];
+const tcHeight = (shape, u, v) => { const r = Math.hypot(u, v);
+  return shape === "dome" ? Math.exp(-(r * r) / 0.09) : shape === "ridge" ? Math.exp(-(u * u) / 0.025) : shape === "ring" ? Math.exp(-((r - 0.5) ** 2) / 0.01)
+    : Math.exp(-(r * r) / 0.26) * (1 - 0.7 * Math.exp(-(Math.min(Math.abs(u), Math.abs(v)) ** 2) / 0.004) * (r < 0.45 ? 1 : 0)); };
+const tcDepth = F => 1.5 * Math.pow(F / 3, 2 / 3);
+function tcPixels(opts) { const cv = document.createElement("canvas"); gelRender(cv, opts); return cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; }
+let TC_REAL = null;
+function tcReal() {
+  if (TC_REAL) return TC_REAL;
+  const base = tcPixels({ shape: "flat" }), w = 128, h = 96, out = new Uint8ClampedArray(base.length); let s = 11;
+  const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647 - 0.5; };
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const k = (j * w + i) * 4, u = i / w, v = j / h, vig = 1 - 0.35 * ((u - 0.5) ** 2 + (v - 0.5) ** 2) * 2.4;
+    const streak = Math.exp(-(((u - 0.72) - (v - 0.5) * 0.45) ** 2) / 0.002) * 0.6;
+    const tint = [0.55 + 0.45 * v + 0.5 * streak, 0.95 - 0.35 * v + 0.1 * streak, 0.7 - 0.2 * u + 0.25 * streak];
+    for (let c = 0; c < 3; c++) out[k + c] = base[k + c] * tint[c] * vig + rnd() * 14;
+    out[k + 3] = 255;
+  }
+  return (TC_REAL = out);
+}
+function tcPut(cv, data) { cv.width = 128; cv.height = 96; const ctx = cv.getContext("2d"), img = ctx.createImageData(128, 96); img.data.set(data); ctx.putImageData(img, 0, 0); }
+LABS.tacto = body => {
+  const caps = ["① penetration map (contact dynamics, white = deeper)", "② rendered: in contact", "③ rendered: no contact", "④ difference ② − ③ (grey = 0)", "⑤ real frame, no contact (stand-in)", "⑥ result: ⑤ + ④"];
+  body.innerHTML = `<div class="presets">${TC_SHAPES.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === TC.shape}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>contact force <input type="range" min="0.1" max="3" step="0.1" value="${TC.F}"><output>${TC.F}</output> N</label></div>
+    <div class="p4grid three">${caps.map(t => `<figure><canvas aria-label="${t}"></canvas><figcaption>${t}</figcaption></figure>`).join("")}</div><div class="ro-out"></div>`;
+  const cvs = body.querySelectorAll("canvas"), out = body.querySelector(".ro-out"), rg = body.querySelector("input");
+  const draw = () => {
+    const dmm = tcDepth(TC.F), depth = Math.min(1, dmm / 1.5), w = 128, h = 96;
+    const map = new Uint8ClampedArray(w * h * 4); let area = 0;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const z = tcHeight(TC.shape, (i / w) * 2 - 1, (j / w) * 2 - h / w) * depth, k = (j * w + i) * 4, g = 255 * z;
+      map[k] = map[k + 1] = map[k + 2] = g; map[k + 3] = 255; if (z > 0.1 * depth && z > 0.03) area++; }
+    const con = tcPixels({ shape: TC.shape, depth }), flat = tcPixels({ shape: "flat" }), real = tcReal();
+    const diff = new Uint8ClampedArray(con.length), res = new Uint8ClampedArray(con.length); let sum = 0;
+    for (let k = 0; k < con.length; k += 4) { for (let c = 0; c < 3; c++) { const dv = con[k + c] - flat[k + c]; sum += Math.abs(dv); diff[k + c] = 128 + dv; res[k + c] = real[k + c] + dv; } diff[k + 3] = res[k + 3] = 255; }
+    [map, con, flat, diff, real, res].forEach((dt, i) => tcPut(cvs[i], dt));
+    out.innerHTML = ro([["penetration depth (toy law)", `${num(dmm, 2)} mm at ${num(TC.F, 1)} N; doubling the force multiplies it by 2^(2/3) ≈ 1.59`],
+      ["contact area", `${area} of ${w * h} pixels (${pct(area / (w * h))}) are pressed in by more than 10 % of the depth`],
+      ["mean |difference|", `${num(sum / (w * h * 3), 1)} grey levels per channel: the signal the rendering adds to the real frame`]]);
+  };
+  body.querySelectorAll(".preset").forEach(b => b.addEventListener("click", () => { TC.shape = b.dataset.p; body.querySelectorAll(".preset").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  rg.addEventListener("input", () => { TC.F = +rg.value; rg.nextElementSibling.value = rg.value; draw(); });
+  draw();
+};
+
+// TACTO's software architecture (slide 15), redrawn.
+function tactoArchSVG(narrow) {
+  if (narrow) return `<svg viewBox="0 0 340 300" role="img" aria-label="TACTO architecture: inside Python, a physics simulator such as PyBullet exchanges data with TACTO, which contains Pyrender; TACTO reads sensor configurations for GelSight, OmniTact or DIGIT">
+    <rect x="10" y="6" width="320" height="196" rx="12" style="fill:color-mix(in srgb, var(--vz-s4) 10%, var(--surface));stroke:var(--vz-s4);stroke-dasharray:5 4"/><text class="lbl" x="24" y="26">Python</text>
+    <rect x="40" y="36" width="260" height="52" rx="8" style="fill:var(--surface-2);stroke:var(--vz-s1);stroke-width:2"/><text class="lbl" x="170" y="60" text-anchor="middle">Physics simulator</text><text class="note" x="170" y="77" text-anchor="middle">e.g. PyBullet: poses, contact forces</text>
+    <text class="note" x="170" y="106" text-anchor="middle">⇅</text>
+    <rect x="40" y="114" width="260" height="76" rx="8" style="fill:var(--surface-2);stroke:var(--vz-s2);stroke-width:2"/><text class="lbl" x="80" y="156" text-anchor="middle">TACTO</text>
+    <rect x="130" y="128" width="156" height="48" rx="6" style="fill:var(--surface);stroke:var(--vz-s2)"/><text class="lbl" x="208" y="157" text-anchor="middle">Pyrender</text>
+    <text class="note" x="170" y="222" text-anchor="middle">⇅ sensor configuration</text>
+    ${["GelSight", "OmniTact", "DIGIT"].map((t, i) => `<rect x="${14 + i * 108}" y="234" width="96" height="30" rx="6" style="fill:var(--surface-2);stroke:var(--line)"/><text class="lbl" x="${62 + i * 108}" y="254" text-anchor="middle">${t}</text>`).join("")}
+    <text class="note" x="170" y="290" text-anchor="middle">… or any other VBTS described by a config</text></svg>`;
+  return `<svg viewBox="0 0 600 190" role="img" aria-label="TACTO architecture: inside Python, a physics simulator such as PyBullet exchanges data with TACTO, which contains Pyrender; TACTO exchanges sensor configurations for GelSight, OmniTact or DIGIT">
+    <rect x="6" y="10" width="420" height="170" rx="14" style="fill:color-mix(in srgb, var(--vz-s4) 10%, var(--surface));stroke:var(--vz-s4);stroke-dasharray:5 4"/><text class="lbl" x="22" y="32">Python</text>
+    <rect x="22" y="56" width="140" height="96" rx="10" style="fill:var(--surface-2);stroke:var(--vz-s1);stroke-width:2"/><text class="lbl" x="92" y="96" text-anchor="middle">Physics simulator</text><text class="note" x="92" y="114" text-anchor="middle">e.g. PyBullet</text><text class="note" x="92" y="130" text-anchor="middle">poses, contact forces</text>
+    <text class="lbl" x="184" y="108" text-anchor="middle">⇄</text>
+    <rect x="206" y="56" width="206" height="96" rx="10" style="fill:var(--surface-2);stroke:var(--vz-s2);stroke-width:2"/><text class="lbl" x="244" y="108" text-anchor="middle">TACTO</text>
+    <rect x="286" y="72" width="114" height="64" rx="8" style="fill:var(--surface);stroke:var(--vz-s2)"/><text class="lbl" x="343" y="102" text-anchor="middle">Pyrender</text><text class="note" x="343" y="118" text-anchor="middle">OpenGL rendering</text>
+    <text class="lbl" x="448" y="108" text-anchor="middle">⇄</text><text class="note" x="520" y="30" text-anchor="middle">sensor configuration</text>
+    ${["GelSight", "⋮", "OmniTact", "DIGIT"].map((t, i) => t === "⋮" ? `<text class="lbl" x="520" y="${84 + i * 4}" text-anchor="middle">⋮</text>` : `<rect x="470" y="${42 + i * 36 - (i > 1 ? 8 : 0)}" width="100" height="28" rx="6" style="fill:var(--surface-2);stroke:var(--line)"/><text class="lbl" x="520" y="${61 + i * 36 - (i > 1 ? 8 : 0)}" text-anchor="middle">${t}</text>`).join("")}</svg>`;
+}
+
+CHARTS.tactoArch = narrow => tactoArchSVG(narrow);
+
+// Sim2Real table of slide 20 (TACTO paper): mean ± std of position error (mm) and rotation error (degrees).
+const S2R = [
+  ["Random", 11.75, 1.15, 46.56, 5.91], ["Sim2Sim", 0.41, 0.01, 3.48, 0.34],
+  ["Real2Real, 16 real", 4.45, 0.86, 33.85, 1.07], ["Real2Real, 32 real", 3.48, 0.56, 25.45, 2.07], ["Real2Real, 64 real", 2.01, 0.14, 10.96, 0.24], ["Real2Real, 128 real", 0.76, 0.07, 4.96, 0.70],
+  ["Sim2Real, no augmentation", 4.56, 0.40, 17.64, 2.34], ["Sim2Real, with augmentation", 1.66, 0.16, 11.60, 4.65],
+  ["Sim+Real, 16 real", 1.55, 0.12, 9.08, 1.65], ["Sim+Real, 32 real", 1.36, 0.05, 7.95, 1.60], ["Sim+Real, 64 real", 1.24, 0.03, 8.25, 0.77], ["Sim+Real, 128 real", 0.52, 0.03, 4.14, 0.57],
+];
+const s2rRow = k => S2R.find(r => r[0] === k);
+const s2rCurve = (prefix, col) => { const pts = [16, 32, 64, 128].map(nr => [nr, s2rRow(`${prefix}, ${nr} real`)[col]]);
+  return v => { const lv = Math.log2(Math.min(128, Math.max(16, v))), i = Math.min(2, Math.floor(lv - 4)), [a, ya] = pts[i], [, yb] = pts[i + 1], t = lv - Math.log2(a); return ya + (yb - ya) * t; }; };
+const s2rLine = (name, col, unit, yMax, yTicks, label, dys) => line(name, {
+  x: [16, 128], y: [0, yMax], xTicks: [16, 32, 64, 128], yTicks, yTitle: unit, labelW: 104, focusAt: 16,
+  series: [
+    { name: "Real2Real: real data only", short: "Real2Real", slot: 2, dy: dys[0], f: s2rCurve("Real2Real", col) },
+    { name: "Sim+Real: simulated plus real data", short: "Sim+Real", slot: 1, dy: dys[1], f: s2rCurve("Sim+Real", col) },
+    { name: "Sim2Real with augmentation: no real data", short: "Sim2Real aug.", slot: 3, dash: true, f: () => s2rRow("Sim2Real, with augmentation")[col] },
+    { name: "Sim2Sim: tested in simulation", short: "Sim2Sim", dash: true, dy: dys[2], f: () => s2rRow("Sim2Sim")[col] },
+  ],
+  tipHead: v => `${v} real training samples`, fmtY: y => `${num(y, 2)} ${unit === "mm" ? "mm" : "°"}`,
+  aria: label, hitLabel: `${name === "s2rPos" ? "Position" : "Rotation"} error against the number of real samples; use the arrow keys to step between 16, 32, 64 and 128`,
+});
+s2rLine("s2rPos", 1, "mm", 5, [0, 1, 2, 3, 4, 5], "Line chart of position error in millimetres against the number of real training samples, 16 to 128 on a log scale. Real data only: 4.45, 3.48, 2.01, 0.76. Simulation plus real: 1.55, 1.36, 1.24, 0.52. Simulation only with augmentation: 1.66, flat. Tested in simulation: 0.41, flat.", [-7, 5, 17]);
+s2rLine("s2rRot", 3, "deg", 36, [0, 6, 12, 18, 24, 30, 36], "Line chart of rotation error in degrees against the number of real training samples, 16 to 128 on a log scale. Real data only: 33.85, 25.45, 10.96, 4.96. Simulation plus real: 9.08, 7.95, 8.25, 4.14. Simulation only with augmentation: 11.60, flat. Tested in simulation: 3.48, flat.", [-9, 4, 17]);
+// How many real samples alone match Sim+Real with 16: interpolate Real2Real in log₂ between 64 and 128.
+const s2rMatch = col => { const target = s2rRow("Sim+Real, 16 real")[col], a = s2rRow("Real2Real, 64 real")[col], b = s2rRow("Real2Real, 128 real")[col]; return 64 * 2 ** ((a - target) / (a - b)); };
+
+function lecture6() {
+  const p16 = s2rRow("Sim+Real, 16 real"), mPos = s2rMatch(1), mRot = s2rMatch(3);
+  return `${head(l)}
+    <p class="lead">Lectures 4 and 5 built vision-based tactile sensors. This lecture asks how to get their output <b>without the hardware</b>: how to simulate a touch sensor, with the emphasis on VBTS. It splits the problem into two halves, <b>contact dynamics</b> (how the gel and the object deform each other) and <b>sensor response</b> (what the camera makes of that deformation), lays out the options for the hard half along a cost–accuracy trade-off, and then takes apart one simulator in detail: <b>TACTO</b>, from the lecturer's own group.</p>
+
+    <h2>Recap and goal (slides 2–3)</h2>
+    <p>Recap of the VBTS lectures: a bit of history, how they work, advantages and limitations, notable variants, open challenges (full write-ups: <a href="touch-sensing/lecture.html?n=4">Lecture 4</a>, <a href="touch-sensing/lecture.html?n=5">Lecture 5</a>). Today's goal: how do we simulate touch sensors, with particular emphasis on VBTS, and which simulators are in common use.</p>
+
+    <h2>Why simulators? (slide 4)</h2>
+    <ul>
+      <li><b>Prototyping, debugging, benchmarking:</b> a new algorithm or a new sensor design can be tried before anything is built.</li>
+      <li><b>Data:</b> simulators produce large amounts of data quickly and cheaply, to train and evaluate ML models.</li>
+      <li><b>Speed:</b> they can run orders of magnitude faster than the real world.</li>
+      <li><b>Sim2Real:</b> train in simulation, deploy in the real world (the slide promises more on this later in the course).</li>
+    </ul>
+    ${ex("Worked example · a data budget for one hour", `<p>${ctx} The terminal in the TACTO screenshots on slide 15 prints a render time of about <b>0.0094 s</b> per step for four simulated fingertips. At that rate one hour gives 3600 / 0.0094 ≈ <b>383 000</b> steps, or about 1.5 million tactile images for the four sensors, before any physics overhead. A real robot that presses an object, records, lifts and resets might manage one sample every 10 s (our assumption): 360 samples an hour, and someone has to swap the gel when it wears out. Even if the full simulation were ten times slower than the render alone, it would still be about a hundred times faster than the robot.</p>`)}
+
+    <h2>The two sides of touch simulation (slides 5, 11)</h2>
+    <p>Every touch simulator has to answer two questions in a row. <b>Contact dynamics:</b> given the objects, their poses and the forces, how do the sensor surface and the object deform where they meet? <b>Sensor response:</b> given that deformation, what does the sensor output? For a VBTS the second question is an optics problem: how the lit, deformed gel looks to the camera.</p>
+    ${chart("twoSides")}<figcaption>The two halves of slide 5 as a pipeline, drawn here. The braces anticipate the case study: TACTO's first two steps answer the contact-dynamics question, its last two the sensor-response question.</figcaption></figure>
+    <p>The <b>sensor response</b> is usually the easier half to model and compute (slide 11): it is a fixed mapping from deformation to output, so it can be measured once. That measurement is the catch: each sensor has to be <b>characterised</b>, its lights, gel colour, camera and lens, before its simulated output looks like the real one.</p>
+
+    <h2>Contact dynamics: why it is hard (slide 6)</h2>
+    <p>Rigid-body dynamics is well understood and every physics engine does it: two boxes collide, a contact point and a normal force come out. A tactile sensor is not rigid. Simulating a <b>soft contact</b> between the environment and the sensor is generally a very challenging problem, and VBTS make it harder twice over: their output is <b>high-dimensional</b> (an image, not a handful of taxels), and the elastomer is <b>highly compliant</b>, so the contact patch spreads, wraps around edges and changes with every gram of force.</p>
+    ${why("what “soft contact” adds to the problem", `<p>For two rigid bodies the solver only has to stop them interpenetrating: the contact is a point (or a few) and the answer is a force. For a soft body the contact is an area whose shape depends on the force, the object's geometry and the material's stiffness, and friction varies over that area, which is what produces shear and incipient slip. Getting that right needs the material model (how stiff, how incompressible the gel is) and a fine discretisation of the surface, and both make it slow.</p>`)}
+
+    <h2>Four ways to model the dynamics (slides 7–10)</h2>
+    <div class="levels">
+      <div class="lv" style="border-top-color:var(--vz-s3)"><div class="t">Single rigid body</div><div class="d">The sensor is one rigid body; the engine reports one contact force. Not detailed on the slides (our reading): enough for "is there contact, how hard", nothing about the shape.</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="t">Many rigid bodies</div><div class="d">One small rigid body or contact point per taxel. Most rigid-body engines ship such low-dimensional tactile sensors (slide 8 shows a simulated robot torso covered in skin patches). They get slower as contact points are added; at the 1000+ points of a VBTS, impractical.</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s2)"><div class="t">Truly compliant contact</div><div class="d">Finite element modelling (FEM) or particles (the slide cites an elastic-gel FEM work and Tacchi). Very time-consuming, and the compliance of the gel has to be characterised.</div></div>
+      <div class="lv" style="border-top-color:var(--vz-s4)"><div class="t">Learned model</div><div class="d">Learn the dynamics from data. Learning dynamics is well explored in ML in general, but quite underexplored for touch sensing.</div></div>
+    </div>
+    ${ex("Worked example · how many contact points a VBTS implies", `<p>${ctx} A DIGIT image at QVGA has 320 × 240 = <b>76 800</b> pixels. Treating every 10 × 10 pixel block as one contact point gives 32 × 24 = <b>768</b> points per fingertip; a 4 × 4 block gives 80 × 60 = <b>4 800</b>. Five fingertips at the coarse grid are already 3 840 points, every physics step. That is the jump slide 8 means by "1000+ contact points provided by vision-based tactile sensors".</p>`)}
+    ${why("FEM in one paragraph", `<p>Finite element modelling cuts the gel into small elements (tetrahedra, say) and writes the elastic law for each one; assembling them gives a large system <span class="formula" style="display:inline;padding:1px 6px">K u = f</span> in which <i>K</i> is the stiffness matrix, <i>u</i> the displacement of every node and <i>f</i> the forces. The stiffness comes from material parameters such as Young's modulus and Poisson's ratio, which is what "need characterization of the compliance" means: they have to be measured for the actual gel. Contact makes the system nonlinear (which nodes touch changes as it deforms), so it is solved iteratively, many times per step. Particle methods (Tacchi uses one) trade the mesh for many material points but share the cost.</p>`)}
+
+    <h2>The trade-off (slide 12)</h2>
+    <p>Slide 12 summarises the choice in one curve: <b>accuracy against computational cost</b>. It rises slowly at the cheap end and steeply at the expensive end, so small gains in accuracy at the top cost a great deal of compute.</p>
+    ${chart("tradeoff", leg([[3, "single rigid body"], [4, "learned model"], [1, "many rigid bodies"], [2, "compliant (FEM, particles)"]]))}<figcaption>The curve of slide 12 (no units on either axis). The four modelling options are placed on it here as our qualitative reading ${ctx}; the slide shows only the curve. Hover or focus a point.</figcaption></figure>
+    ${tbl(["Option (cheap → expensive)", "What it gives, what it costs"], TRADE.map(p => [p.k, p.t]))}
+    ${why("where the learned model really sits", `<p>A learned model breaks the single curve: its cost is paid up front (data from FEM runs or a real sensor, then training) and is small at run time. Its accuracy is bounded by the data it was trained on and degrades on objects unlike those. That is why it is drawn low on cost here, with the caveat that the true picture is two numbers (training cost, run-time cost), not one.</p>`)}
+
+    <h2>Case study: TACTO (slides 13–16)</h2>
+    <p><b>TACTO</b> (Wang, Lambeta, Chou &amp; Calandra, "TACTO: A Fast, Flexible and Open-source Simulator for High-Resolution Vision-based Tactile Sensors", RA-L 2022) is open source on GitHub; the slides open with a demo video of the simulator.</p>
+    <h3>Architecture (slide 15)</h3>
+    ${chart("tactoArch")}<figcaption>TACTO's software architecture, redrawn after slide 15. Everything runs in Python; the physics simulator is replaceable ("e.g. PyBullet"), and so is the sensor, through its configuration.</figcaption></figure>
+    <p>Two screenshots on the slide show it running: a scene with five rendered tactile frames next to five depth frames (black while nothing touches), and a four-fingered robot hand with four rendered frames, each with the per-step render times printed in the terminal (around 0.022 s and 0.009 s).</p>
+    <h3>Basic principle (slide 16)</h3>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><div><b>Compute forces from the physics engine.</b> The rigid-body engine resolves the contact between object and sensor and reports the force. <span class="tag">${key(1)} contact dynamics</span></div></div>
+      <div class="step"><span class="n">2</span><div><b>Compute the mesh penetration inside the elastomer.</b> Instead of simulating a soft gel, the object's mesh is allowed to sink into the sensor surface; how far it sinks stands in for the deformation. <span class="tag">${key(1)} contact dynamics</span></div></div>
+      <div class="step"><span class="n">3</span><div><b>Render the structured light on the deformed elastomer.</b> Pyrender draws the indented gel lit the way the configured sensor lights it, seen from its camera. <span class="tag">${key(2)} sensor response</span></div></div>
+      <div class="step"><span class="n">4</span><div><b>Post-processing.</b> Make the rendering look like the real sensor (next section). <span class="tag">${key(2)} sensor response</span></div></div>
+    </div>
+    ${why("the trick that makes it fast", `<p>Step 2 is the important simplification. TACTO does not solve the elastomer's mechanics; it treats the gel as a surface the object can sink into, with the depth set by the contact force. That keeps the expensive part (contact) in a standard rigid-body engine and turns the rest into rendering, which GPUs do very fast. The price is physical accuracy: no bulging of the gel around the contact, no shear, no spreading of the patch beyond the object's shape. On slide 12's curve, it sits at the cheap end and buys its realism in steps 3 and 4.</p>`)}
+    ${lab("tacto", "TACTO's pipeline and the realism trick, in miniature")}
+    <p>The lab is a toy version ${ctx}: ① stands in for steps 1–2 (a Hertz-like law turns the force into a penetration depth), ②–③ for step 3 (the same three-LED renderer used in Lecture 4's gel lab), ④–⑥ for the post-processing of slide 17. Frame ⑤ is a drawn stand-in for a real sensor's empty frame, not data.</p>
+
+    <h2>Improving realism (slides 17–18)</h2>
+    <p>A rendered gel looks too clean: perfectly smooth lighting, none of the sensor's own quirks. Slide 17's fix is pixel arithmetic: take the simulated frame <b>in contact</b>, subtract the simulated frame with <b>no contact</b>, and add the result to a <b>real</b> frame from the sensor. The difference holds only what the contact changed; the real frame supplies everything the simulator gets wrong about the background (uneven LEDs, gel colour, scratches, stray reflections). The result is the "fine-tuned" simulation.</p>
+    <div class="formula">fine-tuned = real<sub>no contact</sub> + (sim<sub>contact</sub> − sim<sub>no contact</sub>)</div>
+    ${ex("Worked example · one pixel through the formula", `<p>${ctx} At one pixel on the slope of the contact: simulated in contact (R, G, B) = (180, 120, 90), simulated without contact (128, 128, 128), real empty frame (90, 140, 110). The difference is (+52, −8, −38); added to the real frame it gives <b>(142, 132, 72)</b>. Two pitfalls, both from <a href="touch-sensing/exercise.html?n=4">Practice 4</a>: compute the difference in a signed type (in <code>uint8</code>, 120 − 128 wraps round to 248), and clip the final sum to 0–255.</p>`)}
+    <div class="q"><div class="kicker">Slide 17 asks: there is a mistake in this slide. Can you find it?</div>
+      <p>The slides do not give the answer. Things worth checking, our own candidates ${ctx}:</p>
+      <ul><li>Which real frame is added? For the formula to hold it has to be a real frame <i>without</i> contact; a real frame with a contact in it would add a second imprint.</li>
+      <li>Do the colours of the simulated difference fit the real sensor? The simulated frames are lit blue from the left, red from the top right and green from the bottom right, the real frame is not; a difference rendered with the wrong LED layout adds the contact in the wrong colours.</li>
+      <li>Is the contact in the result where it was in the simulation, and as large?</li></ul>
+      <p>Compare the four images on the slide with these three questions in mind.</p></div>
+    <p><b>Shadows</b> (slide 18): three images of the same sphere contact, simulated without shadows, simulated with shadows enabled, and real. In the real frame the object blocks part of each LED's light, so coloured shadows reach out beyond the contact on the side away from each LED; with shadow rendering switched on, the simulation shows the same lobes and comes much closer to the real image than the shadow-free version.</p>
+
+    <h2>Simulated DIGIT next to the real one (slide 19)</h2>
+    <p>Four objects (a pyramid tip, a sphere, a cylinder and a cube), each pressed with a small and a larger force, in simulation (top row) and on a real DIGIT (bottom row). The shapes, their sizes and how the imprint grows with force agree; the real frames are softer, with blurrier edges and less saturated colours. That residual difference is the <b>reality gap</b> the next slide measures.</p>
+
+    <h2>Sim2Real (slide 20)</h2>
+    <p>The test: a model predicts the <b>position</b> (in mm) and <b>rotation</b> (in degrees) of the contact object from the tactile image, trained on different mixes of data and evaluated on the real sensor. The table on the slide compares a random guess, training and testing in simulation (Sim2Sim), training on real data only (Real2Real) with 16 to 128 samples, training in simulation only (Sim2Real, with and without augmentation), and pre-training in simulation plus 16 to 128 real samples (Sim+Real).</p>
+    ${chart("s2rPos", leg([[2, "Real2Real"], [1, "Sim+Real"], [3, "Sim2Real, augmented", "dash"], ["g", "Sim2Sim", "dash"]]))}<figcaption>Position error against the number of real training samples (log scale), from the table on slide 20; lines between the four measured points are drawn straight. Off the chart: the random guess at 11.75 mm and Sim2Real without augmentation at 4.56 mm. Hover the chart or use the arrow keys.</figcaption></figure>
+    ${chart("s2rRot", leg([[2, "Real2Real"], [1, "Sim+Real"], [3, "Sim2Real, augmented", "dash"], ["g", "Sim2Sim", "dash"]]))}<figcaption>Rotation error against the number of real training samples, same table. Off the chart: the random guess at 46.56°; Sim2Real without augmentation is at 17.64°. Sim+Real is not monotonic here (7.95° at 32, 8.25° at 64), within the spread of ± 0.8–1.6°.</figcaption></figure>
+    ${tbl(["Training data", "Position error (mm)", "Rotation error (°)"], S2R.map(r => [r[0], `${num(r[1], 2)} ± ${num(r[2], 2)}`, `${num(r[3], 2)} ± ${num(r[4], 2)}`]))}
+    <p>Read the table in four steps:</p>
+    <ul>
+      <li><b>The task is learnable:</b> trained and tested in simulation, the model reaches 0.41 mm and 3.5°, against 11.75 mm and 46.6° for guessing.</li>
+      <li><b>The reality gap is large:</b> the same simulation-trained model without augmentation lands at 4.56 mm on the real sensor, about <b>11 times</b> worse than in simulation and no better than 16 real samples.</li>
+      <li><b>Augmentation closes much of it:</b> with augmentation, simulation alone gets 1.66 mm and 11.6°, better than 64 real samples on position (2.01 mm).</li>
+      <li><b>Sim plus a little real data wins:</b> pre-training in simulation and adding real samples beats real data alone at every size, and the best result of the table is Sim+Real with 128 samples (0.52 mm, 4.1°).</li>
+    </ul>
+    ${ex("Worked example · how much real data the simulator is worth", `<p>${ctx} Sim+Real with 16 real samples reaches ${num(p16[1], 2)} mm. Real data alone reaches 2.01 mm at 64 and 0.76 mm at 128 samples; interpolating on the log₂ scale, it gets to ${num(p16[1], 2)} mm at 64 · 2<sup>(2.01 − 1.55)/(2.01 − 0.76)</sup> = 64 · 2<sup>0.37</sup> ≈ <b>${num(mPos, 0)}</b> samples. The rotation error tells the same story: Sim+Real 16 is at ${num(p16[3], 2)}°, which real data alone reaches at about <b>${num(mRot, 0)}</b> samples. So on this task the simulator replaces roughly ${num(mPos - 16, 0)} of every ${num(mPos, 0)} real samples, about four in five. The straight-line interpolation between two measured points is ours.</p>`)}
+    ${why("what “augmentation” usually means here", `<p>The slide does not list the augmentations. In sim-to-real work for images they are typically random changes the real world will throw at the model anyway: brightness and colour shifts, blur, noise, small shifts of the image, different backgrounds. Training on many such variants teaches the model to ignore what differs between simulation and reality and to look at the imprint. Slide 17's real-background trick attacks the same gap from the other side, by making the simulated images more real instead of the model more tolerant.</p>`)}
+
+    <div class="tiles">
+      <div class="tile"><div class="v">2 sides</div><div class="l">contact dynamics (hard) and sensor response (easier, needs characterisation)</div></div>
+      <div class="tile"><div class="v">0.41 → 4.56 mm</div><div class="l">the reality gap: Sim2Sim against Sim2Real without augmentation</div></div>
+      <div class="tile"><div class="v">1.66 mm</div><div class="l">simulation only, with augmentation: better than 64 real samples</div></div>
+      <div class="tile"><div class="v">16 + sim ≈ ${num(mPos, 0)}</div><div class="l">real samples alone needed to match Sim+Real with 16 (position)</div></div>
+    </div>
+
+    <h2>Open challenges and further reading (slides 21–22)</h2>
+    <ul>
+      <li><b>The sweet spot</b> of the trade-off curve: higher accuracy at lower computational cost.</li>
+      <li><b>Multimodality:</b> vibration, temperature and the other channels of Lecture 5's Digit360, which a renderer of gel images does not cover.</li>
+      <li><b>Ease of use:</b> integration of tactile simulation into the simulators robotics already uses.</li>
+    </ul>
+    <p>To read at home: <b>Taxim</b> (Si &amp; Yuan, RA-L 2022), an example-based simulation model for GelSight sensors, and <b>Tacchi</b> (Chen et al., RA-L 2023), a pluggable, low-cost elastomer deformation simulator for optical tactile sensors.</p>
+    ${why("where Taxim and Tacchi sit next to TACTO", `<p>From their titles and abstracts: Taxim attacks the sensor-response side with data, calibrating the optical response of a real GelSight from example images instead of rendering lights and materials, so a new sensor needs a calibration set, not a hand-made light model. Tacchi attacks the contact-dynamics side with a particle method (the "particles" of slide 9), so the gel really deforms, at a cost the authors keep low enough to plug into existing simulators. TACTO, Taxim and Tacchi are three different points on slide 12's curve.</p>`)}
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>Why simulate touch?</b> Prototyping, debugging and benchmarking; cheap data at scale for ML; much faster than real time; Sim2Real.</li>
+      <li><b>What are the two sides?</b> Contact dynamics (how gel and object deform) and sensor response (what the sensor outputs for that deformation).</li>
+      <li><b>Why is contact dynamics hard for VBTS?</b> Soft contact is hard in general; VBTS are high-dimensional and highly compliant.</li>
+      <li><b>Which options exist?</b> One rigid body, many rigid bodies (impractical at 1000+ contacts), truly compliant contact with FEM or particles (slow, needs the gel characterised), learned models (underexplored).</li>
+      <li><b>What is the trade-off?</b> Accuracy against computational cost, with steeply rising cost at the accurate end.</li>
+      <li><b>How does TACTO work?</b> Forces from a physics engine, mesh penetration as the deformation, Pyrender for the lit gel, post-processing; configurable for GelSight, OmniTact, DIGIT.</li>
+      <li><b>How is realism improved?</b> Add the simulated difference to a real no-contact frame; render shadows.</li>
+      <li><b>Does it transfer?</b> Partly: simulation alone with augmentation beats small real datasets, and simulation plus a few real samples beats real data alone.</li>
+    </ul>
+    <h2>Summary (slide 23)</h2>
+    <ul><li>Touch simulation is challenging.</li><li>It is a trade-off between accuracy and computational cost.</li><li>It is conceptually divided into contact dynamics and sensor response.</li><li>There are several ways to compute the contact dynamics.</li><li>Case study: TACTO.</li></ul>
+    ${ex("Likely exam questions", `<p>Name the two sides of touch simulation and explain which is harder for a VBTS and why. Compare the four ways of modelling the contact dynamics by cost and accuracy. Describe TACTO's four steps and the simplification that makes it fast. Explain the background trick of slide 17 and what can go wrong with it. Read the Sim2Real table: what is the reality gap, what does augmentation do, what does adding real data do? This list is our guess ${ctx}.</p>`)}
+    <h2>References named in the lecture (slide 24)</h2>
+    <ul class="refs">
+      <li>Wang, Lambeta, Chou &amp; Calandra (2022). TACTO: a fast, flexible, and open-source simulator for high-resolution vision-based tactile sensors. IEEE RA-L 7(2), 3930–3937. <a href="https://arxiv.org/abs/2012.08456" target="_blank" rel="noopener">arXiv 2012.08456 ↗</a></li>
+      <li>Si &amp; Yuan (2022). Taxim: an example-based simulation model for GelSight tactile sensors. IEEE RA-L 7(2), 2361–2368.</li>
+      <li>Chen, Zhang, Luo, Sun &amp; Fang (2023). Tacchi: a pluggable and low computational cost elastomer deformation simulator for optical tactile sensors. IEEE RA-L 8(3), 1239–1246.</li>
+      <li>Cui, Wang, Wang, Li, Wang &amp; Zhang (2023). Tactile imprint simulation of GelStereo visuotactile sensors. ICMA, 650–656.</li>
+      <li>Narang, Sundaralingam, Macklin, Mousavian &amp; Fox (2021). Sim-to-real for robotic tactile sensing via physics-based simulation and learned latent projections. ICRA, 6444–6451.</li>
+    </ul>
+    <p class="muted">Next: <a href="touch-sensing/lecture.html?n=7">Lecture 7, Perception with Touch</a> (23 Nov). The practice to this lecture's topic is <a href="touch-sensing/exercise.html?n=6">Practice 6, Simulating Touch</a> (24 Nov); the practice the day after this lecture was <a href="touch-sensing/exercise.html?n=5">Practice 5</a> (Vision-based Tactile Sensors 3). Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -923,7 +1198,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, 09:20–10:50, ${esc(roomOn(l.date))}.<br>The summary appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;

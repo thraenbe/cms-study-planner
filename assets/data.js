@@ -4460,7 +4460,7 @@ window.CMS = {
    },
    "note": "OPAL calendar: lectures Mondays 9:20–10:50 in BEY/0245/H, exercises Tuesdays 9:20–10:50 in APB-E040 (exceptions: Lecture 2 on Tue 13 Oct in BEY/0137/U, Exercise 2 on Mon 26 Oct in BEY/0245/H), 12 Oct – 19 Jan. Questions via teaching@lasr.org.",
    "schedule": {
-    "src": "OPAL course structure page, rechecked 2026-10-27 (calendar changed on 20 Oct: Exercise 0 + 1 on 20 Oct, Exercise 2 on Mon 26 Oct, Extra Exercise on 27 Oct, then Exercise n on the Tuesday after Lecture n+1). Exercise topics follow the practice list; Exercise n = Practice n is confirmed up to Exercise 2, later ones are assumed",
+    "src": "OPAL course structure page, rechecked 2026-11-17 (unchanged since the 20 Oct change: Exercise 0 + 1 on 20 Oct, Exercise 2 on Mon 26 Oct, Extra Exercise on 27 Oct, then Exercise n on the Tuesday after Lecture n+1). Exercise topics follow the practice list; Exercise n = Practice n is confirmed up to Exercise 2, later ones are assumed",
     "rows": [
      [
       "2026-10-12",
@@ -4839,7 +4839,21 @@ window.CMS = {
       "title": "Simulating Touch",
       "date": "2026-11-16",
       "icon": "🧪",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "covered": true,
+      "blurb": "How to simulate a touch sensor: the two sides (contact dynamics and sensor response), four ways to model soft contact on an accuracy–cost curve, and the TACTO case study: physics engine plus mesh penetration plus rendering, the real-background trick, and a Sim2Real table where simulation plus 16 real samples matches about 80 real ones.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 6 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-06.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 16 Nov"
+       }
+      ]
      },
      {
       "n": 7,
@@ -5032,6 +5046,12 @@ window.CMS = {
         "kind": "slides",
         "name": "Practice 4 deck (reveal.js)",
         "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "other",
+        "name": "Practice4_5.zip",
+        "where": "OPAL · Practice",
+        "note": "DIGIT frames (coin, screw head, swan, empty) for Practices 4 and 5, 22 MB, posted 9 Nov"
        }
       ]
      },
@@ -5041,7 +5061,15 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 3",
       "date": "2026-11-17",
       "icon": "🧿",
-      "blurb": "Not held yet."
+      "blurb": "Held 17 Nov. The practice deck is not linked on OPAL yet, so the write-up follows once it is; the image data (coin, screw head, swan and empty DIGIT frames) is the archive shared with Practice 4.",
+      "files": [
+       {
+        "kind": "other",
+        "name": "Practice4_5.zip",
+        "where": "OPAL · Practice",
+        "note": "DIGIT frames for Practices 4 and 5, 22 MB, posted 9 Nov"
+       }
+      ]
      },
      {
       "n": "6",
