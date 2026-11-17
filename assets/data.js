@@ -1522,14 +1522,14 @@ window.CMS = {
       "title": "Bridging Architectural Mismatch",
       "date": "2026-11-17",
       "icon": "🌉",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic: glue patterns that adapt, bridge and connect components not built for each other.",
+      "covered": true,
+      "blurb": "Architectural mismatch after Garlan, Allen and Ockerbloom: conflicting assumptions about the component model (infrastructure, control, data), the connectors (protocols, data formats), the global architecture and the construction process; the extensibility patterns as glue; object and class Adapter, Facade for a hidden subsystem, and Mediator (Broker) as an n-way proxy with a bridge, up to web service brokers.",
       "files": [
        {
         "kind": "slides",
-        "name": "#05 Architectural Mismatch",
+        "name": "05-dpf-bridging-architectural-mismatch.pdf",
         "where": "OPAL · Lecture Slides",
-        "note": "already up"
+        "note": "31 pages"
        },
        {
         "kind": "recording",

@@ -1065,8 +1065,281 @@ function lecture4() {
     <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=3">exercise 3, Extensibility Patterns</a> (sheet since 5 Nov, session 11 Nov) builds a Composite of polynomials, Decorators for trigonometric functions and a chained Observer whose cycle a change manager breaks. Previous: <a href="design-patterns/lecture.html?n=3">lecture 3, Creational Variability</a>. Next: <a href="design-patterns/lecture.html?n=5">lecture 5, Bridging Architectural Mismatch</a> (17 Nov). Slides and the learning video #04: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
 }
 
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
-const LABS = { mvc: initMvc, facets: initFacets, proto: initProto, parts: initParts, deco: initDeco, chain: initChain, cm: initCm };
+// ======================= Lecture 5: Bridging Architectural Mismatch (31 slides, 17 Nov) =======================
+const GROLES = leg([[1, "goal / contract the client expects"], [2, "glue class (adapter, facade, mediator)"], [4, "existing class that is glued in"], [3, "client"]]);
+// A polyline edge with an open arrowhead (association) or a hollow triangle (generalisation) at its last point.
+const pathEdge = (pts, kind = "ref", label = "", at = 1, dx = 0, dy = -5, anchor = "middle") => {
+  const d = "M" + pts.map(p => p.map(v => (+v).toFixed(1)).join(",")).join(" L");
+  const [x1, y1] = pts[pts.length - 2], [x2, y2] = pts[pts.length - 1], a = Math.atan2(y2 - y1, x2 - x1), s = kind === "inh" ? 11 : 8;
+  const l = [x2 - s * Math.cos(a - 0.45), y2 - s * Math.sin(a - 0.45)], r = [x2 - s * Math.cos(a + 0.45), y2 - s * Math.sin(a + 0.45)];
+  const hd = kind === "inh" ? `<path class="tri" d="M${x2},${y2} L${l[0].toFixed(1)},${l[1].toFixed(1)} L${r[0].toFixed(1)},${r[1].toFixed(1)} Z"/>` : `<path class="arr" d="M${l[0].toFixed(1)},${l[1].toFixed(1)} L${x2},${y2} L${r[0].toFixed(1)},${r[1].toFixed(1)}"/>`;
+  let lb = ""; if (label) { const [ax, ay] = pts[at - 1] || pts[0], [bx, by] = pts[at] || pts[1]; lb = `<text class="el" x="${(ax + bx) / 2 + dx}" y="${(ay + by) / 2 + dy}" text-anchor="${anchor}">${esc(label)}</text>`; }
+  return `<g class="edge ${kind}"><path class="ln" d="${d}"/>${hd}${lb}</g>`;
+};
+// Association that runs underneath the boxes: down from a, along, up into b.
+const underRef = (a, b, label, drop = 16) => { const y = Math.max(a.y + a.h, b.y + b.h) + drop; return pathEdge([[a.cx, a.y + a.h], [a.cx, y], [b.cx, y], [b.cx, b.y + b.h + 1]], "ref", label, 2, 0, -5); };
+// Make room below a diagram for edges routed under the boxes.
+const taller = (svg, add = 26) => svg.replace(/viewBox="0 0 ([\d.]+) ([\d.]+)"/, (m, w, h) => `viewBox="0 0 ${w} ${(+h + add).toFixed(1)}"`);
+// A dashed zone around a group of boxes with a name in its top-left corner.
+const zone = (bs, name, pad = 8, top = 26) => { const x0 = Math.min(...bs.map(b => b.x)) - pad, x1 = Math.max(...bs.map(b => b.x + b.w)) + pad, y0 = Math.min(...bs.map(b => b.y)) - top, y1 = Math.max(...bs.map(b => b.y + b.h)) + pad;
+  return `<rect class="zone" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="8"/><rect class="hl" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="8" style="stroke:var(--ink-3);stroke-width:1"/><text class="zl" x="${x0 + 8}" y="${y0 + 14}">${esc(name)}</text>`; };
+
+// The four roots of architectural mismatch (slides 5–12), each assumption a hoverable chip.
+const ROOTS = [
+  { k: "Component model", s: "slides 6–8", items: [
+    ["Infrastructure", "each part expects its own platform underneath, e.g. one component Windows, another Linux (slide 6)"],
+    ["Control model", "who owns the main loop: in the jExam picture every part runs its own event loop (slide 7)"],
+    ["Data model", "SELMA, HIS and S-Plus each model students, exams and rooms their own way; jExam has to import all three (slide 8)"],
+    ["Interfaces, substitution", "what an interface is and when one component may replace another (slide 6)"]] },
+  { k: "Connectors", s: "slides 9–10", items: [
+    ["Protocol", "an asynchronous tool lets messages of different tools cross, so the others suddenly face concurrency (slide 9)"],
+    ["Data format", "strings, C data or C++ data on the same channel; translators are needed and can become the bottleneck (slide 10)"]] },
+  { k: "Global architecture", s: "slide 11", items: [
+    ["Repository style", "a database-centred architecture: everything goes through the shared store"],
+    ["Shared nothing", "parts keep their own state and only exchange messages"]] },
+  { k: "Construction process", s: "slide 12", items: [
+    ["Library infrastructure", "which libraries are assumed to be present at build time"],
+    ["Generic language", "a component assumes a language such as C++"],
+    ["Tool-specific language", "generated code: A may expect B's generated code to look different from what B generates, so it gets patched by scripts"]] }];
+CHARTS.roots = narrow => {
+  const W = narrow ? 340 : 600, cols = narrow ? 2 : 4, gap = narrow ? 8 : 10, cw = (W - gap * (cols - 1)) / cols, hh = 40, ch = narrow ? 30 : 30, cg = 6;
+  const colH = g => hh + 8 + g.items.length * (ch + cg);
+  const rowH = narrow ? [Math.max(colH(ROOTS[0]), colH(ROOTS[1])), Math.max(colH(ROOTS[2]), colH(ROOTS[3]))] : [Math.max(...ROOTS.map(colH))];
+  let out = "";
+  ROOTS.forEach((g, i) => {
+    const c = i % cols, r = Math.floor(i / cols), x = c * (cw + gap), y0 = r ? rowH[0] + 14 : 0;
+    out += `<g class="cls t"><rect x="${x}" y="${y0}" width="${cw}" height="${hh}" rx="6"/><text class="cn" x="${x + cw / 2}" y="${y0 + 17}" text-anchor="middle">${esc(g.k)}</text><text class="st" x="${x + cw / 2}" y="${y0 + 32}" text-anchor="middle">${g.s}</text></g>`;
+    out += `<line class="axis" x1="${x + 10}" x2="${x + 10}" y1="${y0 + hh}" y2="${y0 + hh + 8 + (g.items.length - 1) * (ch + cg) + ch / 2}"/>`;
+    g.items.forEach(([n, d], j) => { const yy = y0 + hh + 8 + j * (ch + cg), lines = wrapTxt(n, narrow ? 18 : 20);
+      out += `<line class="axis" x1="${x + 10}" x2="${x + 18}" y1="${yy + ch / 2}" y2="${yy + ch / 2}"/><g class="pt cls h" tabindex="0" data-tip="<b>${esc(n)}</b>${esc(d)}"><rect x="${x + 18}" y="${yy}" width="${cw - 18}" height="${ch}" rx="5"/>${lines.map((ln, q) => `<text class="op" x="${x + 26}" y="${yy + (lines.length > 1 ? 12 : 19) + q * 12}">${esc(ln)}</text>`).join("")}</g>`; });
+  });
+  const H = narrow ? rowH[0] + 14 + rowH[1] : rowH[0];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="The four roots of architectural mismatch after Garlan, Allen and Ockerbloom: different assumptions about the component model (infrastructure, control model, data model, interfaces and substitutability), about the connectors (protocols, data formats), about the global architecture (repository style versus shared nothing) and about the construction process (library infrastructure, a generic language, a tool-specific language with generated code).">${out}</svg>`;
+};
+// Slide 9: the asynchronous tool lets a notification overtake a reply.
+CHARTS.crossing = narrow => seq(narrow, [{ name: "Tool 1", role: "c" }, { name: narrow ? "Async tool" : "Asynchronous tool", role: "h" }, { name: "Tool 3", role: "p" }], [
+  { from: 0, to: 1, text: "request A" }, { from: 2, to: 1, text: "notify B" }, { from: 1, to: 0, text: "notify B", tag: "arrives first" }, { from: 1, to: 0, text: "reply A", ret: true, tag: "only now" }],
+  "Sequence diagram of slide 9: Tool 1 sends request A to the asynchronous tool and waits; meanwhile Tool 3 sends notify B; the asynchronous tool forwards notify B to Tool 1 before it sends reply A, so Tool 1 receives a message it did not wait for while its request is still open: concurrency that Tool 1 was never written for.");
+// Slide 17: object adapter (delegation).
+CHARTS.oadapt = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 90 : 88 });
+  const cl = D.box(0, 0, { name: "Client", role: "c", h: 24, span: narrow ? 0.75 : 0.8 });
+  const g = D.box(narrow ? 0.85 : 1.1, 0, { name: "Goal", ops: ["operation()"], role: "t", abstract: true, span: narrow ? 0.95 : 1.3 });
+  const a = D.box(narrow ? 0 : 1.1, 1.25, { name: "Adapter", ops: [narrow ? "adapted" : "adapted: AdaptedClass", "operation()"], role: "h", span: narrow ? 0.95 : 1.3 });
+  const t = D.box(narrow ? 1.05 : 2.6, 1.25, { name: "AdaptedClass", ops: ["specificOperation()"], role: "p", span: narrow ? 0.95 : 1.2, sm: narrow });
+  D.inh(a, g); D.ref(cl, g, {}); D.ref(a, t, { label: narrow ? "" : "adapted" });
+  if (!narrow) D.note(2.6, 0, ["operation() {", "  adapted", "    .specificOperation();", "}"], a, { span: 1.2 });
+  return D.svg("Object adapter: the client uses the abstract Goal with operation; the Adapter is a subclass of Goal and holds a reference to an object of AdaptedClass; its operation forwards to adapted.specificOperation. The adapted class does not inherit from Goal.");
+};
+// Slide 18: class adapter (multiple inheritance).
+CHARTS.cadapt = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 88 });
+  const cl = narrow ? null : D.box(0, 0, { name: "Client", role: "c", h: 24, span: 0.8 });
+  const g = D.box(narrow ? 0 : 1.1, 0, { name: "GoalClass", ops: ["operation()"], role: "t", abstract: true, span: narrow ? 0.95 : 1.3, stereo: "class or interface" });
+  const t = D.box(narrow ? 1.05 : 2.6, 0, { name: "AdaptedClass", ops: ["specificOperation()"], role: "p", span: narrow ? 0.95 : 1.2, sm: narrow, dy: narrow ? 10 : 10 });
+  const a = D.box(narrow ? 0.5 : 1.85, 1.3, { name: "Adapter", ops: ["operation()", narrow ? "specificOp() (inherited)" : "specificOperation() (inherited)"], role: "h", span: narrow ? 1 : 1.35 });
+  D.inh(a, g); D.inh(a, t); if (cl) D.ref(cl, g, {});
+  if (!narrow) D.note(0, 1.3, ["operation() {", "  this.specificOperation();", "}"], a, { span: 1.45 });
+  return D.svg("Class adapter: the Adapter inherits from GoalClass, which can also be an interface, and from AdaptedClass, the implementation; its operation calls the inherited specificOperation on itself. No second object is involved.");
+};
+// Slide 19: a text class from an external library glued into a drawing editor.
+CHARTS.textex = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 92 });
+  const ed = narrow ? null : D.box(0, 0, { name: "DrawingEditor", role: "c", h: 24, span: 0.8 });
+  const g = D.box(narrow ? 0 : 1.1, 0, { name: "GraficObject", ops: ["frame()", "createManipulator()"], role: "t", abstract: true, span: narrow ? 0.95 : 1.2 });
+  const td = D.box(narrow ? 1.05 : 2.85, 0, { name: "TextDisplay", ops: ["largeness()"], role: "p", span: narrow ? 0.95 : 1.05, stereo: "external library" });
+  const li = D.box(narrow ? 0 : 0.2, 1.3, { name: "Linie", ops: ["frame()", "createManipulator()"], role: "g", span: narrow ? 0.95 : 1.1 });
+  const tx = D.box(narrow ? 1.05 : 1.65, 1.3, { name: "Text", ops: [narrow ? "text" : "text: TextDisplay", "frame()", "createManipulator()"], role: "h", span: narrow ? 0.95 : 1.1 });
+  D.inh(li, g); D.inh(tx, g); D.ref(tx, td, { label: narrow ? "" : "text" }); if (ed) D.ref(ed, g, { mult: "*" });
+  if (!narrow) D.note(2.85, 1.3, ["frame():", "  return text", "    .largeness();", "createManipulator():", "  return new", "    TextManipulator();"], tx, { span: 1.05 });
+  return D.svg("Slide 19: a drawing editor works with any number of GraficObjects, which offer frame and createManipulator. Linie implements them itself. Text is an object adapter: it holds a TextDisplay from an external library and implements frame by returning text.largeness and createManipulator by returning a new TextManipulator.");
+};
+// Slide 23: Facade hides a subsystem.
+CHARTS.facade = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 3 : 4, rowH: narrow ? 92 : 92 });
+  const cl = narrow ? null : D.box(0, 0, { name: "Client", role: "c", h: 24, span: 0.8 });
+  const af = D.box(narrow ? 0.5 : 1.1, 0, { name: "AbstractFacade", ops: ["operation()"], role: "t", abstract: true, span: narrow ? 2 : 1.3 });
+  const cf = D.box(narrow ? 0.5 : 1.1, 1.15, { name: "ConcreteFacade", ops: ["adaptedObject1…3", "operation()"], role: "h", span: narrow ? 2 : 1.3 });
+  const hs = (narrow ? [0, 1, 2] : [0.2, 1.4, 2.6]).map((c0, i) => D.box(c0, 2.6, { name: "HiddenClass" + (i + 1), ops: [narrow ? "specificOp()" : "specificOperation()"], role: "p", span: narrow ? 1 : 1.15, sm: narrow }));
+  D.inh(cf, af); if (cl) D.ref(cl, af, {});
+  hs.forEach((h, i) => D.ref(cf, h, { label: narrow ? "" : "adaptedObject" + (i + 1) }));
+  if (!narrow) D.note(2.55, 0.95, ["operation() {", "  adaptedObject1", "    .specificOperation();", "  adaptedObject2 …", "}"], cf, { span: 1.4 });
+  return taller(D.svg("Facade: the client sees only the abstract facade with one operation. The concrete facade holds the objects of three hidden classes inside the hidden subsystem and implements operation by calling their specific operations in turn.", zone(hs, "HiddenSubsystem")), 6);
+};
+// Slide 26: Mediator structure.
+CHARTS.med = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 84 : 84 });
+  const co = D.box(narrow ? 0 : 0.45, 0, { name: "Colleague", ops: ["mediator"], role: "h", abstract: true, span: narrow ? 0.95 : 1.2 });
+  const me = D.box(narrow ? 1.05 : 2.6, 0, { name: "Mediator", ops: ["communicate()"], role: "t", abstract: true, span: narrow ? 0.95 : 1.2 });
+  const c1 = D.box(0, 1.25, { name: narrow ? "Colleague1" : "ConcreteColleague1", role: "h", h: 24, span: narrow ? 0.48 : 1, sm: narrow });
+  const c2 = D.box(narrow ? 0.52 : 1.1, 1.25, { name: narrow ? "Colleague2" : "ConcreteColleague2", role: "h", h: 24, span: narrow ? 0.48 : 1, sm: narrow });
+  const cm = D.box(narrow ? 1.05 : 2.6, 1.25, { name: "ConcreteMediator", role: "t", h: 24, span: narrow ? 0.95 : 1.2, sm: narrow });
+  D.ref(co, me, { label: narrow ? "" : "mediator" }); D.inh(c1, co); D.inh(c2, co); D.inh(cm, me); D.ref(cm, c2, {});
+  return taller(D.svg("Mediator: every Colleague knows one Mediator; ConcreteColleague1 and ConcreteColleague2 are colleagues; the ConcreteMediator is a Mediator that knows the concrete colleagues and passes messages between them, so the colleagues never refer to each other.", underRef(cm, c1, narrow ? "" : "knows all colleagues")), narrow ? 22 : 30);
+};
+// Slide 29: a web service broker.
+CHARTS.broker = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 92 : 90 });
+  const wm = D.box(0, 0, { name: narrow ? "WSMediator" : "WebServiceMediator", ops: ["buy()", "query(WebService)"], role: "t", abstract: true, span: narrow ? 0.95 : 1.3 });
+  const ws = D.box(narrow ? 1.05 : 2.4, 0, { name: "WebService", ops: ["mediator", "query()"], role: "h", abstract: true, span: narrow ? 0.85 : 1.4 });
+  const cm = D.box(0, 1.3, { name: narrow ? "ConcreteMed." : "ConcreteServiceMediator", ops: ["google, hotel", "buy()", "query(Widget)"], role: "t", span: narrow ? 0.95 : 1.3 });
+  const go = D.box(narrow ? 1.05 : 1.75, 1.3, { name: "Google", ops: ["search()"], role: "h", span: narrow ? 0.85 : 0.95 });
+  const ho = D.box(narrow ? 1.05 : 2.85, narrow ? 2.4 : 1.3, { name: "HotelBooking", ops: ["search()", "reserve()", "buy()"], role: "h", span: narrow ? 0.85 : 1.05 });
+  D.ref(ws, wm, { label: narrow ? "" : "mediator" }); D.inh(cm, wm); D.inh(go, ws); D.ref(cm, go, { label: narrow ? "" : "google" });
+  let extra;
+  if (narrow) { const xr = D.W - 2; extra = pathEdge([[ho.x + ho.w, ho.cy], [xr, ho.cy], [xr, ws.cy + 8], [ws.x + ws.w + 1, ws.cy + 8]], "inh") + pathEdge([[cm.cx, cm.y + cm.h], [cm.cx, ho.cy], [ho.x - 1, ho.cy]], "ref"); }
+  else { D.inh(ho, ws); extra = underRef(cm, ho, "hotel"); }
+  return taller(D.svg("Web service broker of slide 29: a WebService knows a WebServiceMediator and implements query by calling mediator.query(this). Google with search and HotelBooking with search, reserve and buy are web services. The ConcreteServiceMediator knows google and hotel and offers buy and query; the services never call each other directly.", extra), narrow ? 6 : 30);
+};
+// Context, not on the slides: links needed between n components, all pairs versus a mediator.
+line("growth", { x: [2, 32], y: [0, 500], xTicks: [2, 4, 8, 16, 32], yTicks: [0, 100, 200, 300, 400, 500], yTitle: "connections", labelW: 74,
+  series: [{ slot: 2, name: "point to point, n(n − 1)/2", short: "pairwise", f: n => n * (n - 1) / 2 }, { slot: 1, name: "through one mediator, n", short: "mediator", f: n => n }],
+  tipHead: v => `${v} components`, fmtY: v => num(v, 0), focusAt: 8,
+  aria: "Line chart over the number of components n from 2 to 32 on a doubling axis: connections needed when every pair is glued directly, n times n minus 1 over 2 (1, 6, 28, 120, 496), against connections through one mediator, n (2, 4, 8, 16, 32).",
+  hitLabel: "Connection counts; use the arrow keys to double or halve the number of components" });
+const GROW = [2, 4, 6, 8, 16, 32];
+// Explorer 1: a net of components glued pairwise or through one mediator.
+function initNet(body) {
+  let n = 6, med = false;
+  const render = () => {
+    const S = 260, cx = S / 2, cy = S / 2, R = 96, P = Array.from({ length: n }, (_, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+    const links = med ? P.map(([x, y]) => `<line class="s" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`).join("")
+      : P.flatMap((p, i) => P.slice(i + 1).map(q => `<line class="m" x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}"/>`)).join("");
+    const nodes = P.map(([x, y], i) => `<g class="nd h"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="15"/><text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">C${i + 1}</text></g>`).join("");
+    const hub = med ? `<g class="nd t"><rect x="${cx - 32}" y="${cy - 14}" width="64" height="28" rx="6"/><text x="${cx}" y="${cy + 4}" text-anchor="middle">Mediator</text></g>` : "";
+    const pairs = n * (n - 1) / 2, conn = med ? n : pairs, trans = med ? 2 * n : n * (n - 1);
+    body.innerHTML = `<p class="lab-note">Each circle is a component with its own interface and data format. Glued <b>pairwise</b>, every pair needs its own connection, and with different formats a translator in each direction. Glued through a <b>mediator</b>, every component talks to one partner only, and a translator to and from a common format per component is enough.</p>
+      <div class="ctl"><label>components <input type="range" min="2" max="12" value="${n}" data-k="n"> <output>${n}</output></label>
+        <label>glue <select data-k="m"><option value="p" ${med ? "" : "selected"}>pairwise (point to point)</option><option value="m" ${med ? "selected" : ""}>through a mediator</option></select></label></div>
+      <div class="pgrid"><svg class="netsvg" viewBox="0 0 ${S} ${S}" role="img" aria-label="${n} components ${med ? "connected to one mediator in the middle by " + n + " links" : "connected pairwise by " + pairs + " links"}">${links}${hub}${nodes}</svg>
+        <dl class="ro"><dt>connections</dt><dd>${conn}</dd><dt>translators (both directions)</dt><dd>${trans}</dd><dt>adding component ${n + 1} costs</dt><dd>${med ? "1 connection, 2 translators" : `${n} connections, ${2 * n} translators`}</dd><dt>who knows whom</dt><dd>${med ? "each component knows only the mediator" : `each component knows ${n - 1} others`}</dd></dl></div>`;
+    const r = body.querySelector("[data-k=n]");
+    r.addEventListener("input", e => { n = +e.target.value; render(); body.querySelector("[data-k=n]").focus(); });
+    body.querySelector("[data-k=m]").addEventListener("change", e => { med = e.target.value === "m"; render(); });
+  };
+  render();
+}
+// Explorer 2: which glue pattern for which mismatch (slides 14, 16, 22, 25 and our notes).
+const GLUE = [
+  { k: "if", t: "the methods have other names or signatures than the client expects", p: [["Adapter", "maps one interface to another (slide 16); object adapter by delegation, class adapter by multiple inheritance"]] },
+  { k: "df", t: "the data comes in another format (strings, C data, units)", p: [["Adapter", "may also map a data format (slide 16)"], ["Proxy", "as a translator between data formats (slide 14)"], ["Decorator", "wraps and can bridge data mismatch (slide 14)"]] },
+  { k: "pr", nk: "protocol mismatch", t: "the protocol differs (message order, synchronous versus asynchronous)", p: [["Adapter", "may map a protocol (slide 16), but not control flow"], ["Mediator", "context, not on the slides: one object that owns the conversation can queue and reorder messages"]], no: [["Decorator", "slide 14: not for protocol mismatch"]] },
+  { k: "cf", nk: "control flow", t: "every component runs its own main event loop", p: [], no: [["Adapter", "cannot easily map control flow: it is passed once, on entering the adapted class (slide 16)"]], note: "No glue pattern of the deck maps one control model onto another. Context, not on the slides: in practice one loop becomes the master and the others run in their own threads or processes behind a message queue." },
+  { k: "ss", t: "a whole subsystem of classes should look like one object to the client", p: [["Facade", "an object adapter that hides a complete set of objects (slide 22)"]] },
+  { k: "nn", t: "many components must talk to each other, anonymously, in a net that changes at run time", p: [["Mediator (Broker)", "an n-way proxy for communication, combined with a Bridge (slide 25)"], ["Observer with change manager", "Observer combined with Mediator (slide 28, lecture 4)"]] },
+  { k: "ev", t: "extra behaviour should react to the events of a foreign component", p: [["Observer", "listens to the subject's events (slide 14)"]] },
+  { k: "al", t: "a foreign data structure hierarchy needs new algorithms", p: [["Visitor", "extends a data structure hierarchy with new algorithms (slide 14)"]] },
+  { k: "fl", t: "requests passing through should be filtered or their behaviour adapted", p: [["Chain of Responsibility", "as a filter for objects (slide 14)"]] },
+  { k: "pf", t: "the same design has to run on different platforms", p: [["Bridge", "abstraction and implementation become independent components (slide 14)"]] }];
+function initGlue(body) {
+  let on = new Set(["if", "df"]);
+  const render = () => {
+    const sel = GLUE.filter(g => on.has(g.k)), use = new Map(), avoid = [];
+    sel.forEach(g => { g.p.forEach(([n, r]) => { if (!use.has(n)) use.set(n, []); use.get(n).push(r); }); (g.no || []).forEach(([n, r]) => avoid.push([n, r, g.nk])); });
+    const notes = sel.filter(g => g.note).map(g => g.note);
+    body.innerHTML = `<p class="lab-note">Tick what is wrong between your component and the rest of the system. The list collects the glue the deck offers for it, with the slide that says so; several ticks show which single pattern covers most of them.</p>
+      <div class="ctl gl">${GLUE.map(g => `<label><input type="checkbox" data-g="${g.k}" ${on.has(g.k) ? "checked" : ""}> ${g.t}</label>`).join("")}</div>
+      ${use.size || avoid.length || notes.length ? `<ul class="glue">${[...use].sort((a, b) => b[1].length - a[1].length).map(([n, rs]) => `<li><b>${esc(n)}</b>${rs.length > 1 ? `<span class="pts">covers ${rs.length}</span>` : ""}<span>${rs.map(esc).join("; ")}</span></li>`).join("")}${avoid.map(([n, r, nk]) => `<li class="no"><b>${esc(n)}</b><span class="flag bad">⚠ not for ${esc(nk)}</span><span>${esc(r)}</span></li>`).join("")}${notes.map(t => `<li class="no"><b>Hard case</b><span>${esc(t)}</span></li>`).join("")}</ul>` : `<p class="muted">Tick at least one mismatch.</p>`}`;
+    body.querySelectorAll("[data-g]").forEach(el => el.addEventListener("change", e => { const k = e.target.dataset.g; e.target.checked ? on.add(k) : on.delete(k); render(); body.querySelector(`[data-g="${k}"]`).focus(); }));
+  };
+  render();
+}
+function lecture5() {
+  return `${head(l)}
+    <p class="lead">Lectures 2 to 4 built a system's own variation and extension points. Lecture 5 turns to the case where the parts were <em>not</em> built for each other: reused components, libraries and tools that each make their own, mostly unwritten assumptions. When those assumptions clash, the result is <b>architectural mismatch</b>, a term from Garlan, Allen and Ockerbloom (1995). The deck first sorts the assumptions that can clash, then presents the <b>glue patterns</b> that bridge them: <b>Adapter</b>, <b>Facade</b> and <b>Mediator (Broker)</b>, plus the extensibility patterns of lecture 4 used as glue. It closes part 1 of the course (basic patterns). Written from the 31-slide deck; slide numbers refer to it.</p>
+
+    <h2>Reading and goal (slides 2–3)</h2>
+    <p>The required reading is the ICSE 1995 paper <i>Architectural mismatch, or why it is so hard to build systems out of existing parts</i> and its 2009 follow-up in IEEE Software, <i>Architectural Mismatch: Why Reuse Is Still So Hard</i>, together with the GOF entries for Adapter, Mediator and Facade. The goal (slide 3): understand architectural mismatch, and the design patterns that bridge it.</p>
+    ${why("Context, not on the slides: the case study behind the 1995 paper", "<p>The paper is an experience report. The authors set out to build an environment for architectural design (Aesop) from four off-the-shelf parts: an object-oriented database, a GUI toolkit, an event-based tool-integration framework and an RPC interface generator. Every part worked on its own, yet gluing them together took several times the planned effort; the result was large and slow, and some parts had to be modified or partly re-implemented because they assumed they were in charge of the control flow or of the data. The four categories of slide 5 are the paper's diagnosis of why. The 2009 follow-up's title gives its verdict fourteen years later.</p>")}
+
+    <h2>5.1 Where mismatch comes from (slides 4–12)</h2>
+    <p>Slide 5 sorts the assumptions a component makes into four groups. Each one is harmless inside the component that makes it; the trouble starts when two components make different ones.</p>
+    ${chart("roots", leg([[1, "kind of assumption"], [2, "what can differ (hover or focus for the slide's example)"]]))}<figcaption>Our arrangement of slides 5–12. The component model covers the infrastructure, the control model and the data model; the connectors their protocols and data formats.</figcaption></figure>
+    <ul>
+      <li><b>Component model</b> (slide 6): a component model collects what is assumed about components, such as what an interface is and when one component can be substituted for another. Components also assume an infrastructure that may not be there: one expects Windows, the other Linux. (Component models are the topic of the summer course Component-Based Software Engineering.)</li>
+      <li><b>Control model</b> (slide 7): components disagree about who has the main control. The slide's picture is jExam, the exam management system: its web front end, server, reporting part and database, plus the secretary and exam-office clients, each drawn with its own ever-running event loop.</li>
+      <li><b>Data model</b> (slide 8): components disagree about the data itself. jExam imports from the student lifecycle systems SELMA and HIS and from the room planning system S-Plus, each with its own model of the same students, exams and rooms.</li>
+      <li><b>Connectors</b> (slides 9–10): a protocol mismatch arises when one asynchronous tool superimposes concurrency on the others because messages of different tools cross (diagram below). A data format mismatch arises when components expect different things on a channel (strings, C data, C++ data); that needs translation components, which can easily become a performance bottleneck.</li>
+      <li><b>Global architecture</b> (slide 11): a database-centred (repository style) architecture against a shared-nothing one.</li>
+      <li><b>Construction process</b> (slide 12): assumptions about the library infrastructure, about a generic language such as C++ and about a tool-specific language. The combination is fatal: component A may expect B's generated code to look different from what B generates, and the developer ends up patching the generated code with scripts, yet another translation component.</li>
+    </ul>
+    ${chart("crossing", leg([[3, "Tool 1 (waits for its reply)"], [2, "asynchronous tool"], [4, "Tool 3"]]))}<figcaption>Slide 9 as a sequence diagram: the notification from Tool 3 overtakes the reply Tool 1 is waiting for.</figcaption></figure>
+    ${ex("Worked example: the crossing messages of slide 9, step by step", `<p>Tool 1 is written synchronously: it sends <code>request A</code> and expects the next message it receives to be <code>reply A</code>. The asynchronous tool accepts the request and does not block. While A is still being worked on, Tool 3 sends <code>notify B</code>; the asynchronous tool forwards it to every interested tool, Tool 1 included. So Tool 1 receives, in this order: <b>notify B</b>, then <b>reply A</b>. Either it misreads B as the answer to A, or it must buffer B, keep waiting and handle B afterwards. Buffering means Tool 1 now handles two conversations at once: the concurrency the slide says is <em>superimposed</em> on it. Nothing is wrong inside any single tool; the mismatch is in the connector.</p>`)}
+    <h3>What to do about it (slide 13)</h3>
+    <p>Garlan et al. propose four remedies: <b>make all architectural assumptions explicit</b> (hard, because most of them are not formalised, and implicit assumptions violate information hiding and hamper variability); <b>make components more independent</b> of each other; <b>provide bridging technology</b> for translation components (compiler construction, compiler generators, XML technology); and <b>distinguish architectural styles and connectors explicitly</b>. The deck's answer: design patterns serve all of these purposes.</p>
+    <h3>The extensibility patterns as glue (slide 14)</h3>
+    <p>All extensibility patterns of <a href="design-patterns/lecture.html?n=4">lecture 4</a> can treat mismatch. For <b>behaviour adaptation</b>: Chain of Responsibility as a filter for objects, Proxy for translation between data formats, Observer to extend behaviour by listening to a subject's events, Visitor to extend a data structure hierarchy with new algorithms. For <b>data mismatch</b>: Decorator to wrap, adapt behaviour and bridge data mismatch (but not protocol mismatch), and Bridge to factor a design for different platforms so that abstraction and implementation become independent components.</p>
+
+    <h2>5.2 Adapter (slides 15–20)</h2>
+    <p>An <b>object adapter</b> is a proxy that maps one interface to another, or one protocol to another, or one data format to another (slide 16). What it cannot easily map is <b>control flow</b>, because control passes through it only once, on entering the adapted class. Structurally (slide 17) the Adapter is a subclass of the client's Goal class, as a Decorator is, but it delegates to an object of a class that does <em>not</em> inherit from Goal and offers a different operation.</p>
+    ${chart("oadapt", GROLES)}<figcaption>Slide 17 redrawn: the object adapter uses delegation. Inheritance from Goal makes it substitutable; the reference makes it an adapter.</figcaption></figure>
+    <p>A <b>class adapter</b> (slide 18) uses multiple inheritance instead of delegation: it inherits the goal (which can also be an interface) and the implementation of the adapted class, and calls the inherited operation on itself.</p>
+    ${chart("cadapt", GROLES)}<figcaption>Slide 18 redrawn: one object instead of two; the goal may be an interface.</figcaption></figure>
+    ${why("Context, not on the slides: object or class adapter?", "<p>Java and C# have single class inheritance, so a class adapter there is <code>class Adapter extends AdaptedClass implements Goal</code>, which only works when the goal is an interface (the slide's note). The class adapter needs no second object and can override adapted behaviour, but it is fixed to one adapted class at compile time. The object adapter can wrap any object of the adapted class or its subclasses, chosen at run time, and leaves the adapted class completely untouched: the usual choice when the adapted class sits in a library you cannot change.</p>")}
+    ${chart("textex", GROLES)}<figcaption>Slide 19 redrawn: the class Text adapts a TextDisplay from an external library to the editor's GraficObject interface. Linie needs no adapter.</figcaption></figure>
+    ${ex("Worked example: the text adapter of slide 19 in Java", `<p>The editor only knows <code>GraficObject</code>. The library class <code>TextDisplay</code> knows how big its text is but calls that <code>largeness()</code>, and has no idea of manipulators. The adapter fills the gap:</p>
+<pre class="code"><b>abstract class</b> GraficObject {
+  <b>abstract</b> Rect <i>frame</i>();
+  <b>abstract</b> Manipulator <i>createManipulator</i>();
+}
+<b>class</b> Text <b>extends</b> GraficObject {          <em>// object adapter</em>
+  <b>private final</b> TextDisplay text;              <em>// the adapted object (library)</em>
+  Text(TextDisplay t) { text = t; }
+  Rect <i>frame</i>() { <b>return</b> text.largeness(); }    <em>// renamed operation</em>
+  Manipulator <i>createManipulator</i>() {        <em>// added behaviour</em>
+    <b>return new</b> TextManipulator(<b>this</b>);
+  }
+}</pre>
+<p>Two different jobs in one class: <code>frame()</code> is pure interface mapping (another name for the same thing), <code>createManipulator()</code> is functionality the library lacks, so the adapter supplies it. If <code>largeness()</code> returned width and height in another unit or order than <code>Rect</code>, the adapter would also translate the data format, which is the second kind of mapping slide 16 allows.</p>`)}
+    ${ex("Worked example: an adapter that also translates a data format", `<p>Our example, not from the slides. A monitoring client expects <code>Thermometer.celsius()</code>. A legacy sensor driver offers <code>readF()</code> in degrees Fahrenheit. The object adapter implements <code>celsius()</code> as <code>(sensor.readF() − 32) × 5 / 9</code>. A reading of 98.6 °F becomes (98.6 − 32) × 5 / 9 = 66.6 × 5 / 9 = <b>37.0 °C</b>; 32 °F becomes 0 °C; 212 °F becomes 100 °C. The client never learns that the sensor counts in Fahrenheit, and neither the client nor the driver changed.</p>`)}
+    <p><b>Adapters and decorators</b> (slide 20): like a decorator, an adapter inherits its interface from the goal class, but it adapts that interface. Hence adapters can be <b>inserted into inheritance hierarchies later on</b>: new extensions cannot be added inside a closed library, but an adapter with the new features can sit in the application's hierarchy and delegate to the library class.</p>
+
+    <h2>5.3 Facade (slides 21–23)</h2>
+    <p>A <b>facade</b> is an object adapter that hides a complete set of objects, a subsystem; or, seen from the other side, a proxy that hides a subsystem (slide 22). It has to map its own interface onto the interfaces of all the hidden objects. The client depends on one class instead of many, and the subsystem can be reorganised behind it.</p>
+    ${chart("facade", GROLES)}<figcaption>Slide 23 redrawn: one concrete facade, three hidden classes in the subsystem; the facade's single operation calls the hidden ones in turn.</figcaption></figure>
+    ${why("Context, not on the slides: the textbook facade", "<p>The GOF book's example is a compiler subsystem with a scanner, a parser, a builder for the program tree and a code generator. Most clients only want <code>compiler.compile(source)</code>; the facade calls the four classes in the right order. Clients that need finer control can still use the subsystem classes directly: a facade simplifies, it does not have to forbid. Compared with an adapter, a facade usually invents a new, simpler interface instead of matching an existing goal interface.</p>")}
+
+    <h2>5.4 Mediator, or Broker (slides 24–29)</h2>
+    <p>A <b>mediator</b> is an n-way proxy for communication, combined with a Bridge (slide 25). It serves anonymous communication and dynamic communication nets. Every colleague knows only the mediator; the concrete mediator knows the concrete colleagues and passes messages between them (slide 26). In the typical object structure several colleague objects all point to one mediator object.</p>
+    ${chart("med", leg([[2, "colleagues"], [1, "mediator"]]))}<figcaption>Slide 26 redrawn. The concrete colleagues never reference each other; the arrow along the bottom is the mediator's knowledge of all of them.</figcaption></figure>
+    <p>Why both a Proxy and a Bridge (slides 27–28)? <b>Proxy</b>: the mediator object hides all communication partners; every partner uses it as a proxy, so the real partner is hidden. <b>Bridge</b>: the link between Colleague and Mediator connects two hierarchies, an abstraction of the service and its realisation, and both the mediator and the partner hierarchies can be varied independently. Observer with a change manager (<a href="design-patterns/lecture.html?n=4">lecture 4</a>) is exactly Observer combined with Mediator.</p>
+    ${lab("net", "pairwise glue versus one mediator")}
+    ${chart("growth", leg([[2, "pairwise: n(n − 1)/2"], [1, "mediator: n"]]))}<figcaption>Context, not on the slides: the arithmetic behind "n-way proxy". Hover or focus the plot and use the arrow keys to double n.</figcaption></figure>
+    ${tbl(["Components n", "Pairwise n(n − 1)/2", "Through a mediator n"], GROW.map(n => [n, n * (n - 1) / 2, n]))}
+    ${ex("Worked example: six services, glued two ways", `<p>Six components with six different data formats. Pairwise: 6 · 5 / 2 = <b>15 connections</b>, and since each needs a translator both ways, 6 · 5 = <b>30 translators</b>. Through a mediator with one common format: <b>6 connections</b> and 2 · 6 = <b>12 translators</b> (into and out of the common format). A seventh service costs 6 new connections and 12 translators pairwise, but 1 connection and 2 translators with the mediator. The price: every message makes two hops, and the mediator is a single point that all traffic, and all failures, go through.</p>`)}
+    <p><b>Web service brokers</b> (slide 29) apply this to services: an abstract <code>WebService</code> knows a <code>WebServiceMediator</code> and implements <code>query()</code> as <code>mediator.query(this)</code>. Google (with <code>search()</code>) and HotelBooking (with <code>search()</code>, <code>reserve()</code> and <code>buy()</code>) are web services; the <code>ConcreteServiceMediator</code> holds references to both and offers <code>buy()</code> and <code>query()</code>.</p>
+    ${chart("broker", leg([[1, "mediator hierarchy"], [2, "service hierarchy"]]))}<figcaption>Slide 29 redrawn: two hierarchies joined by a bridge; the concrete mediator knows each concrete service.</figcaption></figure>
+    ${ex("Worked example: one query through the broker", `<p>Our reading of slide 29. A hotel search asks the mediator, not Google: <code>hotel.query()</code> runs <code>mediator.query(this)</code>. The concrete mediator sees that the query came from the hotel booking service, can call <code>google.search()</code> for, say, the location, and hand the result back. Google never learns that a hotel service exists, and the hotel service never holds a reference to Google. Replacing Google by another search service changes one field of the concrete mediator and nothing in the services: anonymous communication plus a variable bridge.</p>`)}
+
+    <h2>Which glue for which mismatch</h2>
+    ${lab("glue", "choose the glue pattern")}
+    <div class="tt-wrap"><table class="tt"><tr><th>Pattern</th><th>Wraps</th><th>Interface to the client</th><th>Main job</th></tr>
+      <tr><td>Adapter</td><td>one object (or class)</td><td>the existing goal interface, different from the adapted one</td><td>map interface, protocol, data format</td></tr>
+      <tr><td>Facade</td><td>a whole subsystem</td><td>a new, simpler interface</td><td>hide many objects behind one</td></tr>
+      <tr><td>Mediator</td><td>n communication partners</td><td>each partner sees only the mediator</td><td>anonymous, changeable n-way communication</td></tr>
+      <tr><td>Decorator</td><td>one object of the same type</td><td>the same interface</td><td>add behaviour; bridge data, not protocol mismatch</td></tr>
+      <tr><td>Proxy</td><td>one sister object</td><td>the same interface</td><td>control access; translate data formats</td></tr></table></div>
+    ${why("Context, not on the slides: telling Adapter, Decorator, Proxy and Facade apart", "<p>All four wrap something and forward calls, so the structure alone does not decide. Ask what the client sees. The <b>same</b> interface as the wrapped object: Decorator (adds behaviour, chainable) or Proxy (controls access, one and only). A <b>different, already existing</b> interface: Adapter. A <b>new, simplified</b> interface over many objects: Facade. Exam questions on this lecture tend to be of exactly that compare-and-explain kind, since the oral exam asks for reasons rather than code.</p>")}
+
+    <h2>Summary (slide 30)</h2>
+    <p>Architectural mismatch between components and tools consists of different assumptions about the components, the connections, the architecture and the building procedure. Design patterns, the extensibility patterns as well as communication patterns, can bridge data, interface and protocol mismatches. With glue patterns, reuse becomes much better.</p>
+    <div class="tiles"><div class="tile"><div class="v">4 roots</div><div class="l">component model, connectors, global architecture, construction process</div></div><div class="tile"><div class="v">≠ interface</div><div class="l">Adapter: maps interface, protocol or data format, not control flow</div></div><div class="tile"><div class="v">1 for many</div><div class="l">Facade: an object adapter for a whole subsystem</div></div><div class="tile"><div class="v">n(n−1)/2 → n</div><div class="l">connections, pairwise versus through a mediator</div></div></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What is architectural mismatch?</b> Components that work alone but make conflicting implicit assumptions, so gluing them is hard (Garlan, Allen, Ockerbloom 1995).</li>
+      <li><b>Which assumptions can clash?</b> The component model (infrastructure, control model, data model), the connectors (protocols, data formats), the global architecture (repository or shared nothing) and the construction process (libraries, languages, generated code).</li>
+      <li><b>What do Garlan et al. propose?</b> Make assumptions explicit, make components more independent, provide bridging technology, distinguish styles and connectors explicitly; the deck adds that design patterns serve all of it.</li>
+      <li><b>Object versus class adapter?</b> Delegation to an adapted object versus multiple inheritance from goal and adapted class; both map interface, protocol or data format, neither maps control flow easily.</li>
+      <li><b>Adapter versus Decorator?</b> Both inherit the goal interface; a decorator keeps the interface and adds behaviour, an adapter maps to a different one, so it can be inserted into a hierarchy later.</li>
+      <li><b>Facade?</b> An object adapter, or proxy, that hides a whole subsystem behind one interface.</li>
+      <li><b>Mediator (Broker)?</b> An n-way proxy combined with a bridge: anonymous, dynamically changeable communication; web service brokers; Observer with change manager is Observer plus Mediator.</li>
+    </ul>
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=4">exercise 4, Architecture Mismatch</a> (planned for 25 Nov; the sheet is not in OPAL yet). Previous: <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a>. Next: <a href="design-patterns/lecture.html?n=6">lecture 6, Role-based Design</a> (24 Nov), the start of part 2. Slides and the learning video #05: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const LABS = { mvc: initMvc, facets: initFacets, proto: initProto, parts: initParts, deco: initDeco, chain: initChain, cm: initCm, net: initNet, glue: initGlue };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
