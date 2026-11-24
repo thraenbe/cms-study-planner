@@ -4031,7 +4031,7 @@ window.CMS = {
        "family": "ssm"
       }
      ],
-     "decision": "Open: talk about one paper in depth or compare several of the topic (the slides ask for a conscious decision). Leaning: one architecture family per section with the Transformer as the common baseline."
+     "decision": "Decided on 24 Nov: compare the three architecture families (dense attention, mixture of experts, state space) instead of one paper in depth, with the Transformer as the common baseline and one section per family."
     },
     "schedule": {
      "src": "tentative timeline from the kick-off slides of 15 Oct; the exact dates are in the OPAL course calendar, and the final-presentation split changes with the number of talks",
