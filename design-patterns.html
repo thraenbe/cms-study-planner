@@ -10,6 +10,7 @@
 <script src="assets/data.js"></script>
 <script src="assets/site.js"></script>
 <script src="design-patterns/dpf.js"></script>
+<script src="design-patterns/exam-questions.js"></script>
 </head>
 <body class="dpf">
 <header class="sitebar" data-page="course"></header>
@@ -30,6 +31,10 @@ const lectures = (c.lectures || []).map(l => `<a class="game-card lec ${l.covere
     <div class="game-icon">🗂️</div>
     <h2>Orga</h2>
     <p>Next session, exam and Selma, old exams (none exist, the exam is oral), the full schedule with rooms, how the exercises work, material and contacts.</p>
+  </a><a class="game-card" href="design-patterns/exam.html">
+    <div class="game-icon">🎤</div>
+    <h2>Mock oral exam</h2>
+    <p>${(window.DPF_EXAM || []).length || "Own"} questions in exam style with key points, a 15-minute simulation with a clock, and your progress per lecture.</p>
   </a>`;
 const exercises = (c.exercises || []).map(x => `<a class="game-card exe ${x.covered ? "" : "soon"}" href="design-patterns/exercise.html?n=${x.n}">
     <div class="game-icon">${x.icon}</div>

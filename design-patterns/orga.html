@@ -37,6 +37,7 @@ const archiveHTML = xa ? `<h2 id="old-exams">Old exams</h2>
   <div class="box" style="padding:.6rem 1.2rem"><table class="plan exams"><tbody>${(xa.history || []).map(h => `<tr class="${h.current ? "next" : ""}"><td class="d">${esc(h.sem)}</td><td class="k"><span class="sw ${h.form === "written" ? "wr" : "or"}" title="${esc(h.form)}"></span></td><td><b>${esc(h.weeks)}</b>${h.note ? ` <span class="muted">· ${esc(h.note)}</span>` : ""}</td></tr>`).join("")}</tbody></table></div>
   ${(xa.facts || []).length ? `<ul>${xa.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
   ${xa.substitute ? `<h3>What to practise with instead</h3><p>${esc(xa.substitute)}</p>` : ""}
+  <p><a href="design-patterns/exam.html">🎤 Mock oral exam on this board: own questions per lecture with key points and a 15-minute simulation →</a></p>
   ${(xa.links || []).length ? `<div class="links">${xa.links.map(l => `<a href="${l.u}" target="_blank" rel="noopener">${esc(l.t)} ↗</a>`).join("")}</div>` : ""}
   ${xa.leads ? `<p class="muted">${esc(xa.leads)} Checked in OPAL on ${U.fmtDate ? U.fmtDate(xa.checked) : esc(xa.checked)}.</p>` : ""}` : "";
 const links = [
