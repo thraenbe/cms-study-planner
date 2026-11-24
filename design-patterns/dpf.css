@@ -111,6 +111,8 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dpf .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
 .dpf .plan .sw.lec { background: var(--c-core); }
 .dpf .plan .sw.exe { background: var(--c-trk); }
+.dpf .sw.wr { background: var(--warn); }
+.dpf .sw.or { background: var(--c-core); }
 .dpf .plan tr.past td { color: var(--ink-3); }
 .dpf .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
 .dpf .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
