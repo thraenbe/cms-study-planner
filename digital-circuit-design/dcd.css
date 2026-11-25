@@ -371,6 +371,13 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .l5nl .cell.hd { background: transparent; color: var(--ink-3); font-size: 13px; }
 .dcd .l5nl .cell.blank { font-size: 11px; color: var(--ink-3); }
 .dcd .l5nl .cell.one { background: color-mix(in srgb, var(--vz-s1) var(--w), var(--surface)); }
+.dcd .l5sym td:first-child { white-space: nowrap; }
+@media (min-width: 761px) { .dcd .l5sym td.en, .dcd .l5sym td.ep { min-width: 9.5rem; } }
+.dcd .l5sym .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+.dcd .l5sym .sw.t { background: var(--vz-s1); }
+.dcd .l5sym .sw.v { background: var(--vz-gray); }
+.dcd .l5sym td.en { box-shadow: inset 3px 0 var(--vz-s1); }
+.dcd .l5sym td.ep { box-shadow: inset 3px 0 var(--vz-gray); }
 /* Lecture 3 multiplier chapter: the three-stage diagram, the key statement, the "what changes where" table */
 .dcd .viz .stg-box { fill: var(--surface); stroke: var(--vz-axis); stroke-width: 1.2; }
 .dcd .viz .pt.on .stg-box, .dcd .viz .pt:focus-visible .stg-box { stroke: var(--ink-2); stroke-width: 1.6; }
@@ -445,3 +452,62 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
   .dcd .cmp.l6one li { grid-template-columns: 1fr; }
   .dcd .l6g .l6sch { max-width: 300px !important; }
 }
+/* Lecture 7: RC edges, inverter chain, setup/hold window, timing-path bars, critical-path network. */
+.dcd .viz .l7thr { stroke: var(--vz-gray); stroke-width: 1; stroke-dasharray: 4 3; }
+.dcd .viz .l7br { stroke: var(--ink-2); stroke-width: 1.2; }
+.dcd .viz .l7ring { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.dcd .viz .l7wv { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.dcd .viz .l7wv.d { stroke: var(--vz-s1); }
+.dcd .viz .l7win { fill: color-mix(in srgb, var(--vz-s2) 22%, transparent); }
+.dcd .viz .pt.on .l7win, .dcd .viz .pt:focus-visible .l7win { fill: color-mix(in srgb, var(--vz-s2) 34%, transparent); }
+.dcd .viz .l7edge { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 2 3; }
+.dcd .viz .l7hl { stroke: var(--ink-3); stroke-width: 1.2; }
+.dcd .viz .l7unk { fill: url(#l7hatch); stroke: var(--ink-3); stroke-width: 1; }
+.dcd .viz .l7ok { fill: color-mix(in srgb, var(--ok) 24%, transparent); }
+.dcd .viz .l7bad { fill: color-mix(in srgb, var(--bad) 24%, transparent); }
+.dcd .viz .l7req { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.dcd .viz .l7cap { stroke: var(--ink); stroke-width: 1.5; }
+.dcd .viz .fg0.l7su { opacity: .55; }
+.dcd .viz .pt.on .bar, .dcd .viz .pt:focus-visible .bar { filter: brightness(1.12); }
+.dcd .viz .l7box { fill: var(--surface); stroke: var(--vz-axis); stroke-width: 1.2; }
+.dcd .viz .pt.crit .l7box { stroke: var(--ink); stroke-width: 2; }
+.dcd .viz .pt.on .l7box, .dcd .viz .pt:focus-visible .l7box { stroke: var(--focus); stroke-width: 2; }
+.dcd .viz .l7w { fill: none; stroke: var(--ink-3); stroke-width: 1.4; }
+.dcd .viz .l7pa, .dcd .viz .l7pb, .dcd .viz .l7pt { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dcd .viz .l7pa { stroke: var(--vz-s2); }
+.dcd .viz .l7pb { stroke: var(--vz-s1); }
+.dcd .viz .l7pt { stroke: var(--ink); stroke-width: 3; }
+.dcd .viz .l7pa.crit, .dcd .viz .l7pb.crit { stroke-width: 4; }
+.dcd .viz .l7pa:not(.crit), .dcd .viz .l7pb:not(.crit) { stroke-dasharray: 5 4; }
+.dcd .viz .l7gn { fill: var(--ink); font-size: 12px; font-weight: 700; }
+.dcd .viz .l7gd { fill: var(--ink-2); font-size: 11px; }
+.dcd .l7stages { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 10px; }
+.dcd .l7st { display: inline-flex; align-items: center; gap: 4px; }
+.dcd .l7st small { color: var(--ink-3); font-size: 12px; margin-right: 2px; }
+.dcd .l7st .preset { padding: 3px 10px; }
+/* Exercise 4: layer swatches (drawn like the sheet's layout editor) and the stick-diagram explorer. */
+.dcd .e4sw { display: inline-block; width: 26px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 8px; border: 1px solid var(--line); background: #111; }
+.dcd .e4sw.well { background: repeating-linear-gradient(135deg, #d98a32 0 2px, #111 2px 6px); }
+.dcd .e4sw.act { background: #5a1414; border-color: #c03030; }
+.dcd .e4sw.poly { background: linear-gradient(90deg, #111 35%, #2fc44f 35% 65%, #111 65%); }
+.dcd .e4sw.ct { background: linear-gradient(#ece8d0, #ece8d0) center / 8px 8px no-repeat, #111; }
+.dcd .e4sw.m1 { background: repeating-linear-gradient(135deg, #2bb6c4 0 2px, #111 2px 6px); border-color: #3fd4e0; }
+.dcd .e4sw.m2 { background: linear-gradient(90deg, #e020e0 0 40%, transparent 40%), repeating-linear-gradient(135deg, #b030b0 0 2px, #111 2px 6px); }
+.dcd .e4l td:first-child { white-space: nowrap; }
+.dcd .viz .e4well { fill: color-mix(in srgb, var(--vz-s4) 9%, transparent); }
+.dcd .viz .e4wb { stroke: var(--vz-s4); stroke-width: 1; stroke-dasharray: 5 4; }
+.dcd .viz .e4rail { fill: var(--ink-3); }
+.dcd .viz .e4rl { fill: var(--surface); font-size: 10px; font-weight: 700; }
+.dcd .viz .e4lab { fill: var(--ink-3); font-size: 11px; }
+.dcd .viz .e4d { stroke: var(--ink-3); stroke-width: 1; fill: var(--surface); }
+.dcd .viz .e4d.hi { fill: color-mix(in srgb, var(--vz-s2) 32%, var(--surface)); }
+.dcd .viz .e4d.lo { fill: color-mix(in srgb, var(--vz-s1) 32%, var(--surface)); }
+.dcd .viz .e4ct { fill: var(--ink); }
+.dcd .viz .e4m { stroke: var(--ink-2); stroke-width: 2; }
+.dcd .viz .e4poly { stroke: var(--vz-s3); stroke-width: 4; stroke-linecap: round; }
+.dcd .viz .e4ch.on { fill: var(--vz-s3); }
+.dcd .viz .e4ch.off { fill: var(--surface); stroke: var(--vz-s3); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.dcd .viz .pt.on .e4ch, .dcd .viz .pt:focus-visible .e4ch { stroke: var(--ink); stroke-width: 2; }
+.dcd .viz .e4net { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dcd .viz .e4ser { fill: var(--ink-3); font-size: 10px; font-style: italic; }
+.dcd .viz .e4out { fill: var(--ink); font-size: 13px; font-weight: 700; }

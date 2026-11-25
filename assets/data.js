@@ -2642,8 +2642,17 @@ window.CMS = {
       "title": "Timing of CMOS logic",
       "date": "2026-11-23",
       "icon": "⏱️",
-      "covered": false,
-      "blurb": "MOS capacitances, the RC switch model, effective resistance, gate delays, setup and hold in synchronous circuits."
+      "covered": true,
+      "blurb": "How long gates take: MOS capacitances and the RC switch model with its effective resistance, 10–90 % rise and fall times and f_max, transfer gates in the path, the optimal fan-out of an inverter chain (226 ps instead of 5.6 ns for 1 pF) and the CBUFX8 clock buffer, timing characterisation by circuit simulation, flip-flop setup and hold, timing paths with arrival, required time and slack, and the critical path.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Dig_Schaltungstechnik_Vorlesung_07_Timing_Folien.pdf",
+        "where": "Chair materials page",
+        "url": "https://tu-dresden.de/ing/elektrotechnik/iee/hpsn/studium/materialien/digitale-schaltungstechnik-vorlesung",
+        "note": "2022/23 deck, password from lecture 1"
+       }
+      ]
      },
      {
       "n": 8,
@@ -2783,7 +2792,13 @@ window.CMS = {
         "kind": "sheet",
         "name": "DSTUebung3_2025de_Aufgaben.pdf",
         "where": "OPAL · Exercises/Übungen",
-        "note": "German, your group; German solution not posted yet"
+        "note": "German, your group"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung3_2025de_Loesung.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German solution, seen on 25 Nov; not compared with this page yet"
        },
        {
         "kind": "sheet",
@@ -2801,12 +2816,26 @@ window.CMS = {
      },
      {
       "n": 4,
-      "title": null,
+      "title": "CMOS technology: reading cell layouts",
       "date": "2026-12-03",
-      "published": null,
+      "published": "2026-11-25",
       "icon": "✏️",
-      "covered": false,
-      "blurb": "Expected to cover lectures 7–8 (timing, power and energy); the chair posts each sheet with solutions in OPAL (English and German versions) around the session."
+      "covered": true,
+      "blurb": "Sheet 4 (task 4.1, five parts): turning standard-cell layouts back into circuits: the layers, PMOS and NMOS, pins and series nodes of a NOR2 (W/L 12 and 6.7), a buffer, an AND2, a cell built from clocked inverters and an OA21, with a stick-diagram explorer. Our own solutions; part d) only partly traced, no official solution yet.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DSTUebung4_2025de_Aufgaben.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "German, your group"
+       },
+       {
+        "kind": "sheet",
+        "name": "DSTUebung4_2025en_taskdescription.pdf",
+        "where": "OPAL · Exercises/Übungen",
+        "note": "English version"
+       }
+      ]
      },
      {
       "n": 5,
