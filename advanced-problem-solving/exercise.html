@@ -643,6 +643,180 @@ x₅: ${i9.flips[4].ev} − 0.7 · 2 = ${num(i9.flips[4].adj, 1)}</p>
     <p class="muted">Previous sheet: <a href="advanced-problem-solving/exercise.html?n=2">tutorial 2</a>. Next: tutorial 4 on evolutionary algorithms, after <a href="advanced-problem-solving/lecture.html?n=5">lecture 5</a>. The sheet is in OPAL → Tutorials → Tutorial 3 (tabu search); it is not republished here.</p>`;
 }
 
+// ---------------- Tutorial 4: evolutionary algorithms (sheet 4) ----------------
+const { xoverLab, ox, pmx, posRow } = APSSViz;
+// Task 1: the graph of the sheet (5 nodes, 6 edges; the edges 3–4 and 5–1 cross in the drawing).
+const GV = { 1: [40, 95], 2: [130, 25], 3: [220, 95], 4: [95, 170], 5: [165, 170] }, GE = [[1, 2], [2, 3], [3, 1], [3, 4], [4, 5], [5, 1]], CL = "ABC";
+const conflicts = c => GE.filter(([a, b]) => c[a - 1] === c[b - 1]);
+const ALLCOL = Array.from({ length: 243 }, (_, i) => [0, 1, 2, 3, 4].map(k => Math.floor(i / 3 ** k) % 3));
+const CHIST = [0, 1, 2, 3, 4, 5, 6].map(q => ALLCOL.filter(c => conflicts(c).length === q).length);
+vbars("gchist", {
+  cats: CHIST.map((_, q) => `${q}`), y: [0, 100], yTicks: [0, 20, 40, 60, 80, 100], yTitle: "colourings",
+  series: [{ slot: 1, name: "colourings with this many conflicts", vals: CHIST }], tipHead: q => `${q} conflicting edge${q === "1" ? "" : "s"}`, fmtY: v => `${v}`,
+  aria: `Bar chart of all 243 colourings of the sheet's graph with 3 colours by number of conflicting edges: ${CHIST.map((v, q) => `${v} with ${q}`).join(", ")}. 18 are proper.`,
+});
+const COL_SETS = [["X, proper", [0, 1, 2, 0, 1]], ["Y = X renamed", [1, 2, 0, 1, 2]], ["one-point child of X and Y", [0, 1, 0, 1, 2]], ["the other child", [1, 2, 2, 0, 1]], ["all one colour", [0, 0, 0, 0, 0]]];
+function graphSVG(c, narrow) {
+  const bad = conflicts(c), isBad = (a, b) => bad.some(([u, v]) => (u === a && v === b) || (u === b && v === a));
+  const edges = GE.map(([a, b]) => `<line class="gedge${isBad(a, b) ? " bad" : ""}" x1="${GV[a][0]}" y1="${GV[a][1]}" x2="${GV[b][0]}" y2="${GV[b][1]}"/>`).join("");
+  const nodes = Object.entries(GV).map(([k, [x, y]]) => `<g class="gnode" data-n="${k}" tabindex="0" role="button" aria-label="node ${k}, colour ${CL[c[k - 1]]}: press to change"><circle cx="${x}" cy="${y}" r="19" style="fill:color-mix(in srgb, var(--vz-s${c[k - 1] + 1}) 45%, var(--surface))"/><text x="${x}" y="${y - 1}" text-anchor="middle">${k}</text><text class="cl" x="${x}" y="${y + 12}" text-anchor="middle">${CL[c[k - 1]]}</text></g>`).join("");
+  return `<svg viewBox="0 0 260 200" style="max-width:${narrow ? 300 : 340}px" role="img" aria-label="The sheet's graph coloured ${c.map(v => CL[v]).join("")}; ${bad.length} conflicting edge${bad.length === 1 ? "" : "s"}${bad.length ? ": " + bad.map(([a, b]) => `${a}–${b}`).join(", ") : ""}">${edges}${nodes}</svg>`;
+}
+function initGcol(body) {
+  const st = { c: COL_SETS[0][1].slice(), pre: 0 };
+  body.innerHTML = `<p class="lab-note">k = 3 colours A, B, C. Click a node (or focus it and press Enter) to give it the next colour. Conflicting edges are drawn thick and dashed. Fitness here: 6 − (number of conflicting edges), so a proper colouring scores 6.</p>
+    <div class="presets" role="group" aria-label="Colouring">${COL_SETS.map(([t], k) => `<button class="preset" data-c="${k}" aria-pressed="${k === 0}">${t}</button>`).join("")}</div>
+    ${leg([[1, "colour A"], [2, "colour B"], [3, "colour C"]])}<div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const render = (focus) => {
+    const bad = conflicts(st.c);
+    out.innerHTML = `${graphSVG(st.c, isNarrow())}<dl class="ro"><dt>genotype</dt><dd class="mono">(${st.c.map(v => CL[v]).join(", ")})</dd><dt>conflicts</dt><dd>${bad.length ? bad.map(([a, b]) => `${a}–${b}`).join(", ") : "none: a proper colouring"}</dd><dt>fitness</dt><dd>6 − ${bad.length} = <b>${6 - bad.length}</b></dd></dl>`;
+    out.querySelectorAll(".gnode").forEach(g => { const go = () => { const i = +g.dataset.n - 1; st.c[i] = (st.c[i] + 1) % 3; st.pre = null; render(g.dataset.n); };
+      g.addEventListener("click", go); g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } }); });
+    if (focus) out.querySelector(`.gnode[data-n="${focus}"]`)?.focus();
+    body.querySelectorAll("[data-c]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.c === st.pre));
+  };
+  body.querySelectorAll("[data-c]").forEach(b => b.addEventListener("click", () => { st.pre = +b.dataset.c; st.c = COL_SETS[st.pre][1].slice(); render(); }));
+  render(); body.dataset.rerender = "gcol"; body._rerender = () => render();
+}
+// Task 2: the sheet's two schedules.
+const S4P1 = [1, 2, 3, 4, 5, 6, 7, 8], S4P2 = [3, 7, 2, 8, 1, 5, 4, 6];
+const XO_T4 = [
+  { label: "(a) OX, cut after position 2", op: "ox", p1: S4P1, p2: S4P2, cut: 3 },
+  { label: "(b) PMX, segment 3–5", op: "pmx", p1: S4P1, p2: S4P2, a: 3, b: 5, note: "The 8 and the 1 are placed by the mapping chain at positions 6 and 7, where neither parent has them." },
+];
+const initXo4 = body => xoverLab(body, XO_T4);
+// Task 3: the knapsack instance and its penalty fitness f(x) = Σ v·x − 2 · max(0, Σ w·x − 12).
+const KV = [2, 3, 1, 2, 1, 3], KW = [2, 4, 1, 3, 1, 4], CAP = 12;
+const kn = s => { const x = [...s].map(Number), V = x.reduce((t, b, i) => t + b * KV[i], 0), W = x.reduce((t, b, i) => t + b * KW[i], 0); return { s, V, W, ex: Math.max(0, W - CAP), f: V - 2 * Math.max(0, W - CAP) }; };
+const KALL = Array.from({ length: 64 }, (_, i) => kn(i.toString(2).padStart(6, "0")));
+const KOPT = KALL.filter(x => x.W <= CAP).reduce((a, b) => b.V > a.V ? b : a);
+const KBESTINF = Math.max(...KALL.filter(x => x.W > CAP).map(x => x.f));
+const G0 = ["101010", "010101", "110010", "001101"].map(kn);
+const TOURN = [[0, 1], [2, 3], [1, 2], [0, 3]].map(([a, b]) => ({ a, b, w: G0[b].f > G0[a].f ? b : a }));
+const PAR = TOURN.map(t => G0[t.w]);
+const cross = (x, y) => [x.s.slice(0, 3) + y.s.slice(3), y.s.slice(0, 3) + x.s.slice(3)];
+const KIDS = [...cross(PAR[0], PAR[1]), ...cross(PAR[2], PAR[3])].map(kn);
+const flip = (s, i) => s.slice(0, i - 1) + (s[i - 1] === "1" ? "0" : "1") + s.slice(i);
+const G1 = [kn(flip(KIDS[0].s, 1)), KIDS[1], KIDS[2], kn(flip(KIDS[3].s, 6))];
+const meanF = g => g.reduce((t, x) => t + x.f, 0) / g.length;
+CHARTS.knap = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 250 : 270, L = 40, R = narrow ? 12 : 20, T = 18, B = 34, PW = W - L - R, PH = H - T - B;
+  const x = w => L + w / 16 * PW, y = f => T + PH - f / 12 * PH;
+  const groups = {}; KALL.forEach(k => { const key = `${k.W},${k.f}`; (groups[key] = groups[key] || []).push(k); });
+  const dots = Object.values(groups).map(gr => { const k = gr[0], inf = k.W > CAP, tip = `<b>weight ${k.W}, fitness ${k.f}</b>${inf ? `<span class="trow">value ${k.V} − 2 · ${k.ex} excess</span>` : ""}<span class="trow">${gr.map(g => g.s).join(" · ")}</span>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}">${inf ? `<line class="ann" x1="${x(k.W)}" x2="${x(k.W)}" y1="${y(Math.min(k.V, 12))}" y2="${y(k.f)}"/>` : ""}<circle class="dot gray anchor" cx="${x(k.W)}" cy="${y(k.f)}" r="${2.5 + Math.sqrt(gr.length) * 1.6}"/></g>`; }).join("");
+  const ring = (k, slot, r, dash) => `<circle cx="${x(k.W)}" cy="${y(k.f)}" r="${r}" fill="none" stroke="var(--vz-s${slot})" stroke-width="2"${dash ? ' stroke-dasharray="3 2"' : ""}/>`;
+  const rings = G0.map(k => ring(k, 1, 9)).join("") + G1.map(k => ring(k, 2, 13, true)).join("") + ring(KOPT, 3, 9);
+  const xt = [0, 2, 4, 6, 8, 10, 12, 14, 16].map(v => `<text class="tick" x="${x(v)}" y="${H - 14}" text-anchor="middle">${v}</text>`).join("");
+  const yt = [0, 2, 4, 6, 8, 10, 12].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="All 64 item subsets by total weight and penalised fitness. Fitness rises with weight up to the capacity 12, where the optimum 111011 reaches 10; heavier subsets lose 2 per unit of excess. Generation 0 sits at fitness 4, 8, 6, 6, generation 1 at 6, 8, 8, 3.">${yt}${xt}
+    <line class="ann dash" x1="${x(CAP)}" x2="${x(CAP)}" y1="${T}" y2="${T + PH}"/><text class="vl2" x="${x(CAP) - 5}" y="${T + 10}" text-anchor="end">capacity 12</text>
+    <text class="note" x="${L - 34}" y="11">fitness</text><text class="note" x="${W - R}" y="${H - 2}" text-anchor="end">total weight</text>${dots}${rings}</svg>`;
+};
+
+function tutorial4() {
+  const tr = TOURN.map((t, i) => `<tr><td>${i + 1}</td><td>Ind${t.a + 1} (${G0[t.a].f}) vs Ind${t.b + 1} (${G0[t.b].f})</td><td><b>Ind${t.w + 1}</b>${G0[t.a].f === G0[t.b].f ? " (tie, lower index)" : ""}</td><td>P${i + 1}</td></tr>`).join("");
+  const row = (name, k, extra = "") => `<tr class="${k.W > CAP ? "inf" : ""}"><td>${name}</td><td class="mono">${k.s}</td><td class="n">${k.W}</td><td class="n">${k.V}</td><td class="n">${k.f}${k.W > CAP ? ` (${k.V} − 2 · ${k.ex})` : ""}</td>${extra}</tr>`;
+  const kidSrc = ["P1 head + P2 tail", "P2 head + P1 tail", "P3 head + P4 tail", "P4 head + P3 tail"];
+  const oxa = ox(S4P1, S4P2, 3).child, oxb = ox(S4P2, S4P1, 3).child, pma = pmx(S4P1, S4P2, 3, 5).child, pmb = pmx(S4P2, S4P1, 3, 5).child;
+  const v = a => `(${a.join(", ")})`;
+  return `${head(e)}
+    <p class="lead">Sheet 4 belongs to lecture 5. Task 1 is a design question in the style of the earlier sheets, now for an evolutionary algorithm and for graph colouring, where one subtle point (colour names are arbitrary) decides whether crossover helps at all. Task 2 is OX and PMX by hand on two job schedules. Task 3 runs one complete generation of a genetic algorithm on a 0/1 knapsack instance with a penalty function, from fitness values through tournaments, crossover and mutation to the new population. The sheet carries no points and there are no official solutions; everything below is our own working.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">χ(G) = 3</div><div class="l">nodes 1, 2, 3 form a triangle; ${CHIST[0]} of the 3<sup>5</sup> = 243 colourings with three colours are proper</div></div>
+      <div class="tile"><div class="v">${v(oxa)}</div><div class="l">O1 of the order crossover in task 2</div></div>
+      <div class="tile"><div class="v">${v(pma)}</div><div class="l">O1 of PMX in task 2, which is also OX's O2</div></div>
+      <div class="tile"><div class="v">8 → 8</div><div class="l">best fitness before and after the generation of task 3; the optimum is ${KOPT.V} (items ${[...KOPT.s].map((b, i) => b === "1" ? i + 1 : null).filter(Boolean).join(", ")})</div></div>
+    </div>
+    <p class="muted">Date: the ICCL calendar (last edited 9 Nov) lists tutorial 4 for your Friday group on 27 Nov; the sheet's date range is 26–30 Nov, one week for all four groups.</p>
+
+    ${task(1, "An evolutionary algorithm for graph colouring", `<p>Colour the nodes of a graph so that adjacent nodes differ, with as few colours as possible; the minimum is the chromatic number χ(G). The sheet's graph has five nodes and the edges 1–2, 2–3, 3–1, 3–4, 4–5, 5–1. Design an EA by answering eight questions: (a) representation with k colours fixed and the size of the search space, (b) the fitness function and what a perfect solution looks like, (c) initialisation, population size, and whether individuals must be proper colourings, (d) roulette or tournament selection, (e) a crossover operator and the problem with combining two proper colourings, (f) a mutation operator and its rate, (g) generational replacement against elitism, (h) a premature-convergence scenario, how to detect it and what to do.</p>`, `
+      ${lab("gcol", "colour the sheet's graph")}
+      <h3>(a) Representation</h3>
+      <p>An integer vector c = (c<sub>1</sub>, …, c<sub>n</sub>) with c<sub>i</sub> ∈ {1, …, k}, the colour of node i. Every vector is a colouring, just not necessarily a proper one, so the operators never produce invalid genotypes; properness is left to the fitness. The search space has <b>k<sup>n</sup></b> individuals: 3<sup>5</sup> = 243 for the sheet's graph with k = 3.</p>
+      <p>How to choose k: nodes 1, 2, 3 form a triangle, so at least three colours are needed, and there are proper 3-colourings (A, B, C, A, B is one), so χ(G) = 3. With k = 2 none of the 32 vectors is proper. For a graph whose χ is unknown, run the EA with some k, and if it finds a proper colouring, decrease k and run again.</p>
+      ${chart("gchist", "")}
+        <figcaption>All 243 colourings of the sheet's graph with three colours, by their number of conflicting edges (our enumeration). Only ${CHIST[0]} are proper (7 %); the single most common case is two conflicts.</figcaption>
+      </figure>
+      <h3>(b) Evaluation function</h3>
+      <p class="formula">conflicts(c) = |{ (u, v) ∈ E : c<sub>u</sub> = c<sub>v</sub> }| &nbsp;&nbsp;·&nbsp;&nbsp; f(c) = |E| − conflicts(c), maximised</p>
+      <p>A perfect solution is a proper colouring: no conflicting edge, so f = |E| = 6, the maximum. Minimising the conflict count directly is the same thing. If k is not fixed, the number of colours used becomes a second objective: for example minimise M · conflicts(c) + colours(c) with M larger than n, so that removing a conflict always counts more than saving a colour.</p>
+      <h3>(c) Initialisation</h3>
+      <p>Draw each node's colour uniformly from {1, …, k}. Population size: for this graph 10 to 20 individuals are plenty (the whole space has only 243 points), for real instances typically 50 to 100. The trade-off: a large population keeps more diversity and is less likely to converge prematurely, but every generation costs more evaluations; a small one converges fast and risks getting stuck. The individuals do <b>not</b> need to be proper colourings: the fitness already ranks them by their number of conflicts, improper individuals carry useful partial structure, and insisting on properness would need a repair step or a constructive initialisation (say, greedy colouring in a random node order), which reduces diversity from the start.</p>
+      <h3>(d) Parent selection</h3>
+      <p><b>Tournament selection</b>, k = 2 or 3. The fitness values are small integers between 0 and 6 that lie close together: individuals with 4, 5 and 6 satisfied edges would get almost the same slice of a roulette wheel, so roulette exerts very little pressure exactly where it matters, and its behaviour depends on how the fitness is scaled (6 − conflicts or 100 − conflicts would give different wheels). A tournament only compares, so it is independent of scaling, cheap, and its pressure is set by k.</p>
+      <h3>(e) Crossover</h3>
+      <p>One-point and uniform crossover <b>can be used directly</b>: any mix of two colour vectors is again a colour vector. The problem is that colour names are arbitrary. A colouring is really a partition of the nodes into colour classes; renaming the colours gives a different genotype for the same partition. Cross two proper colourings that differ only by such a renaming, and the child mixes two naming schemes:</p>
+      ${ex("Worked example: two proper parents, improper children", `<p>X = (A, B, C, A, B) is proper. Y = (B, C, A, B, C) is X with A → B → C → A renamed: the same partition, also proper. One-point crossover after node 2 gives (A, B | A, B, C): nodes 1 and 3 now share colour A, conflict on edge 3–1. The other child (B, C | C, A, B) has two conflicts, 2–3 and 5–1. Two parents with fitness 6 produce children with ${6 - conflicts([0, 1, 0, 1, 2]).length} and ${6 - conflicts([1, 2, 2, 0, 1]).length}. Load the presets in the explorer above to see it.</p>`)}
+      <p>Remedies: bring every individual into a <b>canonical form</b> before crossover, renaming the colours in order of first appearance (X and Y both become (1, 2, 3, 1, 2), and crossover of identical parents loses nothing); or use a crossover that inherits whole colour classes rather than single genes.</p>
+      ${why("Context, not on the sheet or the slides", `<p>Class-based crossover is how the strongest evolutionary graph-colouring algorithms work: the greedy partition crossover of Galinier and Hao (1999) builds the child class by class, each time taking the largest remaining colour class from one parent, alternating between parents, and combines this with a tabu search on each child. That hybrid of lectures 4 and 5 is the kind of method slide 39 has in mind when it says EAs with local search often beat each pure method.</p>`)}
+      <h3>(f) Mutation</h3>
+      <p>Pick a node and give it a different, random colour. A rate of 1/n per gene (0.2 here, about one recolouring per child) changes little enough to keep the structure inherited from the parents and enough to bring in colour choices that crossover cannot create. A more targeted version recolours a node that is part of a conflict, which spends the mutation where it can help.</p>
+      <h3>(g) Survivor selection</h3>
+      <p>Generational replacement throws away the whole parent population, including the best colouring found so far, if all offspring happen to be worse; the best fitness can then go down again. Elitism keeps the best individual (or the best few) and so makes the best fitness monotone. Here <b>elitism</b> is the better choice: once a proper colouring is found it must not be lost (and the run can stop), and on a graph this small the loss of diversity through elitism is no concern.</p>
+      <h3>(h) Premature convergence</h3>
+      <p>A scenario: early on, a few individuals with a single conflict dominate the tournaments, their copies and near-copies fill the population, and every individual ends up with the same conflict, say nodes 4 and 5 sharing a colour, inside the same naming scheme. Crossover of near-identical parents reproduces them, and a single recolouring of node 4 or 5 often creates a new conflict elsewhere, so the population stays put.</p>
+      <ul>
+        <li><b>Detect it</b>: the number of distinct genotypes drops (count them in canonical form, otherwise renamed copies look diverse), the mean fitness approaches the best, and the best fitness does not improve for many generations.</li>
+        <li><b>Counteract it</b>: raise the mutation rate or use the targeted mutation, lower the tournament size, replace part of the population with new random individuals while keeping the elite, or restart.</li>
+      </ul>
+      ${ans([["k<sup>n</sup> = 243", "integer vector of colours, k = 3"], ["6 − conflicts", "fitness; 6 means proper"], ["tournament, k = 2–3", "integer fitness values close together"], ["renaming", "proper parents give improper children: canonicalise or inherit colour classes"], ["elitism", "never lose a proper colouring"]])}`)}
+
+    ${task(2, "Order crossover and PMX on two schedules", `<p>Two permutations of eight jobs: P1 = (1, 2, 3, 4, 5, 6, 7, 8) and P2 = (3, 7, 2, 8, 1, 5, 4, 6). (a) OX with the cut after position 2 (counting from 0): O1 keeps P1's positions 0–2, O2 keeps P2's; which property of P1 survives in O1? (b) PMX with the segment at positions 3–5, both offspring, tracing the mapping step by step. (c) Compare the two O1s: what does each operator preserve, and which kind of problem suits each?</p>`, `
+      ${lab("xo4", "the sheet's two crossovers, step by step")}
+      <h3>(a) Order crossover</h3>
+      <p>O1 starts with P1[0:3] = 1 2 3. Walk through P2 from position 3, wrapping round: 8 (new), 1 (have it), 5, 4, 6 (new), then 3, 7, 2 from the front: 3 and 2 are there, 7 is new. Writing the new values in order gives <b>O1 = ${v(oxa)}</b>. O2 starts with P2[0:3] = 3 7 2 and walks P1 from position 3: 4, 5, 6, 7 (have it), 8, then 1, 2, 3 from the front: <b>O2 = ${v(oxb)}</b>.</p>
+      <p>What survives of P1 in O1: the block (1, 2, 3) at the front, with its absolute positions, its order and its adjacencies. Everything after the cut follows the <b>relative order</b> of P2: 8, 5, 4, 6, 7 is the order in which these jobs appear in P2 when it is read from position 3 onwards.</p>
+      <h3>(b) PMX</h3>
+      <p><b>O1.</b> Copy P1's segment: (·, ·, ·, 4, 5, 6, ·, ·), mapping 4↔8, 5↔1, 6↔5. P2[3] = 8 is missing: position 3 holds 4, and 4 stands at position 6 in P2, outside the segment, so 8 goes to position 6. P2[4] = 1 is missing: position 4 holds 5, 5 stands at position 5 in P2 (inside), position 5 holds 6, 6 stands at position 7 in P2 (outside), so 1 goes to position 7. P2[5] = 5 is already in. Fill positions 0–2 from P2: <b>O1 = ${v(pma)}</b>.</p>
+      <p><b>O2.</b> Copy P2's segment: (·, ·, ·, 8, 1, 5, ·, ·). P1[3] = 4 is missing: position 3 holds 8, 8 stands at position 7 in P1, so 4 goes to 7. P1[4] = 5 is in. P1[5] = 6 is missing: position 5 holds 5, 5 stands at position 4 in P1 (inside), position 4 holds 1, 1 stands at position 0 in P1, so 6 goes to 0. Fill positions 1, 2, 6 from P1: <b>O2 = ${v(pmb)}</b>.</p>
+      <h3>(c) Comparison</h3>
+      <div class="gwrap">${posRow(8, "position")}${APSSViz.genes(oxa, [1, 1, 1, 2, 2, 2, 2, 2], [], "OX O1")}${APSSViz.genes(pma, [2, 2, 2, 1, 1, 1, 0, 0], [6, 7], "PMX O1")}</div>
+      <p class="muted">Tint: the parent whose value at that position the child has, or whose order it follows (OX's tail); outlined cells without tint stand where neither parent has them.</p>
+      <ul class="cmp two">
+        <li><b>OX preserves order</b><span class="v"><span class="sw t"></span>O1 keeps P1's head in place and takes the rest in P2's relative order, but not at P2's positions (job 5 stands at position 5 in P2 and at position 4 in O1). Suits problems where what matters is which job comes before which, or which city follows which: the TSP (a tour is a cyclic order), sequencing with set-up times.</span></li>
+        <li><b>PMX preserves positions</b><span class="v"><span class="sw v"></span>Six of O1's eight jobs sit exactly where one parent has them: 3, 7, 2 at P2's positions, 4, 5, 6 at P1's. Only the two jobs placed by the mapping chain (8 and 1) move. Suits problems where the slot itself carries meaning: assigning jobs to time slots or machines, timetabling, assignment problems.</span></li>
+      </ul>
+      <p>A coincidence worth noticing: PMX's O1 equals OX's O2. Both start with P2's first three jobs 3, 7, 2, and here the remaining jobs happen to land in the same order and places.</p>
+      ${ans([[v(oxa), "OX, O1"], [v(oxb), "OX, O2"], [v(pma), "PMX, O1"], [v(pmb), "PMX, O2"]])}`)}
+
+    ${task(3, "One generation of a GA on a 0/1 knapsack problem", `<p>Six items with values (2, 3, 1, 2, 1, 3) and weights (2, 4, 1, 3, 1, 4), capacity W = 12, maximise the total value. A bit string x of length 6 selects the items. The fitness is the value minus twice the excess weight, f(x) = Σ v<sub>i</sub>x<sub>i</sub> − 2 · max(0, Σ w<sub>i</sub>x<sub>i</sub> − 12). Tournament selection with k = 2 and given pairings (ties to the lower index), one-point crossover after position 3, the given bit flips as mutation, generational replacement. Start population: 101010, 010101, 110010, 001101. Run one generation, (a) to (e).</p>`, `
+      <h3>(a) Weights and fitness</h3>
+      <div class="tt-wrap"><table class="tt ga"><thead><tr><th></th><th>string</th><th>weight</th><th>value</th><th>fitness</th></tr></thead><tbody>${G0.map((k, i) => row(`Ind${i + 1}`, k)).join("")}</tbody></table></div>
+      <p>For example Ind2 = 010101 selects items 2, 4 and 6: weight 4 + 3 + 4 = 11 ≤ 12, value 3 + 2 + 3 = 8, no penalty. All four start individuals are feasible; mean fitness ${num(meanF(G0), 2)}, best 8.</p>
+      <h3>(b) Tournaments</h3>
+      <div class="tt-wrap"><table class="tt ga"><thead><tr><th>#</th><th>pairing (fitness)</th><th>winner</th><th>becomes</th></tr></thead><tbody>${tr}</tbody></table></div>
+      <p>Ind2 wins twice, Ind1 never: the weakest individual leaves no offspring, the strongest gets two chances. That is selection pressure at work even with k = 2.</p>
+      <h3>(c) Crossover</h3>
+      <div class="tt-wrap"><table class="tt ga"><thead><tr><th></th><th>string</th><th>weight</th><th>value</th><th>fitness</th><th>made of</th></tr></thead><tbody>${KIDS.map((k, i) => row(`C${i + 1}`, k, `<td>${kidSrc[i]}</td>`)).join("")}</tbody></table></div>
+      <p>P1 = 010|101 and P2 = 110|010 give C1 = 010 010 and C2 = 110 101. P3 = 010|101 and P4 = 001|101 give C3 = 010 101 and C4 = 001 101.</p>
+      <h3>(d) Mutation</h3>
+      <p>Flip bit 1 of C1: 010010 → <b>110010</b> (weight 7, value 6, fitness 6). It is Ind3 again, recreated by chance. Flip bit 6 of C4: 001101 → <b>001100</b> (items 3 and 4: weight 4, value 3, fitness 3). C2 and C3 stay as they are.</p>
+      <h3>(e) The new population</h3>
+      <div class="tt-wrap"><table class="tt ga"><thead><tr><th></th><th>string</th><th>weight</th><th>value</th><th>fitness</th></tr></thead><tbody>${G1.map((k, i) => row(`C${i + 1}${i === 0 || i === 3 ? "′" : ""}`, k)).join("")}</tbody></table></div>
+      ${chart("knap", leg([[1, "generation 0 (ring)"], [2, "generation 1 (dashed ring)"], [3, "the optimum (ring)"], ["g", "all 64 subsets"]]))}
+        <figcaption>Every subset of the six items at its total weight and penalised fitness (our enumeration); dot size grows with the number of subsets on the same point, and for overweight subsets a thin line runs from their raw value down to their penalised fitness. Hover a dot for its strings.</figcaption>
+      </figure>
+      <details class="tbl"><summary>Table view</summary><table><thead><tr><th></th><th>string</th><th>weight</th><th>fitness</th></tr></thead><tbody>${G0.map((k, i) => `<tr><td>generation 0, Ind${i + 1}</td><td>${k.s}</td><td class="n">${k.W}</td><td class="n">${k.f}</td></tr>`).join("")}${G1.map((k, i) => `<tr><td>generation 1, C${i + 1}</td><td>${k.s}</td><td class="n">${k.W}</td><td class="n">${k.f}</td></tr>`).join("")}<tr><td>optimum</td><td>${KOPT.s}</td><td class="n">${KOPT.W}</td><td class="n">${KOPT.f}</td></tr></tbody></table></details>
+      <ul>
+        <li><b>Has the best fitness improved?</b> No. It is 8 before and after (Ind2, and in generation 1 both C2 and C3 = Ind2). The mean rises slightly, from ${num(meanF(G0), 2)} to ${num(meanF(G1), 2)}, but generational replacement could just as well have lowered it: nothing guarantees that the best individual survives.</li>
+        <li><b>Is C2 feasible?</b> No. 110101 selects items 1, 2, 4 and 6: weight 13, one unit over the capacity. Its value is 10, the highest of all eight strings, and the penalty takes 2 · 1 = 2 off, leaving 8. The penalty does not forbid infeasible strings; it ranks them below what they would be worth. Here an infeasible string ties with the best feasible one.</li>
+        <li><b>What about P3 × P4?</b> P3 = Ind2 = 010|101 and P4 = Ind4 = 001|101 have the same tail 101. Swapping identical tails changes nothing: C3 = P3 and C4 = P4, copies of their parents. Crossover can only create something new where the parents differ in the part that is exchanged. (Ind2 also appears twice as a parent, which is how a dominant individual spreads.)</li>
+      </ul>
+      ${why("Context, not on the sheet: is a penalty factor of 2 strong enough?", `<p>Enumerating all 64 strings: the best feasible one is ${KOPT.s} (items ${[...KOPT.s].map((b, i) => b === "1" ? i + 1 : null).filter(Boolean).join(", ")}, weight ${KOPT.W}, value ${KOPT.V}), and the best infeasible strings reach fitness ${KBESTINF} (110101 and 011111, each one unit over). Since ${KBESTINF} &lt; ${KOPT.V}, the factor 2 is large enough for the global optimum of f to be feasible, which is the condition a penalty function has to meet. With factor 1, 110101 would score 9 and 011111 too, still below 10; with factor 0 the optimum of f would be all six items, weight 15. The ties at 8 show the cost of a mild penalty: the EA cannot tell an overweight solution from a good feasible one, and may spend generations around the infeasible side of the capacity line.</p>`)}
+      ${ans([["4 · 8 · 6 · 6", "fitness of Ind1–Ind4 (weights 4, 11, 7, 8)"], ["Ind2, Ind3, Ind2, Ind4", "tournament winners, P1–P4"], ["6 · 8 · 8 · 3", "fitness of the new population 110010, 110101, 010101, 001100"], ["8 → 8", "best fitness unchanged; C2 infeasible (weight 13), C3 and C4 copies of P3 and P4"]])}`)}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Write your eight design answers for task 1 in two lines each; (e), the renaming problem, is the one to be able to explain with an example.</li>
+      <li>Do both crossovers of task 2 on paper first, including PMX's second child, then check them in the explorer.</li>
+      <li>Recompute the knapsack tables of task 3 without looking, and decide what you would change (penalty factor, survivor selection) so that the best fitness cannot get worse.</li>
+      <li>Reread selection, crossover and survivor selection in <a href="advanced-problem-solving/lecture.html?n=5">lecture 5</a>.</li>
+    </ul>
+    <p class="muted">Previous sheet: <a href="advanced-problem-solving/exercise.html?n=3">tutorial 3</a>. Next: tutorial 5 on answer set programming, after <a href="advanced-problem-solving/lecture.html?n=6">lecture 6</a>. The sheet is in OPAL → Tutorials → Tutorial 4 (EA); it is not republished here.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date);
   return `${head(e)}
@@ -652,8 +826,8 @@ function placeholder() {
       <p class="muted">${e.planned ? `Planned tutorial; the topic follows the lecture of that week and the date is assumed weekly: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.` : `This tutorial is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not worked through here yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.`}<br>${esc(e.blurb)}<br>${e.sheet ? `The sheet is in OPAL (Tutorials → Tutorial ${e.n}) since ${U.fmtDate(e.sheet)}: work through it before the session. The write-up with worked solutions appears here after the tutorial.` : "The write-up appears here once the sheet is in OPAL and the session has taken place."}</p>
     </div>`;
 }
-const WRITEUPS = { 1: tutorial1, 2: tutorial2, 3: tutorial3 };
-const LABS = { astar: initAstar, vtable: initVtable, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc, jss: initJss, ts3: initTs3 };
+const WRITEUPS = { 1: tutorial1, 2: tutorial2, 3: tutorial3, 4: tutorial4 };
+const LABS = { astar: initAstar, vtable: initVtable, bridge: initBridge, sa: initSa, gsat2: initGsat2, pcalc: initPcalc, jss: initJss, ts3: initTs3, gcol: initGcol, xo4: initXo4 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Tutorial not found</h1><p>There is no tutorial ${esc(q)}.</p>`;
@@ -668,7 +842,7 @@ addEventListener("resize", () => {
   if (isNarrow() === narrowNow) return;
   narrowNow = isNarrow(); mountCharts();
   // Explorers that draw at a width-dependent size redraw their current state.
-  document.querySelectorAll(".lab-body[data-rerender]").forEach(b => { const nxt = b.querySelector('[data-s="next"]'); if (nxt) { const o = b.querySelector(".scount output"); const i = +o.value; b.querySelector('[data-s="reset"]').click(); for (let k = 0; k < i; k++) nxt.click(); } else b.querySelector('[aria-pressed="true"]')?.click(); });
+  document.querySelectorAll(".lab-body[data-rerender]").forEach(b => { if (b._rerender) { b._rerender(); return; } const nxt = b.querySelector('[data-s="next"]'); if (nxt) { const o = b.querySelector(".scount output"); const i = +o.value; b.querySelector('[data-s="reset"]').click(); for (let k = 0; k < i; k++) nxt.click(); } else b.querySelector('[aria-pressed="true"]')?.click(); });
 });
 </script>
 </body>

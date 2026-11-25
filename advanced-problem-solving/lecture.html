@@ -1073,6 +1073,344 @@ bit 7: 31 − 0.7 · 1 = 31 − 0.7 = ${pen(PEN[2])}</p>
     <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=5">lecture 5</a>, evolutionary algorithms. Previous: <a href="advanced-problem-solving/lecture.html?n=3">lecture 3</a>, local search. Slides: OPAL → Lectures → Lesson 4 (tabu search); the slide numbers above are those of the 31-slide deck (the PDF has 41 pages because of overlays). References on the last slide: Michalewicz &amp; Fogel, How to Solve It: Modern Heuristics (Springer 2004), and Knox, Tabu search performance on the symmetric traveling salesman problem (Computers &amp; Operations Research, 1994).</p>`;
 }
 
+// ---------------- Lecture 5: evolutionary algorithms ----------------
+const { onePoint, uniform, ox, pmx, cycles, cx, qPen, qPenalty, shuffle, genes, posRow, xoverLab } = APSSViz;
+// Slide 10 redrawn: the EA cycle. Selection arrows in slot 1 (they reduce diversity), variation in slot 2 (it creates it).
+CHARTS.easchema = narrow => {
+  const W = narrow ? 340 : 600, H = narrow ? 290 : 250;
+  const hd = (x, y, d, c) => { const p = { r: [[0, 0], [-8, -5], [-8, 5]], l: [[0, 0], [8, -5], [8, 5]], u: [[0, 0], [-5, 8], [5, 8]], d: [[0, 0], [-5, -8], [5, -8]] }[d];
+    return `<path class="hd ${c}" d="M${p.map(([a, b]) => `${x + a},${y + b}`).join(" L")} Z"/>`; };
+  const box = (x, y, w, t) => `<rect x="${x}" y="${y}" width="${w}" height="40" rx="8"/><text class="bx" x="${x + w / 2}" y="${y + 25}" text-anchor="middle">${t}</text>`;
+  const g = narrow
+    ? { pop: [20, 130, 110], par: [200, 30, 120], off: [200, 230, 120],
+        sel1: "M75,130 V50 H192", h1: [200, 50, "r"], l1: [84, 42, "start", "parent selection"],
+        v: "M260,70 V222", hv: [260, 230, "d"], lv1: [252, 140, "end", "recombination"], lv2: [252, 158, "end", "mutation"],
+        sel2: "M200,250 H75 V178", h2: [75, 170, "u"], l2: [84, 268, "start", "survivor selection"],
+        i: "M45,96 V122", hi: [45, 130, "d"], li: [20, 88, "start", "initialisation"], t: "M105,170 V206", ht: [105, 214, "d"], lt: [113, 202, "start", "termination"] }
+    : { pop: [150, 105, 130], par: [420, 20, 130], off: [420, 190, 130],
+        sel1: "M215,105 V40 H412", h1: [420, 40, "r"], l1: [228, 32, "start", "parent selection"],
+        v: "M485,60 V182", hv: [485, 190, "d"], lv1: [495, 118, "start", "recombination"], lv2: [495, 138, "start", "mutation"],
+        sel2: "M420,210 H215 V153", h2: [215, 145, "u"], l2: [228, 228, "start", "survivor selection"],
+        i: "M30,115 H142", hi: [150, 115, "r"], li: [30, 106, "start", "initialisation"], t: "M150,135 H38", ht: [30, 135, "l"], lt: [30, 156, "start", "termination"] };
+  const lbl = ([x, y, a, t]) => `<text class="al" x="${x}" y="${y}" text-anchor="${a}">${t}</text>`;
+  return `<svg class="sch" viewBox="0 0 ${W} ${H}" role="img" aria-label="The general schema of an evolutionary algorithm: initialisation fills the population; parent selection picks parents; recombination and mutation turn them into offspring; survivor selection returns individuals to the population; the loop ends at the termination condition">
+    <path class="ar sel" d="${g.sel1}"/>${hd(...g.h1, "sel")}${lbl(g.l1)}
+    <path class="ar var" d="${g.v}"/>${hd(...g.hv, "var")}${lbl(g.lv1)}${lbl(g.lv2)}
+    <path class="ar sel" d="${g.sel2}"/>${hd(...g.h2, "sel")}${lbl(g.l2)}
+    <path class="ar io" d="${g.i}"/>${hd(...g.hi, "io")}${lbl(g.li)}<path class="ar io" d="${g.t}"/>${hd(...g.ht, "io")}${lbl(g.lt)}
+    ${box(...g.pop, "Population")}${box(...g.par, "Parents")}${box(...g.off, "Offspring")}</svg>`;
+};
+// Slide 18: selection probabilities. Roulette p = f / Σf; tournament of size k drawn with replacement, won by the fittest:
+// with ranks r = 1 (worst) … N (best), P(r wins) = (r^k − (r − 1)^k) / N^k. The presets have no ties.
+const SEL_SETS = [["slide 18's pool", [12, 7, 15, 9, 5]], ["+100 for everyone", [112, 107, 115, 109, 105]], ["one dominant individual", [12, 7, 60, 9, 5]]];
+const roulP = fs => { const s = fs.reduce((a, b) => a + b, 0); return fs.map(f => f / s); };
+const tourP = (fs, k) => fs.map(f => { const r = fs.filter(g => g <= f).length, N = fs.length; return (r ** k - (r - 1) ** k) / N ** k; });
+const pc = v => `${num(v * 100, 1)} %`;
+function initSel(body) {
+  let cur = 0;
+  body.innerHTML = `<p class="lab-note">Five individuals; the bars give the probability that one selection step picks each of them. Roulette wheel: p = f / Σf. Tournament: draw k individuals at random (with replacement) and take the fittest. Change the fitness values and watch which method notices.</p>
+    <div class="presets" role="group" aria-label="Fitness values">${SEL_SETS.map(([t], k) => `<button class="preset" data-p="${k}" aria-pressed="${k === 0}">${t}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const render = () => {
+    const fs = SEL_SETS[cur][1], r = roulP(fs), t2 = tourP(fs, 2), t3 = tourP(fs, 3), bi = fs.indexOf(Math.max(...fs)), wi = fs.indexOf(Math.min(...fs));
+    vbars("sel", { cats: fs.map(f => `f = ${f}`), y: [0, 0.7], yTicks: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7], fmtTick: v => `${Math.round(v * 100)} %`, yTitle: "P(pick)",
+      series: [{ slot: 1, name: "roulette wheel", vals: r }, { slot: 2, name: "tournament, k = 2", vals: t2 }, { slot: 3, name: "tournament, k = 3", vals: t3 }],
+      tipHead: c => c, fmtY: pc, aria: `Grouped bars of selection probabilities for fitness values ${fs.join(", ")}. Roulette: ${r.map(pc).join(", ")}. Tournament k = 2: ${t2.map(pc).join(", ")}. Tournament k = 3: ${t3.map(pc).join(", ")}.` });
+    const note = cur === 0 ? `The tournament with k = 2 gives the best individual ${pc(t2[bi])} and the worst ${pc(t2[wi])}; the roulette wheel is gentler on these values (${pc(r[bi])} and ${pc(r[wi])}).`
+      : cur === 1 ? `Adding 100 to every fitness changes nothing about who is better, yet the roulette wheel now treats all five almost alike (${pc(r[wi])} to ${pc(r[bi])}): the selection pressure is gone. The tournaments only compare, so their bars have not moved.`
+      : `One individual with f = 60 takes ${pc(r[bi])} of the roulette wheel: two thirds of all parents would be copies of it, the route to premature convergence that slide 18 warns about. The tournaments see the same ranking as before and keep their bars.`;
+    out.innerHTML = `${chart("sel", leg([[1, "roulette wheel"], [2, "tournament, k = 2"], [3, "tournament, k = 3"]]))}<figcaption>Probabilities computed from the formulas above, not read off the slides.</figcaption></figure>
+      <details class="tbl"><summary>Table view</summary><table><thead><tr><th>fitness</th><th>roulette</th><th>k = 2</th><th>k = 3</th></tr></thead><tbody>${fs.map((f, i) => `<tr><td class="n">${f}</td><td class="n">${pc(r[i])}</td><td class="n">${pc(t2[i])}</td><td class="n">${pc(t3[i])}</td></tr>`).join("")}</tbody></table></details>
+      <dl class="ro"><dt>what to see</dt><dd>${note}</dd></dl>`;
+    body.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.p === cur));
+    mountCharts();
+  };
+  body.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { cur = +b.dataset.p; render(); }));
+  render();
+}
+// The 8-queens board of slides 14–15, 21 and 32. Genotypes are written 1-based as on the slides, stored 0-based.
+const Q_SETS = [["slide 14", [1, 3, 5, 7, 2, 4, 6, 8]], ["after the swap of slide 21", [1, 3, 6, 7, 2, 4, 5, 8]], ["OX child 1 of slide 24", [1, 3, 5, 4, 2, 8, 7, 6]], ["a solution", [1, 5, 8, 6, 3, 7, 2, 4]]];
+function boardSVG(g, narrow) {
+  const n = g.length, S = narrow ? 28 : 34, L = 58, T = 6, W = L + n * S + 6, H = T + n * S + 44, pen = qPen(g);
+  const cx_ = i => L + i * S + S / 2, cy_ = r => T + (n - 1 - r) * S + S / 2;
+  let sq = ""; for (let i = 0; i < n; i++) for (let r = 0; r < n; r++) sq += `<rect class="qsq${(i + r) % 2 ? "" : " dk"}" x="${L + i * S}" y="${T + (n - 1 - r) * S}" width="${S}" height="${S}"/>`;
+  let att = ""; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (Math.abs(g[i] - g[j]) === j - i) att += `<line class="qatt" x1="${cx_(i)}" y1="${cy_(g[i])}" x2="${cx_(j)}" y2="${cy_(g[j])}"/>`;
+  const qs = g.map((r, i) => `<circle class="qn${pen[i] ? " bad" : ""}" cx="${cx_(i)}" cy="${cy_(r)}" r="${S * 0.3}"/>`).join("");
+  const rows = [...Array(n).keys()].map(r => `<text class="tick" x="${L - 6}" y="${cy_(r) + 4}" text-anchor="end">${r + 1}</text>`).join("");
+  const cols = g.map((_, i) => `<text class="tick" x="${cx_(i)}" y="${T + n * S + 14}" text-anchor="middle">${i + 1}</text><text class="qpen${pen[i] ? "" : " z"}" x="${cx_(i)}" y="${T + n * S + 34}" text-anchor="middle">${pen[i]}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" style="max-width:${W}px" role="img" aria-label="8 by 8 board with queens on rows ${g.map(r => r + 1).join(", ")} in columns 1 to 8; ${pen.reduce((a, b) => a + b, 0) / 2} pairs of queens share a diagonal">${sq}${att}${qs}${rows}${cols}
+    <text class="note" x="${L - 6}" y="${T + n * S + 14}" text-anchor="end">column</text><text class="note" x="${L - 6}" y="${T + n * S + 34}" text-anchor="end">checks</text></svg>`;
+}
+function initQueens(body) {
+  const st = { g: Q_SETS[0][1].map(v => v - 1), sel: null, pre: 0, seed: 11 };
+  body.innerHTML = `<p class="lab-note">Column i holds one queen on row g(i), so the genotype is a permutation and rows and columns never clash; only diagonals can. Under each column: the number of queens that queen can check (the slide's penalty of one queen). Click two genes of the genotype to swap them, which is the mutation of slide 21.</p>
+    <div class="presets" role="group" aria-label="Genotype">${Q_SETS.map(([t], k) => `<button class="preset" data-q="${k}" aria-pressed="${k === 0}">${t}</button>`).join("")}<button class="preset" data-q="rnd">random permutation</button></div>
+    ${leg([[2, "queen that can check another"], ["g", "queen without conflicts"], [2, "shared diagonal", "ln"]])}<div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const render = () => {
+    const pen = qPen(st.g), P = pen.reduce((a, b) => a + b, 0);
+    out.innerHTML = `${boardSVG(st.g, isNarrow())}
+      <div class="gwrap" style="margin-top:8px"><div class="gstrip"><span class="gl">genotype</span>${st.g.map((r, i) => `<button class="gc" data-i="${i}" aria-pressed="${st.sel === i}" aria-label="column ${i + 1}, row ${r + 1}${st.sel === i ? ", selected for a swap" : ""}">${r + 1}</button>`).join("")}</div></div>
+      <dl class="ro"><dt>genotype</dt><dd class="mono">${st.g.map(r => r + 1).join(" ")}</dd><dt>penalty</dt><dd>${pen.join(" + ")} = <b>${P}</b>, that is ${P / 2} pair${P === 2 ? "" : "s"} of queens on a shared diagonal${P ? "" : ": a solution"}</dd><dt>swap</dt><dd>${st.sel === null ? "click a gene, then a second one" : `column ${st.sel + 1} selected: click another gene to swap with it`}</dd></dl>`;
+    out.querySelectorAll("[data-i]").forEach(b => b.addEventListener("click", () => { const i = +b.dataset.i;
+      if (st.sel === null) st.sel = i; else { if (i !== st.sel) [st.g[i], st.g[st.sel]] = [st.g[st.sel], st.g[i]]; st.sel = null; }
+      render(); out.querySelector(`[data-i="${i}"]`)?.focus(); }));
+    body.querySelectorAll("[data-q]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.q) === String(st.pre)));
+  };
+  body.querySelectorAll("[data-q]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.q; st.sel = null; st.pre = k;
+    st.g = k === "rnd" ? shuffle([...Array(8).keys()], rng(st.seed++)) : Q_SETS[+k][1].map(v => v - 1); render(); }));
+  render(); body.dataset.rerender = "queens"; body._rerender = render;
+}
+// The 8-queens EA of slide 32, run for real: population 100 random permutations; parent selection takes the best two of
+// `pool` random individuals; recombination always, by the order crossover of slide 24 at a random cut; each child is mutated
+// by a random swap with probability pm; survivor selection merges and deletes the worst two (ties: the newest goes);
+// stop at a solution or after 10 000 fitness evaluations (the initial 100 included).
+function eaRun(seed, pm, pool, n = 8, maxE = 10000) {
+  const rand = rng(seed), N = 100, pop = [];
+  for (let k = 0; k < N; k++) { const g = shuffle([...Array(n).keys()], rand); pop.push({ g, p: qPenalty(g) }); }
+  const oxc = (A, B, cut) => { const ch = A.slice(0, cut), has = new Uint8Array(n); ch.forEach(v => has[v] = 1); for (let k = 0; k < n; k++) { const v = B[(cut + k) % n]; if (!has[v]) { ch.push(v); has[v] = 1; } } return ch; };
+  const distinct = () => new Set(pop.map(x => x.g.join(","))).size;
+  let ev = N; const pts = [], snaps = [];
+  const rec = () => { let b = Infinity, s = 0; for (const x of pop) { if (x.p < b) b = x.p; s += x.p; } pts.push([ev, b, s / N]); snaps.push(Uint16Array.from(pop, x => x.p)); return b; };
+  let best = rec(); const d0 = distinct();
+  while (ev < maxE && best > 0) {
+    const idx = []; while (idx.length < pool) { const k = Math.floor(rand() * N); if (!idx.includes(k)) idx.push(k); }
+    idx.sort((a, b) => pop[a].p - pop[b].p);
+    const A = pop[idx[0]].g, B = pop[idx[1]].g, cut = 1 + Math.floor(rand() * (n - 1)), kids = [oxc(A, B, cut), oxc(B, A, cut)];
+    for (const k of kids) if (rand() < pm) { const i = Math.floor(rand() * n); let j = Math.floor(rand() * (n - 1)); if (j >= i) j++; [k[i], k[j]] = [k[j], k[i]]; }
+    for (const k of kids) pop.push({ g: k, p: qPenalty(k) }); ev += 2;
+    for (let r = 0; r < 2; r++) { let w = 0; for (let i = 1; i < pop.length; i++) if (pop[i].p >= pop[w].p) w = i; pop.splice(w, 1); }
+    best = rec();
+  }
+  const sol = best === 0 ? pop.find(x => x.p === 0).g : null;
+  return { pts, snaps, ev, best, d0, d1: distinct(), sol, n };
+}
+const EA_SEEDS = [6, 3, 8, 5];
+const niceUp = v => { const e = 10 ** Math.floor(Math.log10(v)), m = v / e; return [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(s => m <= s + 1e-9) * e; };
+function runSVG(r, narrow) {
+  const W = narrow ? 340 : 600, H = narrow ? 220 : 240, L = 40, R = narrow ? 12 : 54, T = 24, B = 30, PW = W - L - R, PH = H - T - B;
+  const X1 = niceUp(Math.max(r.ev, 200)), Y1 = niceUp(r.pts[0][2] * 1.15);
+  const x = v => L + v / X1 * PW, y = v => T + PH - v / Y1 * PH, step = Math.max(1, Math.floor(r.pts.length / 400));
+  const sel = r.pts.filter((_, i) => i % step === 0 || i === r.pts.length - 1);
+  const path = k => "M" + sel.map(p => `${x(p[0]).toFixed(1)},${y(p[k]).toFixed(1)}`).join(" L");
+  const xt = [0, X1 / 4, X1 / 2, 3 * X1 / 4, X1].map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${T + PH}"/><text class="tick" x="${x(v) + (v === X1 ? 4 : 0)}" y="${H - 10}" text-anchor="${v === X1 ? "end" : "middle"}">${num(v, 0)}${v === X1 && !narrow ? " evaluations" : ""}</text>`).join("");
+  const ys = Y1 % 4 === 0 ? Y1 / 4 : Y1 % 5 === 0 ? Y1 / 5 : Y1 % 3 === 0 ? Y1 / 3 : Y1 / 2;
+  const yt = Array.from({ length: Math.round(Y1 / ys) + 1 }, (_, k) => k * ys).map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${num(v, 1)}</text>`).join("");
+  const last = r.pts[r.pts.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of one EA run on ${r.n} queens: best and mean penalty in the population over ${num(r.ev, 0)} fitness evaluations; the best penalty ends at ${r.best}, the mean falls from ${num(r.pts[0][2], 1)} to ${num(last[2], 1)}">${yt}${xt}
+    <text class="note" x="${L - 34}" y="12">penalty</text>
+    <path class="rline mean" d="${path(2)}"/><path class="rline best" d="${path(1)}"/>
+    ${narrow ? "" : `<text class="lbl" x="${x(last[0]) + 6}" y="${y(last[2]) + (Math.abs(y(last[2]) - y(last[1])) < 14 ? -6 : 4)}">mean</text><text class="lbl" x="${x(last[0]) + 6}" y="${y(last[1]) + (Math.abs(y(last[2]) - y(last[1])) < 14 ? 12 : 4)}">best</text>`}
+    <g class="xh" style="display:none"><line class="rxh" y1="${T}" y2="${T + PH}"/><circle class="rdot mean" r="4.5"/><circle class="rdot best" r="4.5"/><text class="rtip" y="${T - 8}"></text></g>
+    <rect class="rhit" x="${L}" y="${T}" width="${PW}" height="${PH}" tabindex="0" aria-label="Read the run: arrow keys move along the evaluations"/></svg>`;
+}
+function wireRun(el, r) {
+  const svg = el.querySelector("svg"), hit = svg.querySelector(".rhit"), g = svg.querySelector(".xh"), [ln, dm, db, tx] = g.children;
+  const vb = svg.viewBox.baseVal, W = vb.width, narrow = W < 400, L = 40, R = narrow ? 12 : 54, T = 24, H = vb.height, PH = H - T - 30, PW = W - L - R;
+  const X1 = niceUp(Math.max(r.ev, 200)), Y1 = niceUp(r.pts[0][2] * 1.15), x = v => L + v / X1 * PW, y = v => T + PH - v / Y1 * PH;
+  let k = 0;
+  const show = i => { k = Math.max(0, Math.min(r.pts.length - 1, i)); const [e, b, m] = r.pts[k], X = x(e); g.style.display = "";
+    ln.setAttribute("x1", X); ln.setAttribute("x2", X); dm.setAttribute("cx", X); dm.setAttribute("cy", y(m)); db.setAttribute("cx", X); db.setAttribute("cy", y(b));
+    tx.textContent = `${num(e, 0)} evaluations: best ${b}, mean ${num(m, 1)}`; tx.setAttribute("x", Math.min(Math.max(X, L + 120), W - R - 120)); tx.setAttribute("text-anchor", "middle"); };
+  hit.addEventListener("pointermove", ev => { const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(svg.getScreenCTM().inverse()); const e = (p.x - L) / PW * X1;
+    let lo = 0; while (lo < r.pts.length - 1 && r.pts[lo + 1][0] <= e) lo++; show(lo); });
+  hit.addEventListener("pointerleave", () => g.style.display = "none"); hit.addEventListener("blur", () => g.style.display = "none");
+  hit.addEventListener("focus", () => show(k)); hit.addEventListener("keydown", ev => { const d = { ArrowRight: 1, ArrowLeft: -1 }[ev.key]; if (!d) return; ev.preventDefault(); show(k + d * Math.max(1, Math.round(r.pts.length / 50))); });
+}
+function histSVG(arr, maxP, title) {
+  const bins = []; for (let p = 0; p <= maxP; p += 2) bins.push(0); arr.forEach(p => { const b = Math.min(bins.length - 1, p / 2); bins[b]++; });
+  const W = 200, H = 100, L = 24, T = 8, B = 18, PW = W - L - 6, PH = H - T - B, bw = PW / bins.length, ym = niceUp(Math.max(...bins, 10));
+  const bars = bins.map((c, i) => c ? `<rect class="hbar${i ? "" : " z"}" x="${L + i * bw + 0.5}" y="${T + PH - Math.max(2.5, c / ym * PH)}" width="${Math.max(1, bw - 1)}" height="${Math.max(2.5, c / ym * PH)}" rx="1"><title>penalty ${i * 2}${i === bins.length - 1 ? " or more" : ""}: ${c}</title></rect>` : "").join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Histogram of the population's penalties, ${title}: ${bins.map((c, i) => c ? `${c} at ${i * 2}` : "").filter(Boolean).join(", ")}">
+    <line class="axis" x1="${L}" x2="${W - 6}" y1="${T + PH}" y2="${T + PH}"/><text class="tick" x="${L - 4}" y="${T + 8}" text-anchor="end">${ym}</text><text class="tick" x="${L - 4}" y="${T + PH}" text-anchor="end">0</text>
+    ${bars}<text class="tick" x="${L}" y="${H - 4}">0</text><text class="tick" x="${W - 6}" y="${H - 4}" text-anchor="end">${maxP}${maxP < 100 ? "+" : ""}</text></svg>`;
+}
+function initEa(body) {
+  const st = { n: 8, pm: 0.8, pool: 5, run: 0 };
+  const grp = (k, lbl, opts) => `<div class="presets" role="group" aria-label="${lbl}"><span class="lab-note" style="margin:0 6px 0 0;align-self:center">${lbl}</span>${opts.map(([v, t]) => `<button class="preset" data-k="${k}" data-v="${v}" aria-pressed="${st[k] === v}">${t}</button>`).join("")}</div>`;
+  body.innerHTML = `<p class="lab-note">Slide 32's settings: 100 random permutations; parents are the best two of five random individuals; order crossover always; a random swap with probability 80 %; the worst two of population plus offspring are deleted; stop at a solution or after 10 000 evaluations. The runs are seeded, so run A is always the same run. Change one setting at a time.</p>
+    ${grp("n", "board", [[8, "8 queens (slides)"], [16, "16 queens"]])}${grp("pm", "mutation", [[0, "0 %"], [0.2, "20 %"], [0.8, "80 % (slides)"]])}${grp("pool", "parents: best 2 of", [[2, "2 (random parents)"], [5, "5 (slides)"], [20, "20"]])}${grp("run", "seed", [[0, "run A"], [1, "run B"], [2, "run C"], [3, "run D"]])}
+    ${leg([[3, "best penalty in the population", "ln"], [1, "mean penalty", "ln"]])}<div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const render = () => {
+    const r = eaRun(EA_SEEDS[st.run], st.pm, st.pool, st.n), half = r.snaps[Math.floor((r.snaps.length - 1) / 2)], maxP = st.n === 8 ? 20 : 40;
+    const hp = Math.floor((r.pts.length - 1) / 2), narrow = isNarrow();
+    out.innerHTML = `<div class="runchart">${runSVG(r, narrow)}</div>
+      <div class="phist">${[[r.snaps[0], `begin: evaluation ${r.pts[0][0]}`], [half, `halfway: evaluation ${num(r.pts[hp][0], 0)}`], [r.snaps[r.snaps.length - 1], `end: evaluation ${num(r.ev, 0)}`]].map(([a, t]) => `<figure>${histSVG(a, maxP, t)}<figcaption>${t}</figcaption></figure>`).join("")}</div>
+      <dl class="ro"><dt>outcome</dt><dd>${r.sol ? `solution after ${num(r.ev, 0)} evaluations: <span class="mono">${r.sol.map(v => v + 1).join(" ")}</span>${r.ev === 100 ? " (already in the random initial population)" : ""}` : `no solution within ${num(r.ev, 0)} evaluations; best penalty ${r.best}`}</dd>
+      <dt>diversity</dt><dd>${r.d0} distinct genotypes at the start, ${r.d1} at the end</dd><dt>histograms</dt><dd>penalties of the 100 individuals (green: penalty 0, a solution); bars on the right edge collect ${maxP} and more</dd></dl>`;
+    wireRun(out.querySelector(".runchart"), r);
+    body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", String(st[b.dataset.k]) === b.dataset.v));
+  };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { st[b.dataset.k] = +b.dataset.v; render(); }));
+  render(); body.dataset.rerender = "ea"; body._rerender = render;
+}
+const XO_LEC = [
+  { label: "one-point (slide 23)", op: "one", p1: [1, 0, 1, 0, 1, 1, 0], p2: [0, 1, 0, 1, 0, 0, 1], cut: 3 },
+  { label: "uniform (slide 23)", op: "uni", p1: [1, 0, 1, 0, 1, 1, 0], p2: [0, 1, 0, 1, 0, 0, 1], mask: [1, 0, 1, 0, 1, 0, 1] },
+  { label: "OX (slide 24)", op: "ox", p1: [1, 3, 5, 7, 2, 4, 6, 8], p2: [8, 7, 6, 5, 4, 3, 2, 1], cut: 3 },
+  { label: "PMX (slide 25)", op: "pmx", p1: [1, 3, 5, 7, 2, 4, 6, 8], p2: [4, 6, 1, 2, 8, 5, 3, 7], a: 3, b: 5, note: "In O1 the 5 ends up at position 0, where neither parent has it: see the box below the explorer." },
+  { label: "CX (slide 26)", op: "cx", p1: [1, 3, 5, 7, 2, 4, 6, 8], p2: [3, 5, 1, 8, 6, 2, 4, 7] },
+];
+const initXover = body => xoverLab(body, XO_LEC);
+// Numbers quoted in the text, computed once so text and explorers agree.
+const EA_A = eaRun(EA_SEEDS[0], 0.8, 5, 8), EA_B0 = eaRun(EA_SEEDS[1], 0, 5, 8), EA_B8 = eaRun(EA_SEEDS[1], 0.8, 5, 8);
+
+function lecture5() {
+  const P = g => qPenalty(g.map(v => v - 1));
+  return `${head(l)}
+    <p class="lead">Simulated annealing and tabu search improve one solution at a time; when its neighbourhood offers no way out, they need luck or memory. Evolutionary algorithms keep a whole <b>population</b> of solutions instead, let the better ones reproduce, and create new solutions by recombining parents and mutating the result. This lecture builds the general loop, takes each of its components in turn on the running 8-queens example, spends most of its time on crossover (one-point and uniform for bit strings, OX, PMX and CX for permutations), and ends by placing EAs next to the two single-solution methods of lectures 3 and 4. The general schema, the 8-queens example and the run figures are the standard ones of Eiben &amp; Smith's <em>Introduction to Evolutionary Computing</em>, which is on the course reading list.</p>
+    <div class="tiles">
+      <div class="tile"><div class="v">p<sub>i</sub> = f<sub>i</sub> / Σ f<sub>j</sub></div><div class="l">roulette-wheel selection: the chance to become a parent is the share of total fitness</div></div>
+      <div class="tile"><div class="v">k = 2 or 3</div><div class="l">typical tournament size: the fittest of k random individuals becomes a parent; k = 1 is random choice</div></div>
+      <div class="tile"><div class="v">OX · PMX · CX</div><div class="l">permutation crossovers: they keep relative order, (mostly) absolute position, or the exact locus of every gene</div></div>
+      <div class="tile"><div class="v">7 components</div><div class="l">representation, fitness, population, parent selection, variation, survivor selection, termination</div></div>
+    </div>
+
+    <h2>From one solution to a population <small>(slides 3–9)</small></h2>
+    <p>The recap slide sets the scene. Simulated annealing keeps one solution and accepts a worse move with probability 1 / (1 + e<sup>Δ/T</sup>), exploring while T is high and exploiting as it cools; it is stochastic and memoryless. Tabu search keeps one solution too, escapes through its tabu list, is deterministic given the memory, and diversifies through the frequency memory. Their shared limitation: <b>one solution at a time</b>. If the neighbourhood of the current solution offers no good escape route, the search is stuck there.</p>
+    <p>The new idea has three parts: work on a <b>population</b> of solutions, let them <b>compete</b> against each other, and use <b>random variation</b> to search for new ones. The slides tell it as rabbits and foxes: the faster and smarter rabbits are not eaten and have more offspring, breeding mixes their genes, now and then a mutation adds something new, and over the generations the rabbits get faster; the foxes, meanwhile, have to get better at catching them.</p>
+    <p>As an algorithm (slide 8): a population lives in an environment with limited resources; competition selects the fitter individuals; they seed new individuals through recombination and mutation; the new ones are evaluated and compete, possibly with their parents, for survival; over time the fitness of the population rises. Four facts to keep:</p>
+    <ul>
+      <li>EAs are <b>generate-and-test</b> algorithms: make candidates, evaluate them, keep the good ones.</li>
+      <li>They are <b>stochastic</b> and <b>population-based</b>.</li>
+      <li>The <b>variation operators</b> (recombination, mutation) create the diversity the search needs.</li>
+      <li><b>Selection</b> reduces diversity, and that is the force pushing quality up. The two pull in opposite directions, and tuning an EA is largely tuning that balance.</li>
+    </ul>
+    <p>Slide 9 draws the difference on a cost landscape with several local optima. SA and tabu search follow one trajectory, and getting stuck means restarting or relying on memory. An EA's eight individuals sit in several valleys at once; selection keeps the population near the promising regions, recombination can combine two solutions that sit near <em>different</em> local optima into offspring that may land near the global one, and mutation explores locally and keeps the population from collapsing onto a single point.</p>
+
+    <h2>The loop <small>(slides 10–13)</small></h2>
+    ${chart("easchema", leg([[1, "selection: reduces diversity", "ln"], [2, "variation: creates diversity", "ln"], ["g", "start and stop", "ln"]]))}
+      <figcaption>Slide 10's general schema redrawn. The colours are our addition: they mark which steps select and which vary, the two forces of slide 8.</figcaption>
+    </figure>
+    <p class="formula pre">INITIALISE population with random candidate solutions
+EVALUATE each candidate
+while not TERMINATION-CONDITION do
+  SELECT parents
+  RECOMBINE pairs of parents
+  MUTATE the resulting offspring
+  EVALUATE new candidates
+  SELECT individuals for the next generation
+end while</p>
+    <p>Historically, the different kinds of EA came with different representations (slide 12): <b>genetic algorithms</b> with binary strings, <b>evolution strategies</b> with real-valued vectors, <b>evolutionary programming</b> with finite state machines, <b>genetic programming</b> with trees. Technically the order is: choose the representation to suit the problem, then the variation operators to suit the representation. The selection operators only look at fitness values, so they are independent of the representation and can be reused everywhere.</p>
+    <p>The components (slide 13): representation, evaluation (fitness) function, population, parent selection, variation operators (recombination and mutation), survivor selection, plus an initialisation procedure and a termination condition. The rest of the lecture takes them one by one.</p>
+
+    <h2>Representation, fitness, population: the 8-queens example <small>(slides 14–16)</small></h2>
+    <p>The candidate solutions as the problem sees them are <b>phenotypes</b>; inside the algorithm they are encoded as <b>chromosomes</b> (genotypes). Encoding maps phenotype to genotype; decoding maps a genotype back to exactly one phenotype. A chromosome consists of <b>genes</b> at fixed positions (<b>loci</b>, singular locus), each with a value (an <b>allele</b>). One requirement is non-negotiable: to be able to find the global optimum, every feasible solution must be representable in genotype space.</p>
+    <p>The running example is the <b>8-queens problem</b>: place eight queens on a chessboard so that none can capture another. The phenotype is a board; the genotype is a <b>permutation of 1 … 8</b>, read as “the queen in column i stands on row g(i)”. Because every value appears once, no two queens share a row or a column; only diagonals remain to be checked. The fitness (slide 15) is built from a penalty: the penalty of a queen is the number of queens she can check, the penalty of a configuration is the sum over all queens and is minimised, and the fitness is the inverse penalty, maximised (EAs usually talk about maximising fitness).</p>
+    ${lab("queens", "the 8-queens genotype, its board and its penalty")}
+    ${ex("Worked example: the penalty of slide 14's genotype", `<p>g = (1, 3, 5, 7, 2, 4, 6, 8). Two queens share a diagonal when their row difference equals their column difference. The queens in columns 1 and 8 stand on rows 1 and 8: |8 − 1| = |8 − 1|, the long diagonal. No other pair qualifies (columns 1 and 2: rows 1 and 3, differences 2 against 1; and so on). So queens 1 and 8 each have penalty 1 and the configuration has penalty <b>${P([1, 3, 5, 7, 2, 4, 6, 8])}</b>, one checking pair. Slide 21's mutation swaps the third and the seventh value and gives (1, 3, 6, 7, 2, 4, 5, 8): now columns 3 and 4 (rows 6 and 7) and columns 6 and 7 (rows 4 and 5) touch diagonally as well, penalty <b>${P([1, 3, 6, 7, 2, 4, 5, 8])}</b>. A mutation is a random step, and most random steps from a good solution make it worse.</p>`)}
+    ${why("Context, not on the slides: why a permutation is the right genotype", `<p>Placing eight queens on any eight of the 64 squares gives C(64, 8) = 4 426 165 368 phenotypes. The permutation encoding keeps only boards with one queen per row and column: 8! = 40 320 genotypes, a hundred-thousand-fold smaller space, and it still contains every solution, so the requirement of slide 14 holds. Enumerating all 40 320 permutations (our own count) gives exactly 92 solutions and an average penalty of 10. A random permutation is a solution with probability 92 / 40 320 ≈ 0.23 %, which is why a population of 100 random permutations already contains one in about one run out of five (you will see that in the run explorer below). We count “can check” without blocking: two queens on a diagonal check each other even with a third queen between them, the usual convention for this example.</p>`)}
+    <p>The <b>population</b> (slide 16) holds the current genotypes: usually a fixed number, as a multiset (duplicates allowed). Some EAs give it a spatial structure, such as a grid where individuals only mate with neighbours. Selection usually looks at the whole population: reproductive chances are relative to the current generation. <b>Diversity</b> means the number of different solutions present; there is no single measure, and in practice one counts distinct fitness values, phenotypes or genotypes.</p>
+
+    <h2>Parent selection <small>(slides 17–19)</small></h2>
+    <p>Parent selection decides which individuals may create offspring. It is responsible for pushing quality up, and it is usually <b>probabilistic</b>: better individuals are more likely to become parents, but not guaranteed to, and even the worst one has a non-zero chance. That randomness is a feature; it can help the search out of local optima. In the 8-queens EA, five individuals are picked at random and the best two become the parents.</p>
+    <ul class="cmp two">
+      <li><b>Roulette wheel (fitness-proportionate)</b><span class="v"><span class="sw t"></span>Individual i is picked with probability p<sub>i</sub> = f<sub>i</sub> / Σ<sub>j</sub> f<sub>j</sub>, each individual gets a slice of the wheel the size of its fitness. Sensitive to how fitness is scaled: if one individual dominates, it fills the wheel, and the population converges prematurely.</span></li>
+      <li><b>Tournament</b><span class="v"><span class="sw v"></span>Pick k individuals at random, the fittest of them becomes a parent; repeat for every parent. k = 1 is random selection (no pressure), a large k always takes the best (too greedy); k = 2 or 3 is typical. Easy to implement and immune to scaling, because it only compares.</span></li>
+    </ul>
+    ${ex("Worked example: the two pictures of slide 18", `<p><b>Roulette.</b> Four individuals with f = 8, 6, 4, 2 and Σf = 20 get 8/20 = 40 %, 30 %, 20 % and 10 % of the wheel. <b>Tournament.</b> From the pool f = 12, 7, 15, 9, 5, a tournament of size 2 happens to draw 7 and 15; the 15 wins and becomes a parent. How likely is each individual to win one such tournament? Rank them from worst (r = 1, f = 5) to best (r = 5, f = 15). With replacement, the individual of rank r wins exactly when all k draws have rank ≤ r and not all have rank ≤ r − 1:</p>
+      <p class="formula">P(rank r wins) = (r<sup>k</sup> − (r − 1)<sup>k</sup>) / N<sup>k</sup> &nbsp;&nbsp;→&nbsp;&nbsp; k = 2, N = 5: 1/25, 3/25, 5/25, 7/25, 9/25 = 4 %, 12 %, 20 %, 28 %, 36 %</p>
+      <p>For k = 3 the best individual's share grows to 61/125 = 48.8 % and the worst one's falls to 1/125 = 0.8 %: a larger tournament means more selection pressure.</p>`)}
+    ${lab("sel", "roulette wheel against tournament")}
+    ${why("Context, not on the slides: with or without replacement", `<p>Slide 18 draws two different individuals for its tournament. If the k individuals are drawn <em>without</em> replacement, the worst individual can never win (it loses to whoever it meets), so the slide-17 property “even the worst has a non-zero chance” no longer holds; the best individual wins whenever it is drawn, which happens with probability k / N (40 % for k = 2, N = 5). With replacement, the worst wins only if it is drawn k times in a row: 1 / N<sup>k</sup>. Both versions are common; for exam calculations, say which one you use.</p>`)}
+    <p>Slide 19 turns selection pressure into the central trade-off. <b>Exploitation</b> focuses on the best solutions found so far: fast improvement, but other good regions may be missed. <b>Exploration</b> samples new, diverse regions: slower, but it avoids getting stuck. Each component of an EA leans one way:</p>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>more exploitation</th><th>more exploration</th></tr></thead><tbody>
+      <tr><td class="rl">parent selection</td><td>strong pressure (large k)</td><td>weak pressure (small k)</td></tr>
+      <tr><td class="rl">survivor selection</td><td>elitism (keep the best)</td><td>age-based (replace the parents)</td></tr>
+      <tr><td class="rl">population size</td><td>small</td><td>large</td></tr>
+      <tr><td class="rl">mutation rate</td><td>low</td><td>high</td></tr>
+    </tbody></table></div>
+    <p><b>Premature convergence</b>: when selection is too strong, the population converges to a local optimum before the global one is found. All individuals become alike, diversity is gone, and recombination of near-identical parents produces nothing new. The slide's sketch shows a healthy run whose best fitness keeps climbing towards the global optimum and a premature one that flattens out below it. Remedies: raise the mutation rate, reduce the selection pressure, or restart with injected diversity.</p>
+
+    <h2>Variation: mutation and recombination <small>(slides 20–22)</small></h2>
+    <p>Variation operators generate new candidate solutions and are told apart by their arity: arity 1 is <b>mutation</b>, arity 2 or more is <b>recombination</b> (with two parents usually called <b>crossover</b>). There was a long debate about which of the two matters more; most EAs today use both, and the concrete operator always depends on the representation.</p>
+    <ul class="cmp two">
+      <li><b>Mutation</b><span class="v"><span class="sw t"></span>Acts on one genotype and returns another. The randomness is essential: it is what distinguishes mutation from other unary heuristic operators. Each child is a step to a new point in the search space, so mutation can guarantee that the whole space is reachable (connectedness). For 8-queens: swap the values at two random positions, which keeps the genotype a permutation.</span></li>
+      <li><b>Recombination</b><span class="v"><span class="sw v"></span>Merges information from the parents into the offspring; which parts are merged is chosen at random. Most offspring will be worse than or as good as their parents; the hope is that some combine the good traits of both and are better.</span></li>
+    </ul>
+
+    <h2>Crossover operators <small>(slides 23–28)</small></h2>
+    <p>For <b>binary strings</b> two operators cover most uses (slide 23). <b>One-point crossover</b> chooses one random cut point and swaps the tails: from P1 = 1010110 and P2 = 0101001 with the cut after the third bit come O1 = 101 1001 and O2 = 010 0110. <b>Uniform crossover</b> flips a coin for every position: with the mask 1010101 (1 = take P1), O1 = 1111100. Uniform mixes more, because every gene is inherited independently.</p>
+    <p>For <b>permutations</b> (8-queens, the TSP, schedules) these operators break: a one-point child of two permutations can contain a value twice and another not at all. Slides 24–26 give three operators that always return a valid permutation, each keeping a different property of the parents.</p>
+    ${lab("xover", "all five crossover operators of the lecture, step by step")}
+    ${ex("Worked example: order crossover, slide 24", `<p>P1 = (1, 3, 5 | 7, 2, 4, 6, 8), P2 = (8, 7, 6 | 5, 4, 3, 2, 1), crossover point after the third position. O1 keeps P1's first part 1 3 5. Then walk through P2 starting after the crossover point and wrapping round: 5 (already there, skip), 4, 3 (skip), 2, 1 (skip), 8, 7, 6. Appending the new values gives <b>O1 = (1, 3, 5, 4, 2, 8, 7, 6)</b>. Symmetrically, O2 keeps 8 7 6 and walks P1 from position 3: 7 (skip), 2, 4, 6 (skip), 8 (skip), 1, 3, 5, so <b>O2 = (8, 7, 6, 2, 4, 1, 3, 5)</b>. What OX preserves: the <em>relative order</em> of the values taken from the other parent. As 8-queens boards the children score penalties ${P([1, 3, 5, 4, 2, 8, 7, 6])} and ${P([8, 7, 6, 2, 4, 1, 3, 5])}, between the parents' ${P([1, 3, 5, 7, 2, 4, 6, 8])} and ${P([8, 7, 6, 5, 4, 3, 2, 1])} (P2 puts all eight queens on one diagonal): no improvement on the better parent, the normal case for a single crossover.</p>`)}
+    ${ex("Worked example: partially mapped crossover, slide 25", `<p>P1 = (1, 3, 5, 7, 2, 4, 6, 8), P2 = (4, 6, 1, 2, 8, 5, 3, 7), segment positions 3–5 (counting from 0). <b>Step 1:</b> copy P1's segment, O1 = (?, ?, ?, 7, 2, 4, ?, ?); the segment pairs up 7↔2, 2↔8, 4↔5. <b>Step 2:</b> place P2's segment values that are missing. P2[3] = 2 is already in. P2[4] = 8: its position 4 is taken by 2; 2 sits at position 3 in P2, inside the segment, taken by 7; 7 sits at position 7 in P2, outside, so 8 goes to position 7. P2[5] = 5: position 5 is taken by 4, which sits at position 0 in P2, so 5 goes to position 0. <b>Step 3:</b> copy the remaining positions 1, 2, 6 from P2: <b>O1 = (5, 6, 1, 7, 2, 4, 3, 8)</b>. With the roles swapped, <b>O2 = (1, 3, 4, 2, 8, 5, 6, 7)</b>. The chain always ends outside the segment, because it can never cycle inside it.</p>`)}
+    ${ex("Worked example: cycle crossover, slide 26", `<p>P1 = (1, 3, 5, 7, 2, 4, 6, 8), P2 = (3, 5, 1, 8, 6, 2, 4, 7). Trace cycles: start at position 0, take P2's value there (3), find it in P1 (position 1), take P2's value there (5), find it in P1 (position 2), take P2[2] = 1, which is at position 0 in P1: the cycle closes. Cycle 1 = positions {0, 1, 2}. The next unvisited position 3 gives P2[3] = 8 → position 7, P2[7] = 7 → position 3: cycle 2 = {3, 7}. Position 4 gives 6 → 6, 4 → 5, 2 → 4: cycle 3 = {4, 5, 6}. O1 takes cycles 1 and 3 from P1 and cycle 2 from P2: <b>O1 = (1, 3, 5, 8, 2, 4, 6, 7)</b>, and O2 the opposite: <b>(3, 5, 1, 7, 6, 2, 4, 8)</b>. Every value sits at exactly the position it had in one of the parents.</p>`)}
+    ${why("Context, not on the slides: two details checked against the slides' own examples", `<p><b>PMX and positions.</b> Slide 25 says that every gene of a PMX child sits where it was in P1 or P2. That holds for the copied segment and for every gene taken straight from P2, but not for the genes placed by the mapping chain: in the slide's own O1 = (5, 6, 1, 7, 2, 4, 3, 8), the 5 stands at position 0, while P1 has 1 and P2 has 4 there. (The 8 at position 7 is fine only because P1 happens to have it there.) The guarantee for <em>every</em> gene is the property of CX, which is why the overview calls CX the stronger position-preserving operator.</p>
+      <p><b>CX: which cycles come from P1.</b> Slide 26 writes “odd-length cycles from P1”. The standard rule (Oliver, Smith and Holland 1987; Eiben &amp; Smith) alternates by the cycle's <em>number</em>: first, third, fifth cycle from P1, second, fourth from P2. In the slide's example the cycles have lengths 3, 2, 3, so both readings give the same children; tutorial 4 and an exam question would only differ for an example where they do not.</p>`)}
+    <p>Slide 27 collects the design principles:</p>
+    <ol>
+      <li><b>Match the representation.</b> The operator must always produce valid offspring, without a repair step: one-point or uniform for bit strings, OX, PMX or CX for permutations.</li>
+      <li><b>Preserve what matters.</b> Pick the operator whose children inherit the property the problem cares about: OX the relative order, PMX the absolute positions, CX the exact locus.</li>
+      <li><b>Control the amount of mixing.</b> Uniform mixes more than one-point; OX keeps less positional information than PMX or CX. More mixing means more diversity but can break up well-adapted building blocks.</li>
+      <li><b>One or two offspring.</b> Most operators make two complementary children per crossover; some make one. Each child must be evaluated.</li>
+      <li><b>Recombination alone is not enough.</b> Crossover only rearranges alleles that are already present; new genetic material comes from mutation, so mutation is always needed as well.</li>
+    </ol>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th>operator</th><th>representation</th><th>preserves</th><th>typical use</th></tr></thead><tbody>
+      <tr><td class="rl">one-point</td><td>binary</td><td>contiguous segments</td><td>general binary GA</td></tr>
+      <tr><td class="rl">uniform</td><td>binary</td><td>each gene independently</td><td>high-mixing binary GA</td></tr>
+      <tr><td class="rl">order (OX)</td><td>permutation</td><td>relative order</td><td>TSP: the order matters</td></tr>
+      <tr><td class="rl">PMX</td><td>permutation</td><td>absolute position</td><td>scheduling: the slot matters</td></tr>
+      <tr><td class="rl">cycle (CX)</td><td>permutation</td><td>exact locus</td><td>strong position constraints</td></tr>
+    </tbody></table></div>
+    <p class="muted">Slide 28's overview; all five produce two offspring.</p>
+
+    <h2>Self-study: crossover for the TSP <small>(slide 29)</small></h2>
+    <p>Representation and recombination depend on the problem above all. The self-study assignment is sections 4 and 5 of Potvin, <em>Genetic algorithms for the traveling salesman problem</em> (Annals of Operations Research 63, 1996): the <b>ordinal</b> and the <b>path</b> representation of a tour and the crossover operators that belong to each. The paper is in the Lesson 5 folder in OPAL and publicly on Springer.</p>
+    ${why("Context, not on the slides: the ordinal representation in one example", `<p>The path representation is the tour itself, a permutation of the cities, so OX, PMX and CX apply directly. The ordinal representation encodes each city by its position in a reference list from which the visited cities are removed one by one. Take cities (1, 2, 3, 4, 5) and the tour 1 3 5 2 4: city 1 is at position 1 of (1 2 3 4 5); remove it, 3 is at position 2 of (2 3 4 5); then 5 is at position 3 of (2 4 5); 2 at position 1 of (2 4); 4 at position 1 of (4). The code is (1, 2, 3, 1, 1). Any string whose i-th entry lies between 1 and n − i + 1 decodes to a valid tour, so plain one-point crossover works without repair. The price is that a tail exchanged by crossover means a different set of cities in each child, so little of a good partial tour survives. Section 5 of the paper discusses this trade-off.</p>`)}
+
+    <h2>Survivor selection, initialisation, termination <small>(slides 30–32)</small></h2>
+    <p><b>Survivor selection</b>, also called replacement, decides who enters the next generation. Most EAs keep the population size fixed, and this step is often deterministic: <b>fitness-based</b> (rank parents and offspring together and keep the best), <b>age-based</b> (make as many offspring as there are parents and replace all parents), or a combination (<b>elitism</b>: age-based, but the best individual always survives). The 8-queens EA merges population and offspring, ranks by fitness, and deletes the worst two.</p>
+    <p><b>Initialisation</b> is usually random, with an even spread and mixture of allele values; it may include existing solutions or use problem-specific heuristics to seed the population. The <b>termination condition</b> is checked in every iteration: a known or hoped-for fitness is reached, a maximum number of generations (or evaluations) is used up, the diversity falls below a threshold, or a given number of generations passes without improvement.</p>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th>8-queens EA (slide 32)</th><th></th></tr></thead><tbody>
+      <tr><td class="rl">representation</td><td>permutation of 1 … 8</td></tr>
+      <tr><td class="rl">fitness</td><td>inverse penalty (checking queens)</td></tr>
+      <tr><td class="rl">initial population</td><td>100 random permutations</td></tr>
+      <tr><td class="rl">parent selection</td><td>best two of five random individuals</td></tr>
+      <tr><td class="rl">recombination</td><td>order crossover (slide 24), probability 100 %</td></tr>
+      <tr><td class="rl">mutation</td><td>swap two values, probability 80 %</td></tr>
+      <tr><td class="rl">survivor selection</td><td>merge, rank, delete the worst two</td></tr>
+      <tr><td class="rl">termination</td><td>a solution, or 10 000 fitness evaluations</td></tr>
+    </tbody></table></div>
+    <p>That is a complete specification, so it can be run. The explorer does exactly that, with the order crossover as the recombination: the slides give the crossover probability, not the operator, and slide 24 demonstrates OX on exactly these genotypes.</p>
+    ${lab("ea", "the 8-queens EA of slide 32, run in your browser")}
+    <p>What the runs show. With the slide's settings, run A finds a solution after <b>${num(EA_A.ev, 0)}</b> evaluations, with ${EA_A.d1} of 100 genotypes still distinct at the end. Switch mutation to <b>0 %</b> and pick run B: the population converges to near-copies of one board, ${EA_B0.d1} distinct genotypes remain, and after ${num(EA_B0.ev, 0)} evaluations the best penalty is still ${EA_B0.best}. That is premature convergence in its plainest form: crossover can only rearrange what is there (principle 5 of slide 27). With 80 % mutation the same run B ${EA_B8.sol ? `solves the problem after ${num(EA_B8.ev, 0)} evaluations` : `ends at penalty ${EA_B8.best}`}. On 16 queens the effect is stronger and the curves take the shape of slide 34.</p>
+    ${why("Context, not on the slides: our own measurements with this explorer's code", `<p>100 runs on 8 queens with the slide's settings (seeds 1000–1099) all found a solution, after 232 evaluations in the median. Without mutation, 86 of 100 did; the other 14 froze with a handful of distinct genotypes. On 16 queens (30 runs each), 28 of 30 runs with 80 % mutation found a solution within 10 000 evaluations (median about 2 800), but only 2 of 30 without mutation, most of them ending with fewer than ten distinct genotypes. Parent pools of 2, 5 and 20 change the median less than mutation does, because survivor selection (delete the worst two) already supplies most of the selection pressure here.</p>`)}
+
+    <h2>How a run behaves <small>(slides 33–37)</small></h2>
+    <p><b>Population distribution</b> (slide 33): at the beginning the individuals are spread over the whole landscape; halfway, most sit on the hills; at the end they cluster on one or a few peaks. The histograms in the explorer above are the same picture for the 8-queens run, with penalty instead of position. <b>Best fitness over time</b> (slide 34) rises steeply at first and then flattens out: most of the progress happens early.</p>
+    <p>Two consequences. <b>Heuristic initialisation</b> rarely pays (slide 35): if a random population starts at best fitness a and a heuristically seeded one at b &gt; a, the random run reaches level b after k generations anyway, so the effort only saves those k generations. <b>When to stop</b> (slide 36): divide a run into two equally long halves; if the fitness gained in the first half, X, is much larger than the gain Y in the second, further time buys little. EAs have <b>anytime behaviour</b>: they can be stopped at any moment and return the best solution so far, and after a certain point extra effort hardly improves it.</p>
+    <p><b>Performance from a global perspective</b> (slide 37) is drawn over a range of problems. A problem-tailored method peaks on the problems it was made for and does poorly elsewhere; random search is uniformly weak; an EA is evenly good across the range. EAs are robust, general tools: on most single problems a specialised method beats them, but the specialised method has limited reach and may not do well on every instance.</p>
+
+    <h2>Simulated annealing, tabu search and EAs <small>(slides 38–39)</small></h2>
+    <div class="tt-wrap"><table class="tt memo"><thead><tr><th></th><th>simulated annealing</th><th>tabu search</th><th>evolutionary algorithm</th></tr></thead><tbody>
+      <tr><td class="rl">solutions</td><td>one</td><td>one</td><td>a population</td></tr>
+      <tr><td class="rl">memory</td><td>none</td><td>explicit (tabu list)</td><td>implicit in the population</td></tr>
+      <tr><td class="rl">escape</td><td>random acceptance</td><td>forced moves</td><td>recombination and mutation</td></tr>
+      <tr><td class="rl">determinism</td><td>stochastic</td><td>deterministic</td><td>stochastic</td></tr>
+      <tr><td class="rl">parameters</td><td>T<sub>0</sub>, cooling schedule</td><td>tenure, horizon</td><td>population size, mutation rate, crossover probability</td></tr>
+      <tr><td class="rl">diversity</td><td>none</td><td>via frequency memory</td><td>built in through the population</td></tr>
+      <tr><td class="rl">prefer when</td><td>large neighbourhood; simplicity needed</td><td>combinatorial structure; reproducibility needed</td><td>many local optima; parallelism available</td></tr>
+      <tr><td class="rl">avoid when</td><td>structure could be exploited by memory</td><td>neighbourhood too large to scan</td><td>very tight time budget; a small population converges fast</td></tr>
+    </tbody></table></div>
+    <p>All three are <b>metaheuristics</b>: general frameworks that apply to any problem once a representation and an evaluation function are given, and none guarantees the global optimum. In practice hybrids often beat each pure method: SA with restarts, tabu search with a randomised tenure, EAs with a local search step for each offspring.</p>
+    ${why("Context, not on the slides: what to be able to do by hand", `<p>The hand calculations of this lecture are small and exact, the kind a written exam can ask for and the kind tutorial 4 drills: selection probabilities for a given fitness list (roulette shares, tournament probabilities), one-point and uniform children from two bit strings, OX, PMX and CX children from two permutations with every intermediate step, the fitness of individuals under a penalty function, and one full generation of a small GA. The design side matters as much: given a problem, name a representation, a fitness function, operators that keep offspring valid, and the selection scheme, with one sentence of justification each. OPAL now also has a “Mock Exam” node with an earlier exam paper.</p>`)}
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>EAs</b> evolve a population: parent selection, recombination, mutation, evaluation and survivor selection in a loop until a termination condition holds. Variation creates diversity; selection removes it and pushes quality.</li>
+      <li><b>Representation</b> first: every feasible solution must be encodable; for 8-queens a permutation (8! genotypes) instead of any 8 squares (4.4 billion).</li>
+      <li><b>Parent selection</b>: roulette wheel p<sub>i</sub> = f<sub>i</sub> / Σf<sub>j</sub> (sensitive to scaling and to a dominant individual) or tournament of size k (k = 2–3, only compares). Too much pressure leads to premature convergence.</li>
+      <li><b>Crossover</b> must match the representation: one-point or uniform for bit strings; OX (relative order), PMX (positions of the segment and most other genes) or CX (every gene's locus) for permutations. Crossover cannot create new alleles; mutation can.</li>
+      <li><b>Survivor selection</b>: fitness-based, age-based or elitist. <b>Initialisation</b> is usually random (heuristic seeding saves only the first few generations); <b>termination</b> by target fitness, budget, diversity or stagnation.</li>
+      <li><b>Compared with SA and tabu search</b>: a population instead of one solution, implicit instead of explicit memory, stochastic, naturally parallel; preferred on landscapes with many local optima.</li>
+    </ul>
+    <h2>Tutorial 4 and what comes next</h2>
+    <p>Sheet 4 (in OPAL since 23 Nov) applies this lecture three ways: design an EA for graph colouring, compute OX and PMX children by hand on two schedules, and run one full generation of a GA on a 0/1 knapsack problem with a penalty function. See <a href="advanced-problem-solving/exercise.html?n=4">tutorial 4</a>.</p>
+    <p class="muted">Next: <a href="advanced-problem-solving/lecture.html?n=6">lecture 6</a>, answer set programming, a declarative, logic-programming way of modelling and solving combinatorial problems. Previous: <a href="advanced-problem-solving/lecture.html?n=4">lecture 4</a>, tabu search. Slides: OPAL → Lectures → Lesson 5 (EA), together with the Potvin paper; the slide numbers above are those of the 42-slide deck (the PDF has 56 pages because of overlays). The reference slide lists Michalewicz &amp; Fogel, How to Solve It: Modern Heuristics (Springer 2004), and Knox's tabu search paper from lecture 4; Eiben &amp; Smith, Introduction to Evolutionary Computing (Springer 2003), is on the ICCL reading list.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -1082,8 +1420,8 @@ function placeholder() {
       <p class="muted">${l.planned ? `Planned topic in last year's order; the date is the next free Tuesday, not announced: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.` : `This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.`}<br>Topic from the course overview: ${esc(l.blurb)}<br>The write-up appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
-const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins, land: initLand, gsat: initGsat, twoopt: initTwoOpt, tabu: initTabu, mem: initMem };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const LABS = { sons: initSons, hs: initHs, sat: initSat, tree: initTree, ro: initRo, coins: initCoins, land: initLand, gsat: initGsat, twoopt: initTwoOpt, tabu: initTabu, mem: initMem, sel: initSel, queens: initQueens, ea: initEa, xover: initXover };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
@@ -1098,7 +1436,7 @@ addEventListener("resize", () => {
   if (isNarrow() === narrowNow) return;
   narrowNow = isNarrow(); mountCharts();
   // Explorers that draw SVG at a width-dependent size redraw their current step.
-  document.querySelectorAll(".lab-body[data-rerender]").forEach(b => { const btn = b.querySelector('[data-s="next"]'); if (btn) { const o = b.querySelector(".scount output"); const i = +o.value; b.querySelector('[data-s="reset"]').click(); for (let k = 0; k < i; k++) btn.click(); } else b.querySelector("[data-c]")?.dispatchEvent(new Event("change")); });
+  document.querySelectorAll(".lab-body[data-rerender]").forEach(b => { if (b._rerender) { b._rerender(); return; } const btn = b.querySelector('[data-s="next"]'); if (btn) { const o = b.querySelector(".scount output"); const i = +o.value; b.querySelector('[data-s="reset"]').click(); for (let k = 0; k < i; k++) btn.click(); } else b.querySelector("[data-c]")?.dispatchEvent(new Event("change")); });
 });
 </script>
 </body>

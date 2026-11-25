@@ -598,3 +598,63 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .apss p.formula.pre { white-space: pre-wrap; }
 .apss table.tt.nb td, .apss table.tt.nb th { white-space: nowrap; }
 @media (max-width: 600px) { .apss table.tt.nb td, .apss table.tt.nb th { padding: 4px 6px; font-size: 12.5px; } }
+
+/* Lecture 5 and tutorial 4: evolutionary algorithms. Gene strips (cells tinted by the parent that donated the gene),
+   the EA cycle diagram, the queens board, the run chart with its population histograms, the colouring graph. */
+.apss .gwrap { display: grid; gap: 4px; margin: 0 0 10px; max-width: 100%; overflow-x: auto; }
+.apss .gstrip { display: grid; grid-template-columns: 4.8rem; grid-auto-columns: minmax(26px, 40px); grid-auto-flow: column; gap: 4px; align-items: center; justify-content: start; }
+.apss .gstrip .gl { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.apss .gstrip.idx span:not(.gl) { text-align: center; font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.apss .gstrip.idx .gl { font-weight: 400; color: var(--ink-3); font-size: 11px; }
+.apss .gstrip.seg span:not(.gl) { height: 4px; border-radius: 2px; }
+.apss .gstrip.seg span.in { background: var(--ink-2); }
+.apss .gstrip.kid { margin-top: 6px; }
+.apss .gc { font: 600 15px ui-monospace, "IBM Plex Mono", monospace; height: 32px; display: grid; place-items: center; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.apss .gc.p1 { background: color-mix(in srgb, var(--vz-s1) 22%, var(--surface)); border-color: transparent; box-shadow: inset 0 -3px var(--vz-s1); }
+.apss .gc.p2 { background: color-mix(in srgb, var(--vz-s2) 22%, var(--surface)); border-color: transparent; box-shadow: inset 0 -3px var(--vz-s2); }
+.apss .gc.p3 { background: color-mix(in srgb, var(--vz-s3) 22%, var(--surface)); border-color: transparent; box-shadow: inset 0 -3px var(--vz-s3); }
+.apss .gc.empty { color: var(--ink-3); border-style: dashed; font-weight: 400; }
+.apss .gc.hl { outline: 2px solid var(--ink); outline-offset: 1px; }
+.apss button.gc { cursor: pointer; }
+.apss button.gc:hover { border-color: var(--ink-2); }
+.apss button.gc[aria-pressed="true"] { outline: 2px solid var(--focus); outline-offset: 1px; }
+.apss .viz .sch rect { fill: var(--surface); stroke: var(--ink-2); stroke-width: 1.5; }
+.apss .viz .sch .bx { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.apss .viz .sch .ar { fill: none; stroke-width: 2; }
+.apss .viz .sch .ar.sel { stroke: var(--vz-s1); } .apss .viz .sch .ar.var { stroke: var(--vz-s2); } .apss .viz .sch .ar.io { stroke: var(--ink-3); stroke-dasharray: 4 3; }
+.apss .viz .sch .al { fill: var(--ink-2); font-size: 12px; }
+.apss .viz .sch .hd.sel { fill: var(--vz-s1); } .apss .viz .sch .hd.var { fill: var(--vz-s2); } .apss .viz .sch .hd.io { fill: var(--ink-3); }
+.apss .lab .qsq { fill: var(--surface); } .apss .lab .qsq.dk { fill: color-mix(in srgb, var(--ink) 9%, var(--surface)); }
+.apss .lab .qatt { stroke: var(--vz-s2); stroke-width: 2; opacity: .85; }
+.apss .lab .qn { fill: var(--ink-2); stroke: var(--surface); stroke-width: 2; }
+.apss .lab .qn.bad { fill: var(--vz-s2); }
+.apss .lab .qt { fill: var(--surface); font-size: 11px; font-weight: 700; pointer-events: none; }
+.apss .lab .qpen { fill: var(--ink); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.apss .lab .qpen.z { fill: var(--ink-3); font-weight: 400; }
+.apss .lab .rline { fill: none; stroke-width: 2; stroke-linejoin: round; }
+.apss .lab .rline.best { stroke: var(--vz-s3); } .apss .lab .rline.mean { stroke: var(--vz-s1); }
+.apss .lab .rhit { fill: transparent; cursor: crosshair; }
+.apss .lab .rhit:focus { outline: none; stroke: var(--focus); stroke-width: 2; }
+.apss .lab .rxh { stroke: var(--ink-3); stroke-width: 1; }
+.apss .lab .rdot.best { fill: var(--vz-s3); stroke: var(--surface-2); stroke-width: 2; } .apss .lab .rdot.mean { fill: var(--vz-s1); stroke: var(--surface-2); stroke-width: 2; }
+.apss .lab .rtip { fill: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
+.apss .lab .lbl { fill: var(--ink-2); font-size: 12px; font-weight: 600; }
+.apss .lab .hbar { fill: var(--vz-s1); } .apss .lab .hbar.z { fill: var(--vz-s3); }
+.apss .phist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 6px 0 0; }
+.apss .phist figure { margin: 0; } .apss .phist figcaption { font-size: 12px; color: var(--ink-2); margin: 2px 0 0; }
+.apss .lab .gedge { stroke: var(--ink-3); stroke-width: 2; }
+.apss .lab .gedge.bad { stroke: var(--ink); stroke-width: 3.5; stroke-dasharray: 6 4; }
+.apss .lab .gnode { cursor: pointer; } .apss .lab .gnode circle { stroke: var(--ink); stroke-width: 1.5; }
+.apss .lab .gnode:focus { outline: none; } .apss .lab .gnode:focus circle { stroke: var(--focus); stroke-width: 3; }
+.apss .lab .gnode text { fill: var(--ink); font-size: 13px; font-weight: 700; pointer-events: none; }
+.apss .lab .gnode .cl { font-size: 11px; font-weight: 600; fill: var(--ink-2); }
+.apss table.tt.ga td { font-variant-numeric: tabular-nums; }
+.apss table.tt.ga td.mono { letter-spacing: .08em; }
+.apss table.tt.ga tr.inf td { font-style: italic; }
+@media (max-width: 600px) {
+  .apss .gstrip { grid-template-columns: 3.4rem; grid-auto-columns: minmax(0, 32px); gap: 3px; }
+  .apss .gstrip .gl { font-size: 12px; }
+  .apss .gc { font-size: 13px; height: 28px; }
+  .apss .phist { grid-template-columns: 1fr; gap: 4px; }
+  .apss .phist svg { max-width: 280px; }
+}
