@@ -3471,6 +3471,16 @@ window.CMS = {
       "kind": "exercise"
      },
      {
+      "date": "2026-11-24",
+      "label": "Lecture 5: Evolutionary algorithms",
+      "kind": "lecture"
+     },
+     {
+      "date": "2026-11-27",
+      "label": "Tutorial 4 (Evolutionary algorithms); sheet in OPAL since 23 Nov",
+      "kind": "exercise"
+     },
+     {
       "date": "2026-12-20",
       "label": "Christmas break until 3 Jan",
       "kind": "break"
@@ -3499,7 +3509,7 @@ window.CMS = {
     "format": "2 SWS lecture + 2 SWS tutorial, 5 LP. Taught entirely in English. The slides of each lecture and the exercise sheet of each tutorial are uploaded in OPAL per session; you attend one tutorial group per week and discuss the sheet there. The forum is for questions and for sharing solutions.",
     "contact": "Dr. Sarah Alice Gaggl (lecturer, Computational Logic group at ICCL) runs the lecture; Dr. habil. Hannes Straß and Dr. Timothy S. Lyon run tutorial groups, Tim Lyon yours. Questions go to the OPAL forum, or by mail if the forum cannot answer them",
     "coursePage": "https://iccl.inf.tu-dresden.de/web/Advanced_Problem_Solving_and_Search_(WS2026)",
-    "materialsNote": "Slides (one PDF per lecture, plus extra decks on uninformed search, informed search and dynamic programming for lecture 2) and tutorial sheets are in OPAL only; the ICCL page has the calendar and the reading list. The lecture pages here are summaries in our own words.",
+    "materialsNote": "Slides (one PDF per lecture, plus extra decks on uninformed search, informed search and dynamic programming for lecture 2) and tutorial sheets are in OPAL only; the ICCL page has the calendar and the reading list. The lecture pages here are summaries in our own words. Since 23 Nov OPAL also has a “Mock Exam” node with an earlier exam paper (WS 2024/25).",
     "roomNote": "The lecture is in GÖR/0226/H (Görges-Bau). Your tutorial group 2 meets in APB/E006/U, a seminar room on the ground floor of the Andreas-Pfitzmann-Bau; the other groups use E007 and E001 in the same building.",
     "reading": [
      {
@@ -3524,7 +3534,13 @@ window.CMS = {
       "t": "Introduction to Evolutionary Computing",
       "a": "A. E. Eiben & J. E. Smith",
       "y": 2003,
-      "v": "Springer"
+      "v": "Springer · the general EA scheme and the 8-queens example of lecture 5"
+     },
+     {
+      "t": "Genetic algorithms for the traveling salesman problem",
+      "a": "Jean-Yves Potvin",
+      "y": 1996,
+      "v": "Annals of Operations Research 63(3) · sections 4–5 are lecture 5's self-study"
      },
      {
       "t": "Hypertree decompositions and tractable queries",
@@ -3626,9 +3642,24 @@ window.CMS = {
       "title": "Evolutionary algorithms",
       "date": "2026-11-24",
       "icon": "🧬",
-      "covered": false,
+      "covered": true,
       "planned": false,
-      "blurb": "Populations, fitness, selection, crossover and mutation; genetic algorithms and evolution strategies."
+      "blurb": "Evolutionary algorithms: a population instead of one solution, the general loop and its seven components on the 8-queens example (permutation genotype, penalty fitness, swap mutation), roulette-wheel and tournament selection, exploration against exploitation and premature convergence, crossover for bit strings (one-point, uniform) and permutations (OX, PMX, CX), survivor selection and termination, how a run behaves, and the comparison with simulated annealing and tabu search.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "APSS_Lecture5.pdf",
+        "where": "OPAL · Lesson 5 (EA)",
+        "note": "42 slides (56 PDF pages with overlays)"
+       },
+       {
+        "kind": "other",
+        "name": "Potvin1996_Article_GeneticAlgorithmsForTheTraveli.pdf",
+        "where": "OPAL · Lesson 5 (EA)",
+        "url": "https://link.springer.com/article/10.1007/BF02125403",
+        "note": "self-study paper, sections 4 and 5"
+       }
+      ]
      },
      {
       "n": 6,
@@ -3754,9 +3785,18 @@ window.CMS = {
       "title": "Evolutionary algorithms",
       "date": "2026-11-27",
       "icon": "📝",
-      "covered": false,
+      "covered": true,
       "planned": false,
-      "blurb": "The sheet on evolutionary algorithms follows lecture 5 of that week. Date from the ICCL calendar; the sheet appears in OPAL."
+      "blurb": "Sheet 4, from lecture 5: design an EA for colouring a 5-node graph (χ = 3, 18 of 243 colourings proper, why renamed colours break crossover), OX and PMX by hand on two job schedules, and one full GA generation on a 0/1 knapsack with a penalty function (the best fitness stays 8, an infeasible child ties with it, identical tails make crossover copy its parents). Our own worked solutions, written before the session.",
+      "sheet": "2026-11-23",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "APSS-T4.pdf",
+        "where": "OPAL · Tutorial 4 (EA)",
+        "note": "3 pages, since 23 Nov, no official solution"
+       }
+      ]
      },
      {
       "n": 5,

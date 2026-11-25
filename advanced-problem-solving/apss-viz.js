@@ -131,5 +131,112 @@ window.APSSViz = (function () {
     const pick = tie === "rnd" ? cands[Math.floor(rand() * cands.length)] : cands[0];
     return { flips, pick, best };
   }
-  return { rng, accept, unsat, gsatStep, isNarrow, key, leg, flag, hbar, vbar, num, sci, sciH, col, CHARTS, LINES, place, chart, lab, stepBar, wireSteps, lineGeo, lineSVG, line, wireLines, vbars, mountCharts, nodeSVG, binTree };
+  // ---------------- Evolutionary algorithm helpers (lecture 5, tutorial 4) ----------------
+  // Crossover operators. Each returns { child, src, steps }: src[i] is 1 or 2 (the parent the gene came from), steps is
+  // the construction as the slides describe it, one { text, child, src, hl } snapshot per step for the explorer.
+  // Positions are 0-indexed as on slides 25–26 and sheet 4.
+  const snap = (child, src, text, hl = []) => ({ text, child: child.slice(), src: src.slice(), hl });
+  function onePoint(p1, p2, cut) {
+    const n = p1.length, child = Array(n).fill(null), src = Array(n).fill(0), steps = [];
+    for (let i = 0; i < cut; i++) { child[i] = p1[i]; src[i] = 1; }
+    steps.push(snap(child, src, `Copy the head, positions 0–${cut - 1}, from P1.`, [...Array(cut).keys()]));
+    for (let i = cut; i < n; i++) { child[i] = p2[i]; src[i] = 2; }
+    steps.push(snap(child, src, `Copy the tail, positions ${cut}–${n - 1}, from P2.`, [...Array(n - cut).keys()].map(k => k + cut)));
+    return { child, src, steps };
+  }
+  function uniform(p1, p2, mask) {
+    const n = p1.length, child = Array(n).fill(null), src = Array(n).fill(0), steps = [];
+    for (let i = 0; i < n; i++) { child[i] = mask[i] ? p1[i] : p2[i]; src[i] = mask[i] ? 1 : 2;
+      steps.push(snap(child, src, `Position ${i}: mask ${mask[i]}, so take ${mask[i] ? "P1" : "P2"}[${i}] = ${child[i]}.`, [i])); }
+    return { child, src, steps };
+  }
+  // Order crossover as on slide 24: keep P1's first `cut` genes, then walk P2 from position `cut` (wrapping round)
+  // and append every value not yet in the child.
+  function ox(p1, p2, cut) {
+    const n = p1.length, child = Array(n).fill(null), src = Array(n).fill(0), steps = [];
+    for (let i = 0; i < cut; i++) { child[i] = p1[i]; src[i] = 1; }
+    steps.push(snap(child, src, `Copy P1's first part, positions 0–${cut - 1}.`, [...Array(cut).keys()]));
+    let w = cut;
+    for (let k = 0; k < n; k++) { const j = (cut + k) % n, v = p2[j];
+      if (child.includes(v)) { steps.push(snap(child, src, `P2[${j}] = ${v} is already in the child: skip.`, [])); continue; }
+      child[w] = v; src[w] = 2; steps.push(snap(child, src, `P2[${j}] = ${v} is new: write it at position ${w}.`, [w])); w++; }
+    return { child, src, steps };
+  }
+  // Partially mapped crossover as on slide 25: copy P1's segment a..b, place each displaced P2 segment value by following
+  // the position chain out of the segment, then fill the remaining positions from P2.
+  function pmx(p1, p2, a, b) {
+    const n = p1.length, child = Array(n).fill(null), src = Array(n).fill(0), steps = [], inSeg = i => i >= a && i <= b;
+    for (let i = a; i <= b; i++) { child[i] = p1[i]; src[i] = 1; }
+    steps.push(snap(child, src, `Copy P1's segment, positions ${a}–${b}: mapping ${[...Array(b - a + 1).keys()].map(k => `${p1[a + k]}↔${p2[a + k]}`).join(", ")}.`, [...Array(b - a + 1).keys()].map(k => k + a)));
+    for (let i = a; i <= b; i++) { const v = p2[i];
+      if (child.includes(v)) { steps.push(snap(child, src, `P2[${i}] = ${v} is already in the child: nothing to place.`, [])); continue; }
+      let pos = i; const hops = [];
+      while (true) { const u = p1[pos]; const nxt = p2.indexOf(u); hops.push(`position ${pos} holds ${u}, and ${u} sits at position ${nxt} in P2${inSeg(nxt) ? " (inside the segment)" : " (outside)"}`); pos = nxt; if (!inSeg(pos)) break; }
+      child[pos] = v; src[pos] = 2;
+      steps.push(snap(child, src, `P2[${i}] = ${v}: ${hops.join("; ")}. Place ${v} at position ${pos}.`, [pos])); }
+    const rest = [...Array(n).keys()].filter(i => child[i] === null);
+    rest.forEach(i => { child[i] = p2[i]; src[i] = 2; });
+    steps.push(snap(child, src, rest.length ? `Fill the free positions ${rest.join(", ")} straight from P2.` : "No free positions left.", rest));
+    return { child, src, steps };
+  }
+  // Cycle crossover as on slide 26: trace cycles (take P2[i], find that value in P1, continue there); odd-numbered cycles
+  // come from P1, even-numbered ones from P2.
+  function cycles(p1, p2) {
+    const n = p1.length, cyc = Array(n).fill(0); let c = 0;
+    for (let s = 0; s < n; s++) { if (cyc[s]) continue; c++; let i = s; do { cyc[i] = c; i = p1.indexOf(p2[i]); } while (i !== s); }
+    return cyc;
+  }
+  function cx(p1, p2) {
+    const n = p1.length, cyc = cycles(p1, p2), child = Array(n).fill(null), src = Array(n).fill(0), steps = [], k = Math.max(...cyc);
+    for (let c = 1; c <= k; c++) { const pos = [...Array(n).keys()].filter(i => cyc[i] === c), from = c % 2 ? 1 : 2;
+      pos.forEach(i => { child[i] = from === 1 ? p1[i] : p2[i]; src[i] = from; });
+      steps.push(snap(child, src, `Cycle ${c} covers position${pos.length > 1 ? "s" : ""} ${pos.join(", ")}; cycle ${c} is ${c % 2 ? "odd" : "even"}, so these genes come from P${from}.`, pos)); }
+    return { child, src, steps, cyc };
+  }
+  // 8-queens: genotype p, queen in column i (0-based) on row p[i]. Penalty of a queen = number of queens on a shared
+  // diagonal (rows and columns never clash in a permutation); the configuration's penalty is the sum, twice the pairs.
+  const qPen = p => p.map((r, i) => p.filter((s, j) => j !== i && Math.abs(r - s) === Math.abs(i - j)).length);
+  const qPenalty = p => qPen(p).reduce((s, v) => s + v, 0);
+  const shuffle = (a, rand) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // Strip of genes as cells: src 1/2 tint by parent (slots 1/2), hl marks the cells changed in this step.
+  const genes = (vals, src = [], hl = [], label = "", cls = "") => `<div class="gstrip ${cls}">${label ? `<span class="gl">${label}</span>` : ""}${vals.map((v, i) => `<span class="gc${src[i] ? ` p${src[i]}` : ""}${hl.includes(i) ? " hl" : ""}${v === null ? " empty" : ""}" title="position ${i}${src[i] ? `, from P${src[i]}` : ""}">${v === null ? "·" : v}</span>`).join("")}</div>`;
+  const posRow = (n, label = "") => `<div class="gstrip idx">${label !== null ? `<span class="gl">${label}</span>` : ""}${[...Array(n).keys()].map(i => `<span>${i}</span>`).join("")}</div>`;
+  // The crossover explorer, shared by lecture 5 and tutorial 4. ex = [{ id, label, op, p1, p2, cut | a, b | mask, note }].
+  const OPS = { one: "one-point", uni: "uniform", ox: "order (OX)", pmx: "partially mapped (PMX)", cx: "cycle (CX)" };
+  // swap = true gives the second child: the same operator with the parents' roles exchanged. src and the step texts are
+  // then renamed back, so 1 / "P1" always mean the real P1.
+  function runOp(e, swap = false) {
+    const [a, b] = swap ? [e.p2, e.p1] : [e.p1, e.p2];
+    const r = e.op === "one" ? onePoint(a, b, e.cut) : e.op === "uni" ? uniform(a, b, e.mask) : e.op === "ox" ? ox(a, b, e.cut) : e.op === "pmx" ? pmx(a, b, e.a, e.b) : cx(a, b);
+    if (!swap) return r;
+    const ren = t => t.replace(/P([12])/g, (_, d) => `P${3 - d}`), sw = s => s.map(x => x ? 3 - x : 0);
+    return { ...r, src: sw(r.src), steps: r.steps.map(s => ({ ...s, src: sw(s.src), text: ren(s.text) })) };
+  }
+  function xoverLab(body, examples) {
+    const st = { e: 0, i: 0, o2: false };
+    body.innerHTML = `<p class="lab-note">Pick an example, then step through the construction. Each child cell is tinted by the parent its gene came from; the outlined cells changed in the last step. “Second child” runs the same operator with the parents' roles swapped.</p>
+      <div class="presets" role="group" aria-label="Crossover example">${examples.map((e, k) => `<button class="preset" data-x="${k}" aria-pressed="${k === 0}">${e.label}</button>`).join("")}</div>
+      <div class="ctl"><label><input type="checkbox" data-o2> second child (parents swapped)</label></div>
+      ${leg([[1, "gene from P1"], [2, "gene from P2"]])}
+      <div class="steps"><button class="preset" data-s="reset">↺ Reset</button><button class="preset" data-s="prev">← Back</button><button class="preset" data-s="next">Step →</button><button class="preset" data-s="end">⇥ Run to end</button><span class="scount">step <output>0</output> of <span class="sn"></span></span></div><div class="out"></div>`;
+    const out = body.querySelector(".out"), cnt = body.querySelector(".scount output"), sn = body.querySelector(".sn");
+    const render = () => {
+      const e = examples[st.e], r = runOp(e, st.o2), n = e.p1.length, steps = r.steps; st.n = steps.length; sn.textContent = steps.length; cnt.value = st.i;
+      const cur = st.i ? steps[st.i - 1] : { child: Array(n).fill(null), src: Array(n).fill(0), hl: [], text: "Press Step to start." };
+      const cutMark = e.op === "pmx" ? `segment ${e.a}–${e.b}` : e.op === "ox" || e.op === "one" ? `cut after position ${e.cut - 1}` : e.op === "uni" ? `mask ${e.mask.join("")}, 1 takes ${st.o2 ? "P2" : "P1"}` : "no cut point, cycles instead";
+      const seg = i => e.op === "pmx" ? i >= e.a && i <= e.b : (e.op === "ox" || e.op === "one") ? i < e.cut : false;
+      const pStrip = (vals, k) => genes(vals, vals.map(() => k), [], `P${k}`, "par");
+      const segRow = e.op === "cx" || e.op === "uni" ? "" : `<div class="gstrip idx seg" aria-hidden="true"><span class="gl">${e.op === "pmx" ? "segment" : "head"}</span>${[...Array(n).keys()].map(i => `<span class="${seg(i) ? "in" : ""}"></span>`).join("")}</div>`;
+      const extra = e.op === "cx" ? `<div class="gstrip idx"><span class="gl">cycle</span>${cycles(e.p1, e.p2).map(c => `<span>${c}</span>`).join("")}</div>` : e.op === "uni" ? `<div class="gstrip idx"><span class="gl">mask</span>${e.mask.map(m => `<span>${m}</span>`).join("")}</div>` : "";
+      out.innerHTML = `<div class="gwrap">${posRow(n, "position")}${pStrip(e.p1, 1)}${pStrip(e.p2, 2)}${segRow}${extra}${genes(cur.child, cur.src, cur.hl, st.o2 ? "O2" : "O1", "kid")}</div>
+        <dl class="ro"><dt>operator</dt><dd>${OPS[e.op]}, ${cutMark}</dd><dt>this step</dt><dd>${cur.text}</dd>${st.i === steps.length ? `<dt>result</dt><dd class="mono">(${r.child.join(", ")})</dd>` : ""}${e.note ? `<dt>note</dt><dd>${e.note}</dd>` : ""}</dl>`;
+      body.querySelectorAll("[data-x]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.x === st.e));
+    };
+    body.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", () => { st.e = +b.dataset.x; st.i = 0; render(); }));
+    body.querySelector("[data-o2]").addEventListener("change", ev => { st.o2 = ev.target.checked; st.i = 0; render(); });
+    body.querySelectorAll("[data-s]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.s; st.i = k === "reset" ? 0 : k === "prev" ? Math.max(0, st.i - 1) : k === "next" ? Math.min(st.n, st.i + 1) : st.n; render(); }));
+    render();
+  }
+  return { rng, accept, unsat, gsatStep, isNarrow, key, leg, flag, hbar, vbar, num, sci, sciH, col, CHARTS, LINES, place, chart, lab, stepBar, wireSteps, lineGeo, lineSVG, line, wireLines, vbars, mountCharts, nodeSVG, binTree,
+    onePoint, uniform, ox, pmx, cycles, cx, qPen, qPenalty, shuffle, genes, posRow, xoverLab, runOp };
 })();
