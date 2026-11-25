@@ -687,24 +687,31 @@ function exercise3() {
 }
 // ===== Exercise 4: CMOS technology, reading cell layouts (sheet 4, task 4.1) =====
 const why4 = (t, body) => `<div class="why"><div class="kicker">${t}</div>${body}</div>`;
-// Our reading of the four fully traced layouts as switch-level netlists. cols: the gate net of each poly line that
-// crosses the active areas (the dummy poly at the cell edges is left out); p / n: the net of each diffusion piece from
-// left to right, k + 1 pieces for k poly lines. A name starting with "_" is diffusion without a contact (a series node).
+// Our reading of the five layouts as switch-level netlists. cols: the gate net of each poly line that crosses the
+// active areas (the dummy poly at the cell edges is left out); a cut poly line has { p, n }: different nets on its
+// PMOS and NMOS halves. p / n: the net of each diffusion piece from left to right, k + 1 pieces for k poly lines.
+// A name starting with "_" is diffusion without a contact (a series node). In d) the two active areas of each type are
+// joined at N by metal, drawn here as one piece. The input names in d) are ours (the sheet names no pins), chosen
+// like exercise 2's task 1.8: S = 0 selects A1, S = 1 selects A2.
 const CELLS4 = {
   a: { name: "a) NOR2", ins: ["A", "B"], cols: ["A", "B"], p: ["VDD", "_p", "Z"], n: ["VSS", "Z", "VSS"], f: "Z = ¬(A + B)", st: 1 },
   b: { name: "b) buffer", ins: ["A"], cols: ["A", "X"], p: ["X", "VDD", "Z"], n: ["X", "VSS", "Z"], f: "X = ¬A, Z = ¬X = A", st: 2 },
   c: { name: "c) AND2", ins: ["A", "B"], cols: ["A", "B", "X"], p: ["VDD", "X", "VDD", "Z"], n: ["X", "_n", "VSS", "Z"], f: "X = ¬(A·B), Z = A·B", st: 2 },
+  d: { name: "d) MUX2", ins: ["S", "A1", "A2"], cols: ["S", "X", { p: "A2", n: "A1" }, { p: "A1", n: "A2" }, "S", "N"],
+    p: ["X", "VDD", "_p1", "N", "_p2", "VDD", "Z"], n: ["X", "VSS", "_n1", "N", "_n2", "VSS", "Z"],
+    f: "X = S̅, N = ¬Z, Z = S̅·A<sub>1</sub> + S·A<sub>2</sub>", st: 2,
+    note: "X drives the second poly line, the two cut lines carry A<sub>1</sub> and A<sub>2</sub> (swapped between PMOS and NMOS), and node N drives the output inverter" },
   e: { name: "e) OA21", ins: ["A1", "A2", "A3"], cols: ["A1", "A2", "A3", "X"], p: ["VDD", "_p", "X", "VDD", "Z"], n: ["Y", "X", "Y", "VSS", "Z"], f: "X = ¬((A1 + A2)·A3), Z = (A1 + A2)·A3", st: 2 },
 };
-const CELL4 = { k: "a", v: { A: 0, B: 0, A1: 0, A2: 0, A3: 0 } };
+const CELL4 = { k: "a", v: { A: 0, B: 0, A1: 0, A2: 0, A3: 0, S: 0 } };
 const nm4 = s => s === "VDD" ? "V<sub>DD</sub>" : s === "VSS" ? "V<sub>SS</sub>" : s.replace(/^([A-Z])(\d)$/, "$1<sub>$2</sub>");
 const sn4 = s => s === "VDD" ? `V<tspan baseline-shift="sub" font-size="8">DD</tspan>` : s === "VSS" ? `V<tspan baseline-shift="sub" font-size="8">SS</tspan>` : s.replace(/^([A-Z])(\d)$/, `$1<tspan baseline-shift="sub" font-size="8">$2</tspan>`);
 function evalCell4(cell, inp) {
   const val = { VDD: 1, VSS: 0 }; cell.ins.forEach(i => { val[i] = inp[i]; });
-  const tr = []; cell.cols.forEach((g, i) => { tr.push({ t: "p", g, a: cell.p[i], b: cell.p[i + 1], i }); tr.push({ t: "n", g, a: cell.n[i], b: cell.n[i + 1], i }); });
+  const tr = []; cell.cols.forEach((g, i) => { tr.push({ t: "p", g: g.p || g, a: cell.p[i], b: cell.p[i + 1], i }); tr.push({ t: "n", g: g.n || g, a: cell.n[i], b: cell.n[i + 1], i }); });
   const nets = [...new Set([...cell.p, ...cell.n])].filter(x => x !== "VDD" && x !== "VSS");
   const isOn = t => val[t.g] === (t.t === "p" ? 0 : 1);
-  for (let it = 0; it < 4; it++) {   // two stages settle in two passes; X feeds the second stage's gates
+  for (let it = 0; it < 4; it++) {   // up to three stages (d: S → X → N → Z) settle in three passes
     const on = tr.filter(isOn);
     const reach = src => { const seen = new Set([src]); let grow = true; while (grow) { grow = false; on.forEach(t => { if (seen.has(t.a) !== seen.has(t.b)) { seen.add(t.a); seen.add(t.b); grow = true; } }); } return seen; };
     const up = reach("VDD"), dn = reach("VSS");
@@ -724,25 +731,31 @@ CHARTS.cell4 = narrow => {
     <rect class="e4rail" x="0" y="${yB}" width="${W}" height="12" rx="2"/><text class="e4rl" x="${W - 6}" y="${yB + 10}" text-anchor="end">V<tspan baseline-shift="sub" font-size="8">SS</tspan></text>`;
   const strip = (list, y0, y1, side) => list.map((x, i) => { const cx = xs(i) + sw / 2, cy = (y0 + y1) / 2, ser = x[0] === "_";
     const link = x === "VDD" ? `<line class="e4m" x1="${cx}" x2="${cx}" y1="${yT + 12}" y2="${cy - 5}"/>` : x === "VSS" ? `<line class="e4m" x1="${cx}" x2="${cx}" y1="${cy + 5}" y2="${yB}"/>` : "";
-    const lab = ser ? `<text class="e4ser" x="${cx}" y="${cy + 4}" text-anchor="middle">${narrow ? "–" : "no contact"}</text>` : x === "VDD" || x === "VSS" ? "" : `<text class="e4net" x="${cx}" y="${side === "p" ? y1 - 6 : y0 + 14}" text-anchor="middle">${sn4(x)}</text>`;
+    const lab = ser ? `<text class="e4ser" x="${cx}" y="${cy + 4}" text-anchor="middle">${narrow ? "–" : "no contact"}</text>` : x === "VDD" || x === "VSS" ? "" : `<text class="e4net" x="${cx}" y="${side === "p" ? y1 - 6 : y0 + 12}" text-anchor="middle">${sn4(x)}</text>`;
     return `<rect class="e4d ${cls(x)}" x="${xs(i)}" y="${y0}" width="${sw}" height="${y1 - y0}"/>${link}${ser ? "" : `<rect class="e4ct" x="${cx - 5}" y="${cy - 5}" width="10" height="10"/>`}${lab}`; }).join("");
-  const poly = cell.cols.map((g, i) => { const x = xc(i), gv = val[g];
-    const chan = (t, y0, y1) => { const tt = tr.find(q => q.t === t && q.i === i), on = isOn(tt);
-      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${t === "p" ? "PMOS" : "NMOS"} on poly ${nm4(g)}</b>gate ${gv === undefined ? "undefined" : gv} → ${on ? "conducts" : "off"}<br>between ${nm4(tt.a.replace(/^_.*/, "the shared node"))} and ${nm4(tt.b.replace(/^_.*/, "the shared node"))}`)}"><rect class="e4ch ${on ? "on" : "off"}" x="${x - 6}" y="${y0 - 4}" width="12" height="${y1 - y0 + 8}" rx="2"/></g>`; };
-    return `<line class="e4poly" x1="${x}" x2="${x}" y1="${yP0 - 20}" y2="${yN1 + 12}"/>${chan("p", yP0, yP1)}${chan("n", yN0, yN1)}<rect class="e4ct" x="${x - 5}" y="${mid - 5}" width="10" height="10"/>
-      <text class="e4net" x="${x}" y="${yP0 - 26}" text-anchor="middle">${sn4(g)} = ${gv === undefined ? "?" : gv}</text>`; }).join("");
+  // A cut poly line (d) is drawn as two pieces, each with its own gate contact and label: the PMOS net above the
+  // p strip, the NMOS net below the n strip. Narrow labels drop the spaces so six columns fit at phone width.
+  const gl = (q, x, y) => `<text class="e4net" x="${x}" y="${y}" text-anchor="middle">${sn4(q)}${narrow ? "=" : " = "}${val[q] === undefined ? "?" : val[q]}</text>`;
+  const poly = cell.cols.map((g, i) => { const x = xc(i), cut = typeof g !== "string";
+    const chan = (t, y0, y1) => { const tt = tr.find(q => q.t === t && q.i === i), on = isOn(tt), gv = val[tt.g];
+      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${t === "p" ? "PMOS" : "NMOS"} on poly ${nm4(tt.g)}</b>gate ${gv === undefined ? "undefined" : gv} → ${on ? "conducts" : "off"}<br>between ${nm4(tt.a.replace(/^_.*/, "the shared node"))} and ${nm4(tt.b.replace(/^_.*/, "the shared node"))}`)}"><rect class="e4ch ${on ? "on" : "off"}" x="${x - 6}" y="${y0 - 4}" width="12" height="${y1 - y0 + 8}" rx="2"/></g>`; };
+    const wire = cut
+      ? `<line class="e4poly" x1="${x}" x2="${x}" y1="${yP0 - 20}" y2="${mid - 9}"/><line class="e4poly" x1="${x}" x2="${x}" y1="${mid + 9}" y2="${yN1 + 12}"/><rect class="e4ct" x="${x - 5}" y="${yP1 + 7}" width="10" height="10"/><rect class="e4ct" x="${x - 5}" y="${yN0 - 17}" width="10" height="10"/>`
+      : `<line class="e4poly" x1="${x}" x2="${x}" y1="${yP0 - 20}" y2="${yN1 + 12}"/><rect class="e4ct" x="${x - 5}" y="${mid - 5}" width="10" height="10"/>`;
+    return `${wire}${chan("p", yP0, yP1)}${chan("n", yN0, yN1)}${gl(g.p || g, x, yP0 - 26)}${cut ? gl(g.n, x, yN1 + 28) : ""}`; }).join("");
   const out = `<text class="e4out" x="${W - R / 2}" y="${mid + 4}" text-anchor="middle">Z = ${vtxt("Z")}</text>`;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stick diagram of the ${cell.name.slice(3)} read from layout ${CELL4.k}: ${k} poly lines crossing a p-diffusion strip in the n-well and an n-diffusion strip below. With ${cell.ins.map(i => `${i} = ${CELL4.v[i]}`).join(", ")} the output Z is ${vtxt("Z")}">${well}${rails}${strip(cell.p, yP0, yP1, "p")}${strip(cell.n, yN0, yN1, "n")}${poly}${out}</svg>`;
+  const cuts = cell.cols.filter(g => typeof g !== "string").length;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stick diagram of the ${cell.name.slice(3)} read from layout ${CELL4.k}: ${k} poly lines crossing a p-diffusion strip in the n-well and an n-diffusion strip below${cuts ? `; ${cuts} of them are cut between the strips and carry different signals on their PMOS and NMOS halves` : ""}. With ${cell.ins.map(i => `${i} = ${CELL4.v[i]}`).join(", ")} the output Z is ${vtxt("Z")}">${well}${rails}${strip(cell.p, yP0, yP1, "p")}${strip(cell.n, yN0, yN1, "n")}${poly}${out}</svg>`;
 };
 function initCell4(body) {
   const render = focus => {
-    const cell = CELLS4[CELL4.k], ins = cell.ins, two = cell.cols.includes("X");
+    const cell = CELLS4[CELL4.k], ins = cell.ins, two = cell.cols.includes("X"), inner = ["X", "N"].filter(q => cell.cols.includes(q));
     const rows = Array.from({ length: 2 ** ins.length }, (_, r) => { const v = {}; ins.forEach((x, j) => { v[x] = r >> (ins.length - 1 - j) & 1; }); return { r, v, e: evalCell4(cell, v).val }; });
     const cur = ins.reduce((a, x) => a * 2 + CELL4.v[x], 0), ntr = cell.cols.length * 2;
     body.innerHTML = `<div class="presets" role="group" aria-label="Layout">${Object.entries(CELLS4).map(([kk, cc]) => `<button type="button" class="preset" data-c="${kk}" aria-pressed="${kk === CELL4.k}">${cc.name}</button>`).join("")}</div>
       <div class="l6in" role="group" aria-label="Inputs">${ins.map(x => `<button type="button" class="bit${CELL4.v[x] ? " on" : ""}" data-i="${x}" aria-pressed="${!!CELL4.v[x]}">${nm4(x)} = ${CELL4.v[x]}</button>`).join("")}</div>
-      <dl class="ro"><dt>Function</dt><dd>${cell.f}</dd><dt>Size</dt><dd>${ntr} transistors, ${cell.st} stage${cell.st > 1 ? "s" : ""}${two ? "; the inner node X drives the last poly line (the output inverter)" : ""}</dd></dl>
-      <div class="tt-wrap"><table class="tt l6tt"><tr>${ins.map(x => `<th>${nm4(x)}</th>`).join("")}${two ? "<th>X</th>" : ""}<th>Z</th></tr>${rows.map(q => `<tr data-row="${q.r}" tabindex="0" class="${q.r === cur ? "cur" : ""}">${ins.map(x => `<td>${q.v[x]}</td>`).join("")}${two ? `<td>${q.e.X}</td>` : ""}<td class="${q.e.Z ? "one" : ""}">${q.e.Z}</td></tr>`).join("")}</table></div>`;
+      <dl class="ro"><dt>Function</dt><dd>${cell.f}</dd><dt>Size</dt><dd>${ntr} transistors, ${cell.st} stage${cell.st > 1 ? "s" : ""}${cell.note ? `; ${cell.note}` : two ? "; the inner node X drives the last poly line (the output inverter)" : ""}</dd></dl>
+      <div class="tt-wrap"><table class="tt l6tt"><tr>${ins.map(x => `<th>${nm4(x)}</th>`).join("")}${inner.map(q => `<th>${q}</th>`).join("")}<th>Z</th></tr>${rows.map(q => `<tr data-row="${q.r}" tabindex="0" class="${q.r === cur ? "cur" : ""}">${ins.map(x => `<td>${q.v[x]}</td>`).join("")}${inner.map(y => `<td>${q.e[y]}</td>`).join("")}<td class="${q.e.Z ? "one" : ""}">${q.e.Z}</td></tr>`).join("")}</table></div>`;
     if (focus) body.querySelector(focus)?.focus();
     mountCharts();
   };
@@ -796,10 +809,20 @@ function exercise4() {
     ["m1", "metal 1", "cyan-outlined hatched shapes", "the rails (V<sub>DD</sub> along the top, V<sub>SS</sub> along the bottom), the input and output pins and the wiring inside the cell"],
     ["m2", "via and metal 2", "solid magenta squares and magenta hatched bands (only in d)", "a via connects metal 1 to metal 2, the next wiring layer up, which can cross metal 1 without touching it"],
   ];
-  const CNT = [["a", "NOR2", "¬(A + B)", 4, 1], ["b", "buffer", "A", 4, 2], ["c", "AND2", "A·B", 6, 2], ["d", "cell from clocked inverters: latch or multiplexer (open)", "not settled", 12, "–"], ["e", "OA21", "(A<sub>1</sub> + A<sub>2</sub>)·A<sub>3</sub>", 8, 2]];
+  const CNT = [["a", "NOR2", "¬(A + B)", 4, 1], ["b", "buffer", "A", 4, 2], ["c", "AND2", "A·B", 6, 2], ["d", "2:1 multiplexer (MUX2)", "S̅·A<sub>1</sub> + S·A<sub>2</sub>", 12, "2 (3 from S)"], ["e", "OA21", "(A<sub>1</sub> + A<sub>2</sub>)·A<sub>3</sub>", 8, 2]];
+  // Layout d) column by column: [poly line, PMOS gate, PMOS between, NMOS gate, NMOS between, role]
+  const D4 = [
+    ["1", "S", "X · V<sub>DD</sub>", "S", "X · V<sub>SS</sub>", "select inverter: X = S̅"],
+    ["2", "X", "V<sub>DD</sub> · p<sub>1</sub>", "X", "V<sub>SS</sub> · n<sub>1</sub>", "enable of the left stack (X = 0 opens its PMOS, X = 1 its NMOS)"],
+    ["3 (cut)", "A<sub>2</sub>", "p<sub>1</sub> · N", "A<sub>1</sub>", "n<sub>1</sub> · N", "data, left stack"],
+    ["4 (cut)", "A<sub>1</sub>", "N · p<sub>2</sub>", "A<sub>2</sub>", "N · n<sub>2</sub>", "data, right stack"],
+    ["5", "S", "p<sub>2</sub> · V<sub>DD</sub>", "S", "n<sub>2</sub> · V<sub>SS</sub>", "enable of the right stack"],
+    ["6", "N", "V<sub>DD</sub> · Z", "N", "V<sub>SS</sub> · Z", "output inverter: Z = ¬N"],
+  ];
   return `${head(x)}
     <p class="lead">Sheet 4 has a single task, 4.1, in five parts: five standard-cell layouts, drawn in the colours of a layout editor, to be turned back into transistor circuits and logic functions. It runs <a href="digital-circuit-design/lecture.html?n=6">lecture 6</a>'s slides 7–11 backwards (there, schematics became layouts) and needs <a href="digital-circuit-design/lecture.html?n=5">lecture 5</a>'s layer stack. Part a) adds a number: the W/L ratio of its transistors, which <a href="digital-circuit-design/lecture.html?n=7">lecture 7</a> turns into a switch resistance.</p>
-    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (7 pages: cover, task text, five layout pages) in the OPAL exercise folder; the English version is listed for the Wednesday group on 25 Nov, the German one for this group under 3 Dec. The cover still carries last year's date (03.12.2025). No solution in OPAL yet: everything below is <b>our own reading</b> of the layouts, done in the PDF viewer at high zoom. Part d) is only partly traced.</p>
+    <div class="box status-box"><p style="margin:0 0 .4rem"><b>Sheet status.</b> Task sheet (7 pages: cover, task text, five layout pages) in the OPAL exercise folder; the English version is listed for the Wednesday group on 25 Nov, the German one for this group under 3 Dec. The cover still carries last year's date (03.12.2025).</p>
+      <p style="margin:0 0 .4rem"><b>Solutions.</b> None for this sheet in this year's exercise folder yet. Last year's collection of all task texts (<i>Exercise_DST_2025_ENG.pdf</i>, on the course start page) has the same task 4.1 with the same five layouts, but no solutions. So <b>no part is confirmed by the chair's solution</b>: a) to e) below are all <b>our own reading</b>. On 25 Nov all five were read again from the sheet's original layout images; a), b), c) and e) came out as before, and d), until then open, is now traced completely (a 2:1 multiplexer). The course's Tutorial Plan folder also lists last year's German solution to this sheet (<i>DSTUebung4_2025de_Loesung.pdf</i>, December 2025); it has not been compared with this page yet.</p>
       <p style="margin:0"><b>Session.</b> Thursday 3 Dec, 2nd DS, ${esc(exe.room)}, German group. Material: lecture 5 (layers, cross section), lecture 6 (the pull-up/pull-down recipe, cell layouts, latches) and lecture 7 (W/L and switch resistance).</p></div>
 
     <h2>How to read the layouts</h2>
@@ -815,9 +838,9 @@ function exercise4() {
       <li><b>Function.</b> Read the pull-down (series = AND, parallel = OR) and check that the pull-up is its dual, as in lecture 6's recipe; add the output inverter if there is a second stage.</li>
     </ol>
     ${why4("Context, not on the sheet: the poly lines at the cell edges", "<p>Every layout has a poly line at the left and right edge that crosses no active area. It forms no transistor. In modern processes poly is laid out on a fixed, regular pitch with such dummy lines at the cell borders, because evenly spaced lines print far more precisely in lithography; that is the most likely reason here. For the circuit they can be ignored.</p>")}
-    ${lab("cell4", "the four traced layouts as stick diagrams: pick a cell, flip the inputs")}
+    ${lab("cell4", "the five layouts as stick diagrams: pick a cell, flip the inputs")}
     ${chart("cell4", leg([[2, "net connected to V<sub>DD</sub> (1)"], [1, "net connected to V<sub>SS</sub> (0)"], [0, "<span class=\"key\" style=\"--c:var(--vz-s3)\"></span> poly; a solid gate means the transistor conducts"]]))}
-      <figcaption>Our redrawing of layouts a), b), c) and e): only the poly lines that form transistors, the two diffusion strips cut into the pieces between them, and the contacts (dark squares) with the net each one connects to. Pieces without a contact are series nodes. Same label = same metal net. Hover a gate for its state.</figcaption>
+      <figcaption>Our redrawing of layouts a) to e): only the poly lines that form transistors, the two diffusion strips cut into the pieces between them, and the contacts (dark squares) with the net each one connects to. Pieces without a contact are series nodes. Same label = same metal net. In d), two poly lines are cut between the strips (two pieces, a label above and below), and the two active areas of each type, joined by metal at N, are drawn as one strip. Hover a gate for its state.</figcaption>
     </figure>
 
     ${task("4.1a", "Layout a): two inputs, and the W/L ratio", `<p>Two poly lines cross both active areas. The p-diffusion is 12x high, the n-diffusion 6.7x, and the poly lines are x wide. Derive the circuit and function, and the W/L ratio of the p- and n-channel transistors.</p>`,
@@ -847,16 +870,23 @@ function exercise4() {
       ${ans([["AND2", "Z = A·B: NAND2 (PMOS parallel, NMOS series) + inverter"], ["6", "transistors, 2 stages"]])}`, "sheet task, our solution")}
 
     ${task("4.1d", "Layout d): the wide cell with metal 2", `<p>Twice as wide as the others, ten poly lines, and a second metal layer (magenta) with vias.</p>`,
-      `<p class="muted">Partly traced: what is certain, and what is still open.</p>
-      <p><b>Certain.</b> Only six of the ten poly lines cross active area, in two groups of three (the two edge lines and two lines in the middle carry signals only): <b>12 transistors</b>. In each group:</p>
+      `<p class="muted">Read on 25 Nov from the sheet's original image of this layout (808 × 673 pixels), with the colours separated layer by layer: on its own, the magenta of metal 2 shows four separate nets, which the screen view had blurred together. The pin names are ours (the sheet names no pins).</p>
+      <p><b>Transistors.</b> Six of the ten poly lines cross active area, in two groups of three; the two edge lines and the two lines between the groups form no transistor: <b>12 transistors</b>. Between the groups, metal joins the right-hand diffusion of the left group and the left-hand diffusion of the right group, p and n alike, into one node N. Two of the six lines (3 and 4) are <b>cut</b> between the active areas, so their PMOS and NMOS halves get different signals. Column by column, left to right:</p>
+      <table class="wcw"><thead><tr><th>Poly line</th><th>PMOS gate</th><th>PMOS between</th><th>NMOS gate</th><th>NMOS between</th><th>Role</th></tr></thead><tbody>
+        ${D4.map(r => `<tr><td>line ${r[0]}</td><td data-l="PMOS gate">${r[1]}</td><td data-l="PMOS between">${r[2]}</td><td data-l="NMOS gate">${r[3]}</td><td data-l="NMOS between">${r[4]}</td><td data-l="Role">${r[5]}</td></tr>`).join("")}</tbody></table>
+      <p class="muted">p<sub>1</sub>, n<sub>1</sub>, p<sub>2</sub>, n<sub>2</sub>: diffusion without a contact, the series nodes inside each four-transistor stack.</p>
+      <p><b>Wiring.</b> Metal 1 carries X (a U-shaped strip round the left edge, from both diffusions left of line 1 to the gate of line 2) and N. Metal 2 carries four nets, each from a via to a via:</p>
       <ul>
-        <li>the first line of the left group is an <b>inverter</b> (V<sub>DD</sub> and V<sub>SS</sub> on its right, its output node on its left), and that node drives the next poly line;</li>
-        <li>the next two lines form a <b>clocked inverter</b>: two PMOS in series and two NMOS in series (no contacts between them), the outer pair on the rails, the inner pair at a shared output node N. The poly of the inner line is <b>cut</b> between the active areas, so its PMOS and NMOS gates are two different nets (both taken up into metal 2): in a clocked inverter, the two clock phases C̄ and C;</li>
-        <li>the right group starts with a second stack of the same kind (two PMOS and two NMOS in series, the inner pair at N, the outer pair on the rails) and ends with an inverter that drives the cell's output strip; its gate is reached through metal 2, from node N as far as we could follow it.</li>
+        <li><b>S</b>: from the input pad on line 1 down and along the bottom of the cell to the gate of line 5, so lines 1 and 5 share one input;</li>
+        <li><b>A<sub>2</sub></b>: from the PMOS half of line 3 (through a metal-1 hook over the fifth poly line) across to the NMOS half of line 4;</li>
+        <li><b>A<sub>1</sub></b>: from the NMOS half of line 3, up and along the top of the cell, to the PMOS half of line 4;</li>
+        <li><b>N</b>: from the metal-1 node between the groups to the gate of line 6, the output inverter.</li>
       </ul>
-      <p><b>Open.</b> Two clocked inverters that drive one node with opposite clock phases are a selection: one of them drives N, the other is switched off. If the second one gets the cell's own output back, the cell is a <b>level-sensitive latch</b> (lecture 6's D latch, with clocked inverters in place of the transfer gates and the keeper); if it gets a second data pin, the cell is a <b>2:1 multiplexer</b>. Which one depends on where the metal-2 lines go, and we could not trace them reliably from the screen. To settle in the session, or once the solution is posted.</p>
-      ${why4("Context, not on the sheet: the clocked inverter", "<p>A clocked (tri-state) inverter is an inverter with one more PMOS in series in its pull-up and one more NMOS in its pull-down. The extra pair gets C̄ (PMOS) and C (NMOS): with C = 1 both conduct and the stage inverts; with C = 0 both are off and the output floats, so another stage may drive the node. It does the job of an inverter plus a transfer gate (lecture 6) in one stack, without a separate transfer gate between them. Cutting the poly of the inner pair is exactly what makes the PMOS and NMOS gates two different nets.</p>")}
-      ${ans([["12", "transistors, in two groups of three poly lines"], ["2 stacks onto node N", "the first one a clocked inverter with cut poly"], ["open", "latch or multiplexer: depends on the metal-2 routing"]])}`, "sheet task, partly solved")}
+      <p><b>Function.</b> The pull-up reaches N through lines 2 + 3 (X = 0 and A<sub>2</sub> = 0, i.e. S = 1, A<sub>2</sub> = 0) or through lines 4 + 5 (A<sub>1</sub> = 0 and S = 0). The pull-down reaches N through lines 2 + 3 (X = 1 and A<sub>1</sub> = 1, i.e. S = 0, A<sub>1</sub> = 1) or through lines 4 + 5 (A<sub>2</sub> = 1 and S = 1). So with S = 1, N = ¬A<sub>2</sub>; with S = 0, N = ¬A<sub>1</sub>; and Z = ¬N = <b>S̅·A<sub>1</sub> + S·A<sub>2</sub></b>: a <b>2:1 multiplexer</b>, the function of <a href="digital-circuit-design/exercise.html?n=2#t1.8">task 1.8</a> on sheet 2. Check one row: S = 1, A<sub>1</sub> = 0, A<sub>2</sub> = 1: X = 0; the NMOS pair on lines 4 + 5 (A<sub>2</sub> = 1, S = 1) conducts, N = 0, Z = 1 = A<sub>2</sub>.</p>
+      <p><b>Why we trust the reading without an official solution.</b> The pull-up conducts for S·A̅<sub>2</sub> + S̅·A̅<sub>1</sub>, the pull-down for S·A<sub>2</sub> + S̅·A<sub>1</sub>: in all eight input rows exactly one of the two conducts, so N never floats and never shorts V<sub>DD</sub> to V<sub>SS</sub>. That is the property of every correct static CMOS gate, and a wrongly traced wire would almost always break it. Try all rows in the explorer above (button d).</p>
+      <p><b>Why not a latch.</b> A latch keeps its value through a loop: its own output must come back onto a gate of one of the stacks. Here N only drives line 6, Z drives nothing inside the cell, and the stack gates are S, X = S̅, A<sub>1</sub> and A<sub>2</sub> only, so there is no loop.</p>
+      ${why4("Context, not on the sheet: two tri-state inverters", "<p>A tri-state (clocked) inverter is an inverter with one more PMOS in series in its pull-up and one more NMOS in its pull-down; the extra pair gets an enable and its inverse, and when it is off the output floats so another stage may drive the node. A 2:1 multiplexer is two of them on one node, one enabled by S and one by S̅, plus an output inverter. Layout d) is exactly that netlist with one trick: S and S̅ sit on the continuous poly lines (5 and 2), shared by a PMOS and an NMOS each, while the data lines 3 and 4 are cut, and each data input crosses over in metal 2 from the PMOS of one stack to the NMOS of the other. Sorted by data input: A<sub>2</sub>'s PMOS (line 3) sits in series with the PMOS on X, which is open when S = 1, and its NMOS (line 4) in series with the NMOS on S, also open when S = 1; so A<sub>2</sub> drives N exactly when S = 1, and A<sub>1</sub> exactly when S = 0.</p>")}
+      ${ans([["MUX2", "Z = S̅·A<sub>1</sub> + S·A<sub>2</sub> (2:1 multiplexer)"], ["12", "transistors: select inverter, two tri-state inverters onto N, output inverter"], ["4", "metal-2 nets: S, A<sub>1</sub>, A<sub>2</sub> and N"]])}`, "sheet task, our solution")}
 
     ${task("4.1e", "Layout e): three inputs, two stages", `<p>Four poly lines cross both active areas; inputs on the three left ones.</p>`,
       `<p><b>Pins.</b> Inputs A<sub>1</sub>, A<sub>2</sub>, A<sub>3</sub> on the three left poly lines, the fourth is driven by an internal node X; the right edge strip is the output Z.</p>
@@ -867,13 +897,13 @@ function exercise4() {
 
     <h2>The five cells side by side</h2>
     <div class="tt-wrap"><table class="tt"><tr><th>Layout</th><th>Cell</th><th>Function</th><th>Transistors</th><th>Stages</th></tr>${CNT.map(r => `<tr><td>${r[0]})</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("")}</table></div>
-    <p class="muted">Part d) is only partly traced, see above.</p>
+    <p class="muted">All five are our own readings; none is checked against the chair's solution yet. Stages in d): a data input passes the tri-state stage and the output inverter, S passes the select inverter first.</p>
 
     <h2>Before the session</h2>
     <ul>
       <li>Redraw a) to e) as transistor schematics by hand once, with the pull-up above the pull-down as in lecture 6; the session will most likely do exactly that at the board.</li>
       <li>Reread <a href="digital-circuit-design/lecture.html?n=5">lecture 5</a> (layers, cross section, β = KP · W/L) and <a href="digital-circuit-design/lecture.html?n=6">lecture 6</a> (pull-up/pull-down recipe, the layout slides, the D latch).</li>
-      <li>To settle in the session: what layout d) is (follow the magenta metal-2 lines from the cut poly of the two clocked inverters and from the second one's data input), and whether "characteristic constant" in a) means W/L itself or β = KP · W/L.</li>
+      <li>To check in the session: our reading of d) as a 2:1 multiplexer (the four metal-2 nets, and which pins the chair calls S, A<sub>1</sub> and A<sub>2</sub>), and whether "characteristic constant" in a) means W/L itself or β = KP · W/L.</li>
     </ul>
     ${why4("Context, not on the sheet: what the task trains", "<p>Reading a layout back into a circuit is what layout-versus-schematic checks (LVS) do automatically in every chip flow, and it is a common written-exam task: given a cell, name its transistors, the series and parallel structure and the function. The quickest route is always the same: find the diffusion pieces without contacts (they are the series connections), then read the pull-down network. A cell whose output node drives another poly line in the same cell has two stages, and a non-inverting function (buffer, AND, OR-AND) always does.</p>")}
     <p class="muted">Previous exercise: <a href="digital-circuit-design/exercise.html?n=3">exercise 3</a>. Lectures this sheet rests on: <a href="digital-circuit-design/lecture.html?n=5">5</a>, <a href="digital-circuit-design/lecture.html?n=6">6</a> and, for the W/L part, <a href="digital-circuit-design/lecture.html?n=7">7</a>.</p>`;
