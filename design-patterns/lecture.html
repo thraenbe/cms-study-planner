@@ -1335,11 +1335,342 @@ function lecture5() {
       <li><b>Facade?</b> An object adapter, or proxy, that hides a whole subsystem behind one interface.</li>
       <li><b>Mediator (Broker)?</b> An n-way proxy combined with a bridge: anonymous, dynamically changeable communication; web service brokers; Observer with change manager is Observer plus Mediator.</li>
     </ul>
-    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=4">exercise 4, Architecture Mismatch</a> (planned for 25 Nov; the sheet is not in OPAL yet). Previous: <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a>. Next: <a href="design-patterns/lecture.html?n=6">lecture 6, Role-based Design</a> (24 Nov), the start of part 2. Slides and the learning video #05: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=4">exercise 4, Architecture Mismatch</a> (sheet since 19 Nov, session 25 Nov): adapters for two route providers, a facade for a travel planner, Memento, and a map of how the patterns so far relate. Previous: <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a>. Next: <a href="design-patterns/lecture.html?n=6">lecture 6, Role-based Design</a> (24 Nov), the start of part 2. Slides and the learning video #05: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
 }
 
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
-const LABS = { mvc: initMvc, facets: initFacets, proto: initProto, parts: initParts, deco: initDeco, chain: initChain, cm: initCm, net: initNet, glue: initGlue };
+// ======================= Lecture 6: Role-based Design (59 slides, 24 Nov) =======================
+// Role diagrams: classes and natural types in slot 1 (square corners), role types in slot 2 (rounded, CROM style),
+// compartments as amber-tinted contexts (slot 4). Our own drawings of the slides' figures.
+const RLEG = leg([[1, "class or natural type (the player)"], [2, "role type"], [4, "compartment (context)"]]);
+const rb = (x, y, w, name, sub = "", k = "h", tip = "", h) => ({ x, y, w, h: h || (sub ? 32 : 24), cx: x + w / 2, cy: y + (h || (sub ? 32 : 24)) / 2, name, sub, k, tip });
+const rbSvg = b => `<g class="cls ${b.k}${b.tip ? " pt" : ""}"${b.tip ? ` tabindex="0" data-tip="${esc(b.tip)}"` : ""}><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.k === "h" ? 11 : 3}"/><text class="cn${b.w < 96 ? " sm" : ""}" x="${b.cx}" y="${b.y + (b.sub ? 14 : 16)}" text-anchor="middle">${esc(b.name)}</text>${b.sub ? `<text class="st" x="${b.cx}" y="${b.y + 26}" text-anchor="middle">(${esc(b.sub)})</text>` : ""}</g>`;
+// Point where the line from b's centre towards (tx, ty) leaves b.
+const clipB = (b, tx, ty) => { const dx = tx - b.cx, dy = ty - b.cy, t = Math.min(dx ? b.w / 2 / Math.abs(dx) : 1e9, dy ? b.h / 2 / Math.abs(dy) : 1e9); return [b.cx + dx * t, b.cy + dy * t]; };
+// Role-model edges, straight between two boxes: use (open arrow), assoc (plain), impl (dashed, hollow triangle: role
+// implication), equiv (hollow triangles at both ends), proh (dashed with bars at both ends: role prohibition),
+// fills (solid, filled arrowhead: CROM's fills), map (dashed slot-2 line: role mapping).
+function rEdge(a, b, k, label = "", o = {}) {
+  const p = clipB(a, b.cx, b.cy), q = clipB(b, a.cx, a.cy), ang = Math.atan2(q[1] - p[1], q[0] - p[0]), f = v => (+v).toFixed(1);
+  const tri = (pt, a2, s = 11) => { const l = [pt[0] - s * Math.cos(a2 - 0.45), pt[1] - s * Math.sin(a2 - 0.45)], r = [pt[0] - s * Math.cos(a2 + 0.45), pt[1] - s * Math.sin(a2 + 0.45)];
+    return { d: `M${f(pt[0])},${f(pt[1])} L${f(l[0])},${f(l[1])} L${f(r[0])},${f(r[1])} Z`, open: `M${f(l[0])},${f(l[1])} L${f(pt[0])},${f(pt[1])} L${f(r[0])},${f(r[1])}`, base: [pt[0] - s * 0.9 * Math.cos(a2), pt[1] - s * 0.9 * Math.sin(a2)] }; };
+  let p2 = p, q2 = q, heads = "";
+  if (k === "impl" || k === "equiv" || k === "inh") { const t = tri(q, ang); heads += `<path class="tri" d="${t.d}"/>`; q2 = t.base; }
+  if (k === "equiv") { const t = tri(p, ang + Math.PI); heads += `<path class="tri" d="${t.d}"/>`; p2 = t.base; }
+  if (k === "fills") { const t = tri(q, ang, 9); heads += `<path class="trf" d="${t.d}"/>`; q2 = t.base; }
+  if (k === "use") heads += `<path class="arr" d="${tri(q, ang, 8).open}"/>`;
+  if (k === "proh") { const n = [-Math.sin(ang) * 6, Math.cos(ang) * 6], at = (pt, s) => [pt[0] + s * 7 * Math.cos(ang), pt[1] + s * 7 * Math.sin(ang)];
+    [[at(p, 1)], [at(q, -1)]].forEach(([c]) => { heads += `<path class="ln" d="M${f(c[0] - n[0])},${f(c[1] - n[1])} L${f(c[0] + n[0])},${f(c[1] + n[1])}"/>`; }); }
+  const mid = [(p[0] + q[0]) / 2 + (o.dx || 0), (p[1] + q[1]) / 2 + (o.dy ?? -5)];
+  return `<g class="edge ${k}"><path class="ln${k === "impl" || k === "proh" || k === "map" ? " dash" : ""}" d="M${f(p2[0])},${f(p2[1])} L${f(q2[0])},${f(q2[1])}"/>${heads}${label ? `<text class="el" x="${f(mid[0])}" y="${f(mid[1])}" text-anchor="${o.anchor || "middle"}">${esc(label)}</text>` : ""}</g>`;
+}
+const cmpSvg = (x, y, w, h, name, tip) => `<g class="cmpt pt" tabindex="0" data-tip="${esc(tip)}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/><text class="cn" x="${x + w / 2}" y="${y + 15}" text-anchor="middle">${esc(name)}</text><line class="sep" x1="${x}" x2="${x + w}" y1="${y + 21}" y2="${y + 21}"/></g>`;
+const occ = (b, t) => `<text class="el" x="${b.x + 4}" y="${b.y - 3}">${t}</text>`;
+
+// Slide 10: a design pattern is matched onto an application by role mapping.
+CHARTS.rolemap = narrow => {
+  const W = narrow ? 340 : 600;
+  const sub = rb(narrow ? 14 : 110, 20, narrow ? 136 : 140, "Subject", "", "h", "<b>Subject</b>role type of the Observer pattern: the object whose changes others follow");
+  const obs = rb(narrow ? 190 : 350, 20, narrow ? 136 : 140, "Observer", "", "h", "<b>Observer</b>role type of the Observer pattern: the object that is told about the changes");
+  const sa = rb(narrow ? 6 : 95, 108, narrow ? 152 : 170, "SortingAlgorithm", "", "t", "<b>SortingAlgorithm</b>application class; plays Subject");
+  const ae = rb(narrow ? 182 : 335, 108, narrow ? 152 : 170, "AnimationEngine", "", "t", "<b>AnimationEngine</b>application class; plays Observer");
+  const div = `<line class="axis" x1="0" x2="${W}" y1="80" y2="80"/><text class="zl" x="${W - 4}" y="74" text-anchor="end">design pattern</text><text class="zl" x="${W - 4}" y="96" text-anchor="end">application</text>`;
+  const maps = [[sa, sub], [ae, obs]].map(([c, r]) => rEdge(c, r, "map", "plays", { dx: -6, dy: -14, anchor: "end" })).join("");
+  return `<svg class="dgm" viewBox="0 0 ${W} 142" role="img" aria-label="Role mapping of slide 10. Above the line, the design pattern Observer with the role types Subject and Observer, Subject pointing to Observer. Below the line, the application with the classes SortingAlgorithm and AnimationEngine, SortingAlgorithm pointing to AnimationEngine. Dashed mapping lines say that SortingAlgorithm plays Subject and AnimationEngine plays Observer.">${div}${maps}${rEdge(sub, obs, "use")}${rEdge(sa, ae, "use")}${[sub, obs, sa, ae].map(rbSvg).join("")}</svg>`;
+};
+
+// Slide 16: the class-role model of Figure, six roles stacked on one class, their partner roles outside.
+const FIGR = [
+  ["Predecessor", "FigureChain", "predecessor in a threaded list (chain) of figures", ["Successor", "FigureChain", "the next figure in the chain"]],
+  ["Client", "Graphics", "the figure draws itself through the graphics role model", ["Server", "Graphics", "the graphics side that serves the drawing requests"]],
+  ["Subject", "FigureObserver", "subject of one of the two Observer role models (slide 34: callbacks between clients and figures, and communication among figures)", ["Observer", "FigureObserver", "is informed when the figure changes"]],
+  ["Child", "FigureHierarchy", "child in a figure hierarchy", ["Parent", "FigureHierarchy", "parent in a figure hierarchy, holds the children"]],
+  ["Figure", "FigureHierarchy", "the regular drawing functions", ["Client", "FigureHierarchy", "uses the figure's drawing functions"]],
+  ["Subject", "IntFigObserver", "subject of the other Observer role model", ["Observer", "IntFigObserver", "is informed when the figure changes"]]];
+CHARTS.figroles = narrow => {
+  const W = narrow ? 340 : 600;
+  if (narrow) {
+    const inner = FIGR.map(([n, s, d, p], i) => rb(14 + (i % 2) * 162, 30 + Math.floor(i / 2) * 40, 150, n, s, "h", `<b>${n} (${s})</b>${d}. Partner role: ${p[0]} (${p[1]}).`));
+    return `<svg class="dgm" viewBox="0 0 ${W} 156" role="img" aria-label="Class-role model of slide 16, narrow form: the class Figure with its six role types, Predecessor in FigureChain, Client in Graphics, Subject in FigureObserver, Child and Figure in FigureHierarchy, and Subject in IntFigObserver. The partner roles are named in each tooltip."><g class="cls t"><rect x="4" y="22" width="332" height="130" rx="3"/></g><text class="zl" x="6" y="15">class Figure, its repertoire of six role types</text>${inner.map(rbSvg).join("")}</svg>`;
+  }
+  const inner = FIGR.map(([n, s, d, p], i) => rb(150 + (i % 3) * 102, 88 + Math.floor(i / 3) * 44, 96, n, s, "h", `<b>${n} (${s})</b>${d}. Played by Figure.`));
+  const pos = [[150, 10], [252, 10], [486, 88], [14, 132], [252, 212], [486, 132]];
+  const part = FIGR.map(([, , , p], i) => rb(pos[i][0], pos[i][1], i === 2 || i === 5 || i === 3 ? 100 : 96, p[0], p[1], "h", `<b>${p[0]} (${p[1]})</b>${p[2]}. Played by another object, not by this figure.`));
+  const lines = inner.map((b, i) => rEdge(part[i], b, "assoc")).join("");
+  return `<svg class="dgm" viewBox="0 0 ${W} 250" role="img" aria-label="Class-role model of slide 16: the class Figure carries six role types, Predecessor in the FigureChain role model, Client in Graphics, Subject in FigureObserver, Child and Figure in FigureHierarchy, and Subject in IntFigObserver. Each is connected to its partner role, played by other objects: Successor, Server, Observer, Parent, the Client of FigureHierarchy and the Observer of IntFigObserver."><g class="cls t"><rect x="140" y="78" width="320" height="98" rx="3"/></g><text class="zl" x="140" y="192">class Figure</text>${lines}${[...inner, ...part].map(rbSvg).join("")}</svg>`;
+};
+
+// Slide 17: CROM, the same figure in two compartments; the natural type fills three role types.
+CHARTS.crom = narrow => {
+  const W = narrow ? 340 : 600;
+  const L = narrow ? { c: [4, 20, 332, 136], cl: [14, 56], fi: [226, 56], pa: [14, 116], ch: [226, 116], w: 100 } : { c: [4, 22, 232, 156], cl: [12, 62], fi: [150, 62], pa: [12, 134], ch: [150, 134], w: 76 };
+  const R = narrow ? { c: [4, 214, 332, 76], s: [14, 252], o: [206, 252], w: 120 } : { c: [360, 22, 236, 156], s: [370, 98], o: [510, 98], w: 76 };
+  const fig = rb(narrow ? 130 : 264, narrow ? 172 : 88, narrow ? 80 : 80, "Figure", "", "t", "<b>Figure</b>natural type (a class); it fills the role types Figure and Child of FigureHierarchy and Subject of FigureObserver", 26);
+  const cl = rb(...L.cl, L.w, "Client", "", "h", "<b>Client</b>uses a figure; at most one per figure (0..1)", 26);
+  const fi = rb(...L.fi, L.w, "Figure", "", "h", "<b>Figure (role)</b>the drawable element of the hierarchy", 26);
+  const pa = rb(...L.pa, L.w, "Parent", "", "h", "<b>Parent</b>implies Figure: a parent is also a figure", 26);
+  const ch = rb(...L.ch, L.w, "Child", "", "h", "<b>Child</b>implies Figure: a child is also a figure", 26);
+  const su = rb(...R.s, R.w, "Subject", "", "h", "<b>Subject</b>exactly one per compartment (1..1)", 26);
+  const ob = rb(...R.o, R.w, "Observer", "", "h", "<b>Observer</b>any number (0..*)", 26);
+  const comps = cmpSvg(...L.c, "FigureHierarchy", "<b>FigureHierarchy</b>compartment: the context in which figures are clients, parents, children") + cmpSvg(...R.c, "FigureObserver", "<b>FigureObserver</b>compartment: the context in which a figure is observed");
+  const edges = rEdge(cl, fi, "assoc", "uses") + rEdge(pa, ch, "assoc", "relatesTo") + rEdge(pa, fi, "impl") + rEdge(ch, fi, "impl") + rEdge(su, ob, "assoc", "relatesTo")
+    + rEdge(fig, fi, "fills") + rEdge(fig, ch, "fills") + rEdge(fig, su, "fills");
+  const occs = [[cl, "0..1"], [fi, "0..1"], [pa, "0..1"], [ch, "0..1"], [su, "1..1"], [ob, "0..*"]].map(([b, t]) => occ(b, t)).join("");
+  return `<svg class="dgm" viewBox="0 0 ${W} ${narrow ? 294 : 184}" role="img" aria-label="CROM diagram of slide 17. Compartment FigureHierarchy with the role types Client and Figure, joined by uses, and Parent and Child, joined by relatesTo; Parent and Child each imply the Figure role (dashed arrows with hollow heads); every role there may occur at most once (0..1). Compartment FigureObserver with Subject (exactly one) related to any number of Observers. The natural type Figure, outside both compartments, fills the Figure and Child roles of the hierarchy and the Subject role of the observer compartment.">${comps}${edges}${occs}${[cl, fi, pa, ch, su, ob, fig].map(rbSvg).join("")}${narrow ? "" : `<text class="el" x="302" y="${fig.y + 44}" text-anchor="middle">fills</text>`}</svg>`;
+};
+
+// Slide 24: the ontological properties of the five kinds of types.
+const ONTO = [
+  ["Natural types", 1, 0, "unique", "Person, Company", "exist on their own and stay what they are"],
+  ["Data types", 1, 0, "derived", "Money", "values; identity comes from the value"],
+  ["Role types", -1, 1, "derived", "Consultant, Customer", "played for a while (anti-rigid after Guizzardi et al.), only in a context; identity comes from the player"],
+  ["Compartment types", 1, 1, "unique", "Bank, Transaction", "contexts with their own identity that depend on their participants"],
+  ["Relationship types", 1, 1, "composite", "advises, owns", "identity composed from the two ends"]];
+CHARTS.onto = narrow => {
+  const W = narrow ? 340 : 600, x0 = narrow ? 118 : 150, cw = narrow ? 52 : 74, idw = narrow ? 66 : 84, T = 30, RH = 32, H = T + ONTO.length * RH + 4;
+  const cols = ["rigid", "founded", "identity"], cx = i => i < 2 ? x0 + cw * i + cw / 2 : x0 + cw * 2 + idw / 2;
+  const head = cols.map((c, i) => `<text class="tick" x="${cx(i)}" y="18" text-anchor="middle">${c}</text>`).join("") + (narrow ? "" : `<text class="tick" x="${x0 + cw * 2 + idw + 8}" y="18">example</text>`);
+  const mark = (v, x, y) => v === 1 ? `<circle class="yes" cx="${x}" cy="${y}" r="6"/>` : `<circle class="no" cx="${x}" cy="${y}" r="5.5"/>${v === -1 ? `<text class="note" x="${x + 9}" y="${y - 2}">anti</text>` : ""}`;
+  const rows = ONTO.map(([n, r, fd, id, exm, d], i) => { const y = T + i * RH, cy = y + RH / 2;
+    return `<g class="pt orow${r === -1 ? " role" : ""}" tabindex="0" data-tip="${esc(`<b>${n}</b>rigid: ${r === 1 ? "yes" : "no (anti-rigid)"} · founded: ${fd ? "yes" : "no"} · identity: ${id}<br>${d}; e.g. ${exm}`)}"><rect class="bg" x="0" y="${y + 1}" width="${W}" height="${RH - 2}" rx="5"/>
+      <text class="lbl" x="8" y="${cy + 4}">${n}</text>${mark(r, cx(0), cy)}${mark(fd ? 1 : 0, cx(1), cy)}<text class="op" x="${cx(2)}" y="${cy + 4}" text-anchor="middle">${id}</text>${narrow ? "" : `<text class="op" x="${x0 + cw * 2 + idw + 8}" y="${cy + 4}">${exm}</text>`}</g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Table of slide 24 as a grid. Natural types (Person, Company): rigid, not founded, unique identity. Data types (Money): rigid, not founded, derived identity. Role types (Consultant, Customer): not rigid, anti-rigid after Guizzardi, founded, derived identity. Compartment types (Bank, Transaction): rigid, founded, unique identity. Relationship types (advises, owns): rigid, founded, composite identity.">${head}${rows}</svg>`;
+};
+
+// Slides 36–37: the three steps of role-based design inside the MDA chain.
+CHARTS.steps = narrow => {
+  const W = narrow ? 340 : 600;
+  const tips = ["<b>Requirements model</b>where the collaborations come from (scenarios, CRC cards)", "<b>Step 1, role modelling</b>one slim role model per collaboration, all roles kept distinct, role constraints found", "<b>Step 2, merging</b>role models are composed; new constraints between roles of different models", "<b>Step 3, mapping</b>roles are merged into classes, respecting the constraints; the same role models allow several class models", "<b>Code</b>the class model is implemented as usual"];
+  let bx, extra = "";
+  if (!narrow) {
+    const y = 50, w = 98, g = 27;
+    bx = [rb(0, y, w, "Requirements", "", "g", tips[0], 32), rb(w + g, y, w, "Role models", "step 1", "h", tips[1]), rb(2 * (w + g), y, w, "Merged models", "step 2", "h", tips[2]),
+      rb(3 * (w + g), y - 28, w, "Class model A", "step 3", "t", tips[3]), rb(3 * (w + g), y + 36, w, "Class model B", "step 3", "t", tips[3]), rb(4 * (w + g), y, w, "Code", "", "g", tips[4], 32)];
+    extra = `<rect class="hl" x="${w + g - 8}" y="16" width="${3 * w + 2 * g + 16}" height="${y + 36 + 32 + 8 - 16}" rx="8"/><text class="zl" x="${w + g}" y="11">not in standard MDA</text>`
+      + rEdge(bx[0], bx[1], "use") + rEdge(bx[1], bx[2], "use") + rEdge(bx[2], bx[3], "use") + rEdge(bx[2], bx[4], "use") + rEdge(bx[3], bx[5], "use") + rEdge(bx[4], bx[5], "use");
+    return `<svg class="dgm" viewBox="0 0 ${W} 128" role="img" aria-label="Flow of slides 36 and 37: requirements model, step 1 role modelling to role models, step 2 merging to merged role models, step 3 mapping to a class model, then code. The same merged role models can be mapped to several class models, A and B. The role modelling, merging and mapping steps are marked as not part of standard MDA.">${extra}${bx.map(rbSvg).join("")}</svg>`;
+  }
+  const w = 150, x = 95, gy = 58;
+  bx = [rb(x, 4, w, "Requirements", "", "g", tips[0], 32), rb(x, 4 + gy, w, "Role models", "step 1", "h", tips[1]), rb(x, 4 + 2 * gy, w, "Merged role models", "step 2", "h", tips[2]),
+    rb(10, 4 + 3 * gy, 150, "Class model A", "step 3", "t", tips[3]), rb(180, 4 + 3 * gy, 150, "Class model B", "step 3", "t", tips[3]), rb(x, 4 + 4 * gy, w, "Code", "", "g", tips[4], 32)];
+  extra = `<rect class="hl" x="${x - 8}" y="${4 + gy - 8}" width="${w + 16}" height="${gy + 48}" rx="8"/><text class="zl" x="${x + w + 14}" y="${4 + gy + 34}">not in</text><text class="zl" x="${x + w + 14}" y="${4 + gy + 48}">standard MDA</text>`
+    + rEdge(bx[0], bx[1], "use") + rEdge(bx[1], bx[2], "use") + rEdge(bx[2], bx[3], "use") + rEdge(bx[2], bx[4], "use") + rEdge(bx[3], bx[5], "use") + rEdge(bx[4], bx[5], "use");
+  return `<svg class="dgm" viewBox="0 0 ${W} ${4 * gy + 38}" role="img" aria-label="Flow of slides 36 and 37 from top to bottom: requirements, step 1 role models, step 2 merged role models, step 3 mapping to class model A or class model B, then code. Role modelling, merging and mapping are not part of standard MDA.">${extra}${bx.map(rbSvg).join("")}</svg>`;
+};
+
+// Context, not on the slides: how many classes the actor example of slides 54–57 needs, three ways.
+const ACT = [["one class per combination", "3 × 3 × 3 × 3", 81], ["facets (roots + variants)", "4 dimension roots + 12 variants", 16], ["roles (Person + role types)", "1 natural type + 12 role types", 13]];
+CHARTS.actors = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 8 : 200, R = narrow ? 44 : 60, T = 6, RH = narrow ? 46 : 34, H = T + ACT.length * RH + 22, max = 90, X = v => L + v / max * (W - L - R);
+  const ticks = [0, 20, 40, 60, 80].map(v => `<line class="grid" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - 20}"/><text class="tick" x="${X(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = ACT.map(([n, f, v], i) => { const y = T + i * RH + (narrow ? 20 : 8), bh = 16;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${n}</b>${f} = ${v} classes`)}">${narrow ? `<text class="op" x="${L}" y="${y - 5}">${n}</text>` : `<text class="op" x="${L - 8}" y="${y + 12}" text-anchor="end">${n}</text>`}<path class="bar s1" d="${hbar(X(0), X(v), y, bh)}"/><text class="lbl" x="${X(v) + 6}" y="${y + 12}">${v}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart, our arithmetic for the actor example with four dimensions of three variants each (profession, age, media, genre): one class per combination needs 81 classes, a facet model 16 (four dimension roots and twelve variants), a role model 13 (one natural type Person and twelve role types).">${ticks}<line class="axis" x1="${X(0)}" x2="${X(0)}" y1="${T}" y2="${H - 20}"/>${rows}</svg>`;
+};
+
+// Explorer 1: check role constraints on a set of objects (slides 19–23).
+const RCM = {
+  game: { t: "Game", s: "slide 22", roles: ["Winner", "Loser", "Player"], objs: [["Ann", "Person"], ["Ben", "Person"], ["Cem", "Person"], ["Dora", "Person"]],
+    init: { Ann: ["Winner", "Player"], Ben: ["Loser", "Player"], Cem: ["Loser", "Player"], Dora: [] },
+    cons: [{ k: "occ", r: "Winner", min: 1, max: 1 }, { k: "occ", r: "Player", min: 1, max: Infinity }, { k: "proh", a: "Winner", b: "Loser" }, { k: "impl", a: "Winner", b: "Player" }, { k: "impl", a: "Loser", b: "Player" }] },
+  trans: { t: "Transaction", s: "slide 23", roles: ["Source", "Target"], objs: [["acc 1", "Account"], ["acc 2", "Account"], ["acc 3", "Account"]],
+    init: { "acc 1": ["Source"], "acc 2": ["Target"], "acc 3": [] },
+    cons: [{ k: "occ", r: "Source", min: 1, max: 1 }, { k: "occ", r: "Target", min: 1, max: 1 }, { k: "group", n: "Participants", rs: ["Source", "Target"], min: 1, max: 1 }] },
+  fig: { t: "Figure editor", s: "slides 20–21", roles: ["Figure", "Subject", "Parent", "Child"], objs: [["drawing", "Figure"], ["group", "Figure"], ["rect", "Figure"], ["line", "Figure"]],
+    init: { drawing: ["Figure", "Subject", "Parent"], group: ["Figure", "Subject", "Parent", "Child"], rect: ["Figure", "Subject", "Child"], line: ["Figure", "Child"] },
+    cons: [{ k: "equiv", a: "Figure", b: "Subject" }, { k: "impl", a: "Parent", b: "Figure" }, { k: "impl", a: "Child", b: "Figure" }] },
+  bank: { t: "Bank", s: "slide 19", roles: ["Customer", "Checking", "Savings"], objs: [["Anna", "Person"], ["ACME", "Company"], ["acc 7", "Account"], ["acc 8", "Account"]],
+    init: { Anna: ["Customer"], ACME: ["Customer"], "acc 7": ["Checking"], "acc 8": ["Checking", "Savings"] },
+    cons: [{ k: "fills", r: "Customer", ts: ["Person", "Company"] }, { k: "fills", r: "Checking", ts: ["Account"] }, { k: "fills", r: "Savings", ts: ["Account"] }, { k: "group", n: "BankAccounts", rs: ["Checking", "Savings"], min: 1, max: 1 }] } };
+const rng = (a, b) => `${a}..${b === Infinity ? "*" : b}`;
+function rcCheck(M, P) {
+  const plays = (o, r) => P[o].has(r), names = M.objs.map(o => o[0]), type = Object.fromEntries(M.objs);
+  return M.cons.map(c => {
+    if (c.k === "occ") { const n = names.filter(o => plays(o, c.r)).length; return { lab: `${c.r}: ${rng(c.min, c.max)} per compartment`, kind: "role occurrence", ok: n >= c.min && n <= c.max, why: `${c.r} is played ${n} time${n === 1 ? "" : "s"}` }; }
+    if (c.k === "proh") { const bad = names.filter(o => plays(o, c.a) && plays(o, c.b)); return { lab: `no object plays ${c.a} and ${c.b}`, kind: "role prohibition", ok: !bad.length, why: bad.length ? `${bad.join(", ")} play${bad.length === 1 ? "s" : ""} both` : "" }; }
+    if (c.k === "impl") { const bad = names.filter(o => plays(o, c.a) && !plays(o, c.b)); return { lab: `whoever plays ${c.a} also plays ${c.b}`, kind: "role implication", ok: !bad.length, why: bad.length ? `${bad.join(", ")} play${bad.length === 1 ? "s" : ""} ${c.a} without ${c.b}` : "" }; }
+    if (c.k === "equiv") { const bad = names.filter(o => plays(o, c.a) !== plays(o, c.b)); return { lab: `${c.a} and ${c.b} always together`, kind: "role equivalence", ok: !bad.length, why: bad.length ? `${bad.join(", ")} play${bad.length === 1 ? "s" : ""} only one of them` : "" }; }
+    if (c.k === "group") { const bad = names.filter(o => { const n = c.rs.filter(r => plays(o, r)).length; return n && (n < c.min || n > c.max); }); return { lab: `${c.n} (${rng(c.min, c.max)}): a player plays ${c.min === c.max ? `exactly ${c.min}` : rng(c.min, c.max)} of ${c.rs.join(", ")}`, kind: "role group", ok: !bad.length, why: bad.length ? `${bad.join(", ")} play${bad.length === 1 ? "s" : ""} more than allowed` : "" }; }
+    if (c.k === "fills") { const bad = names.filter(o => plays(o, c.r) && !c.ts.includes(type[o])); return { lab: `only ${c.ts.join(" or ")} may play ${c.r}`, kind: "fills (playership)", ok: !bad.length, why: bad.length ? `${bad.map(o => `${o} is a ${type[o]}`).join(", ")}` : "" }; }
+  });
+}
+function initRc(body) {
+  let mk = "game", P;
+  const reset = () => { const M = RCM[mk]; P = Object.fromEntries(M.objs.map(([o]) => [o, new Set(M.init[o])])); };
+  const render = (focus) => {
+    const M = RCM[mk], res = rcCheck(M, P), bad = res.filter(r => !r.ok).length;
+    body.innerHTML = `<p class="lab-note">Pick a role model from the slides, then tick which roles each object plays inside one compartment. Every constraint is checked at once. Some models start with a violation to repair.</p>
+      <div class="presets" role="group" aria-label="Role model">${Object.entries(RCM).map(([k, v]) => `<button class="preset" data-m="${k}" aria-pressed="${k === mk}">${v.t} <span class="muted">${v.s}</span></button>`).join("")}<button class="preset" data-reset>Reset</button></div>
+      <div class="tt-wrap"><table class="tt rcg"><tr><th>object</th>${M.roles.map(r => `<th>${r}</th>`).join("")}</tr>${M.objs.map(([o, t]) => `<tr><td class="on">${esc(o)} <span class="muted">${t}</span></td>${M.roles.map(r => `<td><input type="checkbox" data-o="${esc(o)}" data-r="${r}" aria-label="${esc(o)} plays ${r}" ${P[o].has(r) ? "checked" : ""}></td>`).join("")}</tr>`).join("")}</table></div>
+      <p class="rc-sum">${bad ? flag("bad", `${bad} of ${res.length} constraints violated`) : flag("ok", `all ${res.length} constraints hold`)}</p>
+      <ul class="glue rc">${res.map(r => `<li class="${r.ok ? "" : "no"}"><b>${r.ok ? "✓" : "⚠"} ${esc(r.lab)}</b><span class="pts">${r.kind}</span>${r.ok ? "" : `<span>${esc(r.why)}</span>`}</li>`).join("")}</ul>`;
+    body.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => { mk = b.dataset.m; reset(); render(`[data-m="${mk}"]`); }));
+    body.querySelector("[data-reset]").addEventListener("click", () => { reset(); render("[data-reset]"); });
+    body.querySelectorAll("input[data-o]").forEach(el => el.addEventListener("change", () => { const s = P[el.dataset.o]; el.checked ? s.add(el.dataset.r) : s.delete(el.dataset.r); render(`input[data-o="${el.dataset.o}"][data-r="${el.dataset.r}"]`); }));
+    if (focus) body.querySelector(focus)?.focus();
+  };
+  reset(); render();
+}
+
+// Explorer 2: six ways to implement the six roles of a figure (slides 41–47), compared on the same questions.
+const IMPL = [
+  { k: "if", t: "Interfaces", s: "slide 42", objs: "1", code: "written by hand in Figure for every role interface", rt: "no: the class is fixed at compile time", twice: "no", id: "one object: no identity problem", deck: "the code for the interfaces must be written by hand" },
+  { k: "mi", t: "Multiple inheritance", s: "slide 43", objs: "1", code: "inherited from role classes, written once", rt: "no", twice: "no: a class inherits a role class only once", id: "one object", deck: "two layers of classes, role classes and standard classes; open problem: the context" },
+  { k: "mx", t: "Mixins", s: "slide 44", objs: "1", code: "inherited from mixins (CLOS, Scala), written once", rt: "no: mixed in when the class is defined", twice: "yes: features are renamed when a mixin is inherited a second time", id: "one object", deck: "a role type is like a mixin class; role code can be inherited" },
+  { k: "mb", t: "Multi-bridge, role objects", s: "slide 45", objs: "1 core + 6 role objects = 7", code: "in one role class per role type", rt: "yes: add or drop a role object", twice: "yes: two role objects of the same type", id: "several objects for one logical figure: object schizophrenia unless identity is managed (Role Object pattern, lecture 8)", deck: "a core object aggregates all role objects; Bridge and Multi-Bridge are typical role implementations" },
+  { k: "dc", t: "Wrappers (Decorator)", s: "slide 46", objs: "1 core + 1 per wrapped role", code: "in the wrapper, around the core's methods (input or output filter)", rt: "yes: roles can be stacked at run time", twice: "yes", id: "the wrapper is not the core: object schizophrenia again", deck: "the wrapper intercepts control flow into and out of a method or class" },
+  { k: "rl", t: "Role language", s: "slide 47", objs: "managed by the language run time", code: "role classes inside contexts (teams, compartments)", rt: "yes, and roles are bound to contexts", twice: "yes", id: "handled by the language", deck: "ObjectTeams/J, SCROLL for Scala, Contexts.jl for Julia" }];
+const RN = [["Figure", "FH"], ["Child", "FH"], ["Client", "Gr"], ["Subject", "FO"], ["Pred.", "FC"], ["Subject", "IFO"]];
+function implSvg(k) {
+  const W = 360, H = 164;
+  let out = "", note = "";
+  if (k === "mx") {
+    const rs = RN.map(([n, s], i) => rb(2 + i * 60, 14, 46, n, s, "g", "", 32)), f = rb(250, 112, 100, "Figure", "", "t", "", 26);
+    out = rs.slice(1).map((r, i) => rEdge(r, rs[i], "use")).join("") + rEdge(f, rs[5], "inh") + rs.map(rbSvg).join("") + rbSvg(f);
+    note = "a linear chain of mixins: each one's super is the mixin before it";
+  } else if (k === "dc") {
+    out = RN.slice(0, 3).map(([n, s], i) => `<g class="cls h"><rect x="${20 + i * 24}" y="${6 + i * 20}" width="${320 - i * 48}" height="${136 - i * 36}" rx="10"/><text class="st" x="${28 + i * 24}" y="${19 + i * 20}">${n} (${s}) wrapper</text></g>`).join("")
+      + rbSvg(rb(130, 74, 100, "Figure (core)", "", "t", "", 24));
+    note = "every call passes each wrapper on the way in and out";
+  } else {
+    const f = rb(130, 112, 100, k === "mb" ? "Figure (core)" : "Figure", "", "t", "", 26), rs = RN.map(([n, s], i) => rb(4 + i * 59, 14, 55, n, s, k === "rl" || k === "mb" ? "h" : "g", "", 32));
+    out = rs.map(r => rEdge(f, r, { if: "impl", mi: "inh", rl: "fills", mb: "use" }[k])).join("") + rs.map(rbSvg).join("") + rbSvg(f);
+    note = { if: "one «interface» per role, all implemented by Figure", mi: "one «role class» per role, all inherited by Figure", rl: "Figure fills role types that live in their contexts", mb: "one role object per role; the core holds them all" }[k];
+  }
+  return `<svg class="dgm implsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Sketch of the ${IMPL.find(x => x.k === k).t.toLowerCase()} implementation of the figure's six roles: ${esc(note)}">${out}<text class="note" x="4" y="${H - 6}">${esc(note)}</text></svg>`;
+}
+function initImpl(body) {
+  let k = "if";
+  const render = focus => {
+    const x = IMPL.find(i => i.k === k);
+    body.innerHTML = `<p class="lab-note">One figure with its six roles (slide 42's list), implemented in the six ways of slides 41–47. The last line of each read-out is what the deck says; the other lines are our own reasoning on top of it.</p>
+      <div class="presets" role="group" aria-label="Implementation technique">${IMPL.map(i => `<button class="preset" data-k="${i.k}" aria-pressed="${i.k === k}">${i.t}</button>`).join("")}</div>
+      <div class="viz mini">${implSvg(k)}</div>
+      <dl class="ro"><dt>objects at run time</dt><dd>${x.objs}</dd><dt>role code lives</dt><dd>${x.code}</dd><dt>add or drop a role at run time</dt><dd>${x.rt}</dd><dt>same role type twice</dt><dd>${x.twice}</dd><dt>identity</dt><dd>${x.id}</dd><dt>the deck (${x.s})</dt><dd>${x.deck}</dd></dl>`;
+    body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { k = b.dataset.k; render(`[data-k="${k}"]`); }));
+    if (focus) body.querySelector(focus)?.focus();
+  };
+  render();
+}
+
+function lecture6() {
+  return `${head(l)}
+    <p class="lead">Part 2 of the course starts here. Part 1 described patterns as classes: template and hook classes, wrappers, glue. Lecture 6 replaces the class by a finer unit, the <b>role</b>: the part an object plays in one collaboration. A design pattern then becomes a set of roles that the classes of an application take on, and a class becomes a bundle of roles from several patterns. The deck builds the vocabulary: roles and role types, compartments (the CROM notation from Dresden), role constraints, how role models are composed and mapped to classes, and how roles can be implemented in an ordinary language. Lectures 7 and 8 use it for design patterns as role models and the Role Object pattern. Written from the 59-slide deck (the chair's chapter 10, <i>Role-Based Design: A Concept for Understanding Design Patterns and Frameworks</i>); slide numbers refer to it.</p>
+
+    <h2>Reading and goals (slides 4–8)</h2>
+    <p>To be read: Riehle and Gross, <i>Role Model Based Framework Design and Integration</i> (OOPSLA 1998), and Liping Zhao, <i>Designing Application Domain Models with Roles</i> (MDAFA workshops, LNCS 3599, 2005). For CROM: the two SLE papers by Kühn et al., a metamodel family for role-based modelling and programming languages (2014) and a combined formal model for relational, context-dependent roles (2015). Background: Reenskaug's OOram book <i>Working with Objects</i>, which introduced role models (the slide calls it a wisdom book for design), Woolf's Object Recursion pattern and Zimmer's <i>Relationships Between Design Patterns</i>. The goals on slide 8 reach beyond this lecture: roles versus objects and role types versus classes, role merging and mapping, implementing roles, composing role models, design patterns and composite patterns as role models, the ontological view of role types (not rigid, founded), and layered frameworks as role models. This deck covers the first half; the rest comes in lectures 7 and 8.</p>
+
+    <h2>6.1 Why roles (slide 10)</h2>
+    <p>The GOF book does not use the word, but design patterns rely on roles. To find a pattern in an application, some application classes must <b>play the roles</b> of the pattern's classes. Every class in a pattern diagram is therefore a <b>role type</b>, and the matched application class plays it. Slide 10's example: a sorting algorithm that is animated on screen contains the Observer pattern. SortingAlgorithm plays Subject, AnimationEngine plays Observer. This matching is called <b>role mapping</b>.</p>
+    ${chart("rolemap", leg([[2, "role types of the pattern"], [1, "classes of the application"]]))}<figcaption>Slide 10 redrawn. The pattern and the application are separate models; the dashed lines are the role mapping.</figcaption></figure>
+    ${why("Context, not on the slides: why this matters for the rest of the course", "<p>With classes as the unit, Observer in a real system looks like a few extra methods scattered over two unrelated classes, which is hard to see and hard to check. With roles, the pattern is a separate, small model, and its occurrence in the system is a mapping you can write down and verify. The same SortingAlgorithm class may play Subject in Observer and, say, the client in Strategy at the same time; neither pattern needs to know about the other. That is the basis for composite patterns (lecture 7) and for layered frameworks (lecture 8 onwards).</p>")}
+
+    <h2>What roles and role types are (slides 11–14)</h2>
+    <p>A <b>role</b> is a <b>dynamic view</b> onto an object (slide 11). The view can change at run time, and each role belongs to one area of concern. Objects <b>play</b> roles: the object is the <b>player</b>. Playing a role means entering a state, so the active roles of an object correspond to its states. Slide 12 adds the service view: a role is a <b>service of an object in a context</b>. Roles are connected to each other the way services are connected to client requests, and they are <b>founded</b>: a role only exists inside a collaboration, and the roles of one collaboration form a <b>role model</b>. Reenskaug: a role model captures one area of concern. Slide 12's person is Employee, Father, Cyclist, Professor, pop fan and soccer player at once. Each of these roles has a partner, such as the employer or the child.</p>
+    <p>A <b>role type</b>, also called an <b>ability</b>, is the <b>service type</b> of an object (slide 13): a dynamic type that an object has for a while. It is part of the protocol of a class, and it is founded relative to its collaboration partner. A role model is then a set of object collaborations described by a set of role types, a constraint specification for the classes and collaborations that will realise it. Slide 14 sums up three aspects that overlap:</p>
+    <ul class="cmp three">
+      <li><b>Relational</b><span class="v">roles are the named places of a relationship: in Person –driver– Car, "driver" is a role</span></li>
+      <li><b>Behavioural</b><span class="v">roles adapt the behaviour of the playing object</span></li>
+      <li><b>Context-dependent</b><span class="v">roles capture the properties an object has only in one context</span></li>
+    </ul>
+    ${ex("Worked example: one person, several role models", `<p>Our example in the slide's style. Anna is a <code>Person</code> (her class never changes). On Monday morning she plays <b>Employee</b> in the role model <i>Employment</i> (partner: Employer), <b>Tester</b> in <i>Team 1</i> and <b>Reviewer</b> in <i>Team 2</i> (slide 18's example), and in the evening <b>Cyclist</b> in <i>Traffic</i> (partner: CarDriver). Four role models, four areas of concern, each with its own partner and protocol. The role <b>Tester</b> has a method <code>check()</code> and state that only makes sense inside Team 1. When Anna leaves Team 1 she drops the role and its state, but stays the same person with the same identity. A class hierarchy cannot express this. <code>Tester extends Person</code> would force Anna's object to change class when she leaves the team, and Tester and Reviewer at once would need a class <code>TesterReviewer</code>.</p>`)}
+
+    <h2>Class-role models (slides 15–16)</h2>
+    <p>A <b>class-role-type diagram</b> (or class-role model) puts the abilities, drawn as ovals, on top of the class rectangles (slide 15). The set of role types of a class is its <b>repertoire</b>, and any number of them can be active at a time. Role types are qualified by their role model in brackets. Slide 16 applies this to a figure in a figure editor: one figure plays roles in several simpler role models, and the class-role model is their composition.</p>
+    ${chart("figroles", RLEG)}<figcaption>Slide 16 redrawn as six role types on one class, with their partner roles outside, played by other objects. Hover or focus a role for its meaning. The narrow form drops the partners and names them in the tooltip.</figcaption></figure>
+
+    <h2>Compartments and CROM (slides 17–19)</h2>
+    <p>The <b>Compartment Role Object Model</b> (CROM, Kühn et al.) makes the context explicit (slide 17). A <b>compartment</b> is the context in which roles are played. The <b>fills</b> relation adds a role type to the repertoire of a class, which CROM calls a natural type. The compartment can have state and behaviour of its own (slide 18). In a <i>Development Team</i> with a coffee count and a <code>meet()</code> method, a Person can be Tester (<code>check()</code>), Reviewer (<code>accept()</code>) or Programmer (<code>code()</code>). One object can play roles in different compartments at the same time: Anna is tester in team 1 and reviewer in team 2, and John is tester in team 1 and programmer in team 3.</p>
+    ${chart("crom", RLEG)}<figcaption>Slide 17 redrawn: the figure editor in CROM. The numbers above the roles are their occurrence constraints; dashed arrows with hollow heads are role implications; solid arrows with filled heads are <i>fills</i>.</figcaption></figure>
+    <p>Slide 19 shows why constraints are needed. In a <i>Bank</i> compartment, persons or companies can be customers, and the same person can be a customer at several banks. An Account plays a checking or a savings account, and a customer owns any number of them. Three questions arise: which roles may talk to which, how many of a role may occur (<b>multiplicity constraints</b>), and who may play a role at all (<b>playership constraints</b>: only persons and companies fill Customer).</p>
+
+    <h2>Role constraints (slides 20–23)</h2>
+    <p>Riehle and Gross annotate role models with arrows between roles (slides 20–21). CROM keeps them and adds counting (slides 22–23):</p>
+    <div class="tt-wrap"><table class="tt rcon"><tr><th>Constraint</th><th>Notation</th><th>Meaning</th><th>Slide example</th></tr>
+      <tr><td>role-use</td><td>a → b</td><td>a required role uses a provided role</td><td>FigureClient uses Figure</td></tr>
+      <tr><td>role-association</td><td>a — b</td><td>the player of a knows a player of b and vice versa</td><td>Parent 1..* — Child, RootClient 0..* — Root</td></tr>
+      <tr><td>role-implication</td><td>a &lt; b</td><td>the player of a must also play b</td><td>Parent, Child imply Figure; Root implies Parent</td></tr>
+      <tr><td>role-prohibition</td><td>a |—| b</td><td>the player of a must not play b, and vice versa</td><td>Parent and Child (slide 20); Winner and Loser (slide 22)</td></tr>
+      <tr><td>role-equivalence</td><td>a &lt;&gt; b</td><td>a implies b and b implies a</td><td>Subject (FigureObserver) and Figure (FigureHierarchy)</td></tr>
+      <tr><td>role-implication inheritance</td><td>a ◀ b, filled</td><td>an implication whose source can be mapped to a subclass of the target</td><td>Retailer ▸ Customer in Retail, mapped as IndirectBusinessPartner extends BusinessPartner</td></tr>
+      <tr><td>role occurrence</td><td>1..1 over a role</td><td>how many role instances may occur in one compartment</td><td>one Winner, any number of Losers, at least one Player</td></tr>
+      <tr><td>role group</td><td>(1..1) around roles</td><td>how many roles of a set one player may play</td><td>Participants (1..1) over Source and Target: an account is source or target, never both</td></tr></table></div>
+    <p>The <b>role group</b> (slide 23) is the generalisation: a group with a cardinality restricts how many of its role types one player may play, and with (1..1) it expresses the prohibition of Riehle. The transaction with a <i>Participants (1..1)</i> group around Source and Target, filled by Account, says the same as Source and Target each occurring once, with a prohibition between them. The checker below runs all of these.</p>
+    ${lab("rc", "role constraints, checked live")}
+    ${why("Context, not on the slides: the Parent–Child prohibition", "<p>Slide 20 draws a prohibition between Parent and Child, yet a nested group in a drawing is a child of the drawing and a parent of its own members. The reading that resolves it: constraints hold per collaboration, that is per instance of the role model or compartment. Inside one parent–child pair no object is both parent and child, so no figure is its own parent. Across pairs, the same object may well be a child in one and a parent in the other. CROM makes that explicit by evaluating constraints inside a compartment instance, which is why the checker treats its table as one compartment and leaves the Parent–Child prohibition out of the figure model.</p>")}
+
+    <h2>Ontological foundations (slide 24)</h2>
+    <p>Three properties separate the kinds of types. A type is <b>rigid</b> if its instances keep it until they die. It is <b>founded</b> (dependent) if its instances depend on the existence of other instances. And <b>identity</b> is either unique, derived from something else, or composed from others. Role types are the only kind that is not rigid, and Guizzardi et al. classify them as <b>anti-rigid</b>: every person who is a customer could stop being one without ceasing to exist.</p>
+    ${chart("onto", leg([[1, "yes", "dot"], ["g", "no", "ring"]]))}<figcaption>Slide 24's table as a grid. Hover or focus a row for the examples and our one-line reading.</figcaption></figure>
+    ${tbl(["Kind of type", "Rigid", "Founded", "Identity", "Example"], ONTO.map(([n, r, fd, id, exm]) => [n, r === 1 ? "yes" : "no (anti-rigid)", fd ? "yes" : "no", id, exm]))}
+    ${why("Context, not on the slides: the test that tells a role from a class", "<p>Two questions decide whether a concept should be a class or a role. Can an instance stop being it and still exist (not rigid)? Does it need a partner or a context to make sense (founded)? Student, Customer, Driver and Tester answer yes twice, so they are role types. Person, Account and Car answer no twice, so they are natural types. Modelling a role type as a subclass of its player (<code>Student extends Person</code>) is the classic modelling error this rules out: the object would have to change its class on graduation. An oral exam question on this lecture would ask for exactly this kind of justification.</p>")}
+
+    <h2>Developing role models (slides 25–26)</h2>
+    <p>The central question when modelling (slide 25): which role does my object play in this context? Equivalently, which responsibility does it have, or which state is it in? With CRC cards the answers group the responsibilities on a card, and each group is a role. A role model specifies the roles of objects in one scenario: keep it slim, and start another role model for a new scenario. <b>Role-based design</b> (slide 26) is collaboration-based design. It starts from an analysis of the collaborations, every partner of a collaboration becomes a role of some object, and the role characterises the protocol of the object in that collaboration. The benefits: roles split a class into smaller pieces, emphasise its context-dependent parts and separate concerns (every role type is one concern), and role models can be reused independently of classes. Hence the idea of the deck: develop with role models, not with classes.</p>
+    ${ex("Worked example: from a CRC card to role models", `<p>Our example. A CRC card for <code>Figure</code> in an editor lists: draw itself, compute its bounding box, hold its sub-figures, know its container, notify views on change, forward unhandled clicks to its container. Grouped by collaboration partner: <i>draw, bounding box</i> go to Graphics (role Client of Graphics); <i>hold sub-figures, know container</i> go to the figure hierarchy (roles Parent and Child); <i>notify views</i> goes to an Observer role model (role Subject); <i>forward clicks</i> goes to a chain (role Predecessor). Four groups, four slim role models, and the class Figure is what remains when they are merged. Slide 16 is this result.</p>`)}
+
+    <h2>6.2 Composing role models (slides 27–34)</h2>
+    <p>Slides 28–30 grow a business application. Persons play BusinessContact in a <i>Contact</i> role model and Customer in a <i>Customer</i> role model, each used by an application client. More role models follow: Retail, Debitor, Investor, each with its own customer-like role. The role models are joined by constraints: the client of the Customer role model uses the customer role, Customer implies BusinessContact, and a Retailer must also play Customer, since retailers are customers of banks. Slide 30 then <b>merges</b> the Customer roles of Customer, Retail, Debitor and Investor into one, and adds Guarantor and Employee. A Guarantor never plays Customer (a prohibition).</p>
+    <p>Merging role models gives <b>partial class diagrams</b> (slides 32–33). Classes combine role types: roles are dynamic, classes are static, and a class groups roles to form objects. A class model is composed of role models, each expressing one aspect of it. The sub-role-models of a composed role model are called its <b>dimensions</b>. Role types may be left <b>open</b> (dangling) for later composition, so not every role is assigned to a class yet. Slide 33 shows the figure editor this way: the classes Figure, CompositeFigure, RectangleFigure, RootFigure, ClassFigure and Graphics, with some client roles still open. Slide 34 names the role models inside it: <b>Composite</b> (composite figures with a root figure, rectangles and class figures), <b>Chain of Responsibility</b> (requests passed up the hierarchy until one figure handles them), and <b>two Observers</b> (callbacks between clients and figures, and communication among figures).</p>
+    ${why("Context, not on the slides: a class diagram as a superposition of patterns", "<p>Read slide 33 the other way round and it is a pattern-mining recipe: given a class diagram, peel off the role models one by one (Composite here, Chain there, two Observers) until nothing is left. Each peeled-off role model is a pattern instance. Slide 8 lists composite design patterns and how to mine them among the goals that lectures 7 and 8 take up.</p>")}
+
+    <h2>6.3 Role mapping in the MDA (slides 35–39)</h2>
+    <p>Role-based design has three steps (slide 36). (1) <b>Role modelling</b>: write role models, keep all roles distinct and find the constraints on which objects play which roles. (2) <b>Merging</b>: compose the role models and add constraints between roles of different models. (3) <b>Mapping</b>: merge the roles into classes, respecting the constraints. The benefit is variability: many different class models come from one set of role models. In model-driven architecture terms (slide 37) role modelling, merging and mapping sit between the requirements model and the class model, a stage that standard MDA does not have.</p>
+    ${chart("steps", leg([["g", "requirements, code"], [2, "role models"], [1, "class models"]]))}<figcaption>Slides 36 and 37 combined. Hover or focus a stage for what happens there.</figcaption></figure>
+    <p>The constraints steer the mapping (slide 38):</p>
+    <ul>
+      <li><b>Role-equivalence</b> is the strong case: both roles go into the same implementation class.</li>
+      <li><b>Role-implication</b> is weaker. The roles go into the same class or into subclasses, which leaves a choice:
+        <ul>
+          <li>The <b>same class</b> makes the class model stricter than the role model. It also reduces the number of run-time objects, so it is more efficient and suffers less <b>object schizophrenia</b>.</li>
+          <li><b>Split classes</b> make it easier to exchange a role at run time, since only that object has to be replaced.</li>
+        </ul></li>
+      <li><b>Role-implication inheritance</b> forces the source into a subclass of the target.</li>
+      <li><b>Role-use</b> can be translated into delegation between different classes.</li>
+    </ul>
+    <p>Slide 39 sums it up: role mapping decides which class inherits from which role interface, computing the classes from the maximal split of the logical objects. The role model has the responsibilities maximally split; the class model has them partly overlaid.</p>
+    ${ex("Worked example: mapping the six roles of a figure", `<p>Slide 21's equivalence <i>Subject (FigureObserver) &lt;&gt; Figure (FigureHierarchy)</i> forces Subject and Figure into one class. Child and Parent each imply Figure, so they go into Figure or into its subclasses. Mapping A puts everything into one class Figure: one object per figure, and the class model forbids what the role model allowed, such as a figure that is never a child. Mapping B keeps Figure + Subject in Figure, puts Parent into a subclass CompositeFigure (the role-implication allows a subclass), and leaves Child in Figure, since every figure may be nested. Slide 33's partial class model likewise splits the hierarchy into Figure, CompositeFigure and further subclasses. Both mappings respect every constraint; they differ in how much is fixed at compile time. Implementing Predecessor (role-use towards Successor) by a delegating link instead of inheritance is the delegation option of slide 38.</p>`)}
+
+    <h2>6.4 Implementing roles by hand (slides 40–48)</h2>
+    <p>Roles can be mapped into classes in several ways (slide 41):</p>
+    <ul>
+      <li>with <b>interfaces</b>, coding every interface by hand (slide 42: <code>class Figure implements FigureHierarchy.Figure, FigureHierarchy.Child, Graphics.Client, IntFigObserver.Subject, FigureObserver.Subject, FigureChain.Predecessor</code>);</li>
+      <li>with <b>multiple inheritance</b> from role classes, a second layer of classes under the standard ones (slide 43). The drawbacks: a class can inherit a role class only once, and the role class does not know its context;</li>
+      <li>with <b>mixins</b> (CLOS, Scala), superclasses that parameterise the generic super declaration of a base class (slide 44). A role type is much like a mixin: role code is inherited, and a mixin's features are renamed when it is inherited a second time;</li>
+      <li>with <b>delegation</b> to one role object per role (slide 45). A role class implements one role type, a core object aggregates all role objects, and Bridge and Multi-Bridge are the typical implementations. This leads to the Role Object pattern of lecture 8;</li>
+      <li>with <b>role-oriented languages</b>: ObjectTeams/J, SCROLL for Scala and Contexts.jl for Julia (slide 47).</li>
+    </ul>
+    <p>However a role is implemented, its body has to be embedded in the control and data flow of the class it belongs to (slide 46). As a <b>wrapper</b> (Decorator) it intercepts calls into and out of a method or class, and roles can be stacked at run time as a decorator list. As an <b>input filter</b> or interceptor it runs before the methods of the class. As an <b>output filter</b> it runs after them.</p>
+    ${lab("impl", "six ways to implement the figure's roles")}
+    <div class="tt-wrap"><table class="tt impl"><tr><th>Technique</th><th>Objects</th><th>Change at run time</th><th>Same role twice</th><th>Identity</th></tr>${IMPL.map(x => `<tr><td>${x.t}</td><td>${x.objs.replace(" = 7", "")}</td><td>${x.rt.split(":")[0]}</td><td>${x.twice.split(":")[0]}</td><td>${x.k === "mb" || x.k === "dc" ? "split: schizophrenia risk" : x.k === "rl" ? "language" : "one object"}</td></tr>`).join("")}</table></div>
+    <p><b>Roles and facets</b> (slide 48): a faceted class (lecture 2) is a class with n dimensions. If a facet has a collaboration partner, it is a role type. The difference is lifetime: roles are played temporarily, facets are lasting.</p>
+
+    <h2>Two examples (slides 49–58)</h2>
+    <p><b>Persons in business applications</b> (slides 50–52): the role models of a person (BusinessContact, Retailer, Guarantor, Customer, Employee, Debitor, Investor, each with a client role) can be implemented two ways. In the first, one class Person implements the roles through interfaces or mixins, and view classes (EmployeeView, CustomerView, GuarantorView) serve the clients. In the second, a <b>multi-bridge</b> makes Customer, Guarantor and Employee separate implementation classes of role objects attached to a core Person.</p>
+    <p><b>Actors, films and directors</b> (slides 54–58): actors, directors and producers make films. Actors have a genre (lover, serious, comedian, the lover in Latin, Nordic and vamp variants), a medium (TV, cinema, Shakespeare stage) and an age (young, medium, old). Directors and producers have similar attributes, and films too. Slide 55 writes this as role models: Profession, Person, Genre, Media. Slides 56–57 implement it as a four-dimensional <b>facet model</b> (dimensional class hierarchies, lecture 2), and slide 58 as a mix of overlaying, inheritance, delegation and role objects.</p>
+    ${chart("actors")}<figcaption>Context, not on the slides: our arithmetic for four dimensions of three variants each (the lover sub-genres left out).</figcaption></figure>
+    ${tbl(["Model", "Formula", "Classes"], ACT.map(([n, f, v]) => [n, f, v]))}
+    ${ex("Worked example: an actor gets older", `<p>Our example. A young comedian in TV films, played by an object, turns middle-aged. <b>One class per combination</b>: the object would have to change from <code>YoungTVComedian</code> to <code>MiddleTVComedian</code>, one of 81 classes. Java cannot change an object's class, so a new object is created and every reference to the old one breaks. <b>Facets</b>: the actor keeps its identity and swaps its Age facet object from Young to Middle: one assignment, as in lecture 2. But a facet is lasting, and the model has no place for being a director in one film and an actor in the next. <b>Roles</b>: the person drops YoungAge and plays MiddleAge, and may play Actor in one film (one compartment) while playing Director in another. The role model is the only one of the three in which "is a director" can hold per film rather than per person.</p>`)}
+
+    <h2>Summary (slide 59)</h2>
+    <p>Role-based modelling is more general and finer-grained than class-based modelling and focuses on collaborations, that is tasks in context. Role mapping allocates roles to implementation classes, and so decides how the classes of a design pattern are allocated to the classes of an application, which can differ a lot from one application to the next. If a design pattern occurs in an application, some class of the application plays the role of each class of the pattern. Roles are dynamic classes: they change over time (non-rigid) and depend on a context (founded).</p>
+    <div class="tiles"><div class="tile"><div class="v">role = view</div><div class="l">a dynamic, context-dependent view onto an object; the object is the player</div></div><div class="tile"><div class="v">anti-rigid + founded</div><div class="l">what makes a role type different from a natural type</div></div><div class="tile"><div class="v">&lt; |—| &lt;&gt;</div><div class="l">implication, prohibition, equivalence; plus occurrence and role groups in CROM</div></div><div class="tile"><div class="v">model → merge → map</div><div class="l">the three steps of role-based design</div></div></div>
+
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What is a role, a role type, a role model?</b> A dynamic view onto an object in one collaboration; the service type behind it (an ability); the set of role types of one collaboration, one area of concern.</li>
+      <li><b>Why does the course need roles?</b> Every class of a design pattern is a role type; a pattern occurs in an application when application classes play its roles (role mapping).</li>
+      <li><b>What does CROM add?</b> Compartments as explicit contexts with state and behaviour, the fills relation, occurrence constraints and role groups.</li>
+      <li><b>Which role constraints exist?</b> Use, association, implication, prohibition, equivalence, implication with inheritance; occurrence and role groups in CROM.</li>
+      <li><b>How do role types differ from natural types?</b> Not rigid (anti-rigid) and founded, with derived identity; natural types are rigid, not founded, with their own identity.</li>
+      <li><b>What are the steps of role-based design?</b> Role modelling, merging, mapping to classes, guided by the constraints; many class models from one set of role models.</li>
+      <li><b>How can roles be implemented?</b> Interfaces, multiple inheritance, mixins, role objects with a (multi-)bridge, wrappers, role languages. One object avoids object schizophrenia; split objects allow roles to change at run time.</li>
+      <li><b>Roles versus facets?</b> A facet with a collaboration partner is a role type; roles are temporary, facets lasting.</li>
+    </ul>
+    <p class="muted">Exercise: <a href="design-patterns/exercise.html?n=5">exercise 5, Formal Models of Design Patterns 1</a> (2 Dec) practises role models; last year's sheet 5 modelled a horse show with natural types, roles and compartments. The <a href="design-patterns/exam.html">mock exam</a> has questions on this lecture. Previous: <a href="design-patterns/lecture.html?n=5">lecture 5, Bridging Architectural Mismatch</a>. Next: <a href="design-patterns/lecture.html?n=7">lecture 7, Design Patterns as Role Models</a> (1 Dec). Slides and the learning video #06: OPAL → Lecture Slides and Learn Videos (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6 };
+const LABS = { mvc: initMvc, facets: initFacets, proto: initProto, parts: initParts, deco: initDeco, chain: initChain, cm: initCm, net: initNet, glue: initGlue, rc: initRc, impl: initImpl };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;

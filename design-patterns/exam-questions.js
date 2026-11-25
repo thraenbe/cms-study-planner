@@ -1,7 +1,7 @@
 // Mock oral exam for Design Patterns and Frameworks (CMS-COR-SSE): our own questions, not from past exams.
 // l = lecture number (0 = cross-cutting), kind = explain | compare | draw | apply, a = key points to say,
-// trap = a common slip, ex = exercise sheet that trains it. Lectures 6–11 are previews: written from last
-// year's exercise sheets (WS25/26) before the lecture is held, to be checked against this term's slides.
+// trap = a common slip, ex = exercise sheet that trains it. Questions with pre: true are previews: written from
+// last year's exercise sheets (WS25/26) before the lecture is held; the flag goes once the lecture's slides are read.
 // `x` in a string is shown as code.
 window.DPF_EXAM = [
   // ── Cross-cutting: openers and questions that span lectures ──
@@ -169,30 +169,35 @@ window.DPF_EXAM = [
     a: ["Behaviour: Chain as a filter, Proxy to translate data formats, Observer to extend behaviour by listening, Visitor to add algorithms.",
         "Data: Decorator wraps and adapts (data, not protocol mismatch); Bridge factors a design for several platforms."] },
 
-  // ── Lecture 6: Role-based design (preview) ──
-  { id: "l6-1", l: 6, kind: "explain", pre: true, q: "What distinguishes natural types, role types and compartment types?",
-    a: ["Natural type (Person, Horse): rigid (an instance cannot stop being one), not founded (exists on its own), own identity.",
-        "Role type (Rider, Referee): anti-rigid (played for a while), founded (depends on a context or relationship), identity derived from the player.",
-        "Compartment type (Team, Show): rigid and founded, own identity; it contains roles and relationships.",
-        "These meta-properties (rigidity, foundedness, identity) come from Guizzardi's ontology, used by CROM."], ex: 5 },
-  { id: "l6-2", l: 6, kind: "explain", pre: true, q: "Why do roles need a context (compartment)? What can objects do with roles that they cannot do with classes?",
-    a: ["A role only makes sense inside a collaboration: a rider rides in a team; the compartment objectifies that context.",
-        "One object can play several roles at once, the same role in several contexts, and acquire or drop roles at run time.",
-        "Compartments can play roles themselves (a Team plays Participant in a Show)."], ex: 5 },
-  { id: "l6-3", l: 6, kind: "explain", pre: true, q: "Which constraints can a role model state? One example each.",
-    a: ["Role implication: whoever plays A must play B (every Child is a Subject).",
-        "Role prohibition: no object plays A and B together (Abstraction and Implementation in Bridge).",
-        "Role equivalence: A and B imply each other.",
-        "Occurrence constraints and cardinalities: a Team has exactly one Rider and at least one Ridden; role groups (exactly one of a set)."], ex: 5 },
-  { id: "l6-4", l: 6, kind: "apply", pre: true, q: "Model a horse show with roles: teams of one rider and at least one horse enter shows, referees examine teams. Which are natural types, roles, compartments?",
+  // ── Lecture 6: Role-based design (held 24 Nov; key points checked against this year's 59-slide deck) ──
+  { id: "l6-1", l: 6, kind: "explain", q: "What distinguishes natural types, role types and compartment types?",
+    a: ["Slide 24 sorts types by three properties: rigid (instances keep the type until they die), founded (instances depend on other instances), identity (unique, derived, composite).",
+        "Natural type (Person, Company): rigid, not founded, unique identity.",
+        "Role type (Customer, Consultant): not rigid (anti-rigid after Guizzardi et al.), founded, identity derived from the player.",
+        "Compartment type (Bank, Transaction): rigid and founded, unique identity; it is the context the roles are played in. Data types (Money) and relationship types (owns) complete the table."], ex: 5 },
+  { id: "l6-2", l: 6, kind: "explain", q: "What is a role, and why do roles need a context (compartment)? What can objects do with roles that they cannot do with classes?",
+    a: ["A role is a dynamic view onto an object, a service of the object in a context; the object is the player; playing a role means entering a state (slides 11–12).",
+        "Roles are founded: they only exist in a collaboration; CROM makes that context explicit as a compartment with its own state and behaviour (slides 17–18).",
+        "One object plays several roles at once, the same role type in several compartments (tester in team 1, reviewer in team 2), and can take up or drop roles at run time without changing its class or identity."], ex: 5 },
+  { id: "l6-3", l: 6, kind: "explain", q: "Which constraints can a role model state? One example each.",
+    a: ["Role-use (FigureClient uses Figure) and role-association (Parent knows Child) (slide 20).",
+        "Role-implication: the player of a must also play b (Parent and Child imply Figure); role-prohibition: never both (Winner and Loser).",
+        "Role-equivalence: both directions (Subject of FigureObserver and Figure of FigureHierarchy); role-implication inheritance: the source maps to a subclass of the target (Retailer and Customer) (slide 21).",
+        "CROM adds occurrence constraints (one Winner per game) and role groups: Participants (1..1) over Source and Target means an account plays exactly one of them (slides 22–23)."], ex: 5 },
+  { id: "l6-4", l: 6, kind: "apply", q: "Model a horse show with roles: teams of one rider and at least one horse enter shows, referees examine teams. Which are natural types, roles, compartments?",
     a: ["Natural types: Person, Horse (also Hotel, Tent, Stable for accommodation).",
         "Roles: Rider, Ridden, Participant, Referee (Guest, Accommodation).",
         "Compartments: Team (Rider 1..1, Ridden 1..*), Show (Referee, Participant), Accommodation plan.",
-        "Relationships: rides (Rider–Ridden), examines (Referee–Participant); the Team fills Participant."], ex: 5 },
-  { id: "l6-5", l: 6, kind: "explain", pre: true, q: "How does role-based design answer the facet and object-schizophrenia problems of lecture 2?",
-    a: ["Concerns that depend on a collaboration become roles in that context instead of facets or a class explosion.",
-        "Separation of concerns per collaboration, dynamic acquisition and loss.",
-        "Implementing roles as separate objects brings object schizophrenia back, which is why the Role Object pattern must manage identity (lecture 8)."] },
+        "Relationships: rides (Rider–Ridden), examines (Referee–Participant); the Team fills Participant. Check each choice with the rigid and founded test of slide 24."], ex: 5 },
+  { id: "l6-5", l: 6, kind: "explain", q: "What are the steps of role-based design, and how do role constraints steer the mapping to classes?",
+    a: ["Three steps (slide 36): role modelling (slim role models, roles kept distinct, constraints found), merging (compose role models, add constraints across them), mapping (merge roles into classes); one set of role models gives many class models.",
+        "Role-equivalence forces one implementation class; role-implication allows the same class or subclasses; implication inheritance forces a subclass; role-use can become delegation (slide 38).",
+        "Same class: fewer run-time objects, more efficient, less object schizophrenia, but stricter than the role model; split classes: a role can be exchanged at run time."] },
+  { id: "l6-6", l: 6, kind: "compare", q: "How can roles be implemented in a language without roles? Compare the options.",
+    a: ["Interfaces (all role code by hand in one class), multiple inheritance from role classes (a role class only once, no context), mixins (role code inherited, renamed when used twice) (slides 41–44).",
+        "Delegation to role objects held by a core, as a Bridge or Multi-Bridge (slide 45), or wrappers (Decorator) that can be stacked at run time (slide 46).",
+        "Role languages: ObjectTeams/J, SCROLL, Contexts.jl (slide 47).",
+        "Trade-off: one object keeps identity simple; split objects allow roles to change at run time but bring object schizophrenia, which the Role Object pattern (lecture 8) must manage."] },
 
   // ── Lecture 7: Design patterns as role models (preview) ──
   { id: "l7-1", l: 7, kind: "explain", pre: true, q: "In what sense is a design pattern a role model? Use Observer.",

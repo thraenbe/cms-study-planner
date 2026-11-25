@@ -1560,14 +1560,14 @@ window.CMS = {
       "title": "Role-based Design",
       "date": "2026-11-24",
       "icon": "🎭",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic: roles versus objects, role types versus classes, role mapping and implementation.",
+      "covered": true,
+      "blurb": "Start of part 2: roles as dynamic, context-dependent views onto objects; role types (abilities), role models and class-role models; compartments and the CROM notation; Riehle's role constraints with CROM's occurrence constraints and role groups; natural versus role types (rigid, founded); composing and merging role models into partial class models; role mapping in the MDA; six ways to implement roles.",
       "files": [
        {
         "kind": "slides",
-        "name": "#06 Role-based Design",
-        "where": "OPAL · Lecture Slides",
-        "note": "already up"
+        "name": "10-dpf-role-based-design.pdf",
+        "where": "OPAL · Lecture Slides (alternative)",
+        "note": "59 pages, since 24 Nov; the chair numbers it chapter 10"
        },
        {
         "kind": "recording",
@@ -1754,13 +1754,19 @@ window.CMS = {
       "covered": true,
       "lecture": 4,
       "points": null,
-      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet.",
+      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; the official solution has been in OPAL since 19 Nov.",
       "files": [
        {
         "kind": "sheet",
         "name": "DPF_Ex3_Extensibility_Patterns-task.pdf",
         "where": "OPAL · Exercise Sheets",
         "note": "since 5 Nov"
+       },
+       {
+        "kind": "solution",
+        "name": "DPF_Ex3_Extensibility_Patterns-solution.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "since 19 Nov, not compared yet"
        }
       ]
      },
@@ -1768,12 +1774,20 @@ window.CMS = {
       "n": 4,
       "title": "Architecture Mismatch",
       "date": "2026-11-25",
-      "published": null,
+      "published": "2026-11-19",
       "icon": "🔗",
-      "covered": false,
+      "covered": true,
       "lecture": 5,
       "points": null,
-      "blurb": "Not published yet. Planned topic: glue patterns for architectural mismatch (lecture 5)."
+      "blurb": "Sheet 4 (in OPAL since 19 Nov): object adapters for the final Revenant framework and the Network Maps library behind one FastestRouteProvider, both combined into one provider; a Facade over five travel services and Memento for saved trips; how the variability, extensibility and glue patterns relate. Own worked solutions; no official solution yet.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DPF_Ex4_Architecture_Mismatch_Patterns-task.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "6 pages, since 19 Nov"
+       }
+      ]
      },
      {
       "n": 5,

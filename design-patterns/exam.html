@@ -143,7 +143,7 @@ function renderStatic() {
   <a class="back" href="design-patterns.html">← All lectures and exercises</a>
   <div class="big-icon">🎤</div><h1>Mock oral exam</h1>
   <p class="meta">Practice questions for ${esc(m.name)} (${CODE}), taken as “Design Patterns and Frameworks”.</p>
-  <p class="lead">There are no old exams for this course: the exam has been oral since WS21/22 and no question collection is public (see <a href="design-patterns/orga.html#old-exams">Orga → Old exams</a>). These ${Q.length} questions are our own, written in the style of an oral exam: explain, compare, draw, apply. ${heldCount} cover lectures already held; the rest are previews for lectures 6 to 11, written from last year's exercise sheets.</p>
+  <p class="lead">There are no old exams for this course: the exam has been oral since WS21/22 and no question collection is public (see <a href="design-patterns/orga.html#old-exams">Orga → Old exams</a>). These ${Q.length} questions are our own, written in the style of an oral exam: explain, compare, draw, apply. ${heldCount} cover lectures already held${Q.some(q => q.pre) ? `; the rest are previews for lectures ${Math.min(...Q.filter(q => q.pre).map(q => q.l))} to 11, written from last year's exercise sheets` : ""}.</p>
   <div class="tiles">
     <div class="tile"><div class="v">≈ 15 min</div><div class="l">oral exam, per the module description</div></div>
     <div class="tile"><div class="v">online</div><div class="l">over BigBlueButton, every year since WS21/22</div></div>
