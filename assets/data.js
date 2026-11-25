@@ -2721,12 +2721,12 @@ window.CMS = {
      },
      {
       "n": 4,
-      "title": null,
+      "title": "CMOS technology: reading cell layouts",
       "date": "2026-12-03",
       "published": "2026-11-25",
       "icon": "✏️",
-      "covered": false,
-      "blurb": "Sheet 4 is in OPAL (English task description, German task sheet listed for this group under 3 Dec; first seen on 25 Nov, no solution yet). Not read or written up yet; it probably covers lectures 7–8 (timing, power and energy).",
+      "covered": true,
+      "blurb": "Sheet 4 (task 4.1, five parts): turning standard-cell layouts back into circuits: the layers, PMOS and NMOS, pins and series nodes of a NOR2 (W/L 12 and 6.7), a buffer, an AND2, a cell built from clocked inverters and an OA21, with a stick-diagram explorer. Our own solutions; part d) only partly traced, no official solution yet.",
       "files": [
        {
         "kind": "sheet",

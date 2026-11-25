@@ -485,3 +485,29 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .l7st { display: inline-flex; align-items: center; gap: 4px; }
 .dcd .l7st small { color: var(--ink-3); font-size: 12px; margin-right: 2px; }
 .dcd .l7st .preset { padding: 3px 10px; }
+/* Exercise 4: layer swatches (drawn like the sheet's layout editor) and the stick-diagram explorer. */
+.dcd .e4sw { display: inline-block; width: 26px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 8px; border: 1px solid var(--line); background: #111; }
+.dcd .e4sw.well { background: repeating-linear-gradient(135deg, #d98a32 0 2px, #111 2px 6px); }
+.dcd .e4sw.act { background: #5a1414; border-color: #c03030; }
+.dcd .e4sw.poly { background: linear-gradient(90deg, #111 35%, #2fc44f 35% 65%, #111 65%); }
+.dcd .e4sw.ct { background: linear-gradient(#ece8d0, #ece8d0) center / 8px 8px no-repeat, #111; }
+.dcd .e4sw.m1 { background: repeating-linear-gradient(135deg, #2bb6c4 0 2px, #111 2px 6px); border-color: #3fd4e0; }
+.dcd .e4sw.m2 { background: linear-gradient(90deg, #e020e0 0 40%, transparent 40%), repeating-linear-gradient(135deg, #b030b0 0 2px, #111 2px 6px); }
+.dcd .e4l td:first-child { white-space: nowrap; }
+.dcd .viz .e4well { fill: color-mix(in srgb, var(--vz-s4) 9%, transparent); }
+.dcd .viz .e4wb { stroke: var(--vz-s4); stroke-width: 1; stroke-dasharray: 5 4; }
+.dcd .viz .e4rail { fill: var(--ink-3); }
+.dcd .viz .e4rl { fill: var(--surface); font-size: 10px; font-weight: 700; }
+.dcd .viz .e4lab { fill: var(--ink-3); font-size: 11px; }
+.dcd .viz .e4d { stroke: var(--ink-3); stroke-width: 1; fill: var(--surface); }
+.dcd .viz .e4d.hi { fill: color-mix(in srgb, var(--vz-s2) 32%, var(--surface)); }
+.dcd .viz .e4d.lo { fill: color-mix(in srgb, var(--vz-s1) 32%, var(--surface)); }
+.dcd .viz .e4ct { fill: var(--ink); }
+.dcd .viz .e4m { stroke: var(--ink-2); stroke-width: 2; }
+.dcd .viz .e4poly { stroke: var(--vz-s3); stroke-width: 4; stroke-linecap: round; }
+.dcd .viz .e4ch.on { fill: var(--vz-s3); }
+.dcd .viz .e4ch.off { fill: var(--surface); stroke: var(--vz-s3); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.dcd .viz .pt.on .e4ch, .dcd .viz .pt:focus-visible .e4ch { stroke: var(--ink); stroke-width: 2; }
+.dcd .viz .e4net { fill: var(--ink); font-size: 12px; font-weight: 600; }
+.dcd .viz .e4ser { fill: var(--ink-3); font-size: 10px; font-style: italic; }
+.dcd .viz .e4out { fill: var(--ink); font-size: 13px; font-weight: 700; }
