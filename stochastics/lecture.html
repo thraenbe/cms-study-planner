@@ -1738,11 +1738,435 @@ function lecture4() {
       <li><b>How do you make it better?</b> Importance sampling: draw from q, average the weights f/q; a q shaped like f shrinks the error (6.4× in variance for x² with q = 2x).</li>
       <li><b>What can go wrong?</b> q ∝ f is perfect but needs the answer; a q much smaller than f somewhere is worse than uniform (infinite variance).</li>
     </ul>
-    <p class="muted">The tutorial on this lecture's material had no notebook in OPAL yet on 17 Nov; the tutorial of 12 Nov (${exeLink(3, "tutorial 3")}) practised Markov chains from ${lecLink(3, "lecture 3")}. Next: ${lecLink(5, "lecture 5")} (23 Nov), variance and variance reduction. Slides: OPAL → Lecture2026 → SMS4.pdf (they may not be republished).</p>`;
+    <p class="muted">The tutorial on this lecture's material is ${exeLink(4, "tutorial 4")} (19 Nov): areas from random points, the law of large numbers, the three ways to integrate a function by Monte Carlo, importance sampling and many dimensions. Next: ${lecLink(5, "lecture 5")} (23 Nov), variance and variance reduction. Slides: OPAL → Lecture2026 → SMS4.pdf (they may not be republished).</p>`;
 }
 
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
-const LABS = { pi: initPi, ou: initOu, count: initCount, bayes: initBayes, newton: initNewton, ar: initAr, mc: initMc, pow: initPow, rw: initRw, lln4: initLln4, dims: initDims, isd: initIsd };
+// ================= Lecture 5 · Variance reduction (SMS5, 30 slides) =================
+// Var[A + B] for the three dice pairs of slide 7: separate dice, top + bottom of one die, one die counted twice.
+const DV5 = 35 / 12;
+const VSUM = [["two separate dice", 2 * DV5, "Cov = 0: the variances simply add"], ["top + bottom of one die", 0, "Cov = −2.92: the total is always 7"], ["one die counted twice", 4 * DV5, "Cov = +2.92: four times the variance of one die"]];
+CHARTS.vsum = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 10 : 178, R = narrow ? 52 : 64, T = 8, RH = narrow ? 50 : 38, H = T + VSUM.length * RH + 24, PW = W - L - R;
+  const x = v => L + v / 12 * PW;
+  const ticks = [0, 3, 6, 9, 12].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = VSUM.map(([k, v, w], i) => { const y0 = T + i * RH + (narrow ? 22 : 9), bh = 18;
+    const tip = `<b>${k}</b>Var[A + B] = 2.92 + 2.92 + 2 · Cov = ${num(v, 2)}<br>${w}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - (narrow ? 20 : 9)}" width="${W}" height="${RH}"/>${v ? `<path class="bar s1" d="${hbar(x(0), x(v), y0, bh)}"/>` : `<line class="ann" x1="${x(0)}" x2="${x(0)}" y1="${y0}" y2="${y0 + bh}" style="stroke-width:3"/>`}
+      <text class="cat" x="${narrow ? x(0) : L - 8}" y="${narrow ? y0 - 6 : y0 + 13}" text-anchor="${narrow ? "start" : "end"}">${k}</text><text class="val" x="${x(v) + 6}" y="${y0 + 13}">${num(v, 2)}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart: variance of the sum of two dice values. Two separate dice: 5.83. Top plus bottom of one die: 0, because the total is always 7. One die counted twice: 11.67, four times the variance of one die.">${ticks}${rows}</svg>`;
+};
+// One plain sample u² against the mean of an antithetic pair (u² + (1 − u)²)/2, over u (slide 10).
+line("pairmean", {
+  xlin: true, step: 0.01, x: [0, 1], y: [0, 1], xTicks: [0, 0.25, 0.5, 0.75, 1], yTicks: [0, 0.25, 0.5, 0.75, 1], yTitle: "averaged value", labelW: 86,
+  series: [{ slot: 2, name: "one plain sample u²", short: "u² (plain)", f: v => v * v },
+    { slot: 3, name: "antithetic pair mean (u² + (1 − u)²)/2", short: "pair mean", f: v => (v * v + (1 - v) ** 2) / 2, dy: 10 }],
+  tipHead: v => `u = ${num(v, 2)}, mirror 1 − u = ${num(1 - v, 2)}`, fmtY: v => num(v, 4), focusAt: 0.26,
+  extra: g => `<line class="ann" x1="${g.L}" x2="${g.W - g.R}" y1="${g.y(1 / 3)}" y2="${g.y(1 / 3)}" stroke-dasharray="4 3"/><text class="note" x="${g.L + 4}" y="${g.y(1 / 3) - 5}">true value 1/3</text>`,
+  hitLabel: "Read one plain sample and the pair mean at a random number u: arrow keys move u by 0.01",
+  aria: "Line chart over the random number u from 0 to 1. One plain sample u² runs from 0 to 1. The antithetic pair mean (u² + (1 − u)²)/2 is a shallow bowl: 0.5 at u = 0 and u = 1, lowest at 0.25 for u = 0.5, so it never strays far from the true value 1/3.",
+});
+// Law of total variance (slide 23): the share of the plain variance that lies within each y (removed by Rao–Blackwell)
+// and between the y's (kept), for the three examples.
+const TV5 = [["two bags", 0.1875, 0.0625], ["two dice", 35 / 12, 35 / 12], ["π", 4 * Math.PI - 32 / 3, 32 / 3 - Math.PI ** 2]];
+CHARTS.tv = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 10 : 96, R = 12, T = 8, RH = narrow ? 52 : 40, H = T + TV5.length * RH + 24, PW = W - L - R, gap = 2;
+  const x = v => L + v * PW;
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(v => `<line class="${v ? "grid" : "axis"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v * 100} %</text>`).join("");
+  const rows = TV5.map(([k, wi, be], i) => { const tot = wi + be, a = wi / tot, y0 = T + i * RH + (narrow ? 22 : 10), bh = 20;
+    const tip = `<b>${k}</b>plain variance ${num(tot, 3)} = within ${num(wi, 3)} + between ${num(be, 3)}<br>Rao–Blackwell keeps ${pct(be / tot)}: ${num(tot / be, 1)}× less variance`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="hit" x="0" y="${y0 - (narrow ? 20 : 10)}" width="${W}" height="${RH}"/>
+      <rect class="seg" x="${x(0)}" y="${y0}" width="${a * PW - gap / 2}" height="${bh}" rx="3" style="fill:var(--vz-gray)"/><rect class="seg s1" x="${x(a) + gap / 2}" y="${y0}" width="${(1 - a) * PW - gap / 2}" height="${bh}" rx="3"/>
+      <text class="val" x="${x(a / 2)}" y="${y0 + 14}" text-anchor="middle" style="fill:#fff">${Math.round(a * 100)} %</text><text class="val" x="${x((1 + a) / 2)}" y="${y0 + 14}" text-anchor="middle" style="fill:#fff">${Math.round((1 - a) * 100)} %</text>
+      <text class="cat" x="${narrow ? x(0) : L - 8}" y="${narrow ? y0 - 6 : y0 + 14}" text-anchor="${narrow ? "start" : "end"}">${k}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stacked bars: how the variance of one plain sample splits into noise within each y, which Rao–Blackwell removes, and noise between the y's, which it keeps. Two bags: 75 % within, 25 % between. Two dice: 50 % and 50 %. Pi: 70 % and 30 %.">${ticks}${rows}</svg>`;
+};
+// Variance per sample of plain Monte Carlo divided by that of the improved estimator, at equal work, on a log axis (slide 27).
+const GAIN5 = [["x², antithetic", (4 / 45) / (1 / 90), 3, "σ² = 0.0889, γ = −0.0778: per two evaluations 1/180 against 4/90"],
+  ["eˣ, antithetic", 0.24204 / 0.00783, 3, "σ² = 0.2420, γ = −0.2342: the pair cancels almost perfectly"],
+  ["4x(1 − x), antithetic", 0.5, 3, "σ² = γ = 0.0889: the pair is one number twice"],
+  ["two dice, Rao–Blackwell", 2, 1, "5.83 against 2.92: the second die's noise is gone"],
+  ["two bags, Rao–Blackwell", 4, 1, "0.25 against 0.0625"],
+  ["π, Rao–Blackwell", (4 * Math.PI - Math.PI ** 2) / (32 / 3 - Math.PI ** 2), 1, "2.70 against 0.80"]];
+CHARTS.gain = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 10 : 178, R = narrow ? 64 : 30, T = 8, RH = narrow ? 48 : 34, H = T + GAIN5.length * RH + 26, PW = W - L - R;
+  const lo = Math.log2(0.35), hi = Math.log2(45), x = v => L + (Math.log2(v) - lo) / (hi - lo) * PW;
+  const ticks = [0.5, 1, 2, 4, 8, 16, 32].map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v === 0.5 ? "½" : v}×</text>`).join("");
+  const rows = GAIN5.map(([k, v, s, w], i) => { const y0 = T + i * RH + (narrow ? 20 : 8), bh = 16, x0 = Math.min(x(1), x(v)), x1 = Math.max(x(1), x(v));
+    const lbl = v >= 1 ? `${num(v, v < 10 ? 1 : 0)}× less` : "2× more";
+    const bar = v >= 1 ? `<path class="bar s${s}" d="${hbar(x0, x1, y0, bh)}"/>` : `<rect class="bar s${s}" x="${x0}" y="${y0}" width="${x1 - x0}" height="${bh}" rx="3"/>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}</b>${lbl} variance than plain Monte Carlo at the same work<br>${w}`)}"><rect class="hit" x="0" y="${y0 - (narrow ? 18 : 8)}" width="${W}" height="${RH}"/>${bar}
+      <text class="cat" x="${narrow ? L : L - 8}" y="${narrow ? y0 - 5 : y0 + 12}" text-anchor="${narrow ? "start" : "end"}">${k}</text><text class="val" x="${v >= 1 ? x1 + 6 : x(1) + 6}" y="${y0 + 12}">${lbl}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart on a logarithmic axis: variance of plain Monte Carlo divided by the variance of the improved estimator at the same work. Antithetic variates: x squared 8 times less, e to the x 31 times less, the hump 4x(1 − x) 2 times more. Rao–Blackwell: two dice 2 times less, two bags 4 times less, pi 3.4 times less.">${ticks}${rows}</svg>`;
+};
+// Explorer: one antithetic pair on the curve of f, and 3,000 repeated estimates with N evaluations each, plain against
+// antithetic (slides 8–13). Both use the same number of evaluations of f: N independent u, or N/2 u and their mirrors.
+const AF5 = {
+  x2: { name: "x²", f: u => u * u, F: 1 / 3, Ft: "1/3", s2: 4 / 45, g: -7 / 90, y1: 1, yt: [0, 0.5, 1] },
+  ex: { name: "eˣ", f: Math.exp, F: Math.E - 1, Ft: "e − 1 ≈ 1.718", s2: (Math.E ** 2 - 1) / 2 - (Math.E - 1) ** 2, g: Math.E - (Math.E - 1) ** 2, y1: 3, yt: [0, 1, 2, 3] },
+  hump: { name: "4x(1 − x)", f: u => 4 * u * (1 - u), F: 2 / 3, Ft: "2/3", s2: 4 / 45, g: 4 / 45, y1: 1, yt: [0, 0.5, 1] },
+};
+const AV5 = { k: "x2", u: 0.26, N: 100, seed: 1, cache: {} };
+function antiRuns() {
+  const key5 = `${AV5.k}|${AV5.N}|${AV5.seed}`; if (AV5.cache[key5]) return AV5.cache[key5];
+  const D = AF5[AV5.k], f = D.f, N = AV5.N, RUNS = 3000, r = mulberry(AV5.seed * 7919 + Object.keys(AF5).indexOf(AV5.k) * 31 + N), P = [], A = [];
+  for (let k = 0; k < RUNS; k++) { let s = 0; for (let i = 0; i < N; i++) s += f(r()); P.push(s / N); let t = 0; for (let i = 0; i < N / 2; i++) { const v = r(); t += f(v) + f(1 - v); } A.push(t / N); }
+  const stat = v => { const m = v.reduce((p, c) => p + c, 0) / v.length; return [m, Math.sqrt(v.reduce((p, c) => p + (c - m) ** 2, 0) / (v.length - 1))]; };
+  return (AV5.cache = { [key5]: { P, A, sp: stat(P), sa: stat(A) } })[key5];
+}
+function antiOut() {
+  const D = AF5[AV5.k], f = D.f, narrow = isNarrow(), W = narrow ? 340 : 560, L = 40, R = 16, T = 14;
+  // Panel 1: the curve, the pair u and 1 − u, its mean, the true value.
+  const H1 = 200, PH = H1 - T - 26, PW = W - L - R, x = v => L + v * PW, y = v => T + PH - v / D.y1 * PH;
+  const u = AV5.u, a = f(u), b = f(1 - u), mp = (a + b) / 2;
+  const path = "M" + Array.from({ length: 101 }, (_, i) => `${x(i / 100).toFixed(1)},${y(f(i / 100)).toFixed(1)}`).join(" L");
+  const yt = D.yt.map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = [0, 0.5, 1].map(v => `<text class="tick" x="${x(v)}" y="${H1 - 8}" text-anchor="middle">${v}</text>`).join("");
+  const pin = (v, fv, s) => `<line class="ann" x1="${x(v)}" x2="${x(v)}" y1="${y(0)}" y2="${y(fv)}" stroke-dasharray="3 3"/><circle cx="${x(v)}" cy="${y(fv)}" r="5.5" style="fill:var(--vz-s${s});stroke:var(--surface);stroke-width:2"/>`;
+  const p1 = `<svg viewBox="0 0 ${W} ${H1}" class="lab-svg" role="img" aria-label="The curve of ${D.name} on 0 to 1 with u = ${num(u, 2)} and its mirror ${num(1 - u, 2)}: f(u) = ${num(a, 3)}, f(1 − u) = ${num(b, 3)}, pair mean ${num(mp, 3)} against the true value ${num(D.F, 3)}.">
+      ${yt}${xt}<text class="note" x="${L}" y="${T - 4}">f(x) = ${D.name} on [0, 1]</text><path class="curve" d="${path}"/>
+      <line class="ann" x1="${L}" x2="${W - R}" y1="${y(D.F)}" y2="${y(D.F)}" stroke-dasharray="4 3"/><text class="note" x="${W - R}" y="${y(D.F) - 5}" text-anchor="end">true value ${D.Ft}</text>
+      ${pin(u, a, 2)}${pin(1 - u, b, 2)}<line x1="${x(Math.min(u, 1 - u))}" x2="${x(Math.max(u, 1 - u))}" y1="${y(mp)}" y2="${y(mp)}" style="stroke:var(--vz-s3);stroke-width:2.4"/>
+      <circle cx="${x(0.5)}" cy="${y(mp)}" r="5" style="fill:var(--vz-s3);stroke:var(--surface);stroke-width:2"/>
+      <text class="note" x="${x(u)}" y="${y(0) + 13}" text-anchor="middle">u</text><text class="note" x="${x(1 - u)}" y="${y(0) + 13}" text-anchor="middle">1 − u</text></svg>`;
+  // Panel 2: histograms of the repeated estimates.
+  const { P, A, sp, sa } = antiRuns(), N = AV5.N, fp = Math.sqrt(D.s2 / N), fa = Math.sqrt((D.s2 + D.g) / N);
+  const half = 4 * Math.max(fp, fa), lo = D.F - half, hi = D.F + half, K = 44, bw = (hi - lo) / K;
+  const hist = v => { const h = new Array(K).fill(0); v.forEach(z => { const i = Math.floor((z - lo) / bw); if (i >= 0 && i < K) h[i]++; }); return h.map(c => c / v.length); };
+  const hp = hist(P), ha = hist(A), top = Math.max(...hp, ...ha) * 1.08, H2 = 190, PH2 = H2 - T - 26;
+  const x2 = v => L + (v - lo) / (hi - lo) * PW, y2 = p => T + PH2 - p / top * PH2;
+  const area = (h, s) => `<path style="fill:var(--vz-s${s});fill-opacity:.28;stroke:var(--vz-s${s});stroke-width:1.6;stroke-linejoin:round" d="M${x2(lo)},${y2(0)} ${h.map((p, i) => `L${x2(lo + i * bw).toFixed(1)},${y2(p).toFixed(1)} L${x2(lo + (i + 1) * bw).toFixed(1)},${y2(p).toFixed(1)}`).join(" ")} L${x2(hi)},${y2(0)} Z"/>`;
+  const p2 = `<svg viewBox="0 0 ${W} ${H2}" class="lab-svg" role="img" aria-label="Histograms of 3,000 estimates of the integral of ${D.name}, each from ${N} evaluations: plain Monte Carlo spreads with standard deviation ${num(sp[1], 4)}, antithetic variates with ${num(sa[1], 4)}.">
+      <line class="axis" x1="${L}" x2="${W - R}" y1="${y2(0)}" y2="${y2(0)}"/>${[0, 1, 2, 3, 4].map(i => lo + (hi - lo) * i / 4).map(v => `<text class="tick" x="${x2(v)}" y="${H2 - 8}" text-anchor="middle">${num(v, 3)}</text>`).join("")}
+      ${area(hp, 2)}${area(ha, 3)}<line class="ann" x1="${x2(D.F)}" x2="${x2(D.F)}" y1="${T}" y2="${y2(0)}" stroke-dasharray="4 3"/>
+      <text class="note" x="${L}" y="${T - 2}">3,000 estimates, each from ${N} evaluations of f: share per bin</text></svg>`;
+  const ratio = D.s2 / (D.s2 + D.g);
+  const reading = AV5.k === "hump" ? "The hump is symmetric around ½, so f(1 − u) = f(u): every pair is the same number twice. The antithetic histogram is the wider one, with twice the variance of plain sampling at the same work." :
+    `f rises steadily, so a small f(u) always comes with a large f(1 − u) and the pair mean hardly moves. The antithetic histogram is ${num(Math.sqrt(ratio), 1)} times narrower (variance ${num(ratio, 0)} times smaller), whatever N you pick.`;
+  return `${p1}${legHTML5([[2, "f(u) and f(1 − u)"], [3, "their pair mean"], ["g", "true value"]])}${p2}${legHTML5([[2, "plain: N independent u"], [3, "antithetic: N/2 u and their mirrors"]])}
+    <div class="tt-wrap"><table class="tt compact"><tr><th style="text-transform:none">${D.name}, N = ${N}</th><th>mean of the estimates</th><th>spread (observed)</th><th>spread (formula)</th></tr>
+      <tr><th>${key(2)} plain</th><td>${num(sp[0], 4)}</td><td>±${num(sp[1], 4)}</td><td>±√(σ²/N) = ±${num(fp, 4)}</td></tr>
+      <tr><th>${key(3)} antithetic</th><td>${num(sa[0], 4)}</td><td>±${num(sa[1], 4)}</td><td>±√((σ² + γ)/N) = ±${num(fa, 4)}</td></tr></table></div>
+    <dl class="ro"><dt>This pair</dt><dd>f(${num(u, 2)}) = ${num(a, 4)}, f(${num(1 - u, 2)}) = ${num(b, 4)}, mean ${num(mp, 4)} (true ${D.Ft}).</dd>
+      <dt>Variance</dt><dd>σ² = ${num(D.s2, 4)}, γ = ${D.g < 0 ? "−" : "+"}${num(Math.abs(D.g), 4)}, correlation ρ = γ/σ² = ${D.g < 0 ? "−" : "+"}${num(Math.abs(D.g / D.s2), 3)}.</dd>
+      <dt>Reading</dt><dd>${reading}</dd></dl>`;
+}
+const legHTML5 = items => `<div class="legend" style="margin:4px 0 10px">${items.map(([s, t]) => `<span class="li">${key(s)}<span class="lt">${t}</span></span>`).join("")}</div>`;
+function initAnti(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${Object.entries(AF5).map(([k, D]) => `<button class="preset" type="button" data-k="${k}" aria-pressed="${k === AV5.k}">f = ${D.name}</button>`).join("")}</span></div>
+    <div class="ctl"><label>u <input type="range" min="0" max="1" step="0.01" value="${AV5.u}"> <output>${AV5.u}</output></label><label>Evaluations N <select>${[20, 100, 1000].map(n => `<option value="${n}"${n === AV5.N ? " selected" : ""}>${n}</option>`).join("")}</select></label><button class="preset" type="button" data-new="1">New runs</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), rng = body.querySelector("input"), o = body.querySelector("output"), sel = body.querySelector("select");
+  const draw = () => { body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === AV5.k)); o.textContent = num(AV5.u, 2); out.innerHTML = antiOut(); };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { AV5.k = b.dataset.k; draw(); }));
+  rng.addEventListener("input", () => { AV5.u = +rng.value; draw(); });
+  sel.addEventListener("change", () => { AV5.N = +sel.value; draw(); });
+  body.querySelector("[data-new]").addEventListener("click", () => { AV5.seed++; draw(); }); draw();
+}
+// Explorer: 3,000 repeated estimates with N samples each, plain Monte Carlo against Rao–Blackwell, for the dice, the
+// bags and π (slides 19–25). Histogram bins follow the lattice of the plain estimates so that no bar is empty by rounding.
+const RBX5 = {
+  dice: { name: "two dice: average total", F: 7, Ft: "7", step: 1, vp: 35 / 6, vr: 35 / 12,
+    plain: r => 2 + Math.floor(6 * r()) + Math.floor(6 * r()), rb: r => 4.5 + Math.floor(6 * r()), what: "x + y from two rolls", whatRb: "3.5 + y from one roll" },
+  bags: { name: "two bags: P(red)", F: 0.5, Ft: "1/2", step: 1, vp: 0.25, vr: 0.0625,
+    plain: r => { const isA = r() < 0.5; return r() < (isA ? 0.75 : 0.25) ? 1 : 0; }, rb: r => (r() < 0.5 ? 0.75 : 0.25), what: "1 if the ball is red", whatRb: "g(bag) = 3/4 or 1/4" },
+  pi: { name: "π, as in lecture 4", F: Math.PI, Ft: "π", step: 4, vp: 4 * Math.PI - Math.PI ** 2, vr: 32 / 3 - Math.PI ** 2,
+    plain: r => { const a = r(), b = r(); return a * a + b * b <= 1 ? 4 : 0; }, rb: r => { const u = r(); return 4 * Math.sqrt(1 - u * u); }, what: "4 if the point is inside", whatRb: "4√(1 − u²)" },
+};
+const RV5 = { k: "pi", N: 100, seed: 1 };
+function rbOut() {
+  const D = RBX5[RV5.k], N = RV5.N, RUNS = 3000, r = mulberry(RV5.seed * 6007 + Object.keys(RBX5).indexOf(RV5.k) * 17 + N), P = [], Q = [];
+  for (let k = 0; k < RUNS; k++) { let s = 0, t = 0; for (let i = 0; i < N; i++) { s += D.plain(r); t += D.rb(r); } P.push(s / N); Q.push(t / N); }
+  const stat = v => { const m = v.reduce((p, c) => p + c, 0) / v.length; return [m, Math.sqrt(v.reduce((p, c) => p + (c - m) ** 2, 0) / (v.length - 1))]; };
+  const [mp, sp] = stat(P), [mq, sq] = stat(Q), fp = Math.sqrt(D.vp / N), fq = Math.sqrt(D.vr / N);
+  const lat = D.step / N, bw = lat * Math.max(1, Math.round(8 * fp / 40 / lat)), lo = (Math.floor((D.F - 4 * fp) / lat) + 0.25) * lat, K = Math.ceil(8 * fp / bw) + 1, hi = lo + K * bw;
+  const hist = v => { const h = new Array(K).fill(0); v.forEach(z => { const i = Math.floor((z - lo) / bw); if (i >= 0 && i < K) h[i]++; }); return h.map(c => c / RUNS); };
+  const hp = hist(P), hq = hist(Q), top = Math.max(...hp, ...hq) * 1.08;
+  const narrow = isNarrow(), W = narrow ? 340 : 560, H = 220, L = 40, R = 16, T = 14, PW = W - L - R, PH = H - T - 26;
+  const x = v => L + (v - lo) / (hi - lo) * PW, y = p => T + PH - p / top * PH;
+  const area = (h, s) => `<path style="fill:var(--vz-s${s});fill-opacity:.28;stroke:var(--vz-s${s});stroke-width:1.6;stroke-linejoin:round" d="M${x(lo)},${y(0)} ${h.map((p, i) => `L${x(lo + i * bw).toFixed(1)},${y(p).toFixed(1)} L${x(lo + (i + 1) * bw).toFixed(1)},${y(p).toFixed(1)}`).join(" ")} L${x(hi)},${y(0)} Z"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="lab-svg" role="img" aria-label="Histograms of ${RUNS} estimates of ${D.name} with N = ${N}: plain Monte Carlo spreads with standard deviation ${num(sp, 4)}, Rao–Blackwell with ${num(sq, 4)}; both are centred on ${D.Ft}.">
+      <line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>${[0, 1, 2, 3, 4].map(i => lo + (hi - lo) * i / 4).map(v => `<text class="tick" x="${x(v)}" y="${H - 8}" text-anchor="middle">${num(v, 3)}</text>`).join("")}
+      ${area(hp, 2)}${area(hq, 1)}<line class="ann" x1="${x(D.F)}" x2="${x(D.F)}" y1="${T}" y2="${y(0)}" stroke-dasharray="4 3"/><text class="note" x="${x(D.F) + 4}" y="${T + 10}">${D.Ft}</text>
+      <text class="note" x="${L}" y="${T - 2}">share of the ${RUNS.toLocaleString("en-GB")} runs per bin</text></svg>
+    ${legHTML5([[2, `plain: averages ${D.what}`], [1, `Rao–Blackwell: averages ${D.whatRb}`]])}
+    <div class="tt-wrap"><table class="tt compact"><tr><th>${RUNS.toLocaleString("en-GB")} runs, N = ${N}</th><th>mean of the estimates</th><th>spread (observed)</th><th>spread (formula)</th></tr>
+      <tr><th>${key(2)} plain</th><td>${num(mp, 4)}</td><td>±${num(sp, 4)}</td><td>±√(${num(D.vp, 4)}/N) = ±${num(fp, 4)}</td></tr>
+      <tr><th>${key(1)} Rao–Blackwell</th><td>${num(mq, 4)}</td><td>±${num(sq, 4)}</td><td>±√(${num(D.vr, 4)}/N) = ±${num(fq, 4)}</td></tr></table></div>
+    <dl class="ro"><dt>Reading</dt><dd>Both are centred on ${D.Ft} (Fact 1: no bias). Rao–Blackwell is ${num(sp / sq, 2)} times narrower in this run; the formula says √(${num(D.vp, 4)}/${num(D.vr, 4)}) = ${num(Math.sqrt(D.vp / D.vr), 2)}, so it needs ${num(D.vp / D.vr, 1)} times fewer samples for the same accuracy.</dd></dl>`;
+}
+function initRb(body) {
+  body.innerHTML = `<div class="ctl"><span class="presets">${Object.entries(RBX5).map(([k, D]) => `<button class="preset" type="button" data-k="${k}" aria-pressed="${k === RV5.k}">${D.name}</button>`).join("")}</span></div>
+    <div class="ctl"><label>Samples per estimate N <select>${[10, 100, 1000].map(n => `<option value="${n}"${n === RV5.N ? " selected" : ""}>${n}</option>`).join("")}</select></label><button class="preset" type="button" data-new="1">New runs</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), sel = body.querySelector("select");
+  const draw = () => { body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === RV5.k)); out.innerHTML = rbOut(); };
+  body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => { RV5.k = b.dataset.k; draw(); }));
+  sel.addEventListener("change", () => { RV5.N = +sel.value; draw(); });
+  body.querySelector("[data-new]").addEventListener("click", () => { RV5.seed++; draw(); }); draw();
+}
+
+function lecture5() {
+  const H = {
+    tool: "Toolbox: the Monte Carlo error and why variance means work", cov: "Covariance: do two random numbers move together?",
+    vsum: "The variance of a sum", anti: "Trick 1: antithetic variates", hand: "Antithetic variates by hand",
+    whyx: "Why it works for x²", three: "Three functions: when the mirror hurts", use: "When to use antithetic variates",
+    bags: "Toolbox for trick 2: joint, marginal and conditional probability", cexp: "Conditional expectation and its two facts",
+    rb: "Trick 2: Rao–Blackwellization", rbx: "Rao–Blackwell by hand: dice, bags and π", tv: "Why trick 2 never hurts: the law of total variance",
+    sim: "Simulation check and when to use Rao–Blackwell", sum: "Lecture 5 on one page",
+  };
+  const T9 = [0.26, 0.30, 0.81, 0.09], P9 = [0.57, 0.85, 0.65, 0.41, 0.47, 0.82, 0.31, 0.79];
+  const t9 = `<div class="tt-wrap"><table class="tt compact"><tr><th>u</th><th>1 − u</th><th>u²</th><th>(1 − u)²</th><th>pair mean</th></tr>${T9.map(u => `<tr><td>${u.toFixed(2)}</td><td>${(1 - u).toFixed(2)}</td><td>${(u * u).toFixed(4)}</td><td>${((1 - u) ** 2).toFixed(4)}</td><td>${((u * u + (1 - u) ** 2) / 2).toFixed(4)}</td></tr>`).join("")}
+    <tr><th colspan="4">average of the 4 pair means</th><td><b>${(T9.reduce((s, u) => s + (u * u + (1 - u) ** 2) / 2, 0) / 4).toFixed(4)}</b></td></tr></table></div>`;
+  const D19 = [[6, 1], [2, 5], [6, 6], [2, 3], [6, 2], [3, 6], [2, 6], [3, 2]];
+  const t19 = `<div class="tt-wrap"><table class="tt compact"><tr><th>throw</th><th>first die y</th><th>second die x</th><th>plain: x + y</th><th>RB: 3.5 + y</th></tr>${D19.map(([y, x], i) => `<tr><th>${i + 1}</th><td>${y}</td><td>${x}</td><td>${x + y}</td><td>${num(3.5 + y, 1)}</td></tr>`).join("")}
+    <tr><th colspan="3">average</th><td><b>${(D19.reduce((s, [y, x]) => s + x + y, 0) / 8).toFixed(3)}</b></td><td><b>${(D19.reduce((s, [y]) => s + 3.5 + y, 0) / 8).toFixed(3)}</b></td></tr></table></div>`;
+  const B20 = [["B", 0], ["B", 0], ["A", 1], ["A", 1], ["B", 0], ["A", 1], ["A", 0], ["B", 0], ["B", 0], ["B", 0]];
+  const t20 = `<div class="tt-wrap"><table class="tt compact"><tr><th>flip</th><th>bag y</th><th>ball (plain only)</th><th>plain: 1 if red</th><th>RB: g(y)</th></tr>${B20.map(([b, r], i) => `<tr><th>${i + 1}</th><td>${b}</td><td>${r ? "red" : "blue"}</td><td>${r}</td><td>${b === "A" ? "0.75" : "0.25"}</td></tr>`).join("")}
+    <tr><th colspan="3">average</th><td><b>0.30</b></td><td><b>0.45</b></td></tr></table></div>`;
+  const P22 = [[0.02, 0.86], [0.49, 0.66], [0.72, 0.24], [0.28, 0.92], [0.61, 0.40], [0.81, 0.97], [0.26, 0.49], [0.68, 0.92], [0.45, 0.98], [0.92, 0.04]];
+  const t22 = `<div class="tt-wrap"><table class="tt compact"><tr><th>point</th><th>u₁</th><th>u₂</th><th>u₁² + u₂²</th><th>plain: inside?</th><th>RB: √(1 − u₁²)</th></tr>${P22.map(([a, b], i) => `<tr><th>${i + 1}</th><td>${a.toFixed(2)}</td><td>${b.toFixed(2)}</td><td>${(a * a + b * b).toFixed(4)}</td><td>${a * a + b * b <= 1 ? 1 : "<b>0</b>"}</td><td>${Math.sqrt(1 - a * a).toFixed(4)}</td></tr>`).join("")}
+    <tr><th colspan="4">4 × average</th><td><b>${(4 * P22.filter(([a, b]) => a * a + b * b <= 1).length / 10).toFixed(2)}</b></td><td><b>${(4 * P22.reduce((s, [a]) => s + Math.sqrt(1 - a * a), 0) / 10).toFixed(4)}</b></td></tr></table></div>`;
+  const bagtab = `<div class="tt-wrap"><table class="tt compact"><tr><th>bag \\ ball</th><th>red</th><th>blue</th><th>row sum: P(bag)</th></tr><tr><th>bag A (3 red, 1 blue)</th><td>3/8</td><td>1/8</td><td>1/2</td></tr><tr><th>bag B (1 red, 3 blue)</th><td>1/8</td><td>3/8</td><td>1/2</td></tr><tr><th>column sum: P(colour)</th><td>1/2</td><td>1/2</td><td>1</td></tr></table></div>`;
+  return `${head(l)}
+    <p class="lead">Lecture 4 showed that a Monte Carlo estimate has a typical error σ/√N, and that the only free lever on that formula is N: a hundred times more samples for one more correct digit. This lecture pulls the other lever, σ, the noise of a single sample. It changes nothing about the 1/√N law; it makes each sample less noisy, so that fewer samples reach the same accuracy. Two tricks, both explained with dice: <b>antithetic variates</b> pair every random number u with its mirror 1 − u so that a lucky high result is cancelled by an unlucky low one, like the top and bottom faces of a die that always add up to 7; <b>Rao–Blackwellization</b> replaces every random part of a sample that can be averaged exactly by its average, like rolling one die and adding 3.5 for the second instead of rolling it. On the way it needs two tools: covariance (do two random numbers move together?) and conditional expectation (the average of something once part of the randomness is known). The deck is “SMS5” in OPAL (Lecture2026), a 30-page summary in five parts plus a recap. Like the deck of lecture 4, it is a simplified companion to the lecture and marks with “Note” the places where it corrects a statement of the lecture; these notes are kept below.</p>
+    ${tiles([[fx(String.raw`N = \sigma_f^2/\varepsilon^2`, "N = σ_f²/ε²"), "samples for a typical error ε: k× less variance, k× fewer samples"], [fx(String.raw`+\,2\,\mathrm{Cov}[A,B]`, "+ 2 Cov[A, B]"), "the extra term in Var[A + B]: negative covariance cancels noise"], ["8× · 31× · ½×", "antithetic gain for x², eˣ and a hump"], [fx(String.raw`\hat\sigma_f^2 \le \sigma_f^2`, "σ̂_f² ≤ σ_f²"), "Rao–Blackwell never hurts: total noise = within + between"]])}
+    ${before([
+      `${inL(4, "Toolbox: a die, densities and the spread of an average", "Mean, variance and the spread of an average")} (lecture 4): E[X], Var[X] = E[X²] − μ², σ = √Var, and Var[X̄<sub>N</sub>] = σ²/N. A fair die has μ = 3.5, Var = 35/12 ≈ 2.92, σ ≈ 1.71. Repeated in ${see(H.tool)}.`,
+      `${inL(4, "Monte Carlo integration")} and ${inL(4, "How accurate: the error shrinks like 1/√N", "its error")} (lecture 4): ∫₀¹ f(x) dx = E[f(U)] for U uniform on [0, 1]; estimate it by the average of f at N random points. For f = x² the variance of one sample is 4/45 ≈ 0.0889.`,
+      `${inL(1, "Part 5 · Conditional probability and independence", "Conditional probability")} (lecture 1): P(A | B) = P(A and B)/P(B), the probability of A once B is known. Repeated with numbers in ${see(H.bags)}.`,
+      `School calculus: ∫₀¹ xᵏ dx = 1/(k + 1), ∫₀¹ eˣ dx = e − 1, multiplying out (1 − x)². Nothing else.`,
+    ])}
+    ${terms([
+      ["Antithetic variates", "Trick 1: pair every uniform random number u with its mirror 1 − u and average f over both, so that high and low results cancel.", H.anti],
+      ["Antithetic estimator θ<sup>A</sup><sub>2N</sub>", "The average of f over N random numbers and their N mirrors, 2N evaluations in total. Its variance is (σ<sub>f</sub>² + γ<sub>f</sub>)/(2N).", H.anti],
+      ["Between-y noise Var[g(Y)]", "How much the conditional averages g(y) differ from one y to the next. The only noise Rao–Blackwell keeps.", H.tv],
+      ["Conditional distribution p(x | y)", "The distribution of X once Y = y is known: one row of the joint table divided by its sum. P(red | bag A) = 3/4.", H.bags],
+      ["Conditional expectation g(y) = E[f | Y = y]", "The average of f once y is known, averaging only over the rest of the randomness. A function of y; with a random Y it is itself random.", H.cexp],
+      ["Conditional variance Var[f | y]", "How much f still scatters once y is known. Bags: 3/16 in each bag; dice: 2.92 (only the second die is left).", H.cexp],
+      ["Correlation ρ", "Covariance scaled to between −1 and +1: ρ = Cov[A, B]/(σ<sub>A</sub>σ<sub>B</sub>). +1: always move together; −1: always opposite; 0: no linear relation.", H.cov],
+      ["Covariance Cov[A, B]", "E[(A − E A)(B − E B)] = E[AB] − E[A]E[B]: positive when A and B tend to be high together, negative when one is high while the other is low, 0 for independent numbers.", H.cov],
+      ["Evaluation of f", "One computation of the function value f(x). The fair way to compare methods is at the same number of evaluations, since those usually cost the time.", H.whyx],
+      ["Estimate θ<sub>N</sub> (theta)", "The Monte Carlo answer from N samples: the average of f over them. A random number, because the samples are.", H.tool],
+      ["Expectation E[X], mean μ", "The long-run average of X, each value weighted by its probability. Fair die: 3.5.", H.tool],
+      ["i.i.d.", "Independent and identically distributed: each sample ignores the others and all come from the same distribution. Plain Monte Carlo samples are i.i.d.; the two halves of an antithetic pair are not independent, on purpose.", H.tool],
+      ["Joint probability P(X, Y)", "The chance of two things together, e.g. bag A and a red ball: 1/2 · 3/4 = 3/8.", H.bags],
+      ["Law of total expectation (tower rule)", "Fact 1: E[E[f | Y]] = E[f]. Average the conditional averages over y and you get the overall average.", H.cexp],
+      ["Law of total variance", "σ<sub>f</sub>² = E[Var(f | Y)] + Var(E[f | Y]): total noise = average noise within each y + noise between the y's.", H.tv],
+      ["Marginal probability", "The chance of one variable alone: a row or column sum of the joint table. P(red) = 3/8 + 1/8 = 1/2.", H.bags],
+      ["Mirror 1 − u", "The reflection of u at the middle of [0, 1]: 0.26 ↔ 0.74. If u is uniform, so is 1 − u.", H.anti],
+      ["Monotone function", "One that only rises or only falls, like x² or eˣ on [0, 1]. For a monotone, non-constant f, antithetic variates are guaranteed to help.", H.use],
+      ["Pair covariance γ<sub>f</sub> (gamma)", "Cov[f(U), f(1 − U)]: how f at u and f at the mirror move together. Negative is good; x²: −7/90.", H.whyx],
+      ["Pilot run", "A small preliminary run (say 100 values of u) to estimate a quantity such as the correlation of f(u) and f(1 − u) before committing to a method.", H.use],
+      ["Rao–Blackwell estimator θ̂<sub>N</sub>", "The average of g(y₁), …, g(y<sub>N</sub>) with y<sub>i</sub> drawn from their own distribution. Variance Var[g(Y)]/N.", H.rb],
+      ["Rao–Blackwellization (RB)", "Trick 2: replace f by its conditional expectation g(y) = E[f | y], computed by hand, and sample only y. Named after the Rao–Blackwell theorem of statistics (C. R. Rao 1945, D. Blackwell 1947).", H.rb],
+      ["Second moment E[X²]", "The average of the square. Variance = second moment − mean².", H.whyx],
+      ["Standard deviation σ", "√Var: the typical distance from the mean in the units of X. Fair die: 1.71.", H.tool],
+      ["Symmetric around ½", "f(1 − x) = f(x), like the hump 4x(1 − x). Then the mirror gives the same value and antithetic variates double the variance.", H.three],
+      ["Typical error", "The standard deviation of the estimate, σ<sub>f</sub>/√N: how far one run's answer typically lands from the truth.", H.tool],
+      ["Unbiased", "Right on average: E[estimate] = the true value, for every N. Both tricks keep this.", H.anti],
+      ["Uniform U(0, 1)", "Every value in [0, 1] equally likely; what a computer's random() gives.", H.anti],
+      ["Variance Var[X]", "Average squared distance from the mean, E[(X − μ)²] = E[X²] − μ². Fair die: 35/12 ≈ 2.92.", H.tool],
+      ["Variance of one sample σ<sub>f</sub>²", "Var[f(X)]: how much a single sample scatters around the true answer. The number this lecture shrinks.", H.tool],
+      ["Variance reduction", "Any change of the estimator that keeps it unbiased but lowers σ<sub>f</sub>², so fewer samples give the same accuracy. Importance sampling (lecture 4) is one; this lecture adds two.", H.tool],
+      ["Within-y noise E[Var(f | Y)]", "The average over y of the conditional variance: the noise that remains once y is known. Exactly what Rao–Blackwell removes.", H.tv],
+    ])}
+
+    <h2>${H.tool} (slides 4–5)</h2>
+    ${plain("A Monte Carlo answer wobbles by about σ<sub>f</sub>/√N. You can shrink that by taking more samples (N) or by making each sample less noisy (σ<sub>f</sub>). The second is what this lecture does, and it pays off one to one: half the variance per sample saves half the samples.")}
+    <p>Recap of lecture 4: to estimate E[f(X)], draw N <dfn>i.i.d.</dfn> samples x₁, …, x<sub>N</sub> and average. The <dfn>estimate</dfn> θ<sub>N</sub> (“theta”) is random, with</p>
+    <div class="formula">${fx(String.raw`\theta_N = \frac1N\sum_{i=1}^N f(x_i) \approx \mathbb E[f(X)], \qquad \mathrm{Var}[\theta_N] = \frac{\sigma_f^2}{N}, \quad \sigma_f^2 = \mathrm{Var}[f(X)], \qquad \text{typical error} = \frac{\sigma_f}{\sqrt N}`, "θ_N = (1/N) Σ f(x_i); Var[θ_N] = σ_f²/N with σ_f² = Var[f(X)]; typical error σ_f/√N")}</div>
+    <p>σ<sub>f</sub>² is the <dfn>variance of one sample</dfn>: how much a single f(X) scatters around the true answer. Its square root, the <dfn>standard deviation</dfn>, divided by √N is the <dfn>typical error</dfn>. For the average die roll: <dfn>expectation</dfn> μ = 3.5, <dfn>variance</dfn> 35/12 ≈ 2.92, σ ≈ 1.71, so the typical error is 1.71/√N: ±0.17 for 100 rolls, ±0.017 for 10,000, ±0.0017 for a million. Each extra correct digit costs 100 times more rolls.</p>
+    <p>Turn the formula around: to reach a target typical error ε (epsilon), solve σ<sub>f</sub>/√N = ε for N.</p>
+    <div class="formula">${fx(String.raw`N_\text{needed} = \frac{\sigma_f^2}{\varepsilon^2}`, "N_needed = σ_f²/ε²")}</div>
+    <p>N is proportional to σ<sub>f</sub>²: an estimator with k times less variance per sample needs k times fewer samples. The deck's one-liner: halving the variance is as good as doubling the computer. Every method that lowers σ<sub>f</sub>² while keeping the answer right on average is a <dfn>variance reduction</dfn> method; importance sampling from lecture 4 was the first.</p>
+    ${ex("Worked example: ∫₀¹ x² dx = 1/3 to within ±0.01 (slide 5)", `<p>ε² = 0.01² = 0.0001, so N = σ<sub>f</sub>²/0.0001 = σ<sub>f</sub>² × 10,000. Plain Monte Carlo: σ<sub>f</sub>² = 4/45 = 0.0889, so <b>889</b> samples. An estimator with half the variance, 0.0444: <b>444</b>. Antithetic variates (below) reach 0.0111 per evaluation: <b>111</b> evaluations, eight times fewer. Check one: with N = 889, 0.298/√889 = 0.298/29.8 = 0.0100 ✓.</p>`)}
+    ${tryit([
+      ["A method has σ<sub>f</sub>² = 0.5. How many samples for a typical error of ±0.005?", `<p>N = 0.5/0.005² = 0.5/0.000025 = <b>20,000</b>.</p>`],
+      ["A new estimator has a third of the variance of the old one, which needed 6,000 samples. How many does the new one need?", `<p>N ∝ σ<sub>f</sub>², so <b>2,000</b>.</p>`],
+    ])}
+
+    <h2>${H.cov} (slide 6)</h2>
+    ${plain("Two random numbers can rise and fall together, move in opposite directions, or ignore each other. Covariance measures which. Trick 1 is built entirely on making two samples move in opposite directions.")}
+    <div class="formula">${fx(String.raw`\mathrm{Cov}[A,B] = \mathbb E\big[(A-\mathbb E[A])(B-\mathbb E[B])\big] = \mathbb E[AB] - \mathbb E[A]\,\mathbb E[B], \qquad \rho = \frac{\mathrm{Cov}[A,B]}{\sigma_A\,\sigma_B},\ -1 \le \rho \le 1`, "Cov[A, B] = E[(A − E A)(B − E B)] = E[AB] − E[A]E[B];  ρ = Cov/(σ_A σ_B), −1 ≤ ρ ≤ 1")}</div>
+    <p>In words, the <dfn>covariance</dfn> is the average of (A above its mean) × (B above its mean). If A and B tend to be above their means together, the products are mostly positive; if one tends to be above while the other is below, mostly negative; for independent numbers the average is 0. The <dfn>correlation</dfn> ρ (“rho”) scales it into [−1, 1], so that +1 means “always together” and −1 “always opposite”. Note Cov[A, A] = Var[A]. Three dice examples (each die has variance 2.92):</p>
+    <ul><li><b>Two separate dice:</b> independent, Cov = 0, ρ = 0.</li><li><b>Top and bottom of one die</b> (bottom = 7 − top): Cov = −2.92, ρ = −1.</li><li><b>One die counted twice</b> (A = B): Cov = Var = +2.92, ρ = +1.</li></ul>
+    ${ex("Worked example: the covariance of top and bottom", `<p>T = top face, B = 7 − T. E[T] = E[B] = 3.5. E[TB] = E[T(7 − T)] = 7 E[T] − E[T²] = 7 · 3.5 − 91/6 = 24.5 − 15.167 = 9.333. Cov = E[TB] − E[T]E[B] = 9.333 − 12.25 = <b>−2.917</b>. σ<sub>T</sub> = σ<sub>B</sub> = 1.708, so ρ = −2.917/(1.708 · 1.708) = −2.917/2.917 = <b>−1</b>. Check with the definition on one face: T = 6 gives (6 − 3.5)(1 − 3.5) = 2.5 · (−2.5) = −6.25; the six products are −6.25, −2.25, −0.25, −0.25, −2.25, −6.25, average −17.5/6 = −2.917 ✓.</p>`)}
+
+    <h2>${H.vsum} (slide 7)</h2>
+    ${plain("When you add two noisy numbers, the noise adds up only if they are independent. If they lean in opposite directions, part of the noise cancels; if they lean the same way, it piles up.")}
+    <div class="formula">${fx(String.raw`\mathrm{Var}[A+B] = \mathrm{Var}[A] + \mathrm{Var}[B] + 2\,\mathrm{Cov}[A,B]`, "Var[A + B] = Var[A] + Var[B] + 2 Cov[A, B]")}</div>
+    <p>For independent A and B the last term is 0 and the variances simply add, as used in lecture 4 for the spread of an average.</p>
+    ${chart("vsum")}${cap("Var[A + B] for the three dice pairs of slide 7, computed with the rule above: 2.92 + 2.92 + 2 · Cov. Hover a bar for the arithmetic. What to look for: the same two variances give anything from 0 to 11.67, depending only on the covariance.")}
+    ${tbl(["pair", "Cov[A, B]", "Var[A + B]"], [["two separate dice", "0", "5.83"], ["top + bottom of one die", "−2.92", "0"], ["one die counted twice", "+2.92", "11.67"]])}
+    ${ex("Worked example: the three sums", `<p>Separate dice: 2.92 + 2.92 + 2 · 0 = <b>5.83</b>; the total ranges from 2 to 12. Top + bottom: 2.92 + 2.92 + 2 · (−2.92) = <b>0</b>: the total is always 7, no noise at all. Counted twice: 2.92 + 2.92 + 2 · 2.92 = <b>11.67</b> = 4 · 2.92, because X + X = 2X and Var[2X] = 4 Var[X]. Repeating a sample is the worst case; pairing it with its opposite the best.</p>`)}
+    ${oops("Adding variances without checking independence. Var[A + B] = Var A + Var B holds only when Cov = 0; for “one die counted twice” it would give 5.83 instead of 11.67.")}
+    ${tryit([
+      ["A fair coin gives A = 1 (head) or 0. Let B = 1 − A. Compute Cov[A, B], ρ and Var[A + B].", `<p>E[A] = E[B] = 1/2, AB is always 0, so Cov = 0 − 1/4 = <b>−1/4</b>. Var A = Var B = 1/4, so ρ = −1/4 / (1/2 · 1/2) = <b>−1</b>. Var[A + B] = 1/4 + 1/4 − 1/2 = <b>0</b>: A + B is always 1.</p>`],
+      ["A die X and Y = 2X. Compute Cov[X, Y] and Var[X + Y].", `<p>Cov[X, 2X] = 2 Var X = <b>5.83</b>. Var[X + Y] = Var[3X] = 9 · 2.92 = <b>26.25</b>; with the rule: 2.92 + 11.67 + 2 · 5.83 = 26.25 ✓.</p>`],
+    ])}
+
+    <h2>${H.anti} (slide 8)</h2>
+    ${plain("Every uniform random number u has a mirror image 1 − u. If f rises steadily, u and 1 − u give one low and one high value, and their average lands near the middle. Use every random number twice, once as itself and once mirrored.")}
+    <p>The recipe for E[f(U)] = ∫₀¹ f(x) dx with U uniform on [0, 1]: (1) draw N random numbers u₁, …, u<sub>N</sub>; (2) also use their mirrors 1 − u₁, …, 1 − u<sub>N</sub>; (3) average f over all 2N numbers, which is the same as averaging the N pair means:</p>
+    <div class="formula">${fx(String.raw`\theta^A_{2N} = \frac{1}{2N}\sum_{i=1}^{2N} f(z_i) = \frac1N\sum_{i=1}^N \frac{f(u_i) + f(1-u_i)}{2}`, "θ^A_2N = (1/2N) Σ f(z_i) = (1/N) Σ [f(u_i) + f(1 − u_i)]/2")}</div>
+    <p>The z<sub>i</sub> are the 2N numbers u₁, …, u<sub>N</sub>, 1 − u₁, …, 1 − u<sub>N</sub>. This is <dfn>antithetic variates</dfn> (“antithetic”: set against each other). Is the <dfn>mirror</dfn> a fair sample? Yes: if U is <dfn>uniform U(0, 1)</dfn>, so is 1 − U (flipping [0, 1] around its middle maps every interval to one of the same length). So every term has the right average, and the estimator is still <dfn>unbiased</dfn>: right on average for every N. What changes is that the two halves of a pair are dependent on purpose; slide 8 sketches it for x² (one low, one high: the errors cancel) and for the hump 4x(1 − x) (both equal: nothing cancels).</p>
+    ${why("Context, not on the slides: where antithetic variates are used", `<p>The trick is standard in computational finance: the payoff of many options rises steadily with the simulated price, which in turn rises with the underlying random number, exactly the monotone case where mirrors cancel. For normal random numbers the mirror of z is −z, the same idea on the real line (inversion from ${lecLink(2, "lecture 2")} turns u ↔ 1 − u into z ↔ −z).</p>`)}
+
+    <h2>${H.hand} (slide 9)</h2>
+    ${plain("Eight evaluations of f either way: four random numbers and their four mirrors, or eight independent random numbers. The pairs land much closer to 1/3.")}
+    ${t9}
+    ${ex("Worked example: the four pairs, step by step", `<p>Pair 1: u = 0.26, mirror 0.74; 0.26² = 0.0676 and 0.74² = 0.5476; pair mean (0.0676 + 0.5476)/2 = <b>0.3076</b>. In every row, when u² is small, (1 − u)² is large. Average of the four pair means: (0.3076 + 0.2900 + 0.3461 + 0.4181)/4 = 1.3618/4 = <b>0.3405</b>, off by 0.007, from only 4 random numbers. Plain, with 8 independent numbers 0.57, 0.85, 0.65, 0.41, 0.47, 0.82, 0.31, 0.79: squares 0.3249, 0.7225, 0.4225, 0.1681, 0.2209, 0.6724, 0.0961, 0.6241, sum 3.2515, average <b>0.4064</b>, off by 0.073.</p><p>One run can be lucky, so compare the typical errors with 8 evaluations (derived next): antithetic √((1/180)/4) = √0.00139 = <b>±0.037</b>; plain √(0.0889/8) = √0.0111 = <b>±0.105</b>.</p>`)}
+
+    <h2>${H.whyx} (slides 10–11)</h2>
+    ${plain("Look at a single pair instead of a single sample. One sample u² can be anything from 0 to 1. The mean of a pair can only be between 0.25 and 0.5. Less room to wobble means less variance.")}
+    <div class="formula">${fx(String.raw`\frac{x^2 + (1-x)^2}{2} = x^2 - x + \tfrac12`, "(x² + (1 − x)²)/2 = x² − x + ½")}</div>
+    <p>This curve is lowest at x = ½ (value ¼) and highest at x = 0 or 1 (value ½).</p>
+    ${chart("pairmean", leg([[2, "one plain sample u²"], [3, "pair mean (u² + (1 − u)²)/2"], ["g", "true value 1/3"]]))}${cap("What gets averaged, plotted over the random number u. The plain sample sweeps the whole range 0 to 1; the antithetic pair mean stays between 0.25 and 0.5, close to the dashed true value. Hover or use the arrow keys to read both at a given u.")}
+    ${tbl(["u", "plain sample u²", "pair mean"], [0, 0.1, 0.26, 0.5, 0.74, 0.9, 1].map(u => [num(u, 2), num(u * u, 4), num((u * u + (1 - u) ** 2) / 2, 4)]))}
+    <p><b>The general rule.</b> f(U) and f(1 − U) have the same variance σ<sub>f</sub>² (both inputs are uniform). Call their covariance the <dfn>pair covariance</dfn> γ<sub>f</sub> (“gamma”). The variance-of-a-sum rule with the factor ½ in front, which squares to ¼:</p>
+    <div class="formula">${fx(String.raw`\gamma_f = \mathrm{Cov}\big[f(U),\,f(1-U)\big]`, "γ_f = Cov[f(U), f(1 − U)]")}</div>
+    <div class="formula">${fx(String.raw`\mathrm{Var}\!\left[\frac{f(u) + f(1-u)}{2}\right] = \frac{\sigma_f^2 + \sigma_f^2 + 2\gamma_f}{4} = \frac{\sigma_f^2 + \gamma_f}{2}, \qquad \mathrm{Var}[\theta^A_{2N}] = \frac{\sigma_f^2 + \gamma_f}{2N}`, "Var[pair mean] = (σ_f² + σ_f² + 2γ_f)/4 = (σ_f² + γ_f)/2;  Var[θ^A_2N] = (σ_f² + γ_f)/(2N)")}</div>
+    <p>N independent pairs: divide by N. Compare with 2N plain samples, the same number of <dfn>evaluations of f</dfn>: σ<sub>f</sub>²/(2N). Antithetic wins exactly when γ<sub>f</sub> &lt; 0.</p>
+    ${ex("Worked example: the numbers for x² (slide 11)", `<p><b>1. Variance of one sample.</b> <dfn>Second moment</dfn> minus mean squared: E[X⁴] = ∫₀¹ x⁴ dx = 1/5 and E[X²] = 1/3, so σ<sub>f</sub>² = 1/5 − 1/9 = 9/45 − 5/45 = <b>4/45 ≈ 0.0889</b>. <b>2. Average of the product.</b> x²(1 − x)² = x² − 2x³ + x⁴, so E[U²(1 − U)²] = 1/3 − 2/4 + 1/5 = (10 − 15 + 6)/30 = <b>1/30</b>. <b>3. Covariance</b> = average of the product − product of the averages; 1 − U is uniform, so E[(1 − U)²] = 1/3: γ<sub>f</sub> = 1/30 − 1/3 · 1/3 = 3/90 − 10/90 = <b>−7/90 ≈ −0.0778</b>. <b>4. Into the rule.</b> Pair variance (σ<sub>f</sub>² + γ<sub>f</sub>)/2 = (8/90 − 7/90)/2 = <b>1/180 ≈ 0.0056</b>. Two independent samples: (4/45)/2 = 8/180. Ratio <b>8</b>.</p><p>Check directly: the pair mean is U² − U + ½, so its variance is Var[U² − U] = E[(U² − U)²] − (E[U² − U])² = (1/5 − 2/4 + 1/3) − (1/3 − 1/2)² = 1/30 − 1/36 = 6/180 − 5/180 = 1/180 ✓.</p>`)}
+    ${tryit([
+      ["One antithetic pair for x² with u = 0.4: what is the pair mean, and how far is it from 1/3?", `<p>(0.16 + 0.36)/2 = <b>0.26</b>, off by 0.073. A plain sample at u = 0.4 gives 0.16, off by 0.173.</p>`],
+      ["f(x) = x on [0, 1]. What does one antithetic pair give, and what is the variance?", `<p>(u + 1 − u)/2 = <b>½</b>, exactly the answer, for every u: variance <b>0</b>. Here γ<sub>f</sub> = −σ<sub>f</sub>²: a straight line is the perfect case.</p>`],
+      ["f(x) = x³ on [0, 1] (true value 1/4). Compute σ<sub>f</sub>², γ<sub>f</sub> and the gain over plain sampling at equal work. (Hint: ∫₀¹ x³(1 − x)³ dx = 1/140.)", `<p>σ<sub>f</sub>² = 1/7 − 1/16 = <b>9/112 ≈ 0.0804</b>. γ<sub>f</sub> = 1/140 − 1/4 · 1/4 = 1/140 − 1/16 = <b>−31/560 ≈ −0.0554</b>. Pair variance (45/560 − 31/560)/2 = 14/1120 = <b>1/80 = 0.0125</b>; two independent samples 9/224 ≈ 0.0402. Gain 0.0402/0.0125 ≈ <b>3.2</b>: less than for x², because x³ bends more.</p>`],
+    ])}
+
+    <h2>${H.three} (slides 12–13)</h2>
+    ${plain("The mirror helps when f rises (or falls) steadily, and the straighter f is, the better. It hurts when f is symmetric around the middle: then u and 1 − u give the same value and you pay for two evaluations but learn only one.")}
+    <div class="tt-wrap"><table class="tt compact"><tr><th>f(x)</th><th>true answer</th><th>σ<sub>f</sub>²</th><th>γ<sub>f</sub></th><th>correlation</th><th>antithetic vs plain, same work</th></tr>
+      <tr><th>x²</th><td>1/3</td><td>0.0889</td><td>−0.0778</td><td>−0.875</td><td>8× less variance</td></tr>
+      <tr><th>eˣ</th><td>e − 1 ≈ 1.718</td><td>0.2420</td><td>−0.2342</td><td>−0.968</td><td>31× less variance</td></tr>
+      <tr><th>4x(1 − x)</th><td>2/3</td><td>0.0889</td><td>+0.0889</td><td>+1.000</td><td>2× <b>more</b> variance</td></tr></table></div>
+    ${ex("Worked example: the eˣ row", `<p>E[e<sup>U</sup>] = e − 1 = 1.7183. E[e<sup>2U</sup>] = (e² − 1)/2 = (7.3891 − 1)/2 = 3.1945, so σ<sub>f</sub>² = 3.1945 − 1.7183² = 3.1945 − 2.9525 = <b>0.2420</b>. The product of a pair is e<sup>u</sup> · e<sup>1−u</sup> = e, a constant! So γ<sub>f</sub> = e − (e − 1)² = 2.7183 − 2.9525 = <b>−0.2342</b>, correlation −0.2342/0.2420 = −0.968. Pair variance (0.2420 − 0.2342)/2 = 0.0039; two independent samples 0.2420/2 = 0.1210; ratio <b>31</b>. eˣ is nearly straight on [0, 1], so the pair almost cancels.</p>`)}
+    ${ex("Worked example: the hump 4x(1 − x)", `<p>4(1 − u)(1 − (1 − u)) = 4(1 − u)u: f(1 − u) = f(u), the mirror gives the same number. So γ<sub>f</sub> = Cov[f(U), f(U)] = σ<sub>f</sub>² = 16 · E[U²(1 − U)²] − (2/3)² = 16/30 − 4/9 = 0.5333 − 0.4444 = <b>0.0889</b>, correlation +1. Pair variance (0.0889 + 0.0889)/2 = 0.0889, the variance of one sample, at the cost of two evaluations; two independent samples would give 0.0444. <b>Twice the variance</b>: slide 12's title says it, positive covariance is an issue.</p>`)}
+    <p>Slide 13 checks the x² case by simulation: 5,000 repeated estimates, each from 100 evaluations of f (100 independent numbers, or 50 numbers and their 50 mirrors). Plain spread ±0.0300 (formula √(0.0889/100) = ±0.0298), antithetic ±0.0106 (formula √((1/180)/50) = ±0.0105), both centred on 1/3: antithetic is √8 ≈ 2.8 times narrower. The explorer repeats it with 3,000 runs for all three functions.</p>
+    ${lab("anti", "antithetic pairs and 3,000 repeated estimates", "Choose a function and drag <b>u</b>: the two orange dots are f(u) and f(1 − u), the green bar their mean. Below, each run computes one estimate from N evaluations; the histograms show how 3,000 such estimates scatter, plain (orange) against antithetic (green). <b>New runs</b> draws fresh random numbers. Compare x² with the hump.")}
+
+    <h2>${H.use} (slide 14)</h2>
+    ${plain("Antithetic variates are safe for a function that only rises or only falls, very good for a nearly straight one, and harmful for one that is symmetric around ½. When unsure, measure the correlation on a few samples first.")}
+    <ul class="cmp three"><li><b>Use it</b><span class="v">f always rises or always falls (a <dfn>monotone function</dfn>, not constant): γ<sub>f</sub> &lt; 0 is guaranteed. Nearly straight f: almost perfect cancellation (eˣ: 31×).</span></li>
+      <li><b>Avoid it</b><span class="v">f <dfn>symmetric around ½</dfn>, a hump or a valley: f(1 − u) = f(u), so γ<sub>f</sub> = +σ<sub>f</sub>² and the variance doubles.</span></li>
+      <li><b>Not sure?</b><span class="v">Run a small <dfn>pilot run</dfn>: draw 100 values u, compute the correlation of f(u) and f(1 − u). Negative: use the trick. Positive: do not.</span></li></ul>
+    <p>Why monotone works: if f rises, a small u gives a small f(u) but a large 1 − u, hence a large f(1 − u); the two always pull in opposite directions.</p>
+    ${why("Context: a note on slide 14, “double the sample size for free”", `<p>The deck notes that the lecture describes the mirrors as doubling the sample size for free. Only the random numbers are free; f still has to be evaluated 2N times, and evaluations are usually what costs the time. Compared at the same number of evaluations, the trick wins only when γ<sub>f</sub> &lt; 0. That is why every comparison on this page is made at equal work.</p>`)}
+    ${tryit([
+      ["Use antithetic variates for f(x) = (x − 0.5)² on [0, 1]?", `<p><b>No.</b> (1 − u − 0.5)² = (0.5 − u)² = f(u): symmetric around ½, the variance doubles.</p>`],
+      ["And for f(x) = √x? And for sin(πx)?", `<p>√x rises on [0, 1]: <b>yes</b>, γ<sub>f</sub> &lt; 0 is guaranteed. sin(πx) is a hump symmetric around ½: <b>no</b>.</p>`],
+    ])}
+
+    <h2>${H.bags} (slide 15)</h2>
+    ${plain("Trick 2 needs to talk about two random things at once: which bag, and which ball. Three words do it: joint (both together), marginal (one alone), conditional (one, once the other is known).")}
+    <p>Flip a fair coin to choose a bag (Y = A or B), then draw one ball from it (X = red or blue). Bag A holds 3 red and 1 blue ball, bag B 1 red and 3 blue.</p>
+    ${bagtab}
+    <p>The inner cells are the <dfn>joint probability</dfn> P(X, Y), the chance of a bag and a colour together: P(A, red) = P(A) · P(red | A) = ½ · ¾ = 3/8. A <dfn>marginal probability</dfn> is the chance of one variable alone, a row or column sum: P(red) = 3/8 + 1/8 = ½. The <dfn>conditional distribution</dfn> P(X | Y) is the chance of a colour once you know the bag: one row divided by its sum, P(red | A) = (3/8)/(1/2) = ¾.</p>
+    ${oops("Reading P(red | A) off the joint table without dividing by the row sum. The cell says 3/8, which is P(A and red), not the 3/4 chance of red from bag A.")}
+
+    <h2>${H.cexp} (slides 16–17)</h2>
+    ${plain("Fix part of the randomness, say which bag, and average over the rest. The result depends on what you fixed, so it is a function g(y), and since y was random, g(Y) is random too.")}
+    <div class="formula">${fx(String.raw`g(y) = \mathbb E[f \mid Y = y] = \sum_x f(x,y)\,P(X = x \mid Y = y) \qquad\text{or}\qquad \int_{-\infty}^{\infty} f(x,y)\,p(x\mid y)\,dx`, "g(y) = E[f | Y = y] = Σ_x f(x, y) P(X = x | Y = y), or ∫ f(x, y) p(x | y) dx")}</div>
+    <p>This is the <dfn>conditional expectation</dfn>: the sum for discrete X, the integral with the conditional density p(x | y) for continuous X. Two examples:</p>
+    <ul><li><b>Bags, f = 1 if the ball is red, else 0.</b> Fix the bag, average over the ball: g(A) = P(red | A) = ¾, g(B) = P(red | B) = ¼. Before the coin is flipped you do not know which value you will get: g(Y) is ¾ or ¼ with probability ½ each.</li>
+      <li><b>Dice, f = X + Y, the total of two dice.</b> Fix the first die Y = y; the second die X still averages 3.5: g(y) = E[X] + y = 3.5 + y, so 4.5, 5.5, …, 9.5 for y = 1, …, 6.</li></ul>
+    <p><b>Fact 1, the average of the averages</b>, also called the <dfn>law of total expectation</dfn> or tower rule: average g over the possible y and you get the overall average of f.</p>
+    <div class="formula">${fx(String.raw`\mathbb E\big[\mathbb E[f\mid Y]\big] = \mathbb E[f]`, "E[E[f | Y]] = E[f]")}</div>
+    <p>Bags: E[g(Y)] = ½ · ¾ + ½ · ¼ = ½ = P(red). Dice: E[3.5 + Y] = 3.5 + 3.5 = 7 = E[X + Y]. Fact 1 will show that trick 2 gives the right answer on average.</p>
+    <p><b>Fact 2, the noise within each y.</b> The <dfn>conditional variance</dfn> Var[f | y] measures how much f still scatters once y is known. Bags: inside one bag f is a coin with success chance g, so Var[f | y] = g(1 − g): Var[f | A] = ¾ · ¼ = 3/16 and Var[f | B] = ¼ · ¾ = 3/16. Dice: once y is known only the second die scatters, so Var[f | y] = 2.92 for every y. Fact 2 is exactly the noise trick 2 removes.</p>
+    ${tryit([
+      ["Bag A gives red with probability 0.9, bag B with 0.3; a fair coin picks the bag. Find g(A), g(B), P(red) and Var[f | A].", `<p>g(A) = 0.9, g(B) = 0.3. P(red) = E[g(Y)] = ½ · 0.9 + ½ · 0.3 = <b>0.6</b>. Var[f | A] = 0.9 · 0.1 = <b>0.09</b>.</p>`],
+      ["Roll a die Y, then pick X uniformly from 1, …, Y. What is g(y) = E[X | Y = y], and E[X]?", `<p>The average of 1, …, y is <b>(y + 1)/2</b>. By Fact 1, E[X] = E[(Y + 1)/2] = (3.5 + 1)/2 = <b>2.25</b>.</p>`],
+    ])}
+
+    <h2>${H.rb} (slide 18)</h2>
+    ${plain("If part of each sample can be averaged out by hand, do it, and sample only the rest. You keep the right answer and drop the noise of the part you averaged.")}
+    <ol><li><b>Work out g(y) by hand:</b> average f over x for a fixed y, g(y) = E[f | y]. Bags: ¾ or ¼. Dice: 3.5 + y.</li>
+      <li><b>Draw only y:</b> draw y₁, …, y<sub>N</sub> from their own (marginal) distribution: flip only the coin, roll only the first die. Never draw x.</li>
+      <li><b>Average g:</b> the estimate is the average of g(y₁), …, g(y<sub>N</sub>). Plain Monte Carlo instead averages f(x<sub>i</sub>, y<sub>i</sub>).</li></ol>
+    <div class="formula">${fx(String.raw`\hat\theta_N = \frac1N\sum_{i=1}^N g(y_i), \qquad y_i \sim p(y), \qquad \mathrm{Var}[\hat\theta_N] = \frac1N\,\mathrm{Var}\big[\mathbb E[f\mid Y]\big] = \frac{\hat\sigma_f^2}{N}`, "θ̂_N = (1/N) Σ g(y_i), y_i ~ p(y);  Var[θ̂_N] = (1/N) Var[E[f | Y]] = σ̂_f²/N")}</div>
+    <p>This is the <dfn>Rao–Blackwell estimator</dfn>, and the move is <dfn>Rao–Blackwellization</dfn> (RB for short), named after the Rao–Blackwell theorem of statistics (C. R. Rao 1945, D. Blackwell 1947). σ̂<sub>f</sub>² (with a hat) is the variance of one RB sample g(Y). It needs two things: g(y) must be computable, and you must be able to draw y on its own. Many problems allow both; some do not.</p>
+    ${why("Context, not on the slides: you have seen this in tutorial 4", `<p>${exeLink(4, "Tutorial 4")} estimated ∫₀¹⁵ x³/(eˣ − 1) dx first by throwing points into a box and counting hits (two random numbers per sample: position x and height y), then by “heights instead of hits”: for a fixed x the hit probability f(x)/1.5 is known exactly, so the height is never drawn. That second step is Rao–Blackwellization with the roles swapped (average out the height, sample the position), and the notebook found that it scatters less, as the law of total variance below guarantees.</p>`)}
+
+    <h2>${H.rbx} (slides 19–22)</h2>
+    ${plain("Three examples, each done by hand with the slide's numbers: the plain column needs every random number, the RB column skips one of them and wobbles less.")}
+    <p><b>Example 1: two dice</b>, estimate the average total (true value 7) from 8 throws:</p>
+    ${t19}
+    ${ex("Worked example: variance per throw, two dice", `<p>Plain: both dice add noise, Var[X + Y] = 35/12 + 35/12 = <b>35/6 ≈ 5.83</b>. RB: only the first die does, Var[3.5 + Y] = <b>35/12 ≈ 2.92</b>. Half the variance, so half the throws for the same accuracy. This run: plain 61/8 = 7.625, off by 0.63; RB 58/8 = 7.250, off by 0.25. Typical errors with 8 throws: √(5.83/8) = <b>±0.85</b> and √(2.92/8) = <b>±0.60</b>. RB never looked at the second-die column.</p>`)}
+    <p><b>Example 2: two bags</b>, estimate P(red) (true value ½) from 10 coin flips:</p>
+    ${t20}
+    ${ex("Worked example: variance per flip, two bags", `<p>Plain: f is 1 or 0 with chance ½ each, variance ½ · ½ = <b>0.25</b>. RB: g(Y) is ¾ or ¼ with chance ½ each, both ¼ away from the mean ½: σ̂<sub>f</sub>² = ½(¾ − ½)² + ½(¼ − ½)² = 1/16 = <b>0.0625</b>. Four times less variance, a quarter of the flips. This run: plain 3/10 = 0.30, off by 0.20; RB (4 · 0.75 + 6 · 0.25)/10 = 4.5/10 = 0.45, off by 0.05. Typical errors with 10 flips: √(0.25/10) = <b>±0.16</b> and √(0.0625/10) = <b>±0.08</b>. Note flip 7: bag A gave a blue ball; plain counts 0, RB still counts 0.75, because it never looks at the ball.</p>`)}
+    <p><b>Example 3: π from lecture 4.</b> Plain: draw (u₁, u₂), score 4 if the point lies inside the quarter circle (u₁² + u₂² ≤ 1), else 0; the variance per point is 4π − π² ≈ 2.70. RB: draw only u = u₁. Given u, the point is inside when u₂ ≤ √(1 − u²), which happens with chance √(1 − u²), the height of the circle above u. So score the whole vertical line, 4√(1 − u²), instead of a single point on it.</p>
+    ${t22}
+    ${ex("Worked example: the ten points, scored both ways", `<p>Point 1 has u₁ = 0.02, so almost its whole vertical line is inside: √(1 − 0.0004) = 0.9998. Point 10 has u₁ = 0.92: only √(1 − 0.8464) = √0.1536 = 0.3919 of its line is inside. Plain: 7 of 10 inside, 4 · 0.7 = <b>2.80</b>, off by 0.34, from 20 random numbers. RB: the ten heights sum to 7.888, 4 · 0.7888 = <b>3.155</b>, off by 0.014, from 10 random numbers. Variances: RB E[16(1 − U²)] − π² = 16 · ⅔ − π² = 10.667 − 9.870 = <b>0.797</b> against plain 12.566 − 9.870 = <b>2.697</b>. Typical errors with 10 points: √(2.697/10) = ±0.52 and √(0.797/10) = ±0.28.</p>`)}
+    ${tryit([
+      ["One RB sample for π with u = 0.6: what does it score?", `<p>4√(1 − 0.36) = 4 · 0.8 = <b>3.2</b>.</p>`],
+      ["Estimate E[XY] for two dice (true value 12.25) by Rao–Blackwell given the first die y. What is g(y), and how much variance does it save?", `<p>g(y) = E[X · y] = <b>3.5y</b>. Var[g(Y)] = 3.5² · 35/12 = 12.25 · 2.917 = <b>35.7</b>. Plain: Var[XY] = E[X²]E[Y²] − 12.25² = 15.167² − 150.06 = 230.03 − 150.06 = <b>80.0</b>. RB saves a factor 80.0/35.7 ≈ <b>2.2</b>.</p>`],
+    ])}
+
+    <h2>${H.tv} (slides 23–24)</h2>
+    ${plain("Split the noise of a plain sample into two parts: how much it scatters once y is known (within), and how much the averages g(y) differ between the y's (between). Rao–Blackwell keeps only the second part, so it can never be noisier than plain sampling.")}
+    <div class="formula">${fx(String.raw`\sigma_f^2 = \underbrace{\mathbb E\big[\mathrm{Var}[f\mid Y]\big]}_{\text{within, } \ge 0} + \underbrace{\mathrm{Var}\big[\mathbb E[f\mid Y]\big]}_{\text{between} \;=\; \hat\sigma_f^2}`, "σ_f² = E[Var[f | Y]] (within, ≥ 0) + Var[E[f | Y]] (between = σ̂_f²)")}</div>
+    <p>This is the <dfn>law of total variance</dfn>: total noise = <dfn>within-y noise</dfn> + <dfn>between-y noise</dfn>. The first term is an average of variances, so it is never negative; the second is exactly the variance of the RB samples. Hence σ̂<sub>f</sub>² ≤ σ<sub>f</sub>²: RB's variance is at most the plain variance, whatever the problem.</p>
+    ${chart("tv", leg([["g", "within each y: removed by Rao–Blackwell"], [1, "between the y's: kept"]]))}${cap("How the variance of one plain sample splits up in the three examples (slide 23), computed here from the values above. Hover a bar for the numbers. The grey part is what Rao–Blackwell throws away; the blue share is what it keeps, so 25 % kept means 4× less variance.")}
+    ${tbl(["example", "plain σ_f²", "within", "between = RB variance", "share kept"], TV5.map(([k, wi, be]) => [k, num(wi + be, 3), num(wi, 3), num(be, 3), pct(be / (wi + be))]))}
+    ${ex("Worked example: the law checked with the bags", `<p>Within: both bags have variance 3/16 (Fact 2), so the average is ½ · 3/16 + ½ · 3/16 = <b>0.1875</b>. Between: g is ¾ or ¼, variance <b>0.0625</b>. Sum 0.1875 + 0.0625 = 0.25 = the plain variance ½ · ½ ✓. With the dice: within 2.92 (the second die) + between Var[3.5 + Y] = 2.92 gives 5.83 ✓.</p>`)}
+    <p><b>The proof in four lines</b> (slide 24), each using a rule already known:</p>
+    <ol>
+      <li>${fx(String.raw`\sigma_f^2 = \mathbb E[f^2] - \mu_f^2 = \mathbb E\big[\mathbb E[f^2\mid Y]\big] - \mu_f^2`, "σ_f² = E[f²] − μ_f² = E[E[f² | Y]] − μ_f²")}: variance = average of the square − square of the average (μ<sub>f</sub> = E[f]), then Fact 1: average first within y, then over y.</li>
+      <li>${fx(String.raw`\mathbb E[f^2\mid Y] = \mathrm{Var}[f\mid Y] + \mathbb E[f\mid Y]^2`, "E[f² | Y] = Var[f | Y] + E[f | Y]²")}: the same rule used inside one y.</li>
+      <li>${fx(String.raw`\sigma_f^2 = \mathbb E\big[\mathrm{Var}[f\mid Y]\big] + \mathbb E[g(Y)^2] - \mu_f^2`, "σ_f² = E[Var[f | Y]] + E[g(Y)²] − μ_f²")}: line 2 put into line 1, with g(Y) = E[f | Y].</li>
+      <li>${fx(String.raw`\mathbb E[g(Y)^2] = \mathrm{Var}[g(Y)] + \mathbb E[g(Y)]^2 = \mathrm{Var}[g(Y)] + \mu_f^2`, "E[g(Y)²] = Var[g(Y)] + E[g(Y)]² = Var[g(Y)] + μ_f²")}: the rule once more, for g(Y), whose average is μ<sub>f</sub> by Fact 1.</li></ol>
+    <p>Line 4 into line 3: the μ<sub>f</sub>² terms cancel and the law of total variance is left.</p>
+    ${why("Context, not on the slides: the theorem behind the name", `<p>In statistics, the Rao–Blackwell theorem says that replacing an estimator by its conditional expectation given a sufficient statistic never increases its mean squared error. The proof is the inequality above. Monte Carlo borrows the name for the same move: condition on part of the randomness and average the rest out exactly.</p>`)}
+    ${tryit([
+      ["For the bags of the earlier try-it (red with 0.9 from A, 0.3 from B, fair coin), split the plain variance into within and between, and give the RB gain.", `<p>Plain: 0.6 · 0.4 = 0.24. Within: ½ · 0.09 + ½ · 0.21 = <b>0.15</b>. Between: g is 0.9 or 0.3, ±0.3 from 0.6, so <b>0.09</b>. Check 0.15 + 0.09 = 0.24 ✓. Gain 0.24/0.09 ≈ <b>2.7</b>.</p>`],
+    ])}
+
+    <h2>${H.sim} (slides 25–26)</h2>
+    ${plain("A simulation confirms the formulas: repeated RB estimates are centred on the right answer and spread less, by the predicted factor.")}
+    <p>Slide 25 repeats each estimate 5,000 times with N = 100. Spread of the estimates, plain / RB / RB formula: two bags 0.049 / 0.026 / 0.025; two dice 0.241 / 0.172 / 0.171; π 0.161 / 0.088 / 0.089. Both π histograms are centred on 3.14 (no bias, by Fact 1); the RB one is about 1.8 times narrower, so its variance is 3.4 times smaller and it needs 3.4 times fewer samples.</p>
+    ${lab("rb", "plain against Rao–Blackwell, 3,000 runs", "Pick an example and N. Each run computes one plain and one Rao–Blackwell estimate from N samples; the histograms show where the 3,000 runs land, plain in orange, Rao–Blackwell in blue. The table compares the observed spreads with the formulas; <b>New runs</b> draws fresh random numbers.")}
+    <ul class="cmp three"><li><b>Why it is attractive</b><span class="v">The variance per sample never goes up; fewer random numbers are needed (x is never drawn); in some real problems the gain is huge, orders of magnitude according to the deck, which attributes this to the lecture.</span></li>
+      <li><b>What it needs</b><span class="v">g(y) = E[f | y] as a formula you can evaluate, and a way to draw y on its own. Here: 3.5 + y, ¾ or ¼, √(1 − u²).</span></li>
+      <li><b>When it fails</b><span class="v">The integral for g(y) cannot be solved, or it is so costly that one RB sample takes longer than several plain samples.</span></li></ul>
+
+    <h2>${H.sum} (slides 27–29)</h2>
+    <div class="tt-wrap"><table class="tt"><tr><th></th><th>Trick 1: antithetic variates</th><th>Trick 2: Rao–Blackwellization</th></tr>
+      <tr><th>In one line</th><td>Pair each u with 1 − u so that high and low cancel</td><td>Replace f by its exact average given y</td></tr>
+      <tr><th>Dice picture</th><td>Top + bottom of a die: always 7</td><td>Roll one die, add 3.5 for the other</td></tr>
+      <tr><th>Variance</th><td>(σ<sub>f</sub>² + γ<sub>f</sub>)/(2N)</td><td>Var[g(Y)]/N, never more than σ<sub>f</sub>²/N</td></tr>
+      <tr><th>Works when</th><td>f rises or falls steadily (γ<sub>f</sub> &lt; 0)</td><td>g(y) can be computed and y can be drawn</td></tr>
+      <tr><th>Can it hurt?</th><td>Yes, for symmetric f (variance doubles)</td><td>No, never (law of total variance)</td></tr></table></div>
+    ${chart("gain", leg([[3, "antithetic variates"], [1, "Rao–Blackwell"]]))}${cap("The six examples of the lecture: plain variance divided by the improved estimator's variance at the same work, on a logarithmic axis (1× = no change). Bars to the right of 1× help, the bar to the left hurts. Hover a bar for the numbers behind it.")}
+    ${tbl(["example", "variance factor vs plain"], GAIN5.map(([k, v]) => [k, v >= 1 ? `${num(v, 2)}× less` : "2× more"]))}
+    <p>Both tricks keep the right answer on average and keep the 1/√N law; they shrink the variance of each sample.</p>
+    <div class="tt-wrap"><table class="tt fs">
+      <tr><th>Plain Monte Carlo</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\theta_N] = \sigma_f^2/N,\ \ \sigma_f^2 = \mathrm{Var}[f(X)]`, "Var[θ_N] = σ_f²/N")}</span></td></tr>
+      <tr><th>Samples needed</th><td><span class="f">${fx(String.raw`N = \sigma_f^2/\varepsilon^2`, "N = σ_f²/ε²")}</span></td></tr>
+      <tr><th>Covariance</th><td><span class="f">${fx(String.raw`\mathrm{Cov}[A,B] = \mathbb E[AB] - \mathbb E[A]\,\mathbb E[B]`, "Cov[A, B] = E[AB] − E[A]E[B]")}</span></td></tr>
+      <tr><th>Variance of a sum</th><td><span class="f">${fx(String.raw`\mathrm{Var}[A+B] = \mathrm{Var}[A] + \mathrm{Var}[B] + 2\,\mathrm{Cov}[A,B]`, "Var[A + B] = Var A + Var B + 2 Cov[A, B]")}</span></td></tr>
+      <tr><th>Antithetic estimator</th><td><span class="f">${fx(String.raw`\theta^A_{2N} = \tfrac1N\textstyle\sum_{i=1}^N \tfrac{f(u_i) + f(1-u_i)}{2}`, "θ^A_2N = (1/N) Σ [f(u_i) + f(1 − u_i)]/2")}</span></td></tr>
+      <tr><th>Its variance</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\theta^A_{2N}] = (\sigma_f^2 + \gamma_f)/(2N)`, "Var[θ^A_2N] = (σ_f² + γ_f)/(2N)")}</span></td></tr>
+      <tr><th>Pair covariance</th><td><span class="f">${fx(String.raw`\gamma_f = \mathrm{Cov}[f(U), f(1-U)],\ U\sim\mathcal U(0,1)`, "γ_f = Cov[f(U), f(1 − U)]")}</span></td></tr>
+      <tr><th>Conditional expectation</th><td><span class="f">${fx(String.raw`g(y) = \mathbb E[f\mid Y = y] = \textstyle\int f(x,y)\,p(x\mid y)\,dx`, "g(y) = E[f | Y = y] = ∫ f(x, y) p(x | y) dx")}</span></td></tr>
+      <tr><th>Tower rule (Fact 1)</th><td><span class="f">${fx(String.raw`\mathbb E\big[\mathbb E[f\mid Y]\big] = \mathbb E[f]`, "E[E[f | Y]] = E[f]")}</span></td></tr>
+      <tr><th>Rao–Blackwell estimator</th><td><span class="f">${fx(String.raw`\hat\theta_N = \tfrac1N\textstyle\sum g(y_i),\ y_i\sim p(y)`, "θ̂_N = (1/N) Σ g(y_i), y_i ~ p(y)")}</span></td></tr>
+      <tr><th>Its variance</th><td><span class="f">${fx(String.raw`\mathrm{Var}[\hat\theta_N] = \mathrm{Var}\big[\mathbb E[f\mid Y]\big]/N = \hat\sigma_f^2/N`, "Var[θ̂_N] = Var[E[f | Y]]/N = σ̂_f²/N")}</span></td></tr>
+      <tr><th>Law of total variance</th><td><span class="f">${fx(String.raw`\mathrm{Var}[f] = \mathbb E\big[\mathrm{Var}[f\mid Y]\big] + \mathrm{Var}\big[\mathbb E[f\mid Y]\big]`, "Var[f] = E[Var[f | Y]] + Var[E[f | Y]]")}</span></td></tr></table></div>
+
+    <h2>Take-home (slide 30)</h2>
+    <ul>
+      <li><b>Why reduce variance?</b> k times less variance per sample means k times fewer samples for the same accuracy; the 1/√N law stays.</li>
+      <li><b>Why does covariance matter?</b> Var[A + B] = Var A + Var B + 2 Cov: negative covariance cancels noise, positive piles it up.</li>
+      <li><b>What is trick 1?</b> Average f(u) and f(1 − u), like the top and bottom of a die. Variance (σ<sub>f</sub>² + γ<sub>f</sub>)/(2N).</li>
+      <li><b>When does it help?</b> For a rising or falling f (x²: 8×, eˣ: 31×); for a symmetric f it doubles the variance.</li>
+      <li><b>What is trick 2?</b> Replace f by g(y) = E[f | y] and draw only y: roll one die, add 3.5.</li>
+      <li><b>Can trick 2 hurt?</b> Never: total noise = within + between, and RB keeps only “between”.</li>
+    </ul>
+    <p class="muted">The tutorial of 19 Nov (${exeLink(4, "tutorial 4")}) practised the Monte Carlo estimator of ${lecLink(4, "lecture 4")}; its outlook names antithetic variates and Rao–Blackwellisation as the next step. Next: ${lecLink(6, "lecture 6")} (30 Nov). Slides: OPAL → Lecture2026 → SMS5.pdf (they may not be republished).</p>`;
+}
+
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const LABS = { pi: initPi, ou: initOu, count: initCount, bayes: initBayes, newton: initNewton, ar: initAr, mc: initMc, pow: initPow, rw: initRw, lln4: initLln4, dims: initDims, isd: initIsd, anti: initAnti, rb: initRb };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
