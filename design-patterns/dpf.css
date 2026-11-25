@@ -111,6 +111,8 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dpf .plan .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: -1px; }
 .dpf .plan .sw.lec { background: var(--c-core); }
 .dpf .plan .sw.exe { background: var(--c-trk); }
+.dpf .sw.wr { background: var(--warn); }
+.dpf .sw.or { background: var(--c-core); }
 .dpf .plan tr.past td { color: var(--ink-3); }
 .dpf .plan tr.next td { background: color-mix(in srgb, var(--focus) 9%, transparent); }
 .dpf .plan tr.next td.d::after { content: " ←"; color: var(--focus); font-weight: 700; }
@@ -371,3 +373,90 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dpf ul.glue li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--vz-s2); font-size: 0.9rem; margin: 0; }
 .dpf ul.glue li.no { border-left-color: var(--vz-gray); }
 .dpf ul.glue li > span:last-child { flex-basis: 100%; color: var(--ink-2); }
+
+/* Mock oral exam page (exam.html): progress bars per lecture, the mock card, kind tags, rating badges, the question bank. */
+.dpf .prog { display: grid; gap: 6px; margin-top: 8px; }
+.dpf .prow { display: grid; grid-template-columns: 92px 1fr 44px; align-items: center; gap: 10px; font-size: 13px; }
+.dpf .prow .pl { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.dpf .prow .pl small { color: var(--ink-3); font-weight: 500; }
+.dpf .prow .pn { font-variant-numeric: tabular-nums; color: var(--ink-2); text-align: right; }
+.dpf .pbar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--surface); }
+.dpf .pbar .seg { min-width: 4px; }
+.dpf .seg.got { background: var(--vz-s3); } .dpf .seg.part { background: var(--vz-s4); } .dpf .seg.miss { background: var(--vz-s2); }
+.dpf .seg.open { background: color-mix(in srgb, var(--ink-3) 22%, var(--surface)); }
+.dpf .prow.pre .seg.open { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink-3) 22%, var(--surface)) 0 4px, var(--surface) 4px 7px); }
+.dpf .kind { display: inline-block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; padding: 1px 7px; border-radius: 999px; vertical-align: 1px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+.dpf .kind.explain { --c: var(--vz-s1); } .dpf .kind.compare { --c: var(--c-team); } .dpf .kind.draw { --c: var(--vz-s3); } .dpf .kind.apply { --c: var(--vz-s2); }
+.dpf .rt { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; color: var(--surface); background: var(--ink-3); vertical-align: 1px; }
+.dpf .rt.got { background: var(--vz-s3); } .dpf .rt.part { background: var(--vz-s4); } .dpf .rt.miss { background: var(--vz-s2); }
+.dpf .rate { display: flex; flex-wrap: wrap; gap: 6px; margin: 0.4rem 0 0; }
+.dpf .preset.r-got[aria-pressed="true"] { border-color: var(--vz-s3); box-shadow: inset 0 0 0 1px var(--vz-s3); }
+.dpf .preset.r-part[aria-pressed="true"] { border-color: var(--vz-s4); box-shadow: inset 0 0 0 1px var(--vz-s4); }
+.dpf .preset.r-miss[aria-pressed="true"] { border-color: var(--vz-s2); box-shadow: inset 0 0 0 1px var(--vz-s2); }
+.dpf .preset.start { background: var(--focus); color: #fff; border-color: var(--focus); font-weight: 600; }
+.dpf .preset:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dpf .mock-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.dpf .mock-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
+.dpf .timer { font: 600 13px ui-monospace, "IBM Plex Mono", monospace; color: var(--ink-2); }
+.dpf .timer.late { color: var(--vz-s2); }
+.dpf .mock-q { font-size: 1.08rem; font-weight: 600; margin: 0 0 0.6rem; }
+.dpf ul.keys { margin: 0.3rem 0 0.6rem; }
+.dpf ul.mock-sum { list-style: none; padding-left: 0; font-size: 0.92rem; }
+.dpf ul.mock-sum li { margin: 0.35rem 0; }
+.dpf p.src { font-size: 0.85rem; margin: 0.2rem 0 0.4rem; }
+.dpf details.xq { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin: 0 0 8px; }
+.dpf details.xq summary { cursor: pointer; padding: 9px 12px; list-style: none; line-height: 1.4; }
+.dpf details.xq summary::-webkit-details-marker { display: none; }
+.dpf details.xq summary::before { content: "▸"; color: var(--ink-3); margin-right: 6px; display: inline-block; transition: transform .15s; }
+.dpf details.xq[open] summary::before { transform: rotate(90deg); }
+.dpf details.xq summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 10px; }
+.dpf details.xq .xa { padding: 0 14px 12px 30px; }
+@media (max-width: 760px) { .dpf .prow { grid-template-columns: 64px 1fr 38px; } .dpf .prow .pl small { display: none; } .dpf details.xq .xa { padding-left: 14px; } }
+
+/* Lecture 6: role diagrams (role types rounded, compartments amber, fills / implication / prohibition edges), the ontology
+   grid, the role-constraint checker and the role-implementation chooser */
+.dpf .viz text.op { fill: var(--ink-2); font-size: 11.5px; }
+.dpf .viz .cmpt rect { fill: color-mix(in srgb, var(--vz-s4) 12%, var(--surface)); stroke: var(--vz-s4); stroke-width: 1.3; }
+.dpf .viz .cmpt .cn { fill: var(--ink); font-size: 12px; font-weight: 700; }
+.dpf .viz .cmpt .sep { stroke: var(--vz-s4); stroke-width: 1; }
+.dpf .viz .cmpt.on rect, .dpf .viz .cmpt:focus rect { stroke-width: 2.4; }
+.dpf .viz .cmpt:focus, .dpf .viz .orow:focus { outline: none; }
+.dpf .viz .edge .trf { fill: var(--ink-2); stroke: var(--ink-2); stroke-width: 1; }
+.dpf .viz .edge.map .ln { stroke: var(--vz-s2); }
+.dpf .viz .orow .bg { fill: transparent; }
+.dpf .viz .orow.role .bg { fill: color-mix(in srgb, var(--vz-s2) 10%, transparent); }
+.dpf .viz .orow.on .bg, .dpf .viz .orow:focus .bg { fill: color-mix(in srgb, var(--ink-3) 14%, transparent); }
+.dpf .viz .orow .yes { fill: var(--vz-s1); }
+.dpf .viz .orow .no { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.dpf table.tt.rcg td { padding: 3px 10px; }
+.dpf table.tt.rcg td.on { text-align: left; white-space: nowrap; font-weight: 600; }
+.dpf table.tt.rcg input { width: 17px; height: 17px; accent-color: var(--focus); }
+.dpf table.tt.rcon th, .dpf table.tt.rcon td, .dpf table.tt.impl th, .dpf table.tt.impl td { text-align: left; vertical-align: top; }
+.dpf table.tt.rcon td:nth-child(2) { white-space: nowrap; font-family: ui-monospace, "IBM Plex Mono", monospace; font-size: 0.85rem; }
+.dpf .rc-sum { margin: 4px 0 6px; }
+.dpf ul.glue.rc li { border-left-color: var(--ok); }
+.dpf ul.glue.rc li.no { border-left-color: var(--bad); }
+.dpf ul.glue.rc li > span.pts { flex-basis: auto; }
+.dpf .viz.mini svg.implsvg { max-width: 440px; margin: 0 auto; }
+/* Exercise 4: the combined-provider trace, the trip timeline, the pattern-relation map */
+.dpf ol.agg { margin: 0 0 8px; padding-left: 1.3rem; font-size: 0.92rem; }
+.dpf ol.agg li { margin: 0.25rem 0; }
+.dpf .viz .seg { stroke: none; }
+.dpf .viz .segl { fill: var(--ink); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.dpf .viz .rn rect { stroke-width: 1.3; }
+.dpf .viz .rn text { fill: var(--ink); font-size: 10px; font-weight: 700; }
+.dpf .viz .rn.f1 rect { fill: color-mix(in srgb, var(--vz-s1) 14%, var(--surface)); stroke: var(--vz-s1); }
+.dpf .viz .rn.f2 rect { fill: color-mix(in srgb, var(--vz-s2) 14%, var(--surface)); stroke: var(--vz-s2); }
+.dpf .viz .rn.f3 rect { fill: color-mix(in srgb, var(--vz-s3) 14%, var(--surface)); stroke: var(--vz-s3); }
+.dpf .viz .rn.help rect { fill: var(--surface); stroke: var(--vz-gray); stroke-dasharray: 4 3; }
+.dpf .viz .rn.on rect, .dpf .viz .rn:focus rect { stroke-width: 2.4; }
+.dpf .viz .tl { fill: none; stroke: var(--ink-3); stroke-width: 1.1; }
+.dpf .key.dash { background: transparent; border: 1.5px dashed var(--c); box-sizing: border-box; }
+.dpf .key.dot { border-radius: 50%; }
+.dpf .key.ring { background: transparent; border: 1.5px solid var(--c); border-radius: 50%; box-sizing: border-box; }
+@media (max-width: 600px) {
+  .dpf table.tt.rcon th:nth-child(2), .dpf table.tt.rcon td:nth-child(2), .dpf table.tt.impl th:nth-child(4), .dpf table.tt.impl td:nth-child(4) { display: none; }
+  .dpf table.tt.rcon th, .dpf table.tt.rcon td, .dpf table.tt.impl th, .dpf table.tt.impl td { padding: 4px 6px; font-size: 0.85rem; }
+}
+.dpf .viz .note .nt { white-space: pre; }
+.dpf .detail p code, .dpf .detail li code { overflow-wrap: anywhere; }

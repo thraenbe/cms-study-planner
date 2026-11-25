@@ -356,7 +356,7 @@ function exercise2() {
     </ul>`;
 }
 
-// ======================= Exercise 3: Extensibility Patterns (sheet since 5 Nov, discussed 11 Nov; no official solution yet) =======================
+// ======================= Exercise 3: Extensibility Patterns (sheet since 5 Nov, discussed 11 Nov; official solution in OPAL since 19 Nov, not compared yet) =======================
 const PROLES = leg([[1, "component (abstract)"], [4, "leaves"], [2, "composites"], [3, "client / operations"]]);
 // Task 1a/1b: the smallest reasonable Composite for polynomials.
 CHARTS.polyComp = narrow => {
@@ -520,7 +520,7 @@ function initObsLab(body) { const render = () => { body.innerHTML = obsOut(); bo
 
 function exercise3() {
   return `${head(e)}
-    <p class="lead">The third sheet is about extensibility: a polynomial represented as an object tree that new operations (count the minus signs, compute the degree, evaluate at x) and new node kinds (sine, cosine, tangent) can be added to, and an Observer chain that turns into an endless loop once it is closed into a cycle. It belongs to <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a> (10 Nov), which comes the day before the session, and it reuses Composite and Observer from <a href="design-patterns/lecture.html?n=1">lecture 1</a>'s MVC and Visitor from <a href="design-patterns/lecture.html?n=2">lecture 2</a>. There is no official solution yet: <b>every answer below is our own</b>. The sheet carries no points.</p>
+    <p class="lead">The third sheet is about extensibility: a polynomial represented as an object tree that new operations (count the minus signs, compute the degree, evaluate at x) and new node kinds (sine, cosine, tangent) can be added to, and an Observer chain that turns into an endless loop once it is closed into a cycle. It belongs to <a href="design-patterns/lecture.html?n=4">lecture 4, Simple Patterns for Extensibility</a> (10 Nov), which comes the day before the session, and it reuses Composite and Observer from <a href="design-patterns/lecture.html?n=1">lecture 1</a>'s MVC and Visitor from <a href="design-patterns/lecture.html?n=2">lecture 2</a>. <b>Every answer below is our own</b>; the official solution has been in OPAL since 19 Nov and is not compared here yet. The sheet carries no points.</p>
     <div class="box status"><p style="margin:0"><b>Status:</b> sheet in OPAL since ${fmt(e.published)} (2 pages, three tasks); session on ${fmt(e.date)}, ${exe.start}, ${esc(exe.room)}. Lecture 4's slides are not written up yet, so the links to it lead to the lecture's placeholder until then.</p></div>
 
     ${task("1", 0, "The degree of polynomials", `
@@ -588,8 +588,228 @@ function exercise3() {
     </ul>`;
 }
 
-const WRITEUPS = { 1: exercise1, 2: exercise2, 3: exercise3 };
-const LABS = { maze: initMazeLab, poly: initPolyLab, obs: initObsLab };
+// ======================= Exercise 4: Architecture Mismatch Patterns (held 25 Nov; sheet read, no official solution yet) =======================
+const AROLES = leg([[1, "target interface of the application"], [2, "adapter or glue class (ours)"], [4, "adapted library or framework class"], [3, "client"]]);
+// A dashed zone around a group of boxes, and extra room under a diagram (local copies of the lecture page's helpers).
+const ezone = (bs, name, pad = 8, top = 24, bottom = pad) => { const x0 = Math.min(...bs.map(b => b.x)) - pad, x1 = Math.max(...bs.map(b => b.x + b.w)) + pad, y0 = Math.min(...bs.map(b => b.y)) - top, y1 = Math.max(...bs.map(b => b.y + b.h)) + bottom;
+  return `<rect class="zone" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="8"/><text class="zl" x="${x0 + 8}" y="${bottom > pad ? y1 - 5 : y0 + 14}">${esc(name)}</text>`; };
+// Extra room under a diagram for a zone that reaches below the boxes.
+const etaller = (svg, add) => svg.replace(/viewBox="0 0 ([\d.]+) ([\d.]+)"/, (m, w, h) => `viewBox="0 0 ${w} ${(+h + add).toFixed(1)}"`);
+// Task 1a: object adapter for the final Revenant classes.
+CHARTS.revenant = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 96 });
+  const fp = D.box(0, 0, { name: "FastestRouteProvider", stereo: "interface", ops: narrow ? ["getFastestRoute(..)", "buyTollTicket(..)"] : ["getFastestRoute(from, to): Route", "buyTollTicket(route, cc): String"], role: "t", abstract: true, span: narrow ? 1 : 1.55 });
+  const fw = D.box(narrow ? 1 : 2.55, 0, { name: "RevenantFramework", stereo: "final", ops: narrow ? ["getInitialized…()"] : ["RevenantFramework(port, user, pw)", "getInitializedMappingComponent()"], role: "p", span: narrow ? 1 : 1.45, sm: narrow });
+  const ad = D.box(0, 1.45, { name: narrow ? "RevenantAdapter" : "RevenantRouteAdapter", ops: narrow ? ["map, routes", "getFastestRoute(..)", "buyTollTicket(..)"] : ["map: RevenantMapComponent", "routes: Map<Route, List<Location>>", "getFastestRoute(from, to)", "buyTollTicket(route, cc)"], role: "h", span: narrow ? 1 : 1.55, sm: narrow });
+  const mc = D.box(narrow ? 1 : 2.55, 1.45, { name: "RevenantMapComponent", stereo: "final", ops: narrow ? ["getFastestRoute(..)", "computeTime…Hours(..)", "purchaseTollToken(..)"] : ["getFastestRoute(from, to)", "computeTimeFor…DrivingInHours(r)", "purchaseTollToken(r, cardNo): String"], role: "p", span: narrow ? 1 : 1.45, sm: true });
+  const db = D.box(narrow ? 1 : 2.55, narrow ? 2.85 : 2.8, { name: "RevenantMapsDatabase", stereo: "final", ops: ["queryShortestRoute(..)"], role: "p", span: narrow ? 1 : 1.45, sm: true });
+  D.inh(ad, fp); D.ref(ad, mc, { label: narrow ? "" : "map" }); D.ref(fw, mc, { label: narrow ? "" : "mapComponent" }); D.ref(mc, db, { label: narrow ? "" : "mapData" });
+  if (!narrow) D.note(0, 2.8, ["getFastestRoute(f, t):", "  locs = map.getFastestRoute(loc(f), loc(t))", "  h = map.computeTimeForRouteDrivingInHours(locs)", "  r = new Route(round(60 · h)); routes.put(r, locs)", "buyTollTicket(r, cc):  (after the user agreed)", "  try map.purchaseTollToken(routes.get(r), cc)", "  catch (e) throw new TicketException(e)"], ad, { span: 2.3 });
+  return D.svg("Our class diagram for task 1a: the RevenantRouteAdapter implements the application's FastestRouteProvider interface and holds the final RevenantMapComponent, which it gets once from the final RevenantFramework; the component uses the final RevenantMapsDatabase. getFastestRoute converts the coordinates to Locations, asks the component for the route, converts its driving time from hours to minutes and remembers which location list belongs to which Route; buyTollTicket looks the list up again, calls purchaseTollToken and translates its exception.");
+};
+// Task 1b: adapter for the Network Maps library (not final).
+CHARTS.netmaps = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 100 : 96 });
+  const fp = D.box(0, 0, { name: "FastestRouteProvider", stereo: "interface", ops: narrow ? ["getFastestRoute(..)", "buyTollTicket(..)"] : ["getFastestRoute(from, to): Route", "buyTollTicket(route, cc): String"], role: "t", abstract: true, span: narrow ? 1 : 1.55 });
+  const rt = D.box(narrow ? 1 : 2.55, 0, { name: "NetworkMapsRoute", ops: narrow ? ["approximateTime…", "meansOfTransport…", "waypoints"] : ["description", "approximateTimeTakenInMinutes", "meansOfTransportation", "waypoints: List<Waypoint>"], role: "p", span: narrow ? 1 : 1.45, sm: true });
+  const ad = D.box(0, 1.45, { name: narrow ? "NetworkMapsAdapter" : "NetworkMapsRouteAdapter", ops: narrow ? ["maps, routes", "getFastestRoute(..)", "buyTollTicket(..)"] : ["maps: NetworkMaps", "routes: Map<Route, NetworkMapsRoute>", "getFastestRoute(from, to)", "buyTollTicket(route, cc)"], role: "h", span: narrow ? 1 : 1.55, sm: narrow });
+  const nm = D.box(narrow ? 1 : 2.55, 1.45, { name: "NetworkMaps", ops: narrow ? ["computeRoutes(..)", "buyTollTicketFor…(..)"] : ["computeRoutes(x1, y1, x2, y2, type)", "buyTollTicketForRoute(r, payment)"], role: "p", span: narrow ? 1 : 1.45, sm: true });
+  const pay = D.box(narrow ? 1 : 2.55, narrow ? 2.85 : 2.8, { name: "Payment", ops: ["paymentInfo: String", "paymentMethod"], role: "p", span: narrow ? 1 : 1.45, sm: true });
+  D.inh(ad, fp); D.ref(ad, nm, { label: narrow ? "" : "maps" }); D.ref(nm, rt, { kind: "dep", label: narrow ? "" : "returns *" }); D.ref(nm, pay, { kind: "dep", label: narrow ? "" : "takes" });
+  if (!narrow) D.note(0, 2.8, ["getFastestRoute(f, t):", "  all = maps.computeRoutes(f.x, f.y, t.x, t.y,", "                          FASTEST_ROUTE)", "  best = the DRIVING_BY_CAR route in all", "    with the least approximateTime…Minutes", "  r = new Route(best.approximateTime…Minutes)", "buyTollTicket(r, cc):", "  maps.buyTollTicketForRoute(routes.get(r),", "    new Payment(cc, CREDIT_CARD))"], ad, { span: 2.3 });
+  return D.svg("Our class diagram for task 1b: the NetworkMapsRouteAdapter implements FastestRouteProvider and delegates to a NetworkMaps object. getFastestRoute splits the two coordinates into four doubles, asks for FASTEST_ROUTE routes, keeps the car routes, takes the one with the fewest minutes and wraps its time in a Route; buyTollTicket finds the NetworkMapsRoute again and pays with a Payment of method CREDIT_CARD.");
+};
+// Task 1c: one provider that asks both adapters.
+CHARTS.combined = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 92 });
+  const cl = narrow ? null : D.box(0, 0, { name: "RoutePlanner (client)", role: "c", h: 24, span: 1.2 });
+  const fp = D.box(narrow ? 0.5 : 1.5, 0, { name: "FastestRouteProvider", stereo: "interface", ops: narrow ? ["getFastestRoute(..)", "buyTollTicket(..)"] : ["getFastestRoute(from, to)", "buyTollTicket(route, cc)"], role: "t", abstract: true, span: narrow ? 1 : 1.6 });
+  const co = D.box(narrow ? 0.5 : 0, narrow ? 2.3 : 1.45, { name: "CombinedRouteProvider", ops: narrow ? ["providers, origin", "getFastestRoute(..)", "buyTollTicket(..)"] : ["providers: List<FastestRouteProvider>", "origin: Map<Route, FastestRouteProvider>", "getFastestRoute: min over providers", "buyTollTicket: origin.get(r).buy…"], role: "h", span: narrow ? 1 : 1.75, sm: narrow });
+  const ra = D.box(narrow ? 0 : 1.85, narrow ? 1.2 : 1.45, { name: narrow ? "RevenantAdapter" : "RevenantRouteAdapter", role: "h", h: 24, span: narrow ? 1 : 1.0, sm: true });
+  const na = D.box(narrow ? 1 : 2.9, narrow ? 1.2 : 1.45, { name: narrow ? "NetworkMapsAdapter" : "NetworkMapsRouteAdapter", role: "h", h: 24, span: narrow ? 1 : 1.1, sm: true });
+  if (cl) D.ref(cl, fp, {}); D.inh(co, fp); D.inh(ra, fp); D.inh(na, fp);
+  return D.svg("Our class diagram for task 1c: the client only knows FastestRouteProvider. The CombinedRouteProvider implements it too and holds a list of providers, here the two adapters of 1a and 1b, which also implement it. getFastestRoute asks every provider and returns the fastest answer, remembering which provider produced it; buyTollTicket goes back to that provider.");
+};
+// Explorer: the combined provider at work (our numbers).
+function initAgg(body) {
+  const S = { net: true, revH: 1.35, nmCar: 74 };
+  const render = focus => {
+    const revMin = Math.round(S.revH * 60), nm = S.net ? [["DRIVING_BY_CAR", S.nmCar], ["BYCICLE", Math.round(S.nmCar * 3.4)], ["WALKING", Math.round(S.nmCar * 10.5)]] : null;
+    const nmMin = nm ? nm[0][1] : null, winner = nm && nmMin < revMin ? "NetworkMaps" : "Revenant", best = winner === "NetworkMaps" ? nmMin : revMin;
+    body.innerHTML = `<p class="lab-note">Our numbers for one trip. Change the two providers' answers or cut the network, and follow the conversions each adapter performs and the choice the combined provider makes.</p>
+      <div class="ctl"><label><input type="checkbox" data-k="net" ${S.net ? "checked" : ""}> network available</label>
+        <label>Revenant driving time <input type="range" min="0.8" max="2.5" step="0.05" value="${S.revH}" data-k="revH"> <output>${num(S.revH, 2)} h</output></label>
+        <label>Network Maps car route <input type="range" min="40" max="150" step="1" value="${S.nmCar}" data-k="nmCar"> <output>${S.nmCar} min</output></label></div>
+      <ol class="agg">
+        <li><b>RevenantRouteAdapter</b>: two Coordinates become two Locations; the component returns a list of Locations and ${num(S.revH, 2)} h of driving; 60 × ${num(S.revH, 2)} = <b>${revMin} min</b> → <code>Route(${revMin})</code>.</li>
+        <li><b>NetworkMapsRouteAdapter</b>: ${nm ? `the coordinates become four doubles; <code>computeRoutes(…, FASTEST_ROUTE)</code> returns ${nm.map(([t, v]) => `${{ DRIVING_BY_CAR: "car", BYCICLE: "bicycle", WALKING: "walking" }[t]} ${v} min`).join(", ")}; only the car route counts → <b>${nmMin} min</b> → <code>Route(${nmMin})</code>.` : `<span class="flag bad">⚠ no network</span> <span>: the remote call fails, the adapter throws, and the combined provider skips it.</span>`}</li>
+        <li><b>CombinedRouteProvider</b>: min(${revMin}${nm ? `, ${nmMin}` : ""}) = <b>${best} min</b> from <b>${winner}</b>; it remembers that this Route came from the ${winner} adapter.</li>
+        <li><b>buyTollTicket(route, cc)</b> goes to the ${winner} adapter: ${winner === "Revenant" ? "<code>purchaseTollToken(locations, cc)</code> with the remembered location list" : "<code>buyTollTicketForRoute(nmRoute, new Payment(cc, CREDIT_CARD))</code> with the remembered NetworkMapsRoute"}.</li></ol>
+      <dl class="ro"><dt>answer to the client</dt><dd>Route(${best}) · ${Math.floor(best / 60)} h ${best % 60} min</dd><dt>providers asked</dt><dd>${S.net ? "2 of 2" : "2, one failed"}</dd><dt>difference</dt><dd>${nm ? `${Math.abs(revMin - nmMin)} min between the two answers` : "only Revenant answered (it works offline)"}</dd></dl>`;
+    body.querySelectorAll("[data-k]").forEach(el => el.addEventListener(el.type === "checkbox" ? "change" : "input", () => { const k = el.dataset.k; S[k] = el.type === "checkbox" ? el.checked : +el.value; render(`[data-k="${k}"]`); }));
+    if (focus) body.querySelector(focus)?.focus();
+  };
+  render();
+}
+// Task 2b: the facade over the travel services.
+CHARTS.facade4 = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 5, rowH: narrow ? 92 : 100, gap: narrow ? 10 : 6 });
+  const cl = D.box(0, 0, { name: "TravelUI (client)", role: "c", h: 24, span: narrow ? 1 : 1.2, sm: narrow });
+  const fa = D.box(narrow ? 0 : 1.6, narrow ? 0.55 : 0, { name: "TravelPlannerFacade", ops: narrow ? ["planTrip(..)", "recommend(stop)", "choose(..), book(cc)"] : ["planTrip(from, to, start): Trip", "recommend(stop): List<PartOfTravel>", "choose(stop, part); book(cc)"], role: "h", span: narrow ? 2 : 1.9, dx: narrow ? 0 : 0, dy: narrow ? 8 : 0 });
+  const tr = narrow ? null : D.box(3.7, 0, { name: "Trip", ops: ["parts: List<PartOfTravel>", "totalTime()"], role: "g", span: 1.3, sm: true });
+  const names = ["FastestRouteProvider", "RestaurantProvider", "SightseeingProvider", "HikingTripProvider", "HotelProvider"];
+  const ps = names.map((n, i) => D.box(narrow ? i % 2 : i, narrow ? 2.05 + Math.floor(i / 2) * 0.45 : 1.6, { name: n, stereo: narrow ? "" : "interface", role: "p", h: narrow ? 26 : undefined, span: 1, sm: true, ops: narrow ? [] : [["getFastestRoute(..)"], ["getRestaurants(..)", "book(..)"], ["getSightseeing…(..)"], ["getHikingTrips(..)"], ["getHotels(..)", "book(..)"]][i] }));
+  D.ref(cl, fa, {}); if (tr) D.ref(fa, tr, { kind: "dep", label: "creates" });
+  if (!narrow) ps.forEach(p => D.ref(fa, p, {}));
+  return etaller(D.svg("Our class diagram for task 2b: the travel UI talks only to the TravelPlannerFacade, which offers planTrip, recommend, choose and book and creates a Trip made of PartOfTravel objects. Behind it, in the hidden subsystem, are the five provider interfaces: FastestRouteProvider (the combined provider of task 1c), RestaurantProvider, SightseeingProvider, HikingTripProvider and HotelProvider.", ezone(ps, "travel services, hidden behind the facade", 6, 8, 20)), 18);
+};
+// Task 2b, worked example: a two-day trip under our assumptions.
+const TRIP = { drive: 800, perDay: 480, meal: 240, mealLen: 60, start: 8 * 60, sight: 120 };
+function tripPlan(T) {
+  const days = []; let left = T.drive, d = 0;
+  while (left > 0) {
+    const segs = []; let t = T.start, today = Math.min(T.perDay, left), driven = 0;
+    if (d > 0 && T.sight) { segs.push(["sight", t, T.sight]); t += T.sight; }
+    while (driven < today) { const leg = Math.min(T.meal, today - driven); segs.push(["drive", t, leg]); t += leg; driven += leg; if (driven < today) { segs.push(["meal", t, T.mealLen]); t += T.mealLen; } }
+    left -= today; if (left > 0) segs.push(["hotel", t, 20 * 60 - t]);
+    days.push(segs); d++;
+  }
+  return days;
+}
+const TK = { drive: [1, "driving"], meal: [4, "restaurant stop"], sight: [3, "sightseeing or hike"], hotel: [2, "hotel night"] };
+CHARTS.trip = narrow => {
+  const days = tripPlan(TRIP), W = narrow ? 340 : 600, L = narrow ? 44 : 56, R = 18, T = 6, RH = 40, H = T + days.length * RH + 24, t0 = 8 * 60, t1 = 20 * 60, X = v => L + (v - t0) / (t1 - t0) * (W - L - R);
+  const ticks = [8, 10, 12, 14, 16, 18, 20].filter((h, i) => !narrow || i % 2 === 0).map(h => `<line class="grid" x1="${X(h * 60)}" x2="${X(h * 60)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${X(h * 60)}" y="${H - 8}" text-anchor="middle">${h}:00</text>`).join("");
+  const hm = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+  const rows = days.map((segs, i) => { const y = T + i * RH + 6, bh = 24;
+    return `<text class="lbl" x="4" y="${y + 16}">Day ${i + 1}</text>` + segs.map(([k, s, len]) => { const x0 = X(s) + 1, x1 = X(s + len) - 1, w = x1 - x0, [slot, name] = TK[k];
+      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${name}</b>${hm(s)}–${hm(s + len)} (${len} min)`)}"><rect class="seg" x="${x0.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${bh}" rx="4" style="fill:var(--vz-s${slot})"/>${w > (narrow ? 34 : 44) ? `<text class="segl" x="${(x0 + w / 2).toFixed(1)}" y="${y + 16}" text-anchor="middle">${k === "drive" ? `${len} min` : k === "hotel" ? "hotel" : k === "meal" ? "meal" : "sights"}</text>` : ""}</g>`; }).join(""); }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of our example trip: 800 minutes of driving, at most 480 per day, a restaurant stop after every 240 minutes of driving. Day 1: drive 240 min from 8:00, meal, drive 240 min, hotel from 17:00. Day 2: sightseeing 8:00 to 10:00, drive 240 min, meal, drive 80 min, arrival at 16:20.">${ticks}${rows}</svg>`;
+};
+// Task 2c: Memento for saved trips.
+CHARTS.memento = narrow => {
+  const D = dgm(narrow, { cols: narrow ? 2 : 4, rowH: narrow ? 96 : 92 });
+  const ui = D.box(0, 0, { name: "TravelUI", role: "c", h: 24, span: narrow ? 1 : 1, sm: narrow });
+  const pl = D.box(narrow ? 1 : 1.3, 0, { name: "TripPlanner", stereo: "originator", ops: narrow ? ["save(), restore(m)"] : ["current: Trip", "save(): TripMemento", "restore(m: TripMemento)"], role: "t", span: narrow ? 1 : 1.4 });
+  const mm = D.box(narrow ? 1 : 2.95, narrow ? 1.3 : 0.3, { name: "TripMemento", stereo: "memento", ops: narrow ? ["state (private)", "summary()"] : ["- trip state (immutable)", "summary(): time, price"], role: "p", span: narrow ? 1 : 1.05, sm: narrow });
+  const ct = D.box(0, narrow ? 1.3 : 1.5, { name: "SavedTrips", stereo: "caretaker", ops: narrow ? ["trips: List<..>", "add(m), compare()"] : ["trips: List<TripMemento>", "add(m); remove(m)", "compare(): sort by summary"], role: "h", span: narrow ? 1 : 1.4 });
+  D.ref(ui, pl, {}); D.ref(pl, mm, { kind: "dep" }); D.ref(ct, mm, { label: narrow ? "" : "trips *" }); if (!narrow) D.ref(ui, ct, {});
+  return D.svg("Our class diagram for task 2c: the TripPlanner is the originator; save creates a TripMemento with the current trip state and restore sets it back. The TripMemento keeps the state private and offers only a summary to others. SavedTrips is the caretaker: it stores any number of mementos and compares them by their summaries without looking inside. The travel UI uses the planner and the saved trips.");
+};
+// Task 3c: how the patterns so far relate (our answer). Edges point from the special to the general pattern.
+const REL = [
+  { id: "th", n: "Template & Hook", f: "x", c: 0, r: 4.75, p: [], t: "helper concept: a fixed template method calls a variable hook (Pree; lecture 2)" },
+  { id: "tm", n: "TemplateMethod", f: 1, c: 1, r: 3.5, p: ["th"], t: "template and hook methods in one class; the hook varies by subclassing (lecture 2)" },
+  { id: "ob", n: "Objectifier", f: 1, c: 1, r: 6, p: ["th"], t: "the hook method reified as an object of its own class (Zimmer; lecture 2)" },
+  { id: "tc", n: "TemplateClass", f: 1, c: 2, r: 4.75, p: ["tm", "ob"], t: "TemplateMethod + Objectifier: the template in one class, the hook in a separate hook object (lecture 2)" },
+  { id: "st", n: "Strategy", f: 1, c: 3, r: 0, p: ["tc"], t: "TemplateClass with the incentive 'vary an algorithm'; the same structure as Objectifier (lecture 2, slides 30–31)" },
+  { id: "sa", n: "State", f: 1, c: 3, r: 1, p: ["tc"], t: "TemplateClass whose hook object is exchanged when the state changes (lecture 2, slide 27 lists it among the TemplateClass patterns)" },
+  { id: "vi", n: "Visitor", f: 1, c: 3, r: 2, p: ["tc"], t: "a data hierarchy as template, an algorithm hierarchy as hook, the hook passed as an argument: double dispatch (lecture 2)" },
+  { id: "br", n: "Bridge", f: 1, c: 3, r: 3.5, p: ["tc"], t: "TemplateClass where template and hook both have hierarchies that vary independently (lecture 2)" },
+  { id: "px", n: "Proxy", f: 2, c: 3, r: 6, p: ["tc"], t: "TemplateClass whose hook is a sister class with the same interface; flat, not chainable (lecture 4)" },
+  { id: "or", n: "ObjectRecursion", f: 2, c: 3, r: 8.5, p: ["tc"], t: "TemplateClass whose hook is the template's own superclass: inheritance and aggregation at once (lecture 4, slide 9)" },
+  { id: "sb", n: "*-Bridge", f: "x", c: 4, r: 3.5, p: ["br"], t: "helper concept: a bridge with 1:n hook objects, add and remove (lecture 4)" },
+  { id: "me", n: "Mediator", f: 3, c: 4, r: 4.75, p: ["px", "br"], t: "an n-way Proxy combined with a Bridge (lecture 5, slide 25); Observer with a change manager is Observer plus Mediator" },
+  { id: "ad", n: "Adapter", f: 3, c: 4, r: 6, p: ["px"], t: "a Proxy that maps to a different interface, protocol or data format (lecture 5, slide 16)" },
+  { id: "de", n: "Decorator", f: 2, c: 4, r: 7.5, p: ["or"], t: "1-ObjectRecursion that ends in a core; same interface, adds behaviour around it (lecture 4)" },
+  { id: "cp", n: "Composite", f: 2, c: 4, r: 8.5, p: ["or"], t: "n-ObjectRecursion: a tree of parts treated like one part (lecture 4)" },
+  { id: "ch", n: "Chain", f: 2, c: 4, r: 9.5, p: ["or"], t: "Chain of Responsibility: 1-ObjectRecursion through a successor link; a request walks until one object handles it (lecture 4)" },
+  { id: "os", n: "Observer", f: 2, c: 5, r: 3.5, p: ["sb"], t: "a *-Bridge from the subject to its observers, with a link back (lecture 4)" },
+  { id: "fa", n: "Facade", f: 3, c: 5, r: 6, p: ["ad"], t: "an object adapter that hides a whole subsystem (lecture 5, slide 22)" }];
+const RFAM = { 1: "variability (lecture 2)", 2: "extensibility (lecture 4)", 3: "glue (lecture 5)", x: "helper concept" };
+CHARTS.relmap = narrow => {
+  const W = narrow ? 340 : 600, f = v => (+v).toFixed(1), by = {};
+  const tri = (x, y) => `<path class="tri" d="M${f(x)},${f(y)} L${f(x + 9)},${f(y - 4.5)} L${f(x + 9)},${f(y + 4.5)} Z"/>`;
+  const node = (d, x, y, w, h) => `<g class="pt rn ${d.f === "x" ? "help" : "f" + d.f}" tabindex="0" data-tip="${esc(`<b>${d.n}</b>${d.t}`)}"><rect x="${f(x)}" y="${f(y)}" width="${w}" height="${h}" rx="5"/><text x="${f(x + w / 2)}" y="${f(y + h / 2 + 4)}" text-anchor="middle">${esc(d.n)}</text></g>`;
+  if (!narrow) {
+    const w = 92, h = 22, cw = (W - w) / 5, rh = 30, T = 4;
+    REL.forEach(d => { by[d.id] = { x: d.c * cw, y: T + d.r * rh, cx: d.c * cw + w / 2, cy: T + d.r * rh + h / 2 }; });
+    const H = T + 10 * rh + 26;
+    const edges = REL.flatMap(d => d.p.map(pid => { const a = by[d.id], b = by[pid], mx = b.x + w + (a.x - b.x - w) / 2;
+      return `<g class="edge"><path class="ln" d="M${f(a.x)},${f(a.cy)} H${f(mx)} V${f(b.cy)} H${f(b.x + w + 9)}"/>${tri(b.x + w, b.cy)}</g>`; })).join("");
+    return `<svg class="dgm" viewBox="0 0 ${W} ${H}" role="img" aria-label="Our map for task 3c, general on the left, special on the right, arrows from the special to the general pattern. Template and Hook leads to TemplateMethod and Objectifier, both lead to TemplateClass. From TemplateClass come Strategy, State, Visitor, Bridge, Proxy and ObjectRecursion. Bridge leads to the helper concept star-Bridge and on to Observer; Mediator specialises both Proxy and Bridge; Adapter specialises Proxy and Facade specialises Adapter; Decorator, Composite and Chain specialise ObjectRecursion.">${edges}${REL.map(d => node(d, by[d.id].x, by[d.id].y, w, h)).join("")}</svg>`;
+  }
+  // Narrow: an indented tree; a second parent is named next to the box.
+  const order = [["th", 0], ["ob", 1], ["tm", 1], ["tc", 2, "+ Objectifier"], ["st", 3], ["sa", 3], ["vi", 3], ["br", 3], ["sb", 4], ["os", 5], ["me", 4, "+ Proxy"], ["px", 3], ["ad", 4], ["fa", 5], ["or", 3], ["de", 4], ["cp", 4], ["ch", 4]];
+  const w = 128, h = 20, rh = 24, ind = 20, parent = {};
+  const pos = order.map(([id, lv, extra], i) => ({ id, lv, extra, x: 4 + lv * ind, y: 4 + i * rh }));
+  pos.forEach(p => { const d = REL.find(r => r.id === p.id); parent[p.id] = d.p.find(pid => pos.findIndex(q => q.id === pid) < pos.findIndex(q => q.id === p.id) && pos.find(q => q.id === pid).lv === p.lv - 1) || d.p[0]; });
+  const at = Object.fromEntries(pos.map(p => [p.id, p]));
+  const lines = pos.filter(p => p.lv).map(p => { const q = at[parent[p.id]]; return `<path class="tl" d="M${q.x + 10},${q.y + h} V${p.y + h / 2} H${p.x}"/>`; }).join("");
+  const nodes = pos.map(p => node(REL.find(r => r.id === p.id), p.x, p.y, w, h) + (p.extra ? `<text class="el" x="${p.x + w + 5}" y="${p.y + 14}">${p.extra}</text>` : "")).join("");
+  return `<svg class="dgm" viewBox="0 0 ${W} ${4 + order.length * rh}" role="img" aria-label="Our map for task 3c as an indented tree, general patterns above, special ones indented below: Template and Hook; Objectifier and TemplateMethod; TemplateClass (also from Objectifier) with Strategy, State, Visitor, Bridge (with star-Bridge and Observer, and Mediator which also specialises Proxy), Proxy (with Adapter and Facade) and ObjectRecursion (with Decorator, Composite and Chain).">${lines}${nodes}</svg>`;
+};
+
+function exercise4() {
+  return `${head(e)}
+    <p class="lead">The fourth sheet practises the glue patterns of <a href="design-patterns/lecture.html?n=5">lecture 5</a>. Two route services with incompatible interfaces are adapted to one interface of our own and then queried together. A travel planner hides five services behind one facade and keeps several planned trips with Memento. The last task looks back at all patterns so far and asks how they are related. There is no official solution yet: <b>every answer below is our own</b>. The sheet carries no points.</p>
+    <div class="box status"><p style="margin:0"><b>Status:</b> sheet in OPAL since ${fmt(e.published)} (6 pages, three tasks); session on ${fmt(e.date)}, ${exe.start}, ${esc(exe.room)}. Task 3 is optional homework for in-person attendants. DSE students submit 3a and 3b; 3c is optional for everyone but recommended for the exam.</p></div>
+
+    ${task("1", 0, "Adapting maps and routes", `
+      <p>Our application wants the fastest car route between two places from several map providers, through one interface of its own: <code>FastestRouteProvider</code> with <code>getFastestRoute(from, to): Route</code> and <code>buyTollTicket(route, creditCardInfo): String</code>. A Route only carries its time in minutes, a Coordinate is an x/y pair of doubles. The ticket method buys a toll ticket for a route if one is needed and the user agrees in a prompt, and returns a token or throws an exception. (a) Adapt the <b>Revenant Framework</b>, which works offline on a local map database. (b) Adapt the small <b>Network Maps</b> library, which asks a remote server. For both: class or object adapter, why, a class diagram, and how the adapter works. (c) Combine both adapters so that users can query both subsystems transparently.</p>
+      <h3>a) Revenant Framework: only an object adapter works</h3>
+      <p>The framework's three classes are all <b>final</b>, and the map component's constructor is protected and needs the maps database. The component is obtained from <code>RevenantFramework.getInitializedMappingComponent()</code>. A <b>class adapter</b> would have to inherit from RevenantMapComponent, which a final class forbids. Java has no multiple class inheritance either, so the slide 18 variant would only work if it could extend the component and implement the interface. That leaves the <b>object adapter</b>: a class <code>RevenantRouteAdapter implements FastestRouteProvider</code> that creates the framework once (port, user, password from the configuration), keeps the map component and delegates to it.</p>
+      ${chart("revenant", AROLES)}<figcaption>Our class diagram for 1a. The note shows the two methods; Location and Coordinate both have x and y, so <code>loc(c)</code> is a field-by-field copy.</figcaption></figure>
+      <p>The adapter does more than rename methods. It bridges four mismatches of the kinds lecture 5 lists (slides 8–10 and 16):</p>
+      <ul>
+        <li><b>Data format</b>: Coordinate becomes Location; the driving time comes in hours and must become whole minutes.</li>
+        <li><b>Data model</b>: our Route is just a time, while Revenant works on a <code>List&lt;Location&gt;</code>. Buying a ticket later needs that list again, so the adapter keeps a map from each Route it returned to its locations. An alternative is a subclass <code>RevenantRoute extends Route</code> that carries the list, if Route is not final.</li>
+        <li><b>Protocol</b>: our interface asks the user before buying. Revenant just buys, so the prompt happens in the adapter (through a callback to the UI) before <code>purchaseTollToken</code>.</li>
+        <li><b>Errors</b>: Revenant throws its own exception when a purchase fails; the adapter catches it and throws the exception type our interface declares, so callers never see a Revenant type.</li>
+      </ul>
+      ${ex("Worked example: one call through the Revenant adapter", `<p>Our numbers. <code>getFastestRoute((13.73, 51.05), (12.37, 51.34))</code>: the two Coordinates become <code>Location(13.73, 51.05)</code> and <code>Location(12.37, 51.34)</code>. The component returns a list of, say, 37 locations, and <code>computeTimeForRouteDrivingInHours</code> gives 1.35 h. 1.35 × 60 = <b>81 min</b>, so the client gets <code>Route(81)</code>, and the adapter stores Route(81) → the 37 locations. Later <code>buyTollTicket(route, cc)</code>: the user is asked; on yes the adapter calls <code>purchaseTollToken(list, cc)</code> and returns its token string.</p>`)}
+      <h3>b) Network Maps: both are possible; we take the object adapter</h3>
+      <p>NetworkMaps is an ordinary public class, not final, and our target is an <b>interface</b>. So a <b>class adapter</b> is possible in Java: <code>class NetworkMapsRouteAdapter extends NetworkMaps implements FastestRouteProvider</code>, one object, the inherited methods called on <code>this</code>. An <b>object adapter</b> works as well. The case for the object adapter: the class adapter would also expose <code>computeRoutes</code> and <code>buyTollTicketForRoute</code> to every client that holds the adapter; it is fixed to NetworkMaps at compile time, so a subclass or a test double cannot be swapped in; and NetworkMaps' constructor, which we do not know, would become part of ours. Either answer counts if it is justified; we use the object adapter, as in 1a, which also makes 1c uniform.</p>
+      ${chart("netmaps", AROLES)}<figcaption>Our class diagram for 1b. The library returns a list of routes for several means of transport; the adapter keeps the car routes and picks the fastest.</figcaption></figure>
+      <p>The mapping here, in our words. Our Coordinate is split into four doubles, and we have to fix which of x and y is the longitude: an assumption to write down, since a mix-up still compiles and gives nonsense routes. <code>RouteType.FASTEST_ROUTE</code> is chosen. The result list is filtered for <code>DRIVING_BY_CAR</code> and the route with the smallest <code>approximateTimeTakenInMinutes</code> wins; that value is already in minutes and goes into the Route unchanged. For the ticket, the card number is wrapped in a <code>Payment</code> with <code>PaymentMethod.CREDIT_CARD</code>. As in 1a, the adapter remembers which NetworkMapsRoute stands behind which Route. A failed network call is turned into our exception as well.</p>
+      ${ans([["object adapter", "1a: forced, the Revenant classes are final"], ["object or class adapter", "1b: both legal (NetworkMaps is not final, the target is an interface); object adapter preferred"], ["Route → original route", "both adapters must remember it, or the ticket cannot be bought"]])}
+      <h3>c) Both adapters behind one provider</h3>
+      <p>A <code>CombinedRouteProvider</code> that itself <b>implements FastestRouteProvider</b> and holds a list of providers, the two adapters. For the client nothing changes: it still calls one FastestRouteProvider (transparency). <code>getFastestRoute</code> asks every provider, ignores the ones that fail (Network Maps without network) and returns the fastest Route, remembering which provider produced it; <code>buyTollTicket</code> forwards to exactly that provider. Structurally this is Composite in its simplest form: one composite and leaves behind the same interface, a 1:n delegation as in the *-Bridge of lecture 4. In intent it is close to the broker of lecture 5 (slide 29): clients query a service without knowing which one answers. A third provider is one more adapter in the list.</p>
+      ${chart("combined", AROLES)}<figcaption>Our class diagram for 1c: the client only knows the interface; the combining provider and both adapters implement it.</figcaption></figure>
+      ${lab("agg", "the combined provider, step by step")}
+      ${why("Context, not on the sheet: 'shortest' or 'fastest'?", "<p>Task 1c asks for the <i>shortest</i> route, but our interface only knows the fastest one, and a Route only carries time. Revenant could report a distance (<code>computeDistanceForRouteInKilometers</code>), Network Maps cannot. So either 'shortest' means shortest in time, which our design does, or Route gets a distance field that only one adapter can fill. The second is a small data-model mismatch of its own; worth asking in the session which one is meant.</p>")}`)}
+
+    ${task("2", 0, "Managing complexity", `
+      <p>The idea of FastestRouteProvider is spread to other domains of a travel planner: interfaces for restaurants near a place and time, sightseeing trips, hikes and hotels with free rooms. Each query returns a <code>PartOfTravel</code> that says how long an activity takes, where and when, and can book it if its provider is a booking provider (restaurants and hotels). (a) The planner should propose combinations of restaurants, sights, hikes and hotels without the client juggling all these APIs: which pattern simplifies access, with its goals and structure? (b) Design the integrated application: ask for the fastest route at a given time and get recommendations for every aspect of the trip, with reasonable assumptions about the user interaction and the trip (for example one hotel per night). (c) Users want to store several planned trips, compare them and book the chosen one: explain intent and structure of Memento.</p>
+      <h3>a) Facade</h3>
+      <p><b>Goals</b>: one simple, task-oriented interface for a subsystem of many classes; clients depend on one class instead of five services; the subsystem can change behind the facade; layering, so the UI layer does not reach into the service layer. Clients that need the details can still use the services directly. <b>Structure</b>: a Facade class that knows the subsystem classes and delegates each of its operations to several of them in the right order; the subsystem classes do their own work and know nothing of the facade. In lecture 5 (slides 21–23) the Facade is an object adapter that hides a whole set of objects. Unlike an adapter it usually <i>invents</i> its interface (<code>planTrip</code>) instead of matching an existing one.</p>
+      <h3>b) The travel planner</h3>
+      ${chart("facade4", AROLES)}<figcaption>Our class diagram for 2b. The route service behind the facade is the combined provider of task 1c.</figcaption></figure>
+      <p>Our assumptions, as the sheet asks: the user gives start, destination and departure time; at most 8 hours of driving per day; a restaurant stop after every 4 hours of driving, looked up near the position and time reached at that point; one hotel per night near the day's end point; on every following morning, sightseeing or a hike near the hotel. The facade's <code>planTrip</code> asks the route provider, cuts the route into days and stops, and asks the matching provider at each stop for the top three proposals. The UI shows them; the user picks one per stop (<code>choose</code>); since a chosen restaurant or hotel can lie off the route, the facade recomputes the route through the chosen stops. <code>book(cc)</code> calls <code>bookActivity</code> on every part whose provider books.</p>
+      ${chart("trip", leg(Object.values(TK).map(([s, n]) => [s, n])))}<figcaption>Worked example under our assumptions: 800 minutes of driving, at most 480 per day, a meal after every 240 minutes, departure at 8:00 both days.</figcaption></figure>
+      ${tbl(["Day", "From", "To", "What"], tripPlan(TRIP).flatMap((segs, i) => segs.map(([k, s, len]) => [`Day ${i + 1}`, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, `${Math.floor((s + len) / 60)}:${String((s + len) % 60).padStart(2, "0")}`, TK[k][1]])))}
+      ${ex("Worked example: the calls behind one planTrip", `<p>800 min of driving with at most 480 per day gives 2 days and <b>1 hotel night</b>. Day 1: 240 min, a meal, 240 min, arrival at 17:00: one <code>getRestaurants</code> call near the 240-minute point around 12:00, one <code>getHotels</code> call near the day's end for that night. Day 2: <code>getSightseeingObjects</code> (or <code>getHikingTrips</code>) near the hotel at 8:00, then 240 min, a meal (another <code>getRestaurants</code>), 80 min, arrival at 16:20. In total 1 route call, 2 restaurant calls, 1 hotel call and 1 sightseeing call, each returning three proposals. Without the facade the UI would make these five calls itself and also know the cutting rules; with it, the UI makes <b>one</b> call.</p>`)}
+      <h3>c) Memento</h3>
+      <p><b>Intent</b> (GOF): capture and externalise an object's internal state, without violating its encapsulation, so that the object can be restored to that state later. <b>Structure</b>: the <b>Originator</b> creates a memento of its current state (<code>save()</code>) and can restore itself from one (<code>restore(m)</code>). The <b>Memento</b> stores the state and offers a wide interface to the originator only, a narrow one (or none) to everybody else. The <b>Caretaker</b> keeps mementos and never looks inside. Here the trip planner is the originator, a TripMemento holds one planned trip (route, chosen parts, times), and SavedTrips is the caretaker. To compare, the caretaker may only use the narrow interface, so the memento offers a summary (total time, price) and nothing more; for booking, the planner restores the chosen memento and books its parts.</p>
+      ${chart("memento", leg([[1, "originator"], [4, "memento"], [2, "caretaker"], [3, "client (UI)"]]))}<figcaption>Our class diagram for 2c. The dashed arrow: the planner creates mementos and reads them back; only it sees their state.</figcaption></figure>
+      ${why("What the task trains", "<p>The difference between Adapter and Facade (match an existing interface versus invent a simpler one), and the habit of writing assumptions down before designing, which the sheet asks for explicitly. Memento is not in the lecture; it is a GOF pattern with a tension worth being able to explain: the caretaker must keep and compare snapshots without breaking the originator's encapsulation, hence the narrow summary interface.</p>")}`)}
+
+    ${task("3", 0, "Relations between patterns", `
+      <p>(a) Compare the extensibility patterns Decorator, Composite, Observer and Chain of Responsibility: which mechanism makes them extensible, and how do they relate to TemplateClass and ObjectRecursion? (b) Compare the glue patterns Adapter, Facade and Mediator: how do they address architectural mismatch, and how do they relate to the variability and extensibility patterns? (c) Sketch a chart of the relations between sixteen patterns of the course, with arrows for specialisation (by class structure, behaviour or intent) and helper concepts where a shared idea has no pattern name yet.</p>
+      <h3>a) Extensibility</h3>
+      <p>The mechanism is a <b>hook object whose type is the template's own supertype</b>. A class both inherits from and holds a reference to the common superclass (ObjectRecursion, lecture 4 slide 9). New behaviour comes from adding objects at run time, not from changing classes. All four are TemplateClass at heart (a template method calling a hook object); they differ in what the hook is and how many there are.</p>
+      <ul class="cmp">
+        <li><b>Decorator</b><span class="v">1-ObjectRecursion: one wrapped object of the same type, ending in a core; adds behaviour before or after the forwarded call</span></li>
+        <li><b>Composite</b><span class="v">n-ObjectRecursion: any number of children of the same type; operations fold over the tree</span></li>
+        <li><b>Chain</b><span class="v">1-ObjectRecursion through the successor link; the request goes on until someone handles it, no core needed</span></li>
+        <li><b>Observer</b><span class="v">not recursive: a *-Bridge from the subject to observers of a separate hierarchy; extended by registering more observers</span></li>
+      </ul>
+      <h3>b) Glue</h3>
+      <p>All three put one more object between parts that do not fit, so that neither part has to change. <b>Adapter</b> maps one interface (or protocol, or data format) to another for one object: a Proxy with a different interface. <b>Facade</b> hides a whole subsystem behind one new interface: an object adapter for many objects. <b>Mediator</b> takes over the communication of n partners, which only know the mediator: an n-way Proxy plus a Bridge (lecture 5, slides 16, 22, 25). Like the variability patterns they are built on delegation to a hook object (TemplateClass and Objectifier). The extensibility patterns can serve as glue too: Decorator and Proxy for data mismatch, Chain as a filter, Observer to listen in (lecture 5, slide 14).</p>
+      <h3>c) The map</h3>
+      ${chart("relmap", leg([[1, RFAM[1]], [2, RFAM[2]], [3, RFAM[3]], ["g", RFAM.x, "dash"]]))}<figcaption>Our answer for 3c, built from the statements of lectures 2, 4 and 5. Hover or focus a pattern for the relation and where the course says so. The narrow form is a tree; a second parent is named next to the box.</figcaption></figure>
+      ${why("What the task trains", "<p>The sheet calls 3c highly recommended for the exam, and the <a href=\"design-patterns/exam.html\">mock exam</a> has cross-cutting questions of the same kind. What it trains: not the sixteen diagrams one by one, but the few ideas they are built from. Template and hook, a hook object, recursion on the hook's type, 1:n hooks, and delegation to a sister. Being able to derive Facade from Adapter from Proxy from TemplateClass in four sentences is worth more than memorising any single structure.</p>")}`)}
+
+    <h2>Before the session</h2>
+    <ul>
+      <li>Draw the two adapters of task 1 by hand and decide which of x and y is the longitude; reread slides 15–23 of <a href="design-patterns/lecture.html?n=5">lecture 5</a> (Adapter, Facade).</li>
+      <li>Write down your own assumptions for 2b before reading ours; the sheet asks for assumptions, so the reasoning counts more than one right design.</li>
+      <li>Open questions for the session: whether 1c's "shortest" means shortest in time; whether the combined provider of 1c is meant as Composite, Mediator or Facade; whether the user prompt of <code>buyTollTicket</code> belongs into the adapter or into the client.</li>
+    </ul>`;
+}
+
+const WRITEUPS = { 1: exercise1, 2: exercise2, 3: exercise3, 4: exercise4 };
+const LABS = { maze: initMazeLab, poly: initPolyLab, obs: initObsLab, agg: initAgg };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => { if (!el.dataset.mounted) { el.dataset.mounted = 1; LABS[el.dataset.lab](el.querySelector(".lab-body")); } });
 if (!e) {
   page.innerHTML = `${back}<h1>${EX} not found</h1><p>There is no ${EX.toLowerCase()} ${esc(q)}.</p>`;

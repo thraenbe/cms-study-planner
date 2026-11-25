@@ -29,6 +29,17 @@ const nextHTML = nx ? (() => { const d = daysUntil(nx.date), t = titleOn(nx.date
   : `<div class="box"><p style="margin:0">No session dates known yet.</p></div>`;
 const tr = rows.map(r => { const t = titleOn(r.date, r.kind);
   return `<tr class="${r.date < today ? "past" : ""} ${r.date === nx?.date ? "next" : ""}"><td class="d">${U.fmtDate(r.date)}</td><td class="k"><span class="sw ${r.kind}" title="${r.kind === "exe" ? EX : "Lecture"}"></span></td><td>${t ? `${r.kind === "lec" ? "Lecture" : EX} ${t.n}: ${esc(t.title)}` : esc(r.topic)} <span class="muted">· ${r.start}–${r.end} · ${esc(r.room)}</span></td></tr>`; }).join("");
+// Old exams: what the archived OPAL courses show (none exist, the exam is oral), as a semester table + notes.
+const xa = c.examArchive;
+const archiveHTML = xa ? `<h2 id="old-exams">Old exams</h2>
+  <div class="box"><p style="margin:0">${esc(xa.verdict)}</p></div>
+  <div class="legend"><span><span class="sw wr"></span>written</span><span><span class="sw or"></span>oral (online, BigBlueButton)</span></div>
+  <div class="box" style="padding:.6rem 1.2rem"><table class="plan exams"><tbody>${(xa.history || []).map(h => `<tr class="${h.current ? "next" : ""}"><td class="d">${esc(h.sem)}</td><td class="k"><span class="sw ${h.form === "written" ? "wr" : "or"}" title="${esc(h.form)}"></span></td><td><b>${esc(h.weeks)}</b>${h.note ? ` <span class="muted">· ${esc(h.note)}</span>` : ""}</td></tr>`).join("")}</tbody></table></div>
+  ${(xa.facts || []).length ? `<ul>${xa.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+  ${xa.substitute ? `<h3>What to practise with instead</h3><p>${esc(xa.substitute)}</p>` : ""}
+  <p><a href="design-patterns/exam.html">🎤 Mock oral exam on this board: own questions per lecture with key points and a 15-minute simulation →</a></p>
+  ${(xa.links || []).length ? `<div class="links">${xa.links.map(l => `<a href="${l.u}" target="_blank" rel="noopener">${esc(l.t)} ↗</a>`).join("")}</div>` : ""}
+  ${xa.leads ? `<p class="muted">${esc(xa.leads)} Checked in OPAL on ${U.fmtDate ? U.fmtDate(xa.checked) : esc(xa.checked)}.</p>` : ""}` : "";
 const links = [
   m.links?.opal ? `<a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course ↗</a>` : "",
   c.coursePage || m.links?.web ? `<a href="${c.coursePage || m.links.web}" target="_blank" rel="noopener">Course page of the chair ↗</a>` : "",
@@ -45,6 +56,7 @@ document.getElementById("page").innerHTML = `
   <h2>Exam &amp; grading</h2>
   ${c.format ? `<p>${esc(c.format)}</p>` : ""}
   ${(c.grading || []).length ? `<div class="grades">${c.grading.map(g => `<div class="grade mine"><b>${esc(g.variant)}</b>${esc(g.how)}${g.selma ? `<div class="s">Selma: ${esc(g.selma)}</div>` : ""}</div>`).join("")}</div>` : "<p class=\"muted\">Grading not recorded yet.</p>"}
+  ${archiveHTML}
   ${c.exerciseNote ? `<h2>How the ${EX.toLowerCase()}s work</h2><p>${esc(c.exerciseNote)}</p>` : ""}
   <h2>Schedule · ${rows.filter(r => r.kind === "lec").length} lectures, ${rows.filter(r => r.kind === "exe").length} ${EX.toLowerCase()}s</h2>
   <div class="legend">${lec ? `<span><span class="sw lec"></span>Lecture · ${U.DAYS_SHORT[lec.day]} ${lec.start}–${lec.end} · ${esc(lec.room)}</span>` : ""}${exe ? `<span><span class="sw exe"></span>${EX} · ${U.DAYS_SHORT[exe.day]} ${exe.start}–${exe.end} · ${esc(exe.room)}</span>` : ""}</div>

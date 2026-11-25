@@ -1560,14 +1560,14 @@ window.CMS = {
       "title": "Role-based Design",
       "date": "2026-11-24",
       "icon": "🎭",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic: roles versus objects, role types versus classes, role mapping and implementation.",
+      "covered": true,
+      "blurb": "Start of part 2: roles as dynamic, context-dependent views onto objects; role types (abilities), role models and class-role models; compartments and the CROM notation; Riehle's role constraints with CROM's occurrence constraints and role groups; natural versus role types (rigid, founded); composing and merging role models into partial class models; role mapping in the MDA; six ways to implement roles.",
       "files": [
        {
         "kind": "slides",
-        "name": "#06 Role-based Design",
-        "where": "OPAL · Lecture Slides",
-        "note": "already up"
+        "name": "10-dpf-role-based-design.pdf",
+        "where": "OPAL · Lecture Slides (alternative)",
+        "note": "59 pages, since 24 Nov; the chair numbers it chapter 10"
        },
        {
         "kind": "recording",
@@ -1754,13 +1754,19 @@ window.CMS = {
       "covered": true,
       "lecture": 4,
       "points": null,
-      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; no official solution yet.",
+      "blurb": "Sheet 3 (in OPAL since 5 Nov): polynomials as a Composite with countSigns and degree (object recursion versus Visitor), Interpreter for evaluate, the secant method and sine, cosine, tangent as a Decorator, and a chained Observer whose cycle is broken by a change manager (Mediator). Own worked solutions; the official solution has been in OPAL since 19 Nov.",
       "files": [
        {
         "kind": "sheet",
         "name": "DPF_Ex3_Extensibility_Patterns-task.pdf",
         "where": "OPAL · Exercise Sheets",
         "note": "since 5 Nov"
+       },
+       {
+        "kind": "solution",
+        "name": "DPF_Ex3_Extensibility_Patterns-solution.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "since 19 Nov, not compared yet"
        }
       ]
      },
@@ -1768,12 +1774,20 @@ window.CMS = {
       "n": 4,
       "title": "Architecture Mismatch",
       "date": "2026-11-25",
-      "published": null,
+      "published": "2026-11-19",
       "icon": "🔗",
-      "covered": false,
+      "covered": true,
       "lecture": 5,
       "points": null,
-      "blurb": "Not published yet. Planned topic: glue patterns for architectural mismatch (lecture 5)."
+      "blurb": "Sheet 4 (in OPAL since 19 Nov): object adapters for the final Revenant framework and the Network Maps library behind one FastestRouteProvider, both combined into one provider; a Facade over five travel services and Memento for saved trips; how the variability, extensibility and glue patterns relate. Own worked solutions; no official solution yet.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "DPF_Ex4_Architecture_Mismatch_Patterns-task.pdf",
+        "where": "OPAL · Exercise Sheets",
+        "note": "6 pages, since 19 Nov"
+       }
+      ]
      },
      {
       "n": 5,
@@ -1841,7 +1855,69 @@ window.CMS = {
       "points": null,
       "blurb": "Not published yet. Planned topic: the Tools-and-Materials pattern language (lecture 11)."
      }
-    ]
+    ],
+    "examArchive": {
+     "checked": "2026-11-24",
+     "verdict": "There are no old exam papers for this course. Since WS21/22 the exam has been an oral exam over BigBlueButton, so no written paper exists. The archived OPAL courses (WS20/21 to WS25/26), their forums, OPAL's course search and the chair's website have no exam papers or question collections.",
+     "history": [
+      {
+       "sem": "WS20/21",
+       "form": "written",
+       "weeks": "any time 8 Feb – 28 Mar 2021",
+       "note": "Corona semester: an open-book test with no time limit on OPAL's separate exam server (Exam@TUD), with a practice test beforehand. That exam course is closed now (access restricted), so its questions cannot be looked at."
+      },
+      {
+       "sem": "WS21/22",
+       "form": "oral",
+       "weeks": "14–18 Feb and 7–11 Mar 2022",
+       "note": "The written OPAL exam was no longer allowed. Enrolment deadline 16 Jan 2022."
+      },
+      {
+       "sem": "WS22/23",
+       "form": "oral",
+       "weeks": "10, 13, 14, 15, 17 Feb and 13, 14, 15, 17 Mar 2023",
+       "note": "Enrolment deadline 15 Jan 2023."
+      },
+      {
+       "sem": "WS23/24",
+       "form": "oral",
+       "weeks": "19–23 Feb and 18–21 Mar 2024",
+       "note": ""
+      },
+      {
+       "sem": "WS24/25",
+       "form": "oral",
+       "weeks": "17–21 Feb and 17–21 Mar 2025",
+       "note": ""
+      },
+      {
+       "sem": "WS25/26",
+       "form": "oral",
+       "weeks": "not recorded",
+       "note": "The Exam page of the archived course is empty."
+      },
+      {
+       "sem": "WS26/27",
+       "form": "oral",
+       "weeks": "one week in February, one in March 2027",
+       "note": "Dates announced around Christmas.",
+       "current": true
+      }
+     ],
+     "facts": [
+      "Every year since WS21/22 had the same shape: one online exam week in February and one in March. The enrolment deadline was in mid-January (16 Jan 2022, 15 Jan 2023).",
+      "CMS students only take the oral exam. In the forum (October 2023) the lecturer confirmed that CMS students do not have to hand in exercise solutions to be admitted; the graded weekly submissions were for Distributed Systems Engineering students, for whom the exercise was the exam.",
+      "After enrolling with the exam office you write to the chair for a slot with your preferred date. The forum answer to a student who had done both: nothing else to do, just wait for the slot."
+     ],
+     "substitute": "The closest thing to old exam material: last year's OPAL course (WS25/26) still has all ten exercise sheets with their solutions, including sheets 5–10 (formal models of design patterns 1 and 2, role object pattern, frameworks, framework extensibility, tools and materials), which are not out yet this term. The introduction slides say the exam expects the exercises to be solved, so these are the best practice material.",
+     "links": [
+      {
+       "t": "WS25/26 OPAL course: exercise sheets with solutions",
+       "u": "https://bildungsportal.sachsen.de/opal/auth/RepositoryEntry/51256197120"
+      }
+     ],
+     "leads": "Not checked: the oral-exam protocols collected by the computer science student council (iFSR, TU login), and the closed Exam@TUD course from WS20/21. Neither is public."
+    }
    }
   },
   "CMS-COR-VIZ": {

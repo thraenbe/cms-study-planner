@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base href="../">
+<title>Scientific Software Engineering · Mock exam</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="design-patterns/dpf.css">
+<script src="assets/data.js"></script>
+<script src="assets/site.js"></script>
+<script src="design-patterns/dpf.js"></script>
+<script src="design-patterns/exam-questions.js"></script>
+<style>
+/* Chart colours (dataviz reference palette, validated steps for light and dark surfaces). */
+:root { --vz-s1: #2a78d6; --vz-s2: #eb6834; --vz-s3: #1baf7a; --vz-s4: #eda100; --vz-gray: #898781; --vz-grid: #e1e0d9; --vz-axis: #c3c2b7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; } }
+:root[data-theme="dark"] { --vz-s1: #3987e5; --vz-s2: #d95926; --vz-s3: #199e70; --vz-s4: #c98500; --vz-grid: #2c2c2a; --vz-axis: #383835; }
+</style>
+</head>
+<body class="dpf">
+<header class="sitebar" data-page="course"></header>
+<div class="wrap"><div class="detail" id="page"></div></div>
+<script>
+// Mock oral exam: the question bank of exam-questions.js with self-ratings (kept in this browser only),
+// a progress chart per lecture, a 15-minute mock with five weighted questions, and the filterable bank.
+const { m, c, esc, U, CODE, fmt, today } = DPF;
+const Q = window.DPF_EXAM || [];
+const page = document.getElementById("page");
+const lecs = c.lectures || [];
+const lec = n => lecs.find(l => l.n === n);
+const isHeld = n => n === 0 || !!lec(n)?.covered;
+const KIND = { explain: "Explain", compare: "Compare", draw: "Draw", apply: "Apply" };
+const RATE = [["got", "Got it"], ["part", "Partly"], ["miss", "Missed"]];
+const RATE_NAME = Object.fromEntries(RATE);
+const GROUPS = [0, ...lecs.map(l => l.n)];
+const gname = n => n === 0 ? "Across lectures" : `Lecture ${n} – ${lec(n)?.title || ""}`;
+const gshort = n => n === 0 ? "Across" : `L${n}`;
+const txt = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+// Ratings live in localStorage (a per-viewer convenience): the page works the same without them.
+const KEY = "dpf-exam-ratings-v1";
+let R = {};
+try { R = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { R = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(R)); } catch (e) { /* private mode: keep in memory */ } };
+
+const heldCount = Q.filter(q => !q.pre).length;
+const nextExam = (c.keyDates || []).find(k => k.kind === "deadline" && k.date >= today);
+
+// ── Progress chart: one stacked bar per lecture group (got / partly / missed / not rated yet) ──
+function progressHTML() {
+  const rows = GROUPS.map(n => {
+    const qs = Q.filter(q => q.l === n); if (!qs.length) return "";
+    const k = { got: 0, part: 0, miss: 0 }; qs.forEach(q => { if (R[q.id]) k[R[q.id]]++; });
+    const open = qs.length - k.got - k.part - k.miss;
+    const seg = (cls, v, label) => v ? `<span class="seg ${cls}" style="flex:${v}" title="${label}: ${v}"></span>` : "";
+    const aria = `${gname(n)}: ${k.got} got, ${k.part} partly, ${k.miss} missed, ${open} not rated, of ${qs.length}`;
+    return `<div class="prow ${isHeld(n) ? "" : "pre"}" role="img" aria-label="${esc(aria)}">
+      <span class="pl" title="${esc(gname(n))}">${gshort(n)}${isHeld(n) ? "" : "<small> preview</small>"}</span>
+      <span class="pbar">${seg("got", k.got, "Got it")}${seg("part", k.part, "Partly")}${seg("miss", k.miss, "Missed")}${seg("open", open, "Not rated")}</span>
+      <span class="pn">${k.got}/${qs.length}</span></div>`;
+  }).join("");
+  const all = Q.length, got = Q.filter(q => R[q.id] === "got").length, rated = Q.filter(q => R[q.id]).length;
+  return `<figure class="viz"><figcaption>Your self-ratings per lecture: green got it, amber partly, orange missed, grey not rated yet. ${got} of ${all} questions marked “got it”, ${rated} rated. Stored only in this browser.</figcaption>
+    <div class="legend"><span class="li"><span class="key" style="--c:var(--vz-s3)"></span>Got it</span><span class="li"><span class="key" style="--c:var(--vz-s4)"></span>Partly</span><span class="li"><span class="key" style="--c:var(--vz-s2)"></span>Missed</span><span class="li"><span class="key" style="--c:var(--line)"></span>Not rated</span></div>
+    <div class="prog">${rows}</div>
+    <p class="muted" style="font-size:.85rem;margin:.5rem 0 0">${rated ? `<button class="preset" data-reset>${resetArmed ? "Click again to clear all ratings" : "Clear my ratings"}</button>` : ""}</p></figure>`;
+}
+let resetArmed = false;
+
+// ── The 15-minute mock: an opener across the course, then four questions from different lectures ──
+const mock = { scope: "held", qs: [], i: 0, shown: false, end: 0, timer: 0, done: {} };
+const weight = q => ({ got: 0.4, part: 2, miss: 3 })[R[q.id]] ?? 2;
+function pickWeighted(pool) {
+  const tot = pool.reduce((s, q) => s + weight(q), 0); let r = Math.random() * tot;
+  for (const q of pool) { r -= weight(q); if (r <= 0) return q; } return pool[pool.length - 1];
+}
+function startMock() {
+  const pool = Q.filter(q => q.l !== 0 && (mock.scope === "all" || !q.pre));
+  const qs = [pickWeighted(Q.filter(q => q.l === 0))];
+  const used = new Set();
+  for (let k = 0; k < 4; k++) { const rest = pool.filter(q => !used.has(q.l)); if (!rest.length) break; const q = pickWeighted(rest); used.add(q.l); qs.push(q); }
+  qs.splice(1, qs.length - 1, ...qs.slice(1).sort((a, b) => a.l - b.l));
+  Object.assign(mock, { qs, i: 0, shown: false, done: {}, end: Date.now() + 15 * 60e3 });
+  clearInterval(mock.timer); mock.timer = setInterval(tick, 1000);
+  renderMock();
+}
+function tick() {
+  const el = document.getElementById("mock-timer"); if (!el) return;
+  const left = Math.max(0, Math.round((mock.end - Date.now()) / 1000));
+  el.textContent = left ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} left` : "time is up";
+  el.classList.toggle("late", left < 120);
+  if (!left) clearInterval(mock.timer);
+}
+function mockBody() {
+  if (!mock.qs.length) return `<p class="lab-note" style="margin:0">Press start. Answer each question out loud as you would to the examiner (one to two minutes, sketch diagrams on paper), then open the key points and rate yourself honestly.</p>`;
+  if (mock.i >= mock.qs.length) {
+    const rows = mock.qs.map(q => `<li><span class="rt ${mock.done[q.id] || ""}">${RATE_NAME[mock.done[q.id]] || "skipped"}</span> ${txt(q.q)} <span class="muted">· ${gshort(q.l)}</span></li>`).join("");
+    const got = mock.qs.filter(q => mock.done[q.id] === "got").length;
+    clearInterval(mock.timer);
+    return `<p style="margin:0 0 .4rem"><b>Done: ${got} of ${mock.qs.length} got it.</b> The ratings went into the chart above; the next mock favours what you missed.</p><ul class="mock-sum">${rows}</ul>`;
+  }
+  const q = mock.qs[mock.i];
+  return `<div class="mock-card">
+      <div class="mock-top"><span>Question ${mock.i + 1} of ${mock.qs.length} · ${esc(gname(q.l))}${q.pre ? " · preview" : ""}</span><span id="mock-timer" class="timer"></span></div>
+      <p class="mock-q"><span class="kind ${q.kind}">${KIND[q.kind]}</span> ${txt(q.q)}</p>
+      ${mock.shown ? `${answerHTML(q)}<div class="rate" role="group" aria-label="Rate your answer">${RATE.map(([k, l]) => `<button class="preset r-${k}" data-mrate="${k}">${l}</button>`).join("")}</div>`
+        : `<button class="preset" data-show>Show the key points</button>`}
+    </div>`;
+}
+function renderMock() {
+  document.getElementById("mock-body").innerHTML = mockBody();
+  document.querySelectorAll("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === mock.scope)));
+  tick();
+}
+
+// ── Question bank ──
+const filt = { g: "all", open: false };
+function answerHTML(q) {
+  return `<ul class="keys">${q.a.map(p => `<li>${txt(p)}</li>`).join("")}</ul>
+    ${q.trap ? `<div class="why" style="--c:var(--warn)"><div class="kicker">Common slip</div><p>${txt(q.trap)}</p></div>` : ""}
+    <p class="muted src">${q.l === 0 ? "Spans several lectures." : lec(q.l)?.covered ? `Read: <a href="design-patterns/lecture.html?n=${q.l}">lecture ${q.l} write-up</a>` : `Preview from last year's sheet; the lecture is on ${fmt(lec(q.l)?.date || today)}.`}${q.ex ? ` · Trained in <a href="design-patterns/exercise.html?n=${q.ex}">exercise ${q.ex}</a>` : ""}</p>`;
+}
+function bankHTML() {
+  const chips = [["all", "All"], ...GROUPS.filter(n => Q.some(q => q.l === n)).map(n => [String(n), gshort(n)])]
+    .map(([k, l]) => `<button class="preset" data-g="${k}" aria-pressed="${filt.g === k}">${l}</button>`).join("");
+  const groups = GROUPS.filter(n => filt.g === "all" || String(n) === filt.g).map(n => {
+    const qs = Q.filter(q => q.l === n && (!filt.open || R[q.id] !== "got")); if (!qs.length) return "";
+    const l = lec(n);
+    const head = n === 0 ? "" : l?.covered ? ` <a class="muted" style="font-size:.85rem;font-weight:500" href="design-patterns/lecture.html?n=${n}">write-up →</a>` : ` <span class="ctx">preview · ${fmt(l?.date || today)}</span>`;
+    return `<h3>${esc(gname(n))}${head}</h3>${qs.map(q => `<details class="xq" data-id="${q.id}">
+      <summary><span class="kind ${q.kind}">${KIND[q.kind]}</span> <span class="qt">${txt(q.q)}</span>${R[q.id] ? ` <span class="rt ${R[q.id]}">${RATE_NAME[R[q.id]]}</span>` : ""}</summary>
+      <div class="xa">${answerHTML(q)}<div class="rate" role="group" aria-label="Rate this question">${RATE.map(([k, lb]) => `<button class="preset r-${k}" data-rate="${k}" data-id="${q.id}" aria-pressed="${R[q.id] === k}">${lb}</button>`).join("")}</div></div></details>`).join("")}`;
+  }).join("");
+  return `<div class="presets" role="group" aria-label="Filter by lecture">${chips}</div>
+    <label class="ctl" style="margin:0 0 .6rem"><input type="checkbox" data-open ${filt.open ? "checked" : ""}> Hide questions marked “got it”</label>
+    ${groups || `<p class="muted">Nothing left here: every question in this filter is marked “got it”.</p>`}`;
+}
+
+function renderStatic() {
+  page.innerHTML = `
+  <a class="back" href="design-patterns.html">← All lectures and exercises</a>
+  <div class="big-icon">🎤</div><h1>Mock oral exam</h1>
+  <p class="meta">Practice questions for ${esc(m.name)} (${CODE}), taken as “Design Patterns and Frameworks”.</p>
+  <p class="lead">There are no old exams for this course: the exam has been oral since WS21/22 and no question collection is public (see <a href="design-patterns/orga.html#old-exams">Orga → Old exams</a>). These ${Q.length} questions are our own, written in the style of an oral exam: explain, compare, draw, apply. ${heldCount} cover lectures already held${Q.some(q => q.pre) ? `; the rest are previews for lectures ${Math.min(...Q.filter(q => q.pre).map(q => q.l))} to 11, written from last year's exercise sheets` : ""}.</p>
+  <div class="tiles">
+    <div class="tile"><div class="v">≈ 15 min</div><div class="l">oral exam, per the module description</div></div>
+    <div class="tile"><div class="v">online</div><div class="l">over BigBlueButton, every year since WS21/22</div></div>
+    <div class="tile"><div class="v">Feb / Mar</div><div class="l">two exam weeks in 2027; dates announced around Christmas</div></div>
+    <div class="tile"><div class="v">all sheets</div><div class="l">the introduction slides expect every exercise sheet solved</div></div>
+  </div>
+  <div class="why"><div class="kicker">How to use this page</div><p>Say every answer out loud before you open the key points: an oral exam rewards explaining reasons, and a diagram you can sketch from memory. The key points are what a complete answer touches, not a script. Rate yourself after each question; the chart and the mock use the ratings, which stay in this browser.</p></div>
+  <h2>Where you stand</h2>
+  <div id="progress"></div>
+  <h2>15-minute mock</h2>
+  <div class="lab" id="mock">
+    <div class="lab-h">Simulation <b>five questions, one clock</b></div>
+    <p class="lab-note">An opener across the course, then four questions from four different lectures, weighted towards what you have not got yet.</p>
+    <div class="presets" role="group" aria-label="Which lectures">
+      <button class="preset" data-scope="held">Held lectures only</button>
+      <button class="preset" data-scope="all">All lectures, previews included</button>
+      <button class="preset start" data-start>Start a mock ▸</button>
+    </div>
+    <div id="mock-body"></div>
+  </div>
+  <h2>All questions</h2>
+  <div id="bank"></div>
+  <p class="foot muted">Own questions in our own words, not taken from any exam. Preview questions (lectures 6–11) come from the WS25/26 exercise sheets and will be checked against this term's slides after each lecture.${nextExam ? ` Next exam milestone: ${esc(nextExam.label)} (${fmt(nextExam.date)}).` : ""}</p>`;
+}
+const renderProgress = () => { document.getElementById("progress").innerHTML = progressHTML(); };
+function renderBank() {
+  const openIds = [...document.querySelectorAll("#bank details[open]")].map(d => d.dataset.id);
+  document.getElementById("bank").innerHTML = bankHTML();
+  openIds.forEach(id => { const d = document.querySelector(`#bank details[data-id="${id}"]`); if (d) d.open = true; });
+}
+
+renderStatic(); renderProgress(); renderMock(); renderBank();
+
+page.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.scope) { mock.scope = b.dataset.scope; renderMock(); }
+  else if ("start" in b.dataset) startMock();
+  else if ("show" in b.dataset) { mock.shown = true; renderMock(); }
+  else if (b.dataset.mrate) { const q = mock.qs[mock.i]; R[q.id] = b.dataset.mrate; mock.done[q.id] = b.dataset.mrate; save(); mock.i++; mock.shown = false; renderMock(); renderProgress(); renderBank(); }
+  else if (b.dataset.rate) { R[b.dataset.id] = b.dataset.rate; save(); renderProgress(); renderBank(); }
+  else if (b.dataset.g) { filt.g = b.dataset.g; renderBank(); }
+  else if ("reset" in b.dataset) { if (resetArmed) { R = {}; save(); resetArmed = false; renderBank(); } else { resetArmed = true; setTimeout(() => { resetArmed = false; renderProgress(); }, 4000); } renderProgress(); }
+});
+page.addEventListener("change", e => { if ("open" in e.target.dataset) { filt.open = e.target.checked; renderBank(); } });
+</script>
+</body>
+</html>
