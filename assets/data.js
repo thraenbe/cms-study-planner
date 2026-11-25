@@ -2837,7 +2837,7 @@ window.CMS = {
       "published": "2026-11-25",
       "icon": "✏️",
       "covered": true,
-      "blurb": "Sheet 4 (task 4.1, five parts): turning standard-cell layouts back into circuits: the layers, PMOS and NMOS, pins and series nodes of a NOR2 (W/L 12 and 6.7), a buffer, an AND2, a cell built from clocked inverters and an OA21, with a stick-diagram explorer. Our own solutions; part d) only partly traced, no official solution yet.",
+      "blurb": "Sheet 4 (task 4.1, five parts): turning standard-cell layouts back into circuits: the layers, PMOS and NMOS, pins and series nodes of a NOR2 (W/L 12 and 6.7), a buffer, an AND2, a 2:1 multiplexer built from two tri-state inverters with cut poly and metal 2, and an OA21, with a stick-diagram explorer for all five. Our own solutions, re-read from the sheet's original images on 25 Nov; no chair solution compared yet.",
       "files": [
        {
         "kind": "sheet",
@@ -2849,7 +2849,19 @@ window.CMS = {
         "kind": "sheet",
         "name": "DSTUebung4_2025en_taskdescription.pdf",
         "where": "OPAL · Exercises/Übungen",
-        "note": "English version"
+        "note": "English version; downloaded 25 Nov"
+       },
+       {
+        "kind": "other",
+        "name": "Exercise_DST_2025_ENG.pdf",
+        "where": "OPAL · Tutorial Plan",
+        "note": "last year's task texts of all sheets, no solutions; downloaded 25 Nov"
+       },
+       {
+        "kind": "solution",
+        "name": "DSTUebung4_2025de_Loesung.pdf",
+        "where": "OPAL · Tutorial Plan",
+        "note": "last year's German solution (Dec 2025); not compared with this page yet"
        }
       ]
      },
