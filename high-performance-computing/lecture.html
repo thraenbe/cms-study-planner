@@ -1603,8 +1603,351 @@ function lecture4() {
       <li><b>static, dynamic or guided?</b> Static for equal work on a dedicated machine, dynamic for the best balance at the highest overhead, guided (or factoring) as the compromise.</li>
     </ul>
     <h2>Exercise</h2>
-    <p>Today's session discussed <a href="high-performance-computing/exercise.html?n=4">Exercise 04</a> on lecture 3's material (pipelines, peak performance, the roofline model, a Romeo node's topology). The exercise on this lecture, <a href="high-performance-computing/exercise.html?n=5">Exercise 05</a>, is expected in OPAL about a week before your group discusses it on <b>Wed 25 Nov, 07:30</b>.</p>
+    <p>Today's session discussed <a href="high-performance-computing/exercise.html?n=4">Exercise 04</a> on lecture 3's material (pipelines, peak performance, the roofline model, a Romeo node's topology). The exercise on this lecture, <a href="high-performance-computing/exercise.html?n=5">Exercise 05</a> (in OPAL since 19 Nov), was discussed on <b>Wed 25 Nov, 07:30</b>.</p>
     <p class="muted">Next: Shared Memory Programming 2, SIMD and dependencies, from the second half of the same deck (<a href="high-performance-computing/lecture.html?n=5">lecture 5</a>, 25 Nov; no lecture on 18 Nov, Buß- und Bettag). Previous: <a href="high-performance-computing/lecture.html?n=3">lecture 3</a>. Slides: OPAL → Lectures → Slides / Download (they may not be republished; this page summarises them in our own words).</p>`;
+}
+
+// ---------------- Lecture 5: Shared Memory Programming 2: SIMD & Dependencies ----------------
+// Builders for the lane and array explorers: a label column, then one cell per element (short rows are padded).
+const sgn = v => v < 0 ? `−${-v}` : `${v}`;
+const vc = (v, cls = "", tip = "") => `<span class="cell ${cls}"${tip ? ` title="${esc(tip)}"` : ""}>${v}</span>`;
+const vgrid = (n, head, rows) => `<div class="vgrid" style="--n:${n}">${head ? `<div></div>${head.map(h => `<div class="h">${h}</div>`).join("")}` : ""}${rows.map(([lab, cells]) => `<div class="rl">${lab}</div>${cells.join("")}${"<div></div>".repeat(Math.max(0, n - cells.length))}`).join("")}</div>`;
+// A chart drawn inside an explorer: the same tooltip wiring as the page's figures (mountCharts redraws it).
+const labChart = (name, legend = "") => `<figure class="viz lab-viz">${legend}<div class="chart-wrap"><div data-chart="${name}"></div><div class="tip" role="tooltip"></div></div></figure>`;
+const arrowDefs = (pre, kinds) => `<defs>${kinds.map(k => `<marker id="${pre}-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah ${k}"/></marker>`).join("")}</defs>`;
+
+// Explorer: the running-sum loop of slides 103–104 (and the forward loop of slide 113) on W-wide SIMD.
+// Vector model: a step of W iterations loads all its operands before it stores any result.
+const PFX0 = [5, 2, -3, 8, 3, 1, 2, 0, 6], PFX = { dir: "back", w: 4 };
+function pfxRun(dir, w) {
+  const a = PFX0.slice(), lo = dir === "back" ? 1 : 0, hi = dir === "back" ? 9 : 8, rows = [];
+  for (let s = lo; s < hi; s += w) {
+    const e = Math.min(s + w, hi), old = a.slice();
+    for (let i = s; i < e; i++) a[i] = (dir === "back" ? old[i - 1] : old[i + 1]) + old[i];
+    rows.push({ s, e, v: a.slice() });
+  }
+  return rows;
+}
+function pfxOut() {
+  const { dir, w } = PFX, rows = pfxRun(dir, w), ref = pfxRun(dir, 1).at(-1).v, fin = rows.at(-1).v, hi = dir === "back" ? 9 : 8;
+  const wrong = fin.filter((v, i) => v !== ref[i]).length;
+  const step = r => r.e - r.s === 1 ? `i = ${r.s}` : `i = ${r.s}–${r.e - 1}`;
+  const cells = r => r.v.map((v, i) => i >= r.s && i < r.e
+    ? (v === ref[i] ? vc(sgn(v), "t1 one", `a[${i}] = ${v}, the same as in the scalar loop`) : vc(sgn(v), "t2 one wrong", `a[${i}] = ${v}; the scalar loop gives ${ref[i]}`))
+    : vc(sgn(v), i >= r.e && i < hi ? "dim" : ""));
+  const grid = vgrid(9, PFX0.map((_, i) => `a[${i}]`), [["start", PFX0.map(v => vc(sgn(v)))], ...rows.map(r => [step(r), cells(r)]), ...(w > 1 ? [["scalar", ref.map(v => vc(sgn(v), "ref", "result of the scalar loop"))]] : [])]);
+  const why = dir === "fwd" ? "Iteration i reads a[i+1] before iteration i+1 overwrites it: an anti dependence. A vector step loads all its operands before it stores, so every iteration still sees the old a[i+1], exactly as the scalar loop does. Safe for any width."
+    : w === 1 ? "In scalar order iteration i reads the a[i−1] that iteration i−1 has just written, so the loop builds running sums: a data (flow) dependence of distance 1."
+    : `A step loads a[i−1] for all its ${w} iterations before it stores anything. Only the first load of each step sees a finished value; the other ${w - 1} see starting values, and from a[2] on every wrong result is the input of the next one.`;
+  return `${grid}${leg([[1, "written in this step, same as scalar"], [2, "written in this step, wrong (dashed outline)"]])}
+    <dl class="ro"><dt>Result</dt><dd>${wrong ? `${wrong} of 8 elements differ from the scalar loop ${flag("bad", "SIMD changes the result")}` : `identical to the scalar loop ${flag("ok", "safe to vectorise")}`}</dd><dt>Why</dt><dd>${why}</dd></dl>`;
+}
+function initPfx(body) {
+  const D = [["back", "a[i] = a[i−1] + a[i] (slides 103–104)"], ["fwd", "a[i] = a[i+1] + a[i] (slide 104)"]], Wd = [[1, "scalar"], [2, "2 lanes"], [4, "4 lanes (slide 104)"], [8, "8 lanes"]];
+  body.innerHTML = `<div class="presets">${D.map(([k, t]) => `<button class="preset" data-dir="${k}">${t}</button>`).join("")}</div>
+    <div class="presets">${Wd.map(([k, t]) => `<button class="preset" data-w="${k}">${t}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = pfxOut();
+    body.querySelectorAll("[data-dir]").forEach(b => b.setAttribute("aria-pressed", b.dataset.dir === PFX.dir));
+    body.querySelectorAll("[data-w]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.w === PFX.w)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-dir],[data-w]"); if (!b) return; if (b.dataset.dir) PFX.dir = b.dataset.dir; else PFX.w = +b.dataset.w; draw(); });
+  draw();
+}
+
+// Explorer: dependence graphs of the slides' loops (107–114, 127–129). Edges [from, to, kind, variable, distance].
+const DD_PRE = [
+  { t: "slide 107", head: "for (i = 1; i < N; i++)", s: [["S1", "A[i] = B[i-1];"], ["S2", "B[i] = C[i];"]], e: [["S2", "S1", "data", "B", 1]],
+    note: "Vector execution as on slide 107 runs S1 for all i first, so every A[i] gets the old B[i−1]; the scalar loop gives A[i] = C[i−1] from i = 2 on." },
+  { t: "slide 110", head: "for (i = 0; i < N-1; i++)", s: [["S1", "A[i] = B[i+1];"], ["S2", "B[i] = C[i];"]], e: [["S1", "S2", "anti", "B", 1]] },
+  { t: "slide 111", head: "for (i = 1; i < N; i++)", s: [["S1", "A[i] = B[i-1];"], ["S2", "A[i] = C[i] + D[i];"]], e: [["S1", "S2", "output", "A", 0]] },
+  { t: "slide 113, anti", head: "for (i = 0; i < 8; i++)", s: [["S1", "b[i] = a[i];"], ["S2", "c[i] = b[i+1];"]], e: [["S2", "S1", "anti", "b", 1]],
+    note: "Kept in this order, the vector version reads b[i+1] after S1 has overwritten it for all i: c[i] = a[i+1] instead of the old b[i+1]." },
+  { t: "slide 113, output", head: "for (i = 0; i < 8; i++)", s: [["S1", "a[i] = x;"], ["S2", "a[i+1] = y;"]], e: [["S2", "S1", "output", "a", 1]],
+    note: "The scalar loop leaves a[0…7] = x and a[8] = y. Kept in this order, the vector version ends with a[0] = x and a[1…8] = y." },
+  { t: "slide 114", head: "for (i = 1; i < N; i++)", s: [["S1", "A[i] = B[i-1];"], ["S2", "B[i] = D[i];"], ["S3", "F[i] = E[i];"], ["S4", "A[i] = C[i+1];"], ["S5", "C[i] = G[i];"], ["S6", "R[i] = S[i+1];"]],
+    e: [["S2", "S1", "data", "B", 1], ["S1", "S4", "output", "A", 0], ["S4", "S5", "anti", "C", 1]] },
+  { t: "slide 127", head: "for (i = 0; i < N; i++)", s: [["S1", "a[i] = c[i];"], ["S2", "b[i] = a[i] * d[i];"], ["Sk", "b[i] = f[i] * c[i];"]], e: [["S1", "S2", "data", "a", 0], ["S2", "Sk", "output", "b", 0]], tr: [["S1", "Sk"]] },
+  { t: "slide 128", head: "for (i = 1; i < N; i++)", s: [["S1", "a[i] = c[i-1];"], ["S2", "b[i] = a[i] * d[i];"], ["Sk", "c[i] = b[i] * e[i];"]], e: [["S1", "S2", "data", "a", 0], ["S2", "Sk", "data", "b", 0], ["Sk", "S1", "data", "c", 1]] },
+  { t: "slide 129, before", head: "for (i = 1; i < N-1; i++)", s: [["S1", "a[i] = b[i+1] + b[i-1];"], ["S2", "b[i] = c[i];"]], e: [["S1", "S2", "anti", "b", 1], ["S2", "S1", "data", "b", 1]],
+    note: "The cycle is closed by the anti dependence S1 → S2. A copy of b[i+1] taken before b is written breaks it: next preset." },
+  { t: "slide 129, after", head: "for (i = 1; i < N-1; i++)", s: [["S1", "double tmp = b[i+1];"], ["S2", "b[i] = c[i];"], ["S3", "a[i] = tmp + b[i-1];"]], e: [["S1", "S2", "anti", "b", 1], ["S2", "S3", "data", "b", 1], ["S1", "S3", "data", "tmp", 0]],
+    note: "tmp is declared inside the body, so every iteration has its own (in vector code: one lane of a register). One tmp declared outside the loop would add an anti dependence S3 → S1 (read in iteration i, overwritten in i + 1) and close a cycle again, one that renaming removes." },
+];
+const DDG = { k: 0 };
+function ddAnalyse(P) {
+  const nm = P.s.map(x => x[0]), k = nm.length, adj = nm.map(() => []);
+  P.e.forEach(([a, b]) => adj[nm.indexOf(a)].push(nm.indexOf(b)));
+  const reach = nm.map((_, i) => { const seen = new Set(), st = [...adj[i]]; while (st.length) { const v = st.pop(); if (!seen.has(v)) { seen.add(v); st.push(...adj[v]); } } return seen; });
+  const cyc = nm.map((_, i) => reach[i].has(i));
+  let order = null;
+  if (!cyc.some(Boolean)) {
+    // Kahn's algorithm, always taking the lowest-numbered ready statement: as close to the original order as possible (slide 133)
+    const indeg = nm.map((_, i) => P.e.filter(([, b]) => nm.indexOf(b) === i).length), done = [];
+    while (done.length < k) { const r = nm.findIndex((_, i) => !done.includes(i) && indeg[i] === 0); done.push(r); adj[r].forEach(v => indeg[v]--); }
+    order = done.map(i => nm[i]);
+  }
+  return { nm, cyc, order };
+}
+CHARTS.ddg = narrow => {
+  const P = DD_PRE[DDG.k], A = ddAnalyse(P), nm = A.nm, k = nm.length;
+  const W = narrow ? 340 : 600, r = narrow ? 15 : 18, step = Math.min(narrow ? 58 : 112, (W - 60) / (k - 1)), x0 = W / 2 - (k - 1) * step / 2;
+  const all = P.e.map(x => [...x, false]).concat((P.tr || []).map(([a, b]) => [a, b, "trans", "", 0, true]));
+  const span = Math.max(1, ...all.map(([a, b]) => Math.abs(nm.indexOf(a) - nm.indexOf(b))));
+  const hh = s => 24 + 20 * s, top = r + hh(span) / 2 + 26, H = 2 * top, cy = top, X = n => x0 + nm.indexOf(n) * step;
+  const edges = all.map(([a, b, t, v, d, tr]) => {
+    const xa = X(a), xb = X(b), up = xb > xa, h = hh(Math.abs(nm.indexOf(a) - nm.indexOf(b)));
+    const yy = up ? cy - r : cy + r, ctrl = up ? cy - r - h : cy + r + h, mx = (xa + xb) / 2, sh = up ? 5 : -5;
+    const path = `M${xa + sh},${yy} Q${mx},${ctrl} ${xb - sh},${yy}`, ly = up ? cy - r - h / 2 - 6 : cy + r + h / 2 + 15;
+    const lab = tr ? "transitive" : narrow ? `${t} ${v}` : `${t} ${v}${d ? `, d = ${d}` : ""}`;
+    const tip = tr ? `<b>${a} → ${b}: transitive</b>through the chain ${a} → ${nm[1]} → ${b}` : `<b>${a} → ${b}: ${t} dependence on ${v}</b>${d ? `carried by the loop, distance ${d}` : "inside one iteration"}<br>points ${up ? "forward" : "backward"}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><path class="hitl" d="${path}"/><path class="de ${t}" d="${path}" marker-end="url(#ahd-${t})"/><text class="el" x="${mx}" y="${ly}" text-anchor="middle">${lab}</text></g>`; }).join("");
+  const nodes = P.s.map(([n, s], i) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${n}: <code>${esc(s)}</code></b>${A.cyc[i] ? "on a dependence cycle" : "not on a cycle"}`)}"><circle class="hit" cx="${X(n)}" cy="${cy}" r="${r + 6}"/><circle class="ddn${A.cyc[i] ? " cyc" : ""}" cx="${X(n)}" cy="${cy}" r="${r}"/><text class="jl" x="${X(n)}" y="${cy + 4}" text-anchor="middle">${n}</text></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Dependence graph of the ${P.t} loop: ${P.e.map(([a, b, t, v]) => `${a} to ${b}, ${t} dependence on ${v}`).join("; ")}. Forward dependences are drawn above the statements, backward ones below.`)}">
+    ${arrowDefs("ahd", ["data", "anti", "output", "trans"])}${edges}${nodes}</svg>`;
+};
+function ddOut() {
+  const P = DD_PRE[DDG.k], A = ddAnalyse(P), ix = n => A.nm.indexOf(n);
+  const TY = { data: "data (flow) dependence, written then read", anti: "anti dependence, read then overwritten", output: "output dependence, written then overwritten" };
+  const list = P.e.map(([a, b, t, v, d]) => `<li><b>${a} → ${b}</b>: ${TY[t]}, on ${v}, ${d ? `carried by the loop (distance ${d})` : "inside one iteration"}; points ${ix(a) < ix(b) ? "forward" : "<b>backward</b>"}</li>`).join("")
+    + (P.tr || []).map(([a, b]) => `<li><b>${a} → ${b}</b>: transitive, through the two dependences above (not one of its own)</li>`).join("");
+  const back = P.e.filter(([a, b]) => ix(a) > ix(b)).length;
+  const verdict = A.order === null ? `${A.nm.filter((_, i) => A.cyc[i]).join(", ")} lie on a cycle: no order of the statements lets the vector version read what the scalar loop reads. ${flag("bad", "not vectorisable")}`
+    : !back ? `Every dependence points forward. Running ${A.nm[0]} for all i, then ${A.nm[1]} for all i${A.nm.length > 2 ? ", and so on," : ""} reads exactly what the scalar loop reads. ${flag("ok", "vectorisable as written")}`
+    : `No cycle, but ${back === 1 ? "one dependence points" : `${back} dependences point`} backward. In the order ${A.order.join(", ")} all of them point forward, and each statement becomes one vector loop. ${flag("ok", "vectorisable after reordering")}`;
+  return `<ul class="dd-list">${list}</ul><dl class="ro"><dt>Verdict</dt><dd>${verdict}</dd>${P.note ? `<dt>Note</dt><dd>${P.note}</dd>` : ""}</dl>`;
+}
+function initDdg(body) {
+  body.innerHTML = `<div class="presets">${DD_PRE.map((p, k) => `<button class="preset" data-k="${k}">${p.t}</button>`).join("")}</div>
+    <div class="code"></div>${labChart("ddg", leg([[1, "data", "ln"], [2, "anti (dashed)", "ln"], [3, "output (dotted)", "ln"], ["g", "transitive", "ln"]]))}<div class="out"></div>`;
+  const code = body.querySelector(".code"), out = body.querySelector(".out");
+  const draw = () => { const P = DD_PRE[DDG.k], w = Math.max(...P.s.map(([, s]) => s.length)) + 2;
+    code.innerHTML = codeBlock(`${P.head} {\n${P.s.map(([n, s]) => `  ${s.padEnd(w)}// ${n}`).join("\n")}\n}`);
+    mountCharts(); out.innerHTML = ddOut();
+    body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.k === DDG.k)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; DDG.k = +b.dataset.k; draw(); });
+  draw();
+}
+
+// Explorer: which elements of A the two statements of slides 115–117 touch. S1 writes A[2i+4], S2 reads A[4i−2].
+const IDXR = { lo: 1, hi: 4 };
+const idxPairs = (lo, hi) => { const out = []; for (let ir = lo; ir <= hi; ir++) { const iw = 2 * ir - 3; if (iw >= lo && iw <= hi) out.push({ k: 4 * ir - 2, iw, ir, t: iw <= ir ? "data" : "anti" }); } return out; };
+CHARTS.idx = narrow => {
+  const { lo, hi } = IDXR, n = hi - lo + 1, W = narrow ? 340 : 600, L = 34, R = 10, T = 26, B = 40, H = narrow ? 290 : 310, PW = W - L - R, PH = H - T - B;
+  const top = Math.ceil((Math.max(4 * hi - 2, 2 * hi + 4) + 1) / 4) * 4, cw = PW / n, off = narrow ? 6 : 9;
+  const x = i => L + (i - lo + 0.5) * cw, y = v => T + PH - v / top * PH, P = idxPairs(lo, hi);
+  const yt = Array.from({ length: top / 4 + 1 }, (_, k) => k * 4).map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = Array.from({ length: n }, (_, k) => lo + k).map(i => `<text class="tick" x="${x(i)}" y="${T + PH + 16}" text-anchor="middle">${i}</text>`).join("");
+  const arrows = P.map(p => { const [x1, x2] = p.t === "data" ? [x(p.iw) - off, x(p.ir) + off] : [x(p.ir) + off, x(p.iw) - off], yy = y(p.k);
+    const lift = 24 + Math.min(26, Math.abs(x2 - x1) / 6), path = `M${x1},${yy - 7} C${x1},${yy - lift} ${x2},${yy - lift} ${x2},${yy - 8}`;
+    return `<path class="de ${p.t}" d="${path}" marker-end="url(#ahi-${p.t})"/>`; }).join("");
+  const pts = Array.from({ length: n }, (_, k) => lo + k).map(i => {
+    const kw = 2 * i + 4, kr = 4 * i - 2, pw = P.find(p => p.iw === i), pr = P.find(p => p.ir === i);
+    const tw = `<b>S1, iteration ${i}: writes A[${kw}]</b>${pw ? `S2 reads A[${kw}] in iteration ${pw.ir}: ${pw.t} dependence` : `no read of A[${kw}] in this range`}`;
+    const tr = `<b>S2, iteration ${i}: reads A[${kr}]</b>${pr ? `S1 writes A[${kr}] in iteration ${pr.iw}: ${pr.t} dependence` : `nothing in this range writes A[${kr}]`}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(tw)}"><circle class="hit" cx="${x(i) - off}" cy="${y(kw)}" r="11"/><rect class="wr" x="${x(i) - off - 5}" y="${y(kw) - 5}" width="10" height="10" rx="2"/></g>
+      <g class="pt" tabindex="0" data-tip="${esc(tr)}"><circle class="hit" cx="${x(i) + off}" cy="${y(kr)}" r="11"/><circle class="rd" cx="${x(i) + off}" cy="${y(kr)}" r="5.5"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Index of A touched in iterations ${lo} to ${hi}: S1 writes ${Array.from({ length: n }, (_, k) => 2 * (lo + k) + 4).join(", ")}; S2 reads ${Array.from({ length: n }, (_, k) => 4 * (lo + k) - 2).join(", ")}. ${P.length ? P.map(p => `A[${p.k}] ${p.t} dependence`).join("; ") : "No element is both written and read"}.`)}">
+    ${arrowDefs("ahi", ["data", "anti"])}${yt}${xt}<text class="note" x="${L - 30}" y="${T - 12}">index of A</text><text class="note" x="${L + PW / 2}" y="${H - 6}" text-anchor="middle">loop iteration i</text>${arrows}${pts}</svg>`;
+};
+function idxOut() {
+  const { lo, hi } = IDXR, P = idxPairs(lo, hi), its = Array.from({ length: hi - lo + 1 }, (_, k) => lo + k), kinds = new Set(P.map(p => p.t));
+  const verdict = kinds.size === 2 ? `a data dependence S1 → S2 and an anti dependence S2 → S1: a cycle, so this range does not vectorise as one loop ${flag("bad", "cycle")}`
+    : kinds.has("data") ? `only data dependences S1 → S2, pointing forward: vectorisable as written ${flag("ok", "forward")}`
+    : kinds.has("anti") ? `only anti dependences S2 → S1, pointing backward: vectorisable once S2 runs before S1 ${flag("ok", "reorder")}`
+    : `S1 and S2 never touch the same element here: no dependence ${flag("ok", "independent")}`;
+  return `<dl class="ro"><dt>S1 writes</dt><dd>A at ${its.map(i => 2 * i + 4).join(", ")}</dd><dt>S2 reads</dt><dd>A at ${its.map(i => 4 * i - 2).join(", ")}</dd>
+    <dt>Shared</dt><dd>${P.length ? P.map(p => `A[${p.k}]: written in iteration ${p.iw}, read in ${p.ir} (${p.t}, distance ${Math.abs(p.ir - p.iw)})`).join("; ") : "none"}</dd><dt>Verdict</dt><dd>${verdict}</dd></dl>`;
+}
+function initIdx(body) {
+  const R = [[1, 4, "i = 1–4 (slide 115)"], [1, 3, "i = 1–3 (slide 116)"], [4, 7, "i = 4–7 (slide 117)"], [1, 7, "i = 1–7, the whole loop"]];
+  body.innerHTML = `<div class="presets">${R.map(([a, b, t]) => `<button class="preset" data-r="${a}-${b}">${t}</button>`).join("")}</div>
+    ${labChart("idx", leg([[1, "S1 writes A[2i + 4] (square)"], [2, "S2 reads A[4i − 2] (circle)"]]))}<div class="out"></div>`;
+  const out = body.querySelector(".out");
+  const draw = () => { mountCharts(); out.innerHTML = idxOut(); body.querySelectorAll("[data-r]").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === `${IDXR.lo}-${IDXR.hi}`)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (!b) return; [IDXR.lo, IDXR.hi] = b.dataset.r.split("-").map(Number); draw(); });
+  draw();
+}
+
+// Explorer: DO-loop normalisation of slide 120. DO I = V1, V2, V3 with K = I + 5, A(3·I + 2) = B(2·K − 5).
+const NRM = { v1: 21, v2: 141, v3: 3 };
+const lin = (c, k) => `${c}*I${k < 0 ? "-" : "+"}${Math.abs(k)}`;
+function nrmOut() {
+  const { v1, v2, v3 } = NRM, n = Math.max(0, Math.floor((v2 - v1 + v3) / v3)), aC = 3 * v3, a0 = 3 * (v1 - v3) + 2, bC = 2 * v3, b0 = 2 * (v1 - v3) + 5;
+  const rows = [1, 2, 3, n].filter((v, i, s) => v >= 1 && v <= n && s.indexOf(v) === i).map(ip => { const I = v1 + (ip - 1) * v3, K = I + 5; return [ip, I, 3 * I + 2, 2 * K - 5]; });
+  return `<div class="nrm">${codeBlock(`DO 100 I = ${v1}, ${v2}, ${v3}\n  K = I + 5\n  A(3*I+2) = B(2*K-5)\n100 CONTINUE`)}<span class="to" aria-hidden="true">→</span>${codeBlock(`DO 100 I = 1, ${n}, 1\n  A(${lin(aC, a0)}) = B(${lin(bC, b0)})\n100 CONTINUE`)}</div>
+    <dl class="ro"><dt>Trip count</dt><dd>(V2 − V1 + V3) / V3 = (${v2} − ${v1} + ${v3}) / ${v3} = ${num((v2 - v1 + v3) / v3)} → <b>${n}</b> iterations${n ? "" : " (the loop never runs)"}</dd>
+      <dt>Old index</dt><dd>I = V1 + (I′ − 1) · V3 = ${v1} + (I′ − 1) · ${v3} = ${v3}·I′ ${v1 - v3 < 0 ? "−" : "+"} ${Math.abs(v1 - v3)}</dd>
+      <dt>Check</dt><dd>${rows.length ? rows.map(([ip, I, a, b]) => `I′ = ${ip}: I = ${I}, A(${a}) = B(${b})`).join(" · ") : "no iterations"}</dd></dl>`;
+}
+function initNorm(body) {
+  const S = [["v1", "lower V1", 1, 40], ["v2", "upper V2", 40, 200], ["v3", "step V3", 1, 6]];
+  body.innerHTML = `<div class="ctl">${S.map(([k, t, a, b]) => `<label>${t} <input type="range" min="${a}" max="${b}" step="1" value="${NRM[k]}" data-k="${k}"> <output>${NRM[k]}</output></label>`).join("")}</div>
+    <div class="presets"><button class="preset" data-p="21,141,3">slide 120</button><button class="preset" data-p="1,100,1">already normal</button><button class="preset" data-p="5,40,4">step 4</button></div><div class="out"></div>`;
+  const out = body.querySelector(".out"), ins = [...body.querySelectorAll("input")];
+  const draw = () => { ins.forEach(i => { i.value = NRM[i.dataset.k]; i.nextElementSibling.textContent = NRM[i.dataset.k]; }); out.innerHTML = nrmOut(); };
+  ins.forEach(i => i.addEventListener("input", () => { NRM[i.dataset.k] = +i.value; draw(); }));
+  body.addEventListener("click", e => { const b = e.target.closest("[data-p]"); if (!b) return; [NRM.v1, NRM.v2, NRM.v3] = b.dataset.p.split(",").map(Number); draw(); });
+  draw();
+}
+
+// Chart: collapsing the cyclic statements of slides 130–132. Edges as drawn on slide 130.
+const SCC_E = [["S1", "S3"], ["S2", "S3"], ["S3", "S4"], ["S4", "S2"], ["S6", "S5"]], SCC_N = ["S1", "S2", "S3", "S4", "S5", "S6"];
+function sccClosure() {
+  const reach = SCC_N.map(a => { const seen = new Set(), st = SCC_E.filter(e => e[0] === a).map(e => e[1]); while (st.length) { const v = st.pop(); if (!seen.has(v)) { seen.add(v); st.push(...SCC_E.filter(e => e[0] === v).map(e => e[1])); } } return seen; });
+  return SCC_N.map((n, i) => ({ n, reach: SCC_N.filter(m => reach[i].has(m)), cyc: reach[i].has(n) }));
+}
+CHARTS.scc = narrow => {
+  const C = sccClosure(), onCyc = n => C.find(c => c.n === n).cyc, W = narrow ? 340 : 600, r = 15, gap = 40, T = 40;
+  const gx = narrow ? W / 2 : 150, Y = n => T + (SCC_N.indexOf(n)) * gap, gh = T + 5 * gap + r + 12;
+  const edges = SCC_E.map(([a, b]) => {
+    const side = a === "S4" && b === "S2" ? 1 : -1, span = Math.abs(SCC_N.indexOf(a) - SCC_N.indexOf(b)), bulge = 14 + 14 * span, cyc = onCyc(a) && onCyc(b);
+    const xs = gx + side * r, xc = gx + side * (r + bulge), path = `M${xs},${Y(a)} C${xc},${Y(a)} ${xc},${Y(b)} ${gx + side * (r + 2)},${Y(b)}`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${a} → ${b}</b>${cyc ? "part of the cycle S2 → S3 → S4 → S2" : `${b} needs ${a}'s result`}`)}"><path class="hitl" d="${path}"/><path class="de ${cyc ? "cyc" : "plain"}" d="${path}" marker-end="url(#ahs-${cyc ? "cyc" : "plain"})"/></g>`; }).join("");
+  const nodes = SCC_N.map(n => { const c = C.find(x => x.n === n);
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${n}</b>${c.reach.length ? `reaches ${c.reach.join(", ")}` : "reaches no other statement"}<br>${c.cyc ? "reaches itself: on a cycle, stays scalar" : "not on a cycle: vector statement"}`)}"><circle class="hit" cx="${gx}" cy="${Y(n)}" r="${r + 6}"/><circle class="ddn ${c.cyc ? "cyc" : "vec"}" cx="${gx}" cy="${Y(n)}" r="${r}"/><text class="jl" x="${gx}" y="${Y(n) + 4}" text-anchor="middle">${n}</text></g>`; }).join("");
+  const B = [["S1", "vector", "vec", "S1 is not on the cycle: one vector loop over all i"], ["S2 · S3 · S4", "one scalar loop", "cyc", "S2, S3 and S4 reach each other, so they stay together, iteration by iteration"], ["S6", "vector", "vec", "S6 must run before S5, because S5 needs its result"], ["S5", "vector", "vec", "S5's vector loop comes last"]];
+  const bx = narrow ? 50 : 330, bw = narrow ? 240 : 240, by0 = narrow ? gh + 36 : T - 14, bh = 34, bg = 56;
+  const boxes = B.map(([t, d, cls, tip], k) => `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k + 1}. ${t}: ${d}</b>${tip}`)}"><rect class="blk ${cls}" x="${bx}" y="${by0 + k * bg}" width="${bw}" height="${bh}" rx="8"/><text class="jl" x="${bx + 12}" y="${by0 + k * bg + 21}">${k + 1}. ${t}</text><text class="note" x="${bx + bw - 12}" y="${by0 + k * bg + 21}" text-anchor="end">${d}</text></g>`).join("");
+  const link = (k, cyc) => `<path class="de ${cyc ? "cyc" : "plain"}" d="M${bx + 40},${by0 + k * bg + bh} L${bx + 40},${by0 + (k + 1) * bg - 2}" marker-end="url(#ahs-${cyc ? "cyc" : "plain"})"/>`;
+  const H = narrow ? by0 + 4 * bg + 4 : Math.max(gh, by0 + 4 * bg + 4);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Left: the dependence graph of slide 130 with edges S1 to S3, S2 to S3, S3 to S4, S4 to S2 and S6 to S5; S2, S3 and S4 form a cycle. Right: after collapsing, the execution order 1. S1 as a vector loop, 2. S2, S3 and S4 in one scalar loop, 3. S6 as a vector loop, 4. S5 as a vector loop.">
+    ${arrowDefs("ahs", ["plain", "cyc"])}<text class="note" x="${gx}" y="14" text-anchor="middle">dependence graph (slide 130)</text>
+    <text class="note" x="${bx + bw / 2}" y="${by0 - 12}" text-anchor="middle">after collapsing the cycle (slide 132)</text>${edges}${nodes}${boxes}${link(0, false)}${link(2, false)}</svg>`;
+};
+
+// Explorer: vectorising "a[i] = b[i] + c[i]; if (d[i] != 0) a[i] = a[i] * d[i];" (slides 137–141) on 8 lanes. Values made up here.
+const MK = { mode: "mask", d: [2, 0, 0, 3, -1, 0, 0, 2] };
+const MK_B = [3, 1, 4, 1, 5, 9, 2, 6], MK_C = [2, 7, 1, 8, 2, 8, 1, 8], MK_DV = [2, 3, 4, 3, -1, 2, 5, 2];
+const MK_MODES = { mask: "mask (slide 138)", merge: "merge (slide 139)", compress: "compress / expand (slide 140)", gather: "gather / scatter (slide 141)" };
+function mkOut() {
+  const { mode, d } = MK, a = MK_B.map((b, j) => b + MK_C[j]), m = d.map(v => v !== 0), on = m.map((v, j) => v ? j : -1).filter(j => j >= 0), k = on.length;
+  const res = a.map((v, j) => m[j] ? v * d[j] : v);
+  const dRow = d.map((v, j) => `<button class="cell${m[j] ? " t1 one" : ""}" data-j="${j}" aria-pressed="${m[j]}" title="lane ${j + 1}: d = ${v}; click to ${m[j] ? "set it to 0" : "make it non-zero"}">${sgn(v)}</button>`);
+  const mRow = m.map(v => vc(v ? "1" : "0", v ? "one" : "dim")), aRow = a.map(v => vc(sgn(v)));
+  const resRow = res.map((v, j) => m[j] ? vc(sgn(v), "t1 one", `lane ${j + 1}: ${a[j]} · ${d[j]}`) : vc(sgn(v), "", `lane ${j + 1}: unchanged`));
+  const dense = vals => vals.length ? vals.map(v => vc(sgn(v), "t1")) : [vc("–", "dim")];
+  const R = {
+    mask: [["a = b + c", aRow], ["d (click)", dRow], ["mask d ≠ 0", mRow], ["a · d where 1", resRow]],
+    merge: [["a = b + c", aRow], ["d (click)", dRow], ["t = a · d", a.map((v, j) => vc(sgn(v * d[j]), m[j] ? "t1" : "dim", m[j] ? "kept" : "computed, then thrown away"))], ["mask d ≠ 0", mRow], ["merge t, a", resRow]],
+    compress: [["a = b + c", aRow], ["d (click)", dRow], ["mask d ≠ 0", mRow], ["compress a", dense(on.map(j => a[j]))], ["compress d", dense(on.map(j => d[j]))], ["multiply", dense(on.map(j => a[j] * d[j]))], ["expand into a", resRow]],
+    gather: [["A in memory", aRow], ["d (click)", dRow], ["mask d ≠ 0", mRow], ["index I(J)", dense(on.map(j => j + 1))], ["load A(I(J))", dense(on.map(j => a[j]))], ["load D(I(J))", dense(on.map(j => d[j]))], ["multiply", dense(on.map(j => a[j] * d[j]))], ["store A(I(J))", resRow]],
+  }[mode];
+  const ops = { mask: `one multiply instruction over all 8 lanes, ${k} of them switched on; ${8 - k} lane${8 - k === 1 ? "" : "s"} do nothing`, merge: `8 multiplies (${8 - k} thrown away) plus one select that merges t and a`, compress: `${k} multipl${k === 1 ? "y" : "ies"} in a dense vector, plus two compress steps and one expand`, gather: `${k} multipl${k === 1 ? "y" : "ies"}, plus an index compress, two gathers and one scatter: ${3 * k} memory accesses at scattered addresses` };
+  const scale = mode === "mask" || mode === "merge" ? "the cost does not depend on the mask: 1,024 elements always take 128 eight-lane multiplies, however few lanes are active"
+    : k ? `at this density (${k} of 8) a loop of 1,024 elements packs into ${Math.ceil(1024 * k / 8 / 8)} dense eight-lane multiplies instead of 128, plus the compress or gather work` : "no lane active: nothing to multiply";
+  return `${vgrid(8, Array.from({ length: 8 }, (_, j) => `${j + 1}`), R)}${leg([[1, "lanes where d ≠ 0 (the work that is needed)"]])}
+    <dl class="ro"><dt>Work</dt><dd>${ops[mode]}</dd><dt>At scale</dt><dd>${scale} (estimate added here)</dd><dt>Result</dt><dd>a = ${res.map(sgn).join(", ")}: the same in all four ways</dd></dl>`;
+}
+function initMask(body) {
+  body.innerHTML = `<div class="presets">${Object.entries(MK_MODES).map(([k, t]) => `<button class="preset" data-mode="${k}">${t}</button>`).join("")}</div>
+    <p class="lab-note">b = ${MK_B.join(", ")} and c = ${MK_C.join(", ")}; the non-zero lanes of d match the slides' example (1, 4, 5, 8). Click a value of d to switch its lane.</p><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = mkOut(); body.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === MK.mode)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-mode],[data-j]"); if (!b) return;
+    if (b.dataset.mode) MK.mode = b.dataset.mode; else { const j = +b.dataset.j; MK.d[j] = MK.d[j] ? 0 : MK_DV[j]; }
+    draw(); if (b.dataset.j) out.querySelector(`[data-j="${b.dataset.j}"]`)?.focus(); });
+  draw();
+}
+
+function lecture5() {
+  const tbl = (h, rows) => `<details class="tbl"><summary>Table view</summary><table><tr>${h.map(x => `<th>${x}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((x, i) => `<td${i ? ' class="n"' : ""}>${x}</td>`).join("")}</tr>`).join("")}</table></details>`;
+  return `${head(l)}
+    <p class="lead">Lecture 3 put SIMD units into the core, lecture 4 spread loops over threads. This lecture asks when a loop may run on the SIMD units at all. A vector instruction executes one statement for several iterations at once and so changes the order in which values are written and read; that is harmless unless one iteration needs a value another one produces or overwrites. The lecture names these <b>data dependences</b> (data, anti, output), draws them as <b>dependence graphs</b>, shows the standard <b>transformations</b> a compiler applies before it analyses subscripts, explains how it picks the statements that become vector instructions (statements on a cycle stay scalar), and ends with four ways to vectorise a loop that contains an <code>if</code>. One chart and five explorers below; the slides are in OPAL, and this page summarises them in our own words.</p>
+    <div class="box"><p><b>Which slides.</b> The second part of the deck shared with <a href="high-performance-computing/lecture.html?n=4">lecture 4</a>: slides 99–142 here; the two summary slides 143–144 close both lectures.</p></div>
+
+    <h2>SIMD loops in OpenMP and compiler flags (slides 99–100, 105)</h2>
+    <p><code>#pragma omp simd</code> in front of a loop tells the compiler to execute it SIMD style, several iterations per vector instruction. The slides stress the catch twice: it is the <b>programmer</b> who guarantees that every iteration can run independently; the compiler takes the pragma at its word. Returns, breaks and function calls inside the body get in the way.</p>
+    ${codeBlock("#pragma omp simd\nfor (int i = 0; i < length; i++)\n  output[i] = input1[i] + input2[i];")}
+    <p>The compiler also has to know which SIMD instructions the target has (slide 105): either a processor (<code>-march=zen2</code> enables AVX2 and FMA for AMD Zen 2; <code>-mtune</code> only tunes for one) or an instruction set (<code>-mavx2</code>). With optimisation on, compilers vectorise simple loops by themselves, but they have to stay correct: in doubt, no SIMD. The pragma tells them a loop is safe, for example one that clamps negative values to zero: <code>#pragma omp simd</code> over <code>if (a[i] &lt; 0.0) a[i] = 0.0;</code>.</p>
+    ${why("Context, not on the slides: what else the pragma can say", `<p>Clauses refine the promise: <code>safelen(k)</code> says dependences are at least k iterations apart, so vectors of up to k elements are safe; <code>reduction(+:s)</code> works as in lecture 4, but across SIMD lanes; <code>linear(j:1)</code> declares a variable that grows with i; <code>aligned(p:64)</code> promises aligned data. <code>#pragma omp parallel for simd</code> combines lectures 4 and 5: the iterations are split over threads, and each thread's chunk is vectorised. GCC's <code>-fopt-info-vec</code> lists the loops it vectorised and <code>-fopt-info-vec-missed</code> the reasons it refused. The slides write the flags with two dashes; GCC and Clang take them with one.</p>`)}
+
+    <h2>Who checks dependences, and what a hazard is (slides 102, 106)</h2>
+    <p>Every optimisation that reorders work (re-sorting instructions, running iterations in parallel, pipelining) must still give the result of the original order. Dependences are checked at three levels (slide 102): the <b>user</b> writes a correct program; the <b>compiler</b> decides whether a loop may be vectorised and whether instructions may be moved to hide latencies; an <b>out-of-order superscalar processor</b> decides at run time which waiting instruction can go now and which can run side by side (lecture 3). This lecture takes the compiler's view, as used for <code>#pragma omp simd</code>.</p>
+    <p>Vector code changes the order of assignments compared with scalar code (slide 106). That buys large speedups and is possible in most scientific-technical programs, but it needs independent sub-operations. What stops an instruction from executing in its planned cycle is called a <b>hazard</b>: <b>structural</b> (the hardware cannot run this combination of instructions at once), <b>control</b> (branches and anything else that changes the program counter) and <b>data</b> (the instruction needs the result of an earlier one). Lecture 3's pipeline explorer shows a data hazard as a stall.</p>
+
+    <h2>Why SIMD can change the result (slides 103–104, 107)</h2>
+    <p>Slide 103's loop <code>for (i = 1; i &lt; N; i++) a[i] = a[i-1] + a[i];</code> turns 5, 2, −3, 8, 3, 1, 2, 0, 6 into the running sums 5, 7, 4, 12, 15, 16, 18, 18, 24, because each iteration reads what the one before has just written. Run with 4-wide SIMD (slide 104) it becomes two vector steps, i = 1–4 and i = 5–8; each step loads its four a[i−1] before it stores, and the result, 5, 7, −1, 5, 11, 12, 3, 2, 6, is a different and logically wrong array. The loop written the other way round, <code>a[i] = a[i+1] + a[i]</code> for i = 0 … N−2, vectorises correctly (the slide's side remark).</p>
+    ${lab("pfx", "the running-sum loop on 1, 2, 4 or 8 lanes")}
+    ${ex("Worked example: the second vector step of slide 104", `<p>After step 1 (i = 1–4) the array is 5, 7, −1, 5, 11, 1, 2, 0, 6: a[1] = 5 + 2 = 7 is right, but a[2] = 2 + (−3) = −1 used the old a[1] = 2 instead of 7 (the scalar loop has 4). Step 2 (i = 5–8) loads a[4…7] = 11, 1, 2, 0 and a[5…8] = 1, 2, 0, 6 and adds lane by lane: 12, 3, 2, 6. Only a[5] = 11 + 1 used a value from the previous step, and that value was already wrong (the scalar loop has 15 there). The scalar loop ends with a[8] = 24, the SIMD version with 6.</p>`)}
+    <p>Slide 107 shows the same effect between two statements. In <code>A[i] = B[i-1]; B[i] = C[i];</code> the scalar loop gives A[2] the B[1] that iteration 1 has just set to C[1]. Vector execution runs the first statement for all i, then the second for all i, so every A[i] receives the <i>old</i> B[i−1]. The first preset of the next explorer draws this loop.</p>
+
+    <h2>Three kinds of dependence (slides 108–113)</h2>
+    <p>Flow analysis has two orthogonal axes (slide 108): <b>control-flow</b> versus <b>data-flow</b> analysis, and the scope, from a basic block (local) to a procedure (intraprocedural) to the whole program (interprocedural). For loop vectorisation the data side counts. Between two statements that touch the same variable there are three kinds of dependence:</p>
+    <ul class="cmp tri" aria-label="Three kinds of data dependence">
+      <li><b>Data (flow)</b><span class="v"><span class="sw t"></span>A later statement reads what an earlier one wrote. Slide 109: A[i] = B[i−1] reads the B that B[i] = C[i] wrote one iteration earlier.</span></li>
+      <li><b>Anti</b><span class="v"><span class="sw o"></span>A statement reads a value that a later one overwrites. Slide 110: A[i] = B[i+1] reads B[i+1] before the next iteration's B[i] = C[i] replaces it.</span></li>
+      <li><b>Output</b><span class="v"><span class="sw p"></span>Two statements write the same element; the later value must win. Slide 111: A[i] is written by S1 and again by S2.</span></li>
+    </ul>
+    <p>Slide 112 rewrites the running sum with a temporary, <code>tmp = a[i-1];</code> (S1) and <code>a[i] = tmp + a[i];</code> (S2): the dependence runs from S2 back to S1 of the next iteration. That is the general problem (slide 113): not only <i>whether</i> two statements depend on each other matters, but the <b>direction</b>. <code>a[i] = a[i+1] + a[i]</code> has a forward-directed dependence and works; the running sum has a backward-directed one. The slide adds two loops to try with and without SIMD, an anti dependence (<code>b[i] = a[i]; c[i] = b[i+1];</code>) and an output dependence (<code>a[i] = x; a[i+1] = y;</code>), both pointing backward.</p>
+    ${lab("ddg", "the slides' loops as dependence graphs")}
+    ${why("Context, not on the slides: the pipeline names, and why only one kind is “real”", `<p>Pipeline literature calls the three read-after-write (RAW, data), write-after-read (WAR, anti) and write-after-write (WAW, output). Only a data dependence carries a value from one statement to another; anti and output dependences exist because two values share one name. Give the second value a new name and they disappear. Out-of-order cores do exactly that with register renaming (lecture 3), and compilers with new variables: slide 129's <code>tmp</code>, the last two presets above.</p>`)}
+
+    <h2>Dependence graphs and index sets (slides 114–117)</h2>
+    <p>A <b>dependence graph</b> has one node per statement and one arrow per dependence, labelled with its kind and variable. In slide 114's six-statement loop, B flows from S2 to S1 of the next iteration, A is written by S1 and again by S4 (output), and S4 reads C[i+1] before S5 of the next iteration writes it (anti); S3 and S6 are independent of everything (preset “slide 114” above).</p>
+    <p>Whether two statements depend on each other can hinge on the subscripts. Slides 115–117 use <code>for (i = 1; i &lt;= 7; i++) { A[2*i+4] = B[i-1]; C[i] = A[4*i-2]; }</code>. S1 writes A at 6, 8, 10, …, 18; S2 reads A at 2, 6, 10, …, 26. They meet at 6, 10, 14 and 18, but in a different order: for i &lt; 4 the write comes first (a data dependence S1 → S2), for i ≥ 4 the read comes first (an anti dependence S2 → S1).</p>
+    ${lab("idx", "which elements of A the two statements touch")}
+    ${ex("Worked example: who touches A[14] and A[18]?", `<p>S1 writes A[2i + 4] = 14 in iteration 5 and 18 in iteration 7. S2 reads A[4i − 2] = 14 in iteration 4 and 18 in iteration 5. Both reads come before the writes: S2 gets the old values and S1 overwrites them later, anti dependences of distance 1 and 2. Below i = 4 it is the other way round: A[6] is written in iteration 1 and read in 2 (distance 1), A[10] is written and read in iteration 3 (distance 0, S1 first in the body). In general the subscripts meet where 2i<sub>w</sub> + 4 = 4i<sub>r</sub> − 2, so i<sub>w</sub> = 2i<sub>r</sub> − 3, and the write is not later than the read exactly when 2i<sub>r</sub> − 3 ≤ i<sub>r</sub>, that is i<sub>r</sub> ≤ 3.</p>`)}
+    ${why("Context, not on the slides: what splitting the range buys", `<p>Over the whole range 1–7 the loop has a data dependence S1 → S2 and an anti dependence S2 → S1: a cycle, so it cannot be vectorised as one loop (preset “i = 1–7”). Split at i = 4 and each part has a single direction: the first part vectorises as written, the second once S2 runs before S1. Compilers call this index-set splitting; finding the split point is the computation of the worked example, which only works because the subscripts are linear in i (next section).</p>`)}
+
+    <h2>Standard transformations (slides 118–125)</h2>
+    <p>Before it can analyse subscripts, a compiler (or a pre-compiler) brings loops into a simpler shape; the slides use Fortran spelling. Three transformations (slide 119): <b>DO-loop normalisation</b>, so the loop variable starts at 1 (0 in C/C++) and steps by 1; <b>subscript normalisation</b>, so subscripts become linear in the loop variables; and <b>scalar renaming</b>, which gives a variable a different name in each region of the program where it serves a locally distinct purpose.</p>
+    <p>Normalisation (slide 120) turns <code>DO I = V1, V2, V3</code> into <code>DO I′ = 1, V2′</code> with V2′ = (V2 − V1 + V3) / V3 and substitutes I = V1 + (I′ − 1) · V3 everywhere in the body. The coefficients come out compact, and every loop now counts 1, 2, 3, …</p>
+    ${lab("norm", "DO-loop normalisation of slide 120's loop")}
+    ${ex("Worked example: slide 120", `<p><code>DO 100 I = 21, 141, 3</code> with K = I + 5 and A(3·I + 2) = B(2·K − 5). Trip count (141 − 21 + 3) / 3 = 123 / 3 = 41. I = 21 + (I′ − 1) · 3 = 3I′ + 18. Substituting: A(3 · (3I′ + 18) + 2) = A(9I′ + 56), and with K = I + 5 = 3I′ + 23 the right side becomes B(2 · (3I′ + 23) − 5) = B(6I′ + 41). Check I′ = 1: I = 21, A(65) = B(47); the original gives A(3 · 21 + 2) = A(65), K = 26, B(52 − 5) = B(47).</p>`)}
+    <p>Subscript normalisation has four tools (slides 121–125):</p>
+    <ul>
+      <li><b>Scalar forward substitution</b> (slide 122): a use of a scalar is replaced by the expression assigned to it earlier. <code>K = 2+7*I</code> followed by <code>A(K) = B(K,K+1) + 3</code> becomes <code>A(2+7*I) = B(2+7*I,3+7*I) + 3</code>. The dependence on K disappears and S1 can go, at the price of more computation.</li>
+      <li><b>Induction-variable substitution</b> (slide 123): a variable updated as iv = iv + expr in every iteration (<code>K = K-2</code>, starting at 1) is an implicit dependence that stops an automatic paralleliser. Its uses are replaced by a formula in the loop variable, <code>A(K)</code> → <code>A(1-2*I)</code>, and the update can go if nothing else needs it.</li>
+      <li><b>Wrap-around substitution</b> (slide 124, Padua and Wolfe 1986): K = 99 before the loop and K = I − 1 at the end of the body means K holds the previous iteration's I − 1, except in the first iteration. Peel that one off, <code>B(1) = F(A(99),A(0))</code>, and the loop from I = 2 uses <code>A(I-2)</code> directly; afterwards K = 99, the value the original loop leaves.</li>
+      <li><b>Standardisation of subscripts</b> (slide 125): test each subscript for linearity (stop if it fails), then bring it into the canonical form f(I) = a<sub>0</sub> + Σ a<sub>j</sub> I<sub>j</sub> with integer constants a<sub>j</sub>.</li>
+    </ul>
+    ${ex("Worked example: the induction variable of slide 123", `<p>K starts at 1 and the body subtracts 2 before using it. I = 1: K = −1; I = 2: K = −3; I = 3: K = −5. The formula 1 − 2·I gives −1, −3, −5: the same values. After the substitution the access A(1 − 2·I) no longer needs the previous iteration's K, so as far as K is concerned the iterations are independent.</p>`)}
+
+    <h2>Which statements become vector instructions (slides 126–133)</h2>
+    <p>Dependences chain: if S1 → S2 and S2 → Sk, then Sk depends <b>transitively</b> on S1 (slide 127). As long as the chains contain no cycle, an order of vector statements exists. A <b>cycle</b> rules it out (slide 128): S1 writes a, S2 reads it and writes b, Sk reads b and writes c, and S1 of the next iteration reads c[i−1]. Every statement needs a result of another one from the same or the previous iteration, so none can run for all i before the others: not vectorisable.</p>
+    <p>Cycles closed by an anti dependence are different (slide 129). In <code>a[i] = b[i+1] + b[i-1]; b[i] = c[i];</code> the read of b[i+1] (anti, S1 → S2) and the read of b[i−1] (data, S2 → S1) form a cycle. Copying b[i+1] into a new variable before b is written gives three statements whose dependences all point forward, and that is the target: only forward-directed dependences.</p>
+    <p>For larger loops (slides 130–132) the compiler computes the <b>transitive closure</b> of the graph, who reaches whom. A statement that reaches itself lies on a cycle. Statements on a common cycle are collapsed into one node that stays a scalar loop; every other node becomes a vector statement.</p>
+    ${chart("scc", leg([[1, "vector statement"], [2, "on a cycle: stays scalar"]]))}
+      <figcaption>Slide 130's graph and the result of slides 131–132. S2, S3 and S4 reach each other, so they are collapsed into one scalar loop; S1, S5 and S6 become vector loops, ordered so that every arrow points downward. Hover a node or arrow.</figcaption>
+    </figure>
+    ${tbl(["Statement", "Reaches (transitive closure)", "On a cycle?"], sccClosure().map(c => [c.n, c.reach.join(", ") || "–", c.cyc ? "yes" : "no"]))}
+    <p>The new execution order (slide 133) maximises the number of vector statements, minimises the number of loops, and stays as close as possible to the original statement order, changing it only where a faster run is expected.</p>
+    ${ex("Worked example: the code after collapsing slide 130's graph", `${codeBlock("for i: S1           // vector\nfor i: S2; S3; S4   // one scalar loop\nfor i: S6           // vector\nfor i: S5           // vector")}<p>S1 feeds the cycle (S1 → S3), so its vector loop runs first. S2, S3 and S4 have to alternate iteration by iteration and stay together. S5 and S6 do not touch the rest, but S6 → S5, so S6's vector loop runs before S5's. Four loops instead of one, three of them vectorised. Splitting one loop into several this way is usually called loop distribution (or fission).</p>`)}
+
+    <h2>Branches in vector code (slides 134–141)</h2>
+    <p>What gets in the way of vectorisation (slide 135): function calls, I/O calls, conditional jumps and other control statements, calls of operations that have no vector form, and <code>return</code>, <code>continue</code> and <code>break</code>. For an <code>if</code> whose condition depends on the data, slide 136 turns control flow into arithmetic: a comparison yields 1 or 0, and the two outcomes are added with these weights. More computation, fewer branches; what remains open is how a vector unit compares and combines the comparison with data.</p>
+    ${codeBlock("for (int i = 0; i < N; i++) {\n  c[i] = (a[i] < 0) * e[i] * f[i] + (a[i] >= 0) * c[i];\n  c[i] = c[i] * b[i];\n}")}
+    ${ex("Worked example: slide 136's if as arithmetic", `<p>Two lanes with a = (−2, 3), e = (4, 5), f = (1, 2), c = (9, 9), b = (2, 2). Lane 1: (a &lt; 0) is 1 and (a ≥ 0) is 0, so c = 1 · 4 · 1 + 0 · 9 = 4, then c · b = 8, as the branch would give (c = e · f = 4, then 4 · 2). Lane 2: c = 0 · 5 · 2 + 1 · 9 = 9, then 18: the untouched c times b. Both lanes ran the same instructions; the price is the multiplications of the branch not taken.</p>`)}
+    <p>Vector processors have four ways to execute such an <code>if</code> (slide 137), shown on <code>a[i] = b[i] + c[i]; if (d[i] != 0) a[i] = a[i] * d[i];</code> with d non-zero in lanes 1, 4, 5 and 8:</p>
+    <ul>
+      <li><b>Mask</b> (slide 138): the comparison yields a mask, and the multiply works only on the lanes it switches on.</li>
+      <li><b>Merge</b> (slide 139): multiply all lanes, then select the needed results and merge them with the old values.</li>
+      <li><b>Compress</b> (slide 140): pack the selected elements of both operands into dense vectors, multiply those, expand the result back to the original positions.</li>
+      <li><b>Scatter/gather</b> (slide 141): turn the mask into a list of indices, load (gather) the selected elements of A and D from memory through that list, multiply, and store (scatter) the results back to the same places.</li>
+    </ul>
+    ${lab("mask", "one if, four ways (8 lanes)")}
+    ${why("Context, not on the slides: what x86 offers for this", `<p>AVX-512 has eight mask registers (k0–k7), and almost every instruction can take one: slide 138's mask operation, including masked loads and stores. AVX and AVX2 have no mask registers for arithmetic; compilers compute both sides and blend them with the comparison result (<code>vblendvpd</code>), slide 139's merge. AVX-512 also has compress and expand instructions (<code>vcompresspd</code>, <code>vexpandpd</code>) and scatter; AVX2 has gather only. A gather or scatter may touch one cache line per element, so it pays off when few lanes are active or the data is scattered anyway.</p>`)}
+
+    <h2>Summary (slides 142–144)</h2>
+    <p>Single-node performance needs all three layers of shared-memory parallelism: threads (speedup up to the number of cores), SIMD (up to what the vector units allow) and pipelining and superscalarity in the core. For loop vectorisation and parallelisation, dependences and other hazards are the obstacle: iterations should be independent, the loop increment should be 1, and control flow needs masks. Threads and vectorisation both need one common address space, which ends at the node; beyond it comes distributed memory.</p>
+
+    <div class="tiles" aria-label="Numbers and rules to remember">
+      <div class="tile"><div class="v">7 of 8</div><div class="l">elements wrong when the running-sum loop runs 2, 4 or 8 lanes wide</div></div>
+      <div class="tile"><div class="v">data · anti · output</div><div class="l">written then read · read then overwritten · written twice</div></div>
+      <div class="tile"><div class="v">forward only</div><div class="l">a loop vectorises statement by statement when every dependence points forward</div></div>
+      <div class="tile"><div class="v">(V2 − V1 + V3) / V3</div><div class="l">trip count after DO-loop normalisation; 41 on slide 120</div></div>
+      <div class="tile"><div class="v">4</div><div class="l">ways to vectorise an if: mask, merge, compress, scatter/gather</div></div>
+    </div>
+    <h2>Take-home</h2>
+    <ul>
+      <li><b>What does <code>#pragma omp simd</code> promise?</b> That every iteration can run independently; the programmer guarantees it, the compiler does not check.</li>
+      <li><b>Why can SIMD change a result?</b> A vector step loads all its operands before it stores, so an iteration that needs a value written by an earlier iteration of the same step reads the old one.</li>
+      <li><b>What are data, anti and output dependences?</b> Written then read; read then overwritten; written twice. Only the first carries a value; the other two vanish when the second value gets its own name.</li>
+      <li><b>When does a loop vectorise?</b> When its dependence graph has no cycle; with only forward dependences as written, otherwise after reordering. Statements on a cycle stay in a scalar loop, the rest become vector statements.</li>
+      <li><b>Why normalise loops and subscripts?</b> So that every loop counts 1, 2, 3, … and every subscript is a linear function of the loop variables, the form dependence tests can solve.</li>
+      <li><b>How is an <code>if</code> vectorised?</b> With a mask, by merging both results, by compressing the active elements into dense vectors, or by gathering and scattering them through an index list.</li>
+    </ul>
+    <h2>Exercise</h2>
+    <p>Today's session discussed <a href="high-performance-computing/exercise.html?n=5">Exercise 05</a> on lecture 4 (load balance of a loop with uneven iterations, schedulers, OpenMP reductions and data-sharing clauses, timing runs on Romeo); its last parts already add SIMD to the thread-parallel program and compare GCC with the Intel compiler. The exercise on this lecture, <a href="high-performance-computing/exercise.html?n=6">Exercise 06</a>, is expected in OPAL about a week before its session on <b>Wed 2 Dec, 07:30</b>.</p>
+    <p class="muted">Next: Distributed Memory: Networks (<a href="high-performance-computing/lecture.html?n=6">lecture 6</a>, 2 Dec). Previous: <a href="high-performance-computing/lecture.html?n=4">lecture 4</a>. Slides: OPAL → Lectures → Slides / Download, the same deck as lecture 4 (they may not be republished; this page summarises them in our own words).</p>`;
 }
 
 function placeholder() {
@@ -1616,8 +1959,8 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the course overview: ${esc(l.blurb)}<br>The summary appears here once the slides are in OPAL and the lecture has taken place.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4 };
-const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham, vec: initVec, fp: initFp, coh: initCoh, da: initDa, scope: initScope, ls: initLs };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5 };
+const LABS = { pipe: initPipe, va: initVa, dp: initDp, pcam: initPcam, race: initRace, ag: initAg, sched: initSched, graham: initGraham, vec: initVec, fp: initFp, coh: initCoh, da: initDa, scope: initScope, ls: initLs, pfx: initPfx, ddg: initDdg, idx: initIdx, norm: initNorm, mask: initMask };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(q)}.</p>`;
