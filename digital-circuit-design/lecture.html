@@ -1353,6 +1353,15 @@ const l5box = (cls, t, body) => `<div class="${cls}"><div class="kicker">${t}</d
 const nice = v => { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; };
 const f2 = (v, d = 2) => (+v.toFixed(d)).toLocaleString("en-GB", { maximumFractionDigits: d });
 
+// Table (slides 16-17): the three transistor voltages, what sets them and an NMOS/PMOS example each.
+const L5SYM = [
+  { s: "V<sub>GS</sub>", n: "Gate-source voltage", m: "Voltage from gate to source (V<sub>G</sub> − V<sub>S</sub>). It is the control knob: it decides whether a channel forms and how strong it is.", by: "You (the circuit)", en: "V<sub>GS</sub> = 1.5 V → strong channel", ep: "V<sub>GS</sub> = −1.5 V → strong channel" },
+  { s: "V<sub>th</sub>", n: "Threshold voltage", m: "The minimum V<sub>GS</sub> at which a channel starts to form. Below it, the transistor is off.", by: "The manufacturing process", en: "V<sub>th,N</sub> = +0.5 V", ep: "V<sub>th,P</sub> = −0.5 V" },
+  { s: "V<sub>DS</sub>", n: "Drain-source voltage", m: "Voltage from drain to source (V<sub>D</sub> − V<sub>S</sub>). It pushes current through the channel and decides between linear and saturation.", by: "The circuit", en: "V<sub>GS</sub> − V<sub>th,N</sub> = 1.0 V, so<br>V<sub>DS</sub> = 0.3 V → linear<br>V<sub>DS</sub> = 1.2 V → saturation", ep: "V<sub>GS</sub> − V<sub>th,P</sub> = −1.0 V, so<br>V<sub>DS</sub> = −0.3 V → linear<br>V<sub>DS</sub> = −1.2 V → saturation" },
+];
+const l5symTable = () => `<table class="wcw l5sym" aria-label="The three transistor voltages"><thead><tr><th>Symbol</th><th>Name</th><th>Meaning</th><th>Set by</th><th><span class="sw t"></span>NMOS example</th><th><span class="sw v"></span>PMOS example</th></tr></thead><tbody>
+  ${L5SYM.map(r => `<tr><td data-l="Symbol">${r.s}</td><td data-l="Name">${r.n}</td><td data-l="Meaning">${r.m}</td><td data-l="Set by">${r.by}</td><td data-l="NMOS example" class="en">${r.en}</td><td data-l="PMOS example" class="ep">${r.ep}</td></tr>`).join("")}</tbody></table>`;
+
 // Diagram (slides 3-4): a bulk CMOS inverter in cross section, frontend (silicon) and backend (contacts, vias, metals).
 // Geometry is ours and not to scale; the layer stack and the four regions are the slide's.
 const XS_TIPS = {
@@ -1619,7 +1628,9 @@ function lecture5() {
     ${l5box("ex", "Worked example: 15 ps input transition into 75 fF", `<p>Interpolate along the load first. At 10 ps: halfway between 0.2 and 0.4 ns = 0.3 ns. At 20 ps: halfway between 0.3 and 0.6 ns = 0.45 ns. Then along the transition: halfway between 0.3 and 0.45 ns = <b>0.375 ns</b>. Each corner weighs 0.25 here. Note what the table says about the cell: doubling the load doubles the delay (0.2 → 0.4 ns, 0.3 → 0.6 ns), so this inverter's delay is almost pure load charging, and a slower input edge adds 50 %.</p>`)}
 
     <h2>Transistor curves (slides 16–17)</h2>
-    <p>Below the table models sits the transistor. The long-channel (square-law) model of the NMOS has three regions:</p>
+    <p>Below the table models sits the transistor. Its formulas are written in three voltages:</p>
+    ${l5symTable()}
+    <p>The long-channel (square-law) model of the NMOS has three regions:</p>
     <div class="formula">Cutoff: V<sub>GS</sub> &lt; V<sub>th,N</sub> → I<sub>D</sub> = 0<br>Linear: V<sub>DS</sub> &lt; V<sub>GS</sub> − V<sub>th,N</sub> → I<sub>D</sub> = β<sub>N</sub> · ((V<sub>GS</sub> − V<sub>th,N</sub>)·V<sub>DS</sub> − V<sub>DS</sub>²/2)<br>Saturation: V<sub>DS</sub> ≥ V<sub>GS</sub> − V<sub>th,N</sub> → I<sub>D</sub> = β<sub>N</sub>/2 · (V<sub>GS</sub> − V<sub>th,N</sub>)² · (1 + λ<sub>N</sub>·(V<sub>DS</sub> − V<sub>GS</sub> + V<sub>th,N</sub>))<br>β<sub>N</sub> = KP<sub>N</sub> · W/L = µ<sub>N</sub>C<sub>ox</sub> · W/L</div>
     <p>The threshold V<sub>th,N</sub>(V<sub>SB</sub>) &gt; 0 depends on the source-bulk voltage; µ<sub>N</sub> is the electron mobility, C<sub>ox</sub> the gate-oxide capacitance per area, and λ<sub>N</sub>(L) &gt; 0 models channel-length modulation, the slight rise of the saturation current with V<sub>DS</sub>. The <b>transfer curve</b> (I<sub>D</sub> over V<sub>GS</sub>) is zero up to the threshold and then grows quadratically; the <b>output characteristics</b> (I<sub>D</sub> over V<sub>DS</sub>) rise steeply in the linear region and flatten in saturation, with the boundary on the parabola V<sub>DS</sub> = V<sub>GS</sub> − V<sub>th</sub>. W/L is the knob from the layout: twice the width, twice the current.</p>
     ${lab("mo", "the square-law NMOS")}

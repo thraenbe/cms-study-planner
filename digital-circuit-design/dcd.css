@@ -371,6 +371,13 @@ a.game-card { display: block; color: inherit; text-decoration: none; }
 .dcd .l5nl .cell.hd { background: transparent; color: var(--ink-3); font-size: 13px; }
 .dcd .l5nl .cell.blank { font-size: 11px; color: var(--ink-3); }
 .dcd .l5nl .cell.one { background: color-mix(in srgb, var(--vz-s1) var(--w), var(--surface)); }
+.dcd .l5sym td:first-child { white-space: nowrap; }
+@media (min-width: 761px) { .dcd .l5sym td.en, .dcd .l5sym td.ep { min-width: 9.5rem; } }
+.dcd .l5sym .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+.dcd .l5sym .sw.t { background: var(--vz-s1); }
+.dcd .l5sym .sw.v { background: var(--vz-gray); }
+.dcd .l5sym td.en { box-shadow: inset 3px 0 var(--vz-s1); }
+.dcd .l5sym td.ep { box-shadow: inset 3px 0 var(--vz-gray); }
 /* Lecture 3 multiplier chapter: the three-stage diagram, the key statement, the "what changes where" table */
 .dcd .viz .stg-box { fill: var(--surface); stroke: var(--vz-axis); stroke-width: 1.2; }
 .dcd .viz .pt.on .stg-box, .dcd .viz .pt:focus-visible .stg-box { stroke: var(--ink-2); stroke-width: 1.6; }
