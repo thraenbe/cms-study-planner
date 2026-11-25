@@ -4913,7 +4913,21 @@ window.CMS = {
       "title": "Perception with Touch",
       "date": "2026-11-23",
       "icon": "👁️",
-      "blurb": "Not held yet. The summary appears here once the lecture is over and its slides are on OPAL."
+      "covered": true,
+      "blurb": "Analytical (non-ML) processing of VBTS images: marker displacement fields read in 2D, 2.5D or 3D (position, size, shape), depth estimation from I = R(∂H/∂x, ∂H/∂y) with a calibrated colour-to-gradient mapping and integration, and delta images against the no-touch frame to bring time in.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Lecture 7 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "slides",
+        "name": "tsp-2026-07.pdf",
+        "where": "OPAL · Material WiSe 2026/27",
+        "note": "PDF export, posted 23 Nov"
+       }
+      ]
      },
      {
       "n": 8,
@@ -5114,7 +5128,7 @@ window.CMS = {
       "title": "Vision-based Tactile Sensors 3",
       "date": "2026-11-17",
       "icon": "🧿",
-      "blurb": "Held 17 Nov. The practice deck is not linked on OPAL yet, so the write-up follows once it is; the image data (coin, screw head, swan and empty DIGIT frames) is the archive shared with Practice 4.",
+      "blurb": "Held 17 Nov. The practice deck is still not linked on OPAL (checked 25 Nov), so the write-up follows once it is; the image data (coin, screw head, swan and empty DIGIT frames) is the archive shared with Practice 4.",
       "files": [
        {
         "kind": "other",
@@ -5130,7 +5144,28 @@ window.CMS = {
       "title": "Simulating Touch",
       "date": "2026-11-24",
       "icon": "🧪",
-      "blurb": "Not held yet."
+      "covered": true,
+      "blurb": "Install TACTO with PyBullet and record simulated DIGIT frames with the course's recorder (R = contact, E = no contact), packed 75/25 into train and validation; then add a real sensor background and extend the recorder to three labels (empty, sphere, cube), 60 samples each, kept for later practices.",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "Practice 6 deck (reveal.js)",
+        "where": "slides.com deck, linked in OPAL"
+       },
+       {
+        "kind": "code",
+        "name": "practice_6.zip",
+        "where": "OPAL · Practice",
+        "note": "recorder and packer scripts plus a real DIGIT background image, 11 KB, posted 24 Nov"
+       },
+       {
+        "kind": "code",
+        "name": "TACTO",
+        "url": "https://github.com/facebookresearch/tacto",
+        "where": "GitHub (facebookresearch/tacto)",
+        "note": "the simulator, installed in the practice"
+       }
+      ]
      },
      {
       "n": "7",

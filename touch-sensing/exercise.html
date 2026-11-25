@@ -571,6 +571,224 @@ function exercise4() {
     <p class="muted">Slides are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
+// ======================================================================================
+// Exercise 6 – Practice 6: TACTO installed, simulated DIGIT data recorded and packed
+// ======================================================================================
+const ansT = items => `<div class="ans">${items.map(([v, l]) => `<div class="a"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>`;
+// Label colours follow the label, not the task: 0 = no contact (slot 1), 1 = sphere (slot 2), 2 = cube (slot 3).
+const P6_LAB = [["0", "no contact", 1], ["1", "contact (sphere)", 2], ["2", "cube (Task 3)", 3]];
+
+// The data path of slides 7–8 and of the two scripts from OPAL: keys → class folders → packer.py → dataset.zip.
+function p6FlowSVG(narrow) {
+  const box = (x, y, w, h, t, s, c, dash) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" style="fill:var(--surface-2);stroke:${c};stroke-width:${dash ? 1.2 : 1.6}${dash ? ";stroke-dasharray:5 4" : ""}"/><text class="lbl" x="${x + 10}" y="${y + 19}">${t}</text>${s ? `<text class="note" x="${x + 10}" y="${y + 35}">${s}</text>` : ""}`;
+  const keys = [["E → collection/0", "a frame without contact", "var(--vz-s1)"], ["R → collection/1", "a frame with contact", "var(--vz-s2)"], ["C → collection/2", "cube, our key for Task 3", "var(--vz-s3)", true]];
+  const aria = "Data path of the practice: the simulated DIGIT in TACTO and PyBullet; key E saves the current frame into collection/0, key R into collection/1, and in Task 3 a third key into collection/2; packer.py shuffles each folder with a fixed seed, puts 75 percent into train and 25 percent into val, and zips everything into dataset.zip.";
+  const arr = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} L${x2} ${y2}" style="stroke:var(--ink-3);stroke-width:1.4"/><circle cx="${x2}" cy="${y2}" r="2.6" style="fill:var(--ink-3)"/>`;
+  if (narrow) {
+    return `<svg viewBox="0 0 340 392" role="img" aria-label="${aria}">
+      ${box(4, 4, 332, 46, "TACTO + PyBullet", "simulated DIGIT, object on six sliders", "var(--ink-3)")}
+      ${keys.map((k, i) => arr(30, 50, 30, 70 + i * 54 + 23) + box(46, 70 + i * 54, 290, 46, k[0], k[1], k[2], k[3])).join("")}
+      ${arr(170, 228, 170, 246)}${box(4, 246, 332, 62, "packer.py", "shuffle each folder (fixed seed),", "var(--ink-3)")}<text class="note" x="14" y="${246 + 51}">first 75 % → train/, the rest → val/</text>
+      ${arr(170, 308, 170, 326)}${box(4, 326, 332, 62, "dataset.zip", "train/0, train/1 (, train/2)", "var(--ink-3)")}<text class="note" x="14" y="${326 + 51}">val/0, val/1 (, val/2)</text></svg>`;
+  }
+  return `<svg viewBox="0 0 600 196" role="img" aria-label="${aria}">
+    ${box(4, 72, 150, 54, "TACTO + PyBullet", "simulated DIGIT", "var(--ink-3)")}<text class="note" x="14" y="${72 + 49}">object on six sliders</text>
+    ${keys.map((k, i) => arr(154, 99, 186, 8 + i * 62 + 23) + box(186, 8 + i * 62, 188, 46, k[0], k[1], k[2], k[3])).join("")}
+    ${[0, 1, 2].map(i => arr(374, 8 + i * 62 + 23, 404, 72)).join("")}
+    ${box(404, 40, 192, 62, "packer.py", "shuffle each folder (fixed seed)", "var(--ink-3)")}<text class="note" x="414" y="${40 + 51}">75 % → train/, 25 % → val/</text>
+    ${arr(500, 102, 500, 122)}${box(404, 122, 192, 62, "dataset.zip", "train/0, train/1 (, train/2)", "var(--ink-3)")}<text class="note" x="414" y="${122 + 51}">val/0, val/1 (, val/2)</text></svg>`;
+}
+CHARTS.p6flow = narrow => p6FlowSVG(narrow);
+
+// What packer.py makes of the two datasets the slides ask for: 60 images per label, int(0.75 · 60) = 45 train.
+const P6_SPLIT = [["Task 1 · train", [45, 45]], ["Task 1 · val", [15, 15]], ["Task 3 · train", [45, 45, 45]], ["Task 3 · val", [15, 15, 15]]];
+CHARTS.split = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 8 : 112, R = narrow ? 40 : 46, T = narrow ? 24 : 12, BH = 22, GAP = narrow ? 32 : 16, PW = W - L - R, max = 140;
+  const H = T + P6_SPLIT.length * (BH + GAP) + 22, x = v => L + v / max * PW;
+  const grid = [0, 45, 90, 135].map(v => `<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T - 6}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+  const rows = P6_SPLIT.map(([k, parts], i) => {
+    const y = T + i * (BH + GAP), tot = parts.reduce((a, b) => a + b, 0); let acc = 0;
+    const segs = parts.map((v, j) => { const x0 = x(acc) + (j ? 1 : 0), x1 = x(acc + v) - (j < parts.length - 1 ? 1 : 0); acc += v;
+      return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${k}, label ${P6_LAB[j][0]}</b>${v} images (${P6_LAB[j][1]})`)}"><rect class="hit" x="${x0}" y="${y - 4}" width="${x1 - x0}" height="${BH + 8}"/><rect class="bar" x="${x0}" y="${y}" width="${x1 - x0}" height="${BH}" rx="${j === parts.length - 1 ? 4 : 0}" style="fill:var(--vz-s${P6_LAB[j][2]})"/></g>`; }).join("");
+    const lab = narrow ? `<text class="cat" x="${L}" y="${y - 7}">${k}</text>` : `<text class="cat" x="${L - 10}" y="${y + BH / 2 + 4}" text-anchor="end">${k}</text>`;
+    return `${lab}${segs}<text class="val" x="${x(tot) + 6}" y="${y + BH / 2 + 4}">${tot}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Stacked bar chart of the packed datasets. Task 1: 90 training images (45 per label for labels 0 and 1) and 30 validation images (15 each). Task 3: 135 training images (45 each for labels 0, 1 and 2) and 45 validation images (15 each).">${grid}<line class="axis" x1="${L}" x2="${L}" y1="${T - 6}" y2="${H - 22}"/>${rows}</svg>`;
+};
+
+// Recorder lab: the simulated frame (TSPViz.gelRender shading added to a background, as TACTO does with a real one),
+// the E/R keys of the script (and a third key for Task 3), the folder counts and what packer.py would make of them.
+// Both backgrounds are drawn stand-ins (a smooth violet–green one and a blotchy one), not the OPAL image.
+const RW = 96, RH = 128;
+const REC = { obj: "sphere", depth: 0.6, real: false, three: false, rep: false, cnt: { "0": 0, "1": 0, "2": 0 }, bad: 0, n: 1, files: [], packed: false,
+  batch: Array.from({ length: 4 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 25))).join("") };
+const recPx = opts => { const cv = document.createElement("canvas"); gelRender(cv, { ...opts, w: RW, h: RH }); return cv.getContext("2d").getImageData(0, 0, RW, RH).data; };
+const REC_BG = {};
+function recBg(kind) {
+  if (REC_BG[kind]) return REC_BG[kind];
+  const out = new Uint8ClampedArray(RW * RH * 4), r = rng(kind === "real" ? 5 : 3);
+  for (let j = 0; j < RH; j++) for (let i = 0; i < RW; i++) {
+    const u = i / RW, v = j / RH, k = (j * RW + i) * 4;
+    const b1 = Math.exp(-((u - 0.35) ** 2 + (v - 0.3) ** 2) / 0.05), b2 = Math.exp(-((u - 0.75) ** 2 + (v - 0.55) ** 2) / 0.06), b3 = Math.exp(-((u - 0.4) ** 2 + (v - 0.85) ** 2) / 0.04);
+    const c = kind === "real" ? [70 + 120 * b1 + 40 * b3, 80 + 110 * b2 + 30 * b1, 70 + 60 * b3 + 30 * (1 - v)] : [95 + 55 * (1 - u) * (1 - v), 85 + 85 * u, 125 + 75 * (1 - u) * (1 - v) - 35 * v];
+    for (let ch = 0; ch < 3; ch++) out[k + ch] = c[ch] + (r() - 0.5) * (kind === "real" ? 10 : 28);
+    out[k + 3] = 255;
+  }
+  return (REC_BG[kind] = out);
+}
+function recFrame(bgKind) {
+  const shape = REC.depth <= 0 ? "flat" : REC.obj === "cube" ? "ridge" : "dome";
+  const con = recPx({ shape, depth: Math.max(0, REC.depth) }), flat = recPx({ shape: "flat" }), bg = recBg(bgKind), out = new Uint8ClampedArray(con.length);
+  for (let k = 0; k < con.length; k += 4) { for (let c = 0; c < 3; c++) out[k + c] = bg[k + c] + 0.9 * (con[k + c] - flat[k + c]); out[k + 3] = 255; }
+  return out;
+}
+const recPut = (cv, data) => { cv.width = RW; cv.height = RH; const ctx = cv.getContext("2d"), img = ctx.createImageData(RW, RH); img.data.set(data); ctx.putImageData(img, 0, 0); };
+LABS.rec = body => {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Object in the scene"><button class="preset" type="button" data-o="sphere" aria-pressed="${REC.obj === "sphere"}">sphere_small.urdf</button><button class="preset" type="button" data-o="cube" aria-pressed="${REC.obj === "cube"}">cube_small.urdf</button></div>
+    <div class="ctl"><label>press depth (0 = lifted off) <input type="range" min="0" max="1" step="0.05" value="${REC.depth}" data-k="depth"><output>${REC.depth}</output></label>
+      <label><input type="checkbox" data-k="real" ${REC.real ? "checked" : ""}> real background (Task 2)</label>
+      <label><input type="checkbox" data-k="three" ${REC.three ? "checked" : ""}> three labels (Task 3)</label>
+      <label><input type="checkbox" data-k="rep" ${REC.rep ? "checked" : ""}> 10 snapshots per key</label></div>
+    <div class="rec"><div class="rec-frames"><figure><canvas aria-label="Simulated tactile frame"></canvas><figcaption>the simulated DIGIT frame</figcaption></figure><figure class="small"><canvas aria-label="Background in use"></canvas><figcaption>background in use</figcaption></figure></div>
+      <div><div class="keys"><button type="button" data-key="0">E · no contact</button><button type="button" data-key="1">R · contact</button><button type="button" data-key="2">C · cube</button>
+        <button type="button" class="pack" data-act="pack">run packer.py</button><button type="button" class="pack" data-act="clear">empty collection/</button></div>
+        <div class="folders"></div><div class="files"></div><div class="ro-out"></div></div></div>`;
+  const cvs = body.querySelectorAll("canvas"), fold = body.querySelector(".folders"), files = body.querySelector(".files"), out = body.querySelector(".ro-out");
+  const labels = () => REC.three ? ["0", "1", "2"] : ["0", "1"];
+  const show = () => {
+    body.querySelector('[data-o="cube"]').disabled = !REC.three; body.querySelector('[data-key="2"]').hidden = !REC.three;
+    recPut(cvs[0], recFrame(REC.real ? "real" : "generic")); recPut(cvs[1], recBg(REC.real ? "real" : "generic"));
+    fold.innerHTML = labels().map(lb => { const L = P6_LAB[+lb]; return `<div class="fr"><code>collection/${lb}</code><span class="ft" style="--c:var(--vz-s${L[2]});width:${Math.min(100, REC.cnt[lb] / 60 * 100)}%"></span><span>${REC.cnt[lb]}/60</span></div>`; }).join("");
+    files.textContent = REC.files.slice(-3).join("  ");
+    const rows = [];
+    if (REC.bad) rows.push(["mislabelled", `${flag("bad", `${REC.bad} snapshot${REC.bad > 1 ? "s" : ""} in the wrong folder`)} (a key pressed that does not match what the sensor shows)`]);
+    if (REC.packed) { const tot = labels().reduce((s, lb) => s + REC.cnt[lb], 0), ns = labels().map(lb => REC.cnt[lb]);
+      rows.push(["packer.py", labels().map(lb => { const n = REC.cnt[lb], tr = Math.floor(n * 0.75); return `label ${lb}: ${tr} train / ${n - tr} val`; }).join(" · ")]);
+      rows.push(["dataset.zip", `${tot} images${Math.max(...ns) !== Math.min(...ns) ? ` ${flag("bad", "labels unbalanced")}` : tot ? ` ${flag("ok", "balanced")}` : ""}`]); }
+    out.innerHTML = rows.length ? `<dl class="ro">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : "";
+  };
+  body.querySelectorAll("[data-o]").forEach(b => b.addEventListener("click", () => { REC.obj = b.dataset.o; body.querySelectorAll("[data-o]").forEach(o => o.setAttribute("aria-pressed", o === b)); show(); }));
+  body.querySelectorAll(".ctl input").forEach(inp => inp.addEventListener("input", () => {
+    if (inp.type === "range") { REC.depth = +inp.value; inp.nextElementSibling.value = inp.value; }
+    else { REC[inp.dataset.k] = inp.checked; if (inp.dataset.k === "three" && !REC.three && REC.obj === "cube") { REC.obj = "sphere"; body.querySelectorAll("[data-o]").forEach(o => o.setAttribute("aria-pressed", o.dataset.o === "sphere")); } }
+    REC.packed = false; show(); }));
+  body.querySelectorAll("[data-key]").forEach(b => b.addEventListener("click", () => {
+    const lb = b.dataset.key, touching = REC.depth > 0, want = !touching ? "0" : REC.three && REC.obj === "cube" ? "2" : "1";
+    for (let i = 0; i < (REC.rep ? 10 : 1); i++) { REC.cnt[lb]++; if (lb !== want) REC.bad++; REC.files.push(`collection/${lb}/image-c${REC.n++}-${REC.batch}.jpg`); }
+    REC.packed = false; show(); }));
+  body.querySelector('[data-act="pack"]').addEventListener("click", () => { REC.packed = true; show(); });
+  body.querySelector('[data-act="clear"]').addEventListener("click", () => { REC.cnt = { "0": 0, "1": 0, "2": 0 }; REC.bad = 0; REC.files = []; REC.packed = false; show(); });
+  show();
+};
+
+const P6_INSTALL = `<span class="cm"># slide 5, with one environment name throughout (the slide creates &lt;your_venv_name&gt; and activates venv_practice_6)</span>
+conda create --name=tsp6 python=<span class="nb">3.8</span>
+conda activate tsp6
+pip install tacto
+git clone https://github.com/facebookresearch/tacto
+cd tacto
+pip install -r requirements/examples.txt
+pip install --force-reinstall numpy==<span class="nb">1.23.5</span>
+cd examples
+python demo_pybullet_digit.py              <span class="cm"># the plain demo: a PyBullet window and the DIGIT view</span>
+
+<span class="cm"># slide 6, only if the installation fails (the slide's gcc line lacks the leading "conda")</span>
+conda install -c conda-forge gcc gxx         <span class="cm"># missing gcc</span>
+conda install -c conda-forge libstdcxx-ng    <span class="cm"># missing libstdcxx</span>
+
+<span class="cm"># slide 7: the material from OPAL, then the recorder's extra dependency</span>
+cp demo_pybullet_digit_recorder.py packer.py tacto/examples/
+pip install pynput`;
+const P6_T2 = `<span class="cm"># demo_pybullet_digit_recorder.py, Task 2 (our sketch): the real background instead of TACTO's own</span>
+bg = cv2.imread(<span class="nb">"conf/background.jpg"</span>)     <span class="cm"># was "conf/bg_digit_240_320.jpg"; copy background.jpg into examples/conf/</span>
+<span class="kw">assert</span> bg <span class="kw">is not None</span>, <span class="nb">"background image not found"</span>   <span class="cm"># imread returns None silently on a wrong path</span>
+digits = tacto.Sensor(**cfg.tacto, background=bg)`;
+const P6_T3 = `<span class="cm"># Task 3 (our sketch): one key per label instead of the two flags capture_press / capture_empty</span>
+LABELS = {<span class="nb">'e'</span>: <span class="nb">'0'</span>, <span class="nb">'r'</span>: <span class="nb">'1'</span>, <span class="nb">'c'</span>: <span class="nb">'2'</span>}          <span class="cm"># empty, sphere, cube</span>
+pending = <span class="kw">None</span>
+
+<span class="kw">def</span> on_press(key):
+    <span class="kw">global</span> pending
+    <span class="kw">try</span>:
+        <span class="kw">if</span> key.char <span class="kw">in</span> LABELS:
+            <span class="kw">with</span> mutex:
+                pending = LABELS[key.char]
+    <span class="kw">except</span> AttributeError:
+        <span class="kw">pass</span>
+
+<span class="cm"># in main(): one folder per label</span>
+<span class="kw">for</span> lab <span class="kw">in</span> LABELS.values():
+    os.makedirs(os.path.join(<span class="nb">'collection'</span>, lab), exist_ok=<span class="kw">True</span>)
+
+<span class="cm"># in the render loop, replacing the two if-blocks</span>
+<span class="kw">if</span> pending <span class="kw">is not None</span>:
+    <span class="kw">with</span> mutex:
+        lab, pending = pending, <span class="kw">None</span>
+    cv2.imwrite(os.path.join(<span class="nb">'collection'</span>, lab, f<span class="nb">'image-c{capturen}-{batch_id}.jpg'</span>), np.concatenate(color, axis=<span class="nb">1</span>))
+    capturen += <span class="nb">1</span>
+
+<span class="cm"># two runs into the same collection/: the sphere (keys E and R), then the cube (key C)</span>
+<span class="cm"># python demo_pybullet_digit_recorder.py object.urdf_path="objects/sphere_small.urdf"</span>
+<span class="cm"># python demo_pybullet_digit_recorder.py object.urdf_path="objects/cube_small.urdf"</span>`;
+
+function exercise6() {
+  return `${head(e)}
+    <p class="lead">The hands-on half of <a href="touch-sensing/lecture.html?n=6">Lecture 6</a>: install <b>TACTO</b>, drive a simulated DIGIT in PyBullet, and record labelled tactile images with a small recorder script. The datasets are the point of the session: slide 12 asks to keep them for future practices.</p>
+    <h2>Recap and goal (slides 2–3)</h2>
+    <p>Why simulators: they help to prototype, debug and benchmark new ideas, they produce large amounts of data cheaply to evaluate ML models, and they open the way to Sim2Real. What a touch simulation has to model: the <b>contact dynamics</b> (many rigid bodies, slow; truly compliant contact, complicated and slow; learned dynamics, so far underexplored) and the <b>sensor response</b>. Full write-up: <a href="touch-sensing/lecture.html?n=6">Lecture 6</a>.</p>
+    ${qbox("Goals", ["Install TACTO.", "Collect data for future practices."])}
+
+    <h2>TACTO (slide 4)</h2>
+    <p>The slide shows the top of TACTO's GitHub page (facebookresearch/tacto): a simulator for vision-based tactile sensors such as the DIGIT, with models for integrating it with PyBullet and a renderer of touch readings, next to pictures of simulated robot fingers with their rendered tactile frames. It is the simulator Lecture 6 took apart: forces from the physics engine, mesh penetration as the deformation, Pyrender for the lit gel, a real background added in post-processing.</p>
+
+    <h2>Setting up (slides 5–7)</h2>
+    <div class="steps">${["Create and activate a Python 3.8 conda environment.", "Install the <code>tacto</code> package, clone the repository and install the requirements of its examples.", "Force numpy back to 1.23.5.", "Run <code>demo_pybullet_digit.py</code> from <code>tacto/examples</code> to check that the plain demo works.", "Download the practice material from OPAL (<code>practice_6.zip</code>: the recorder and packer scripts and a background image), copy the two scripts into <code>tacto/examples</code>, install <code>pynput</code>."].map((s, i) => `<div class="step"><span class="n">${i + 1}</span><span>${s}</span></div>`).join("")}</div>
+    <pre class="code">${P6_INSTALL}</pre>
+    ${why("why pin numpy to 1.23.5", `<p>The slide does not say. A likely reason: NumPy 1.24 removed long-deprecated aliases such as <code>np.float</code> and <code>np.int</code>, and older research code (TACTO's last releases are from before then) still uses them, so a newer numpy fails at the first such line. Pinning is the quick fix; the environment then stays tied to Python 3.8, which is why the slide creates a fresh one. If <code>conda init</code> has never been run for your shell, run it once (the slide's example: <code>conda init bash</code>) and open a new terminal.</p>`)}
+
+    <h2>Data collection (slide 8)</h2>
+    <p>From <code>tacto/examples</code>, run <code>python demo_pybullet_digit_recorder.py</code>. A PyBullet window opens with the DIGIT and an object, plus a panel of sliders for the object's six pose values. Move the object until it touches the sensor and press <b>R</b> to save a snapshot with contact (label 1); move it away and press <b>E</b> to save one without contact (label 0). Then <code>packer.py</code> builds <code>dataset.zip</code>.</p>
+    ${chart("p6flow", leg([[1, "label 0: no contact"], [2, "label 1: contact"], [3, "label 2: cube (Task 3)"]]))}<figcaption>The data path, drawn from slides 7–8 and the two scripts in the OPAL material. The third key is our choice for Task 3, not part of the handed-out script.</figcaption></figure>
+    <p><b>What the recorder does</b> (our reading of the script from OPAL): it is TACTO's DIGIT demo plus a keyboard listener. It sets up a <code>tacto.Sensor</code> with a background image, a DIGIT body in PyBullet with the sensor's camera on it, the object from the config, the pose panel and a simulation thread; then it renders the colour and depth view in a loop. A key press sets a flag; the loop sees it and writes the current colour frame as <code>collection/1/image-c&lt;n&gt;-&lt;batch&gt;.jpg</code> (R) or <code>collection/0/…</code> (E). The counter <code>n</code> is shared by both keys, and <code>batch</code> is four random letters per run, so a second run never overwrites the files of the first. Note that the folder is called <code>collection</code>, not <code>collections</code> as on the slide.</p>
+    <p><b>What the packer does:</b> for every class folder in <code>collection/</code> it shuffles the file names with a fixed seed, copies the first 75 % (rounded down) to <code>dataset/train/&lt;label&gt;/</code> and the rest to <code>dataset/val/&lt;label&gt;/</code>, and zips <code>dataset/</code> into <code>dataset.zip</code>. It handles any number of labels, so Task 3 needs no change there.</p>
+
+    <h2>Task 1 · Collect data with the sphere (slide 9)</h2>
+    ${qbox("The task", ["Run the recorder with the sphere: <code>python demo_pybullet_digit_recorder.py object.urdf_path=\"objects/sphere_small.urdf\"</code>.", "Collect 60 samples with contact and 60 without.", "Zip the dataset."])}
+    <p>The slide shows one frame of each kind: the empty simulated gel, a grainy violet-to-green field, and the same field with the sphere's imprint as a small rainbow-coloured disc, each colour on the side its LED lights. The <code>object.urdf_path=…</code> part is a Hydra override: the recorder reads <code>conf/digit.yaml</code>, and any value of it can be replaced on the command line.</p>
+    ${ansT([["120", "images: 60 in collection/0, 60 in collection/1"], ["90 / 30", "train / val after packer.py (45 + 15 per label)"]])}
+    ${ex("A note on variety", `<p>${ctx} Sixty images of the sphere pressed at the same spot and depth are one image sixty times. For data that a later classifier can learn from, vary the contact position across the gel, the press depth (from barely touching to deep) and, for the no-contact class, how far away the object hovers. The no-contact images of a simulator all look alike; that is fine, it is what an empty sensor looks like.</p>`)}
+
+    <h2>Task 2 · Add a real background (slide 10)</h2>
+    ${qbox("The task", ["Take the background image from the OPAL material and include it in the recorder script."])}
+    <p>The slide shows three frames of the same sphere contact: with TACTO's <b>generic background</b>, the <b>background to add</b> (a frame of a real, untouched DIGIT: soft pink, green and blue patches where the LEDs light the gel unevenly) and the result <b>after addition</b>, where the imprint sits on the real sensor's colours. This is slide 17 of Lecture 6 in code: the rendered change caused by the contact is added to a real no-contact frame.</p>
+    <pre class="code">${P6_T2}</pre>
+    <p>In the handed-out script the background is read from <code>conf/bg_digit_240_320.jpg</code> (a 240 × 320 frame, the DIGIT's portrait image) and passed to <code>tacto.Sensor(…, background=bg)</code>, so Task 2 is a one-line change of the path. The new image should have the same size as the simulated frames.</p>
+
+    <h2>Try the recorder</h2>
+    ${lab("rec", "the recorder, its keys and the packer")}
+    <p class="muted" style="font-size:.9rem">A toy ${ctx}: the frame is the course's three-LED gel cartoon added onto a drawn background, not TACTO's renderer, and both backgrounds are stand-ins. The keys and file names follow the script; pressing a key that does not match what the sensor shows counts as a mislabelled snapshot. "Run packer.py" applies the script's 75 % rule.</p>
+
+    <h2>Task 3 · A more diverse dataset (slide 11)</h2>
+    ${qbox("The task", ["Adapt the script to allow for three labels.", "Record 60 samples each: empty, sphere, cube (<code>examples/objects/cube_small.urdf</code>).", "Zip the dataset."])}
+    <p>The slide's example frames: the sphere's round imprint, the empty gel, and the cube, which touches with an edge and leaves a straight diagonal band. One way to do it: replace the two flags by a dictionary from keys to label folders, then record in two runs into the same <code>collection/</code>, the sphere first (E and R) and the cube second (the new key). The random batch name keeps the two runs' files apart.</p>
+    <pre class="code">${P6_T3}</pre>
+    ${ansT([["180", "images: 60 per label (0 empty, 1 sphere, 2 cube)"], ["135 / 45", "train / val after packer.py (45 + 15 per label)"]])}
+    ${chart("split", leg(P6_LAB.map(([l, t, s]) => [s, `label ${l}: ${t}`])))}<figcaption>What packer.py makes of the two datasets: int(0.75 · 60) = 45 images per label for training, 15 for validation. Hover a segment for its count.</figcaption></figure>
+    ${tbl(["Dataset", "Label 0", "Label 1", "Label 2", "Total"], P6_SPLIT.map(([k, p]) => [k, p[0], p[1], p[2] ?? "–", p.reduce((a, b) => a + b, 0)]))}
+    ${why("pitfalls worth knowing before the ML practices", `<p><b>Keep the two datasets apart.</b> packer.py always writes <code>dataset/</code> and <code>dataset.zip</code> and stops with an error if <code>dataset/</code> already exists (it creates it without <code>exist_ok</code>), so rename the zip after each task and delete <code>dataset/</code> before packing again; empty or move <code>collection/</code> too, or Task 1's images end up in Task 3's set. <b>One background for all classes.</b> If the empty images are recorded with the generic background and the contact images with the real one, a classifier can score perfectly by recognising the background, not the contact. <b>Where the files land.</b> The recorder is a Hydra app; depending on the Hydra version a run may also create an <code>outputs/&lt;date&gt;/&lt;time&gt;/</code> folder, so if <code>collection/</code> is not in <code>tacto/examples</code>, look there. All three are our observations from the scripts, not from the slides.</p>`)}
+
+    <h2>Before the next practice (slide 12)</h2>
+    <p>The slide's one request: <b>save the datasets for future practices</b>.</p>
+    ${["the Task 1 dataset (labels 0 and 1, 120 images), zipped and renamed", "the Task 3 dataset (labels 0, 1 and 2, 180 images), zipped and renamed", "the recorder script with the real background and the three-label keys", "the conda environment, so the next session starts without reinstalling"].map(s => `<div class="check"><span class="bx"></span><span>${s}</span></div>`).join("")}
+    <p style="margin-top:.8rem">Next: <a href="touch-sensing/exercise.html?n=7">Practice 7, Perception with Touch</a> (1 Dec), to <a href="touch-sensing/lecture.html?n=7">Lecture 7</a> (markers, depth estimation, delta images). The practices after it are ML for Touch 1–3, presumably where these datasets are used. Home Exercise 2 opens on 1 Dec.</p>
+    <h2>References (slide 15)</h2>
+    <ul class="refs">
+      <li>Wang, Lambeta, Chou &amp; Calandra (2022). TACTO: a fast, flexible, and open-source simulator for high-resolution vision-based tactile sensors. IEEE RA-L. <a href="https://arxiv.org/abs/2012.08456" target="_blank" rel="noopener">arXiv 2012.08456 ↗</a></li>
+      <li>TACTO on GitHub: <a href="https://github.com/facebookresearch/tacto" target="_blank" rel="noopener">facebookresearch/tacto ↗</a></li>
+    </ul>
+    <p class="muted">Slides and the practice material are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date);
   return `${head(e)}
@@ -580,7 +798,7 @@ function placeholder() {
       <p class="muted">${e.kind === "home" ? `The window is ${fmt(e.date)} – ${fmt(e.due)} according to Practice 0.` : `This practice is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(e.date)}, 09:20–10:50, ${esc(roomOn(e.date))}.`}<br>The write-up appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1, "3": exercise3, "4": exercise4 };
+const WRITEUPS = { "0": exercise0, "1": exercise1, "2": exercise2, "x": exerciseX, "h1": exerciseH1, "3": exercise3, "4": exercise4, "6": exercise6 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise "${esc(q)}".</p>`;

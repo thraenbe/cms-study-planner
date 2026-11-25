@@ -1189,6 +1189,294 @@ function lecture6() {
     <p class="muted">Next: <a href="touch-sensing/lecture.html?n=7">Lecture 7, Perception with Touch</a> (23 Nov). The practice to this lecture's topic is <a href="touch-sensing/exercise.html?n=6">Practice 6, Simulating Touch</a> (24 Nov); the practice the day after this lecture was <a href="touch-sensing/exercise.html?n=5">Practice 5</a> (Vision-based Tactile Sensors 3). Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
 }
 
+// ======================================================================================
+// Lecture 7: Perception with Touch (analytical processing of VBTS images)
+// ======================================================================================
+// Slide 2's two routes from a raw frame, drawn as a tree; the three leaves of today are slides 3–6.
+const PERC = [
+  ["Markers", "track the dots → a displacement field (slides 3–4)", "dots → displacement field", "var(--vz-s1)"],
+  ["Depth estimation", "shading → surface gradients → height map (slide 5)", "shading → gradients → height", "var(--vz-s1)"],
+  ["Delta image", "current frame − frame without touch (slide 6)", "current − no-touch frame", "var(--vz-s1)"],
+  ["Learning-based (AI / ML)", "from Lecture 8 on: ML for Touch", "from Lecture 8: ML for Touch", "var(--vz-gray)", true],
+];
+function perceiveSVG(narrow) {
+  const leaf = (x, y, w, [t, s, sn, c, dash]) => `<rect x="${x}" y="${y}" width="${w}" height="46" rx="9" style="fill:var(--surface-2);stroke:${c};stroke-width:${dash ? 1.2 : 1.8}${dash ? ";stroke-dasharray:5 4" : ""}"/><text class="lbl" x="${x + 12}" y="${y + 20}">${t}</text><text class="note" x="${x + 12}" y="${y + 36}">${narrow ? sn : s}</text>`;
+  const aria = "Tree diagram: a raw frame of a vision-based tactile sensor can be processed analytically, today's topic, with markers, depth estimation or delta images, or with learning-based methods, the topic of the next lectures.";
+  if (narrow) {
+    const ys = [72, 126, 180, 252];
+    return `<svg viewBox="0 0 340 304" role="img" aria-label="${aria}">
+      <rect x="4" y="4" width="332" height="46" rx="9" style="fill:var(--surface);stroke:var(--ink-3)"/><text class="lbl" x="16" y="24">Raw VBTS frame</text><text class="note" x="16" y="40">an RGB image of the lit gel</text>
+      <path d="M12 50 V${ys[2] + 23}" style="fill:none;stroke:var(--vz-s1);stroke-width:1.5"/>${ys.slice(0, 3).map(y => `<path d="M12 ${y + 23} H24" style="stroke:var(--vz-s1);stroke-width:1.5"/>`).join("")}
+      <path d="M6 50 V${ys[3] + 23} H24" style="fill:none;stroke:var(--vz-gray);stroke-width:1.5;stroke-dasharray:4 4"/>
+      <text class="note" x="24" y="${ys[0] - 7}">analytical, today</text><text class="note" x="24" y="${ys[3] - 7}">learning-based, next lectures</text>
+      ${PERC.map((d, i) => leaf(24, ys[i], 312, d)).join("")}</svg>`;
+  }
+  const ys = [10, 64, 118, 196], sy = 125;
+  const curve = (y, c, dash) => `<path d="M156 ${sy} C226 ${sy} 226 ${y + 23} 292 ${y + 23}" style="fill:none;stroke:${c};stroke-width:1.5${dash ? ";stroke-dasharray:4 4" : ""}"/>`;
+  return `<svg viewBox="0 0 600 252" role="img" aria-label="${aria}">
+    <rect x="4" y="${sy - 30}" width="152" height="60" rx="10" style="fill:var(--surface);stroke:var(--ink-3)"/><text class="lbl" x="18" y="${sy - 6}">Raw VBTS frame</text><text class="note" x="18" y="${sy + 12}">an RGB image of the lit gel</text>
+    ${ys.slice(0, 3).map(y => curve(y, "var(--vz-s1)")).join("")}${curve(ys[3], "var(--vz-gray)", true)}
+    <text class="note" x="176" y="20">analytical, today</text><text class="note" x="176" y="246">learning-based, next lectures</text>
+    ${PERC.map((d, i) => leaf(292, ys[i], 304, d)).join("")}</svg>`;
+}
+CHARTS.perceive = narrow => perceiveSVG(narrow);
+
+// Marker lab: a 13 × 10 grid of markers (3 mm pitch) on the gel, a round contact of radius 7 mm in the middle.
+// Toy displacement fields (ours, not from the slides): a press pushes the surface outwards and towards the camera,
+// a shear drags the contact patch sideways, a twist turns it. Arrows are drawn 8× longer than the displacement.
+const MK = { load: "press", m: 0.7, mode: "2d" };
+const MK_LOADS = [["press", "press"], ["shear →", "shear"], ["twist", "twist"], ["press + shear", "ps"]];
+const MK_MODES = [["2D: position", "2d"], ["2.5D: position + size", "25d"], ["3D: position, size + shape", "3d"]];
+const MK_A = 7, MK_S = 400 / 42, MK_E = 8;
+function mkField(load, m) {
+  const a = MK_A, press = load === "press" || load === "ps", out = [];
+  const Z = (press ? 1 : 0.15) * m;                                   // indentation depth at the centre, mm
+  for (let j = 0; j < 10; j++) for (let i = 0; i < 13; i++) {
+    const x = (i - 6) * 3, y = (j - 4.5) * 3, r = Math.hypot(x, y), q = r / a, bump = Math.exp((1 - q * q) / 2);
+    let ux = 0, uy = 0;
+    if (press && r) { const ur = 0.45 * m * q * bump; ux += ur * x / r; uy += ur * y / r; }
+    if (load === "shear" || load === "ps") ux += 0.6 * m * Math.exp(-(r * r) / (2 * (1.2 * a) ** 2));
+    if (load === "twist" && r) { const ut = 0.45 * m * q * bump; ux += -ut * y / r; uy += ut * x / r; }
+    const z = Z * Math.exp(-(r * r) / (a * a)), gx = -2 * x / (a * a) * z, gy = -2 * y / (a * a) * z;
+    out.push({ x, y, r, ux, uy, z, gx, gy });
+  }
+  return out;
+}
+function mkSVG(F) {
+  const X = x => 200 + x * MK_S, Y = y => 150 - y * MK_S, zmax = Math.max(...F.map(p => p.z));
+  const disc = `<circle cx="200" cy="150" r="${MK_A * MK_S}" style="fill:var(--vz-s1);opacity:${(0.06 + 0.22 * zmax).toFixed(2)}"/>`;
+  const marks = F.map(p => {
+    const x0 = X(p.x), y0 = Y(p.y), x1 = X(p.x + p.ux * MK_E), y1 = Y(p.y + p.uy * MK_E), len = Math.hypot(x1 - x0, y1 - y0), ang = Math.atan2(y1 - y0, x1 - x0);
+    const head = len > 5 ? `<path d="M${x1} ${y1} l${(-6 * Math.cos(ang - 0.45)).toFixed(1)} ${(-6 * Math.sin(ang - 0.45)).toFixed(1)} M${x1} ${y1} l${(-6 * Math.cos(ang + 0.45)).toFixed(1)} ${(-6 * Math.sin(ang + 0.45)).toFixed(1)}" style="stroke:var(--vz-s2);stroke-width:1.6;fill:none;stroke-linecap:round"/>` : "";
+    const arrow = len > 1 ? `<path d="M${x0} ${y0} L${x1} ${y1}" style="stroke:var(--vz-s2);stroke-width:1.6;stroke-linecap:round"/>${head}` : "";
+    const xd = X(p.x + p.ux), yd = Y(p.y + p.uy), rad = MK.mode === "2d" ? 2.6 : 2.6 * (1 + 1.2 * p.z);
+    let dot = `<circle cx="${xd.toFixed(1)}" cy="${yd.toFixed(1)}" r="${rad.toFixed(2)}" style="fill:var(--ink)"/>`;
+    if (MK.mode === "3d") { const g = Math.hypot(p.gx, p.gy), th = Math.atan(4 * g), rot = Math.atan2(-p.gy, p.gx) * 180 / Math.PI;
+      dot = `<ellipse cx="${xd.toFixed(1)}" cy="${yd.toFixed(1)}" rx="${(rad * Math.cos(th)).toFixed(2)}" ry="${rad.toFixed(2)}" transform="rotate(${rot.toFixed(1)} ${xd.toFixed(1)} ${yd.toFixed(1)})" style="fill:var(--ink)"/>`; }
+    return dot + arrow;
+  }).join("");
+  const bar = 0.5 * MK_S * MK_E;
+  return `<svg class="mk-svg" viewBox="0 0 400 324" role="img" aria-label="Marker field for a ${MK.load === "ps" ? "press plus shear" : MK.load} load: ${F.length} markers on the gel, each with an arrow from its rest position to where it moved${MK.mode === "2d" ? "" : ", marker size growing where the gel is pressed towards the camera"}${MK.mode === "3d" ? ", and markers squeezed into ellipses on the slopes" : ""}.">
+    <rect x="1" y="1" width="398" height="298" rx="14" style="fill:var(--surface);stroke:var(--line)"/>${disc}${marks}
+    <path d="M14 314 H${14 + bar}" style="stroke:var(--vz-s2);stroke-width:2"/><text class="tick" x="${20 + bar}" y="318">arrow for 0.5 mm of marker motion (drawn 8× longer)</text></svg>`;
+}
+function mkStats(F) {
+  const n = F.length, inner = F.filter(p => p.r > 0);
+  const mx = F.reduce((s, p) => s + p.ux, 0) / n, my = F.reduce((s, p) => s + p.uy, 0) / n;
+  const outw = inner.reduce((s, p) => s + (p.ux * p.x + p.uy * p.y) / p.r, 0) / inner.length;
+  const rot = inner.reduce((s, p) => s + (p.x * p.uy - p.y * p.ux) / p.r, 0) / inner.length;
+  const zmax = Math.max(...F.map(p => p.z)), tilt = Math.max(...F.map(p => Math.atan(Math.hypot(p.gx, p.gy)))) * 180 / Math.PI;
+  return { mx, my, mean: Math.hypot(mx, my), outw, rot, zmax, tilt };
+}
+LABS.markers = body => {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Load on the gel">${MK_LOADS.map(([t, p]) => `<button class="preset" type="button" data-p="${p}" aria-pressed="${p === MK.load}">${t}</button>`).join("")}</div>
+    <div class="presets" role="group" aria-label="What is read from each marker">${MK_MODES.map(([t, p]) => `<button class="preset" type="button" data-mode="${p}" aria-pressed="${p === MK.mode}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>load <input type="range" min="0" max="1" step="0.05" value="${MK.m}"><output>${MK.m}</output></label></div>
+    <div class="mk-wrap"><div class="mk-pic"></div><div class="mk-out"></div></div>`;
+  const pic = body.querySelector(".mk-pic"), out = body.querySelector(".mk-out"), rg = body.querySelector("input");
+  const draw = () => {
+    const F = mkField(MK.load, MK.m), s = mkStats(F), deg0 = Math.atan2(s.my, s.mx) * 180 / Math.PI, deg = Math.abs(deg0) < 0.5 ? 0 : deg0;
+    pic.innerHTML = mkSVG(F);
+    const parts = [[s.mean, "a sideways drag (shear)"], [Math.abs(s.outw), "a normal press (the patch spreads)"], [Math.abs(s.rot), "a torque (the patch turns)"]].filter(([v]) => v > 0.01).sort((a, b) => b[0] - a[0]);
+    const rows = [["mean displacement", `${num(s.mean, 3)} mm${s.mean > 0.005 ? ` towards ${num(deg, 0)}°` : ""}: the whole field moves together → shear`],
+      ["mean outward motion", `${num(s.outw, 3)} mm: markers move away from the centre → normal press`],
+      ["mean rotation", `${num(s.rot, 3)} mm around the centre → torque`]];
+    if (MK.mode !== "2d") rows.push(["marker size", `up to +${num(1.2 * s.zmax * 100, 0)} % in the drawing where the gel is pressed ${num(s.zmax, 2)} mm towards the camera (exaggerated: real growth is a few per cent, see the worked example)`]);
+    if (MK.mode === "3d") rows.push(["marker shape", `squeezed into ellipses on the slopes; the steepest slope is ${num(s.tilt, 1)}° (drawn 4× steeper)`]);
+    out.innerHTML = ro(rows) + `<p class="lab-note" style="margin:10px 0 0">${parts.length ? `Reads as <b>${parts.map(p => p[1]).join(" plus ")}</b>.` : "No load: every marker sits at its rest position."}</p>`;
+  };
+  body.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { MK.load = b.dataset.p; body.querySelectorAll("[data-p]").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  body.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { MK.mode = b.dataset.mode; body.querySelectorAll("[data-mode]").forEach(o => o.setAttribute("aria-pressed", o === b)); draw(); }));
+  rg.addEventListener("input", () => { MK.m = +rg.value; rg.nextElementSibling.value = rg.value; draw(); });
+  draw();
+};
+
+// Calibration with a ball of known radius R pressed d deep: inside the imprint (|x| < a) the gel takes the ball's
+// shape, so the gradient at every pixel is known from geometry. Surface height z(x) = R − d − √(R² − x²) (mm).
+const BALL = { R: 2, d: 0.5 };
+const ballA = () => Math.sqrt(2 * BALL.R * BALL.d - BALL.d ** 2);
+const ballZ = x => Math.abs(x) < ballA() ? BALL.R - BALL.d - Math.sqrt(BALL.R ** 2 - x * x) : 0;
+const ballG = x => Math.abs(x) < ballA() ? x / Math.sqrt(BALL.R ** 2 - x * x) : 0;
+CHARTS.ball = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 40 : 52, R = narrow ? 12 : 28, PW = W - L - R, k = PW / 5;   // px per mm, x from −2.5 to 2.5 mm
+  const T1 = 22, z0 = 0.25, z1 = -1.05, H1 = (z0 - z1) * k, T2 = T1 + H1 + 40, H2 = narrow ? 110 : 130, H = T2 + H2 + 34;
+  const X = x => L + (x + 2.5) * k, Y1 = z => T1 + (z0 - z) * k, Y2 = g => T2 + H2 / 2 - g / 1.2 * (H2 / 2);
+  const a = ballA(), xs = Array.from({ length: 501 }, (_, i) => -2.5 + i * 0.01);
+  const surf = xs.map(x => `${X(x).toFixed(1)},${Y1(ballZ(x)).toFixed(1)}`).join(" L");
+  const gel = `<path d="M${X(-2.5)},${Y1(z1)} L${surf} L${X(2.5)},${Y1(z1)} Z" style="fill:color-mix(in srgb, var(--vz-s1) 13%, var(--surface))"/>`, gline = `<path class="line" d="M${surf}"/>`;
+  const ball = `<clipPath id="ballclip"><rect x="${L}" y="${T1}" width="${PW}" height="${H1}"/></clipPath><circle clip-path="url(#ballclip)" cx="${X(0)}" cy="${Y1(BALL.R - BALL.d)}" r="${BALL.R * k}" style="fill:color-mix(in srgb, var(--ink-3) 22%, var(--surface));stroke:var(--ink-3);stroke-width:1.2"/>`;
+  const gpath = xs.filter(x => Math.abs(x) < a).map(x => `${X(x).toFixed(1)},${Y2(ballG(x)).toFixed(1)}`).join(" L");
+  const g2 = `<clipPath id="gradclip"><rect x="${L}" y="${T2 - 2}" width="${PW}" height="${H2 + 4}"/></clipPath><path clip-path="url(#gradclip)" class="line k2" d="M${X(-2.5)},${Y2(0)} L${X(-a)},${Y2(0)} M${gpath} M${X(a)},${Y2(0)} L${X(2.5)},${Y2(0)}"/>`;
+  const edges = [-a, a].map(x => `<line class="ann dash" x1="${X(x)}" x2="${X(x)}" y1="${T1}" y2="${T2 + H2}"/>`).join("");
+  const xt = [-2, -1, 0, 1, 2].map(x => `<text class="tick" x="${X(x)}" y="${T2 + H2 + 16}" text-anchor="middle">${x}</text>`).join("");
+  const yt = [-1, -0.5, 0, 0.5, 1].map(g => `<line class="${g ? "grid" : "axis"}" x1="${L}" x2="${L + PW}" y1="${Y2(g)}" y2="${Y2(g)}"/><text class="tick" x="${L - 6}" y="${Y2(g) + 4}" text-anchor="end">${g}</text>`).join("");
+  const zt = [0, -0.5, -1].map(z => `<text class="tick" x="${L - 6}" y="${Y1(z) + 4}" text-anchor="end">${z}</text>`).join("");
+  const cols = Array.from({ length: 25 }, (_, i) => -2.4 + i * 0.2).map(x => { const g = ballG(x), inside = Math.abs(x) < a;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>x = ${num(x, 1)} mm</b>${inside ? `depth ${num(-ballZ(x), 3)} mm · gradient ${num(g, 3)} (${num(Math.atan(Math.abs(g)) * 180 / Math.PI, 1)}°)` : "outside the imprint: flat gel, gradient 0"}`)}"><rect class="hit" x="${X(x) - k * 0.1}" y="${T1}" width="${k * 0.2}" height="${T2 + H2 - T1}"/><circle class="dot hov" cx="${X(x)}" cy="${Y2(Math.max(-1.2, Math.min(1.2, g)))}" style="fill:var(--vz-s2)" r="4.5"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cross-section of a calibration ball of radius ${num(BALL.R, 2)} millimetres pressed ${num(BALL.d, 2)} millimetres into the gel, contact radius ${num(a, 2)} millimetres; below it the surface gradient across the imprint, from minus ${num(a / (BALL.R - BALL.d), 2)} at the left edge through 0 at the centre to plus ${num(a / (BALL.R - BALL.d), 2)} at the right edge, and 0 outside.">
+    <text class="note" x="${L}" y="12">surface height z (mm), true aspect ratio; the grey disc is the ball</text>${zt}${gel}${ball}${gline}
+    <text class="note" x="${L}" y="${T2 - 10}">gradient dz/dx: what the lookup table must return for each pixel</text>${yt}${g2}${edges}
+    <text class="note" x="${X(a) + 5}" y="${Y1(z1) - 6}">a = ${num(a, 2)} mm</text>${xt}<text class="note" x="${L + PW}" y="${H - 2}" text-anchor="end">x across the imprint (mm)</text>${cols}</svg>`;
+};
+LABS.ball = body => {
+  body.innerHTML = `<div class="ctl"><label>ball radius R <input type="range" min="1.25" max="3" step="0.25" value="${BALL.R}" data-k="R"><output>${BALL.R}</output> mm</label>
+    <label>pressed in by d <input type="range" min="0.1" max="0.8" step="0.05" value="${BALL.d}" data-k="d"><output>${BALL.d}</output> mm</label></div>
+    ${chart("ball", leg([[1, "gel surface", "ln"], [2, "gradient dz/dx", "ln"]]))}<figcaption>Hover or focus a column for the depth and gradient at that x. The dashed lines are the edge of the contact.</figcaption></figure><div class="ro-out"></div>`;
+  const out = body.querySelector(".ro-out");
+  const draw = () => { const a = ballA(), gmax = a / (BALL.R - BALL.d), area = Math.PI * a * a;
+    out.innerHTML = ro([["contact radius", `a = √(2Rd − d²) = √(2 · ${num(BALL.R, 2)} · ${num(BALL.d, 2)} − ${num(BALL.d, 2)}²) = ${num(a, 3)} mm`],
+      ["steepest gradient", `a / (R − d) = ${num(gmax, 3)}, a slope of ${num(Math.atan(gmax) * 180 / Math.PI, 1)}° at the rim`],
+      ["calibration pairs", `imprint area π a² = ${num(area, 2)} mm²: about ${num(area * 225, 0)} colour → gradient pairs at 15 pixels per mm (our assumption)`]]);
+    mountCharts(); };
+  body.querySelectorAll("input").forEach(r => r.addEventListener("input", () => { BALL[r.dataset.k] = +r.value; r.nextElementSibling.value = r.value; draw(); }));
+  draw();
+};
+
+// Integration lab: a 1-D slice through two imprints. The gradient is "measured" with noise and a calibration bias,
+// then summed up from the left edge (naive) or with the height pinned to 0 at both edges (the 1-D analogue of
+// solving Poisson's equation with a flat border). The noise sequence is fixed (seeded) so sliders do not flicker.
+const IG = { sigma: 0.04, bias: 0.01 };
+const IG_N = 161, IG_DX = 0.05, IG_X = Array.from({ length: IG_N }, (_, k) => -4 + k * IG_DX);
+const igImp = (x, c, R, d) => { const a = Math.sqrt(2 * R * d - d * d), u = x - c; return Math.abs(u) < a ? [R - d - Math.sqrt(R * R - u * u), u / Math.sqrt(R * R - u * u)] : [0, 0]; };
+const igTrue = x => { const p = igImp(x, -1.2, 2, 0.5), q = igImp(x, 1.9, 1, 0.25); return [p[0] + q[0], p[1] + q[1]]; };
+const IG_NOISE = (() => { let s = 20261123; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  return Array.from({ length: IG_N }, () => Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r())); })();
+function igSolve() {
+  const t = IG_X.map(x => igTrue(x)[0]), g = IG_X.map((x, k) => igTrue(x)[1] + IG.bias + IG.sigma * IG_NOISE[k]);
+  const nv = [0]; for (let k = 1; k < IG_N; k++) nv.push(nv[k - 1] + IG_DX * (g[k - 1] + g[k]) / 2);
+  const cr = nv.map((v, k) => v - k / (IG_N - 1) * nv[IG_N - 1]);
+  const rms = h => Math.sqrt(h.reduce((s, v, k) => s + (v - t[k]) ** 2, 0) / IG_N);
+  return { t, nv, cr, drift: nv[IG_N - 1], rN: rms(nv), rC: rms(cr) };
+}
+let IGS = igSolve();
+const IG_SER = [["true surface", "true", "var(--vz-gray)", "true surface"], ["summed from the left", "nv", "var(--vz-s2)", "summed from left"], ["pinned at both edges", "cr", "var(--vz-s1)", "pinned at edges"]];
+CHARTS.integ = narrow => {
+  const W = narrow ? 340 : 600, L = 44, R = narrow ? 12 : 132, T = 28, PH = narrow ? 190 : 210, B = 32, H = T + PH + B, PW = W - L - R, y0 = 0.5, y1 = -0.8;
+  const X = x => L + (x + 4) / 8 * PW, Y = z => T + (y0 - Math.max(y1, Math.min(y0, z))) / (y0 - y1) * PH;
+  const yt = [0.5, 0.25, 0, -0.25, -0.5, -0.75].map(z => `<line class="${z ? "grid" : "axis"}" x1="${L}" x2="${L + PW}" y1="${Y(z)}" y2="${Y(z)}"/><text class="tick" x="${L - 6}" y="${Y(z) + 4}" text-anchor="end">${z}</text>`).join("");
+  const xt = [-4, -2, 0, 2, 4].map(x => `<text class="tick" x="${X(x)}" y="${T + PH + 16}" text-anchor="middle">${x}</text>`).join("");
+  const path = arr => "M" + arr.map((v, k) => `${X(IG_X[k]).toFixed(1)},${Y(v).toFixed(1)}`).join(" L");
+  const S = { true: IGS.t, nv: IGS.nv, cr: IGS.cr };
+  const lines = IG_SER.map(([, k, c]) => `<path class="line" style="stroke:${c}${k === "true" ? ";stroke-width:3;opacity:.7" : ""}" d="${path(S[k])}"/>`).join("");
+  const ends = IG_SER.map(([n, k]) => [n, S[k][IG_N - 1]]), order = ends.map((e, i) => i).sort((a, b) => ends[b][1] - ends[a][1]);
+  let lastY = -99; const lbls = narrow ? "" : order.map(i => { let yy = Y(ends[i][1]) + 4; if (yy - lastY < 14) yy = lastY + 14; lastY = yy; return `<text class="lbl" x="${L + PW + 6}" y="${yy}">${IG_SER[i][3]}</text>`; }).join("");
+  const cols = Array.from({ length: 17 }, (_, i) => i * 10).map(k => `<g class="pt" tabindex="0" data-tip="${esc(`<b>x = ${num(IG_X[k], 1)} mm</b>${IG_SER.map(([n, kk, c]) => `<span class="trow"><i style="--c:${c}"></i><strong>${num(S[kk][k], 3)} mm</strong> ${n}</span>`).join("")}`)}"><rect class="hit" x="${X(IG_X[k]) - PW / 34}" y="${T}" width="${PW / 17}" height="${PH}"/>${IG_SER.map(([, kk, c]) => `<circle class="dot hov" cx="${X(IG_X[k])}" cy="${Y(S[kk][k])}" r="4" style="fill:${c}"/>`).join("")}</g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of the surface height in millimetres across an 8 millimetre slice with two imprints. The true surface dips to minus 0.5 and minus 0.25. Summing the noisy gradient from the left ends ${num(IGS.drift, 3)} millimetres off at the right edge; pinning both edges to zero removes that drift and leaves a root-mean-square error of ${num(IGS.rC, 3)} millimetres.">
+    <defs><clipPath id="clip-integ"><rect x="${L}" y="${T - 2}" width="${PW}" height="${PH + 4}"/></clipPath></defs>
+    <text class="note" x="${L - 34}" y="12">surface height z (mm)</text>${yt}${xt}<g clip-path="url(#clip-integ)">${lines}</g>${lbls}<text class="note" x="${L + PW}" y="${H - 2}" text-anchor="end">x (mm)</text>${cols}</svg>`;
+};
+LABS.integ = body => {
+  body.innerHTML = `<div class="ctl"><label>gradient noise σ <input type="range" min="0" max="0.15" step="0.01" value="${IG.sigma}" data-k="sigma"><output>${IG.sigma}</output></label>
+    <label>calibration bias <input type="range" min="-0.05" max="0.05" step="0.005" value="${IG.bias}" data-k="bias"><output>${IG.bias}</output></label></div>
+    ${chart("integ", leg([["g", "true surface", "ln"], [2, "summed from the left", "ln"], [1, "pinned at both edges", "ln"]]))}<figcaption>A slice through two imprints (a 2 mm ball pressed 0.5 mm deep, a 1 mm ball pressed 0.25 mm deep), sampled every 0.05 mm. The gradients are the true ones plus the noise and bias set above; the noise pattern is fixed. Our toy, not from the slides.</figcaption></figure><div class="ro-out"></div>`;
+  const out = body.querySelector(".ro-out");
+  const draw = () => { IGS = igSolve();
+    out.innerHTML = ro([["drift at the right edge", `${num(IGS.drift, 3)} mm when summed from the left (bias alone contributes bias × 8 mm = ${num(IG.bias * 8, 3)} mm)`],
+      ["RMS error, summed from the left", `${num(IGS.rN, 3)} mm`], ["RMS error, pinned at both edges", `${num(IGS.rC, 3)} mm ${IGS.rC < IGS.rN ? flag("ok", "boundary condition helps") : ""}`]]);
+    mountCharts(); };
+  body.querySelectorAll("input").forEach(r => r.addEventListener("input", () => { IG[r.dataset.k] = +r.value; r.nextElementSibling.value = r.value; draw(); }));
+  draw();
+};
+
+// Delta images over time (slide 6 asks how to bring time in). A synthetic press–hold–slide–release at 30 fps, read
+// two ways: against the frame without touch (the slide's delta image) and against the previous frame (our addition).
+// Signals in mean |difference| per pixel (grey levels); the floor 3.4 is the noise of two frames with σ = 3 each.
+const DT_PH = [[0, 0.5, "no contact", "none"], [0.5, 0.9, "press", "press"], [0.9, 1.6, "hold", "hold"], [1.6, 2.2, "slide", "slide"], [2.2, 2.5, "release", "rel."], [2.5, 3, "no contact", "none"]];
+const dtC = t => t < 0.5 ? 0 : t < 0.9 ? (t - 0.5) / 0.4 : t < 2.2 ? 1 : t < 2.5 ? 1 - (t - 2.2) / 0.3 : 0;
+const dtJ = k => 0.18 * Math.sin(k * 1.7) + 0.12 * Math.sin(k * 4.3);
+const dtRef = k => 3.4 + 17 * dtC(k / 30) + dtJ(k);
+const dtPrev = k => 3.4 + 68 * Math.abs(dtC(k / 30) - dtC((k - 1) / 30)) + (k / 30 >= 1.6 && k / 30 < 2.2 ? 6 : 0) + dtJ(k + 7);
+const dtPhase = k => DT_PH.find(p => k / 30 >= p[0] && k / 30 < p[1] + 1e-9)[2];
+CHARTS.delta = narrow => {
+  const W = narrow ? 340 : 600, L = 34, R = narrow ? 12 : 72, T = 42, PH = narrow ? 170 : 190, B = 30, H = T + PH + B, PW = W - L - R;
+  const X = t => L + t / 3 * PW, Y = v => T + PH - v / 24 * PH, K = Array.from({ length: 91 }, (_, k) => k);
+  const bands = DT_PH.map(([a, b, n, s], i) => `${i % 2 && i < 5 ? `<rect class="band" x="${X(a)}" y="${T}" width="${X(b) - X(a)}" height="${PH}"/>` : ""}<text class="note" x="${(X(a) + X(b)) / 2}" y="${T - 8}" text-anchor="middle"${narrow ? ' style="font-size:9.5px"' : ""}>${narrow ? s : n}</text>`).join("");
+  const yt = [0, 6, 12, 18, 24].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${L + PW}" y1="${Y(v)}" y2="${Y(v)}"/><text class="tick" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${v}</text>`).join("");
+  const xt = [0, 0.5, 1, 1.5, 2, 2.5, 3].map(t => `<text class="tick" x="${X(t)}" y="${T + PH + 16}" text-anchor="middle">${t}</text>`).join("");
+  const path = f => "M" + K.map(k => `${X(k / 30).toFixed(1)},${Y(f(k)).toFixed(1)}`).join(" L");
+  const thr = `<line class="ann dash" x1="${L}" x2="${L + PW}" y1="${Y(8)}" y2="${Y(8)}"/>${narrow ? "" : `<text class="note" x="${L + PW + 6}" y="${Y(8) + 4}">threshold 8</text>`}`;
+  const lbl = narrow ? "" : `<text class="lbl" x="${X(0.94)}" y="${Y(20.6) - 8}">vs no-touch frame</text><text class="lbl" x="${X(0.94)}" y="${Y(3.6) - 8}">vs previous frame</text>`;
+  const cols = K.filter(k => k % 2 === 0).map(k => `<g class="pt" tabindex="0" data-tip="${esc(`<b>t = ${num(k / 30, 2)} s · ${dtPhase(k)}</b><span class="trow"><i style="--c:var(--vz-s1)"></i><strong>${num(dtRef(k), 1)}</strong> vs no-touch frame</span><span class="trow"><i style="--c:var(--vz-s2)"></i><strong>${num(dtPrev(k), 1)}</strong> vs previous frame</span>`)}"><rect class="hit" x="${X(k / 30) - PW / 92}" y="${T}" width="${PW / 46}" height="${PH}"/><circle class="dot hov" cx="${X(k / 30)}" cy="${Y(dtRef(k))}" r="4" style="fill:var(--vz-s1)"/><circle class="dot hov" cx="${X(k / 30)}" cy="${Y(dtPrev(k))}" r="4" style="fill:var(--vz-s2)"/></g>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart over 3 seconds of a press, hold, slide and release, in mean absolute difference per pixel. Against the no-touch frame the signal rises from the noise floor of 3.4 to about 20 during the press and stays there through hold and slide, then falls back after the release. Against the previous frame it spikes to about 9 during the press and 11 during the release, sits at the floor during the hold and at about 9 during the slide.">
+    ${bands}${yt}${xt}${thr}<path class="line" style="stroke:var(--vz-s1)" d="${path(dtRef)}"/><path class="line" style="stroke:var(--vz-s2)" d="${path(dtPrev)}"/>${lbl}
+    <text class="note" x="${L + PW}" y="${H - 2}" text-anchor="end">time (s), 30 frames per second</text><text class="note" x="${L - 30}" y="12">mean |difference| per pixel (grey levels)</text>${cols}</svg>`;
+};
+
+function lecture7() {
+  const sd = 3 * Math.SQRT2, fp = 0.0027 * 76800;
+  return `${head(l)}
+    <p class="lead">Lectures 4 to 6 were about getting tactile images, from a real sensor or a simulator. This lecture asks what to do with them: <b>how do we process the raw data of a vision-based tactile sensor?</b> There are two routes, analytical methods and learning-based ones. Today is the analytical route, and it is a short deck (8 slides) with a live demo: <b>markers</b> that show how the gel moves sideways, <b>depth estimation</b> that turns the shading into a height map, and <b>delta images</b> that bring time into the picture. The learning-based route starts with Lecture 8.</p>
+
+    <h2>Two routes from a raw image (slide 2)</h2>
+    <p>A VBTS delivers an RGB image of its lit gel, many times a second. Between that image and anything a robot can use (where is the contact, how deep, is it slipping, how hard is it pushed) sits a processing step. <b>Analytical methods</b> write that step down from physics and geometry: track these dots, invert this lighting model, subtract that frame. <b>Learning-based methods</b> (AI/ML) learn it from data, which is the subject of the next lectures.</p>
+    ${chart("perceive", leg([[1, "analytical methods (today)"], ["g", "learning-based methods (next lectures)"]]))}<figcaption>Slide 2's two routes, drawn as a tree. The three analytical leaves are the three topics of slides 3–6 and the summary on slide 7.</figcaption></figure>
+    ${why("why learn the analytical route first", `<p>Analytical methods need no training data, run in a few milliseconds, and fail in ways one can explain: a marker the tracker lost, a pixel outside the calibrated range. They also produce the quantities that learning methods are often trained to predict or are given as extra inputs (a depth map, a displacement field, a difference image). Their weakness is the assumptions they rest on, which slide 5 names outright: a flat sensor and a calibration procedure.</p>`)}
+
+    <h2>Markers (slides 3–4)</h2>
+    <p>Many gels carry a regular grid of small dark dots on or just under their surface. With no contact the camera sees the grid at rest; when an object presses or drags the gel, the dots move with the material under them. Finding every dot in the current frame and pairing it with its rest position gives one <b>displacement vector per marker</b>: a sparse vector field of how the gel surface moved.</p>
+    <p>Slide 3 shows such fields from the GelSight work on shear and slip (Yuan et al., ICRA 2015): three photographs of a marked gel with a yellow arrow from each dot, and a scale bar for 0.5 mm of motion under each. In the first, a round contact pushes the markers outwards from its centre in every direction; in the second the arrows also point outwards and grow towards the image border; in the third a long, straight contact runs down the middle and the markers on either side are pushed away from it, to the left and to the right.</p>
+    ${lab("markers", "a marker field under four loads")}
+    <p class="muted" style="font-size:.9rem">The lab's fields are a toy model ${ctx}: smooth bumps around a round contact of 7 mm radius, a 3 mm marker pitch, arrows drawn 8 times longer than the motion. Real fields are noisier and depend on the gel's thickness and stiffness.</p>
+    ${why("what markers add to the shading", `<p>The coloured shading of a GelSight-style image encodes the <b>shape</b> of the pressed surface. A force parallel to the surface (shear) hardly changes that shape: the gel is dragged sideways, its relief stays almost the same, and the image barely changes. The markers make that sideways motion visible. From the field one can read a few global numbers, as the lab does: the mean displacement (a net drag, so shear), the outward spreading (a normal press), the rotation about the centre (a torque). <b>Slip</b> shows up in the same field: while the object sticks, the markers under it move with it; when the rim of the contact starts to slide, the markers there lag behind the ones in the middle, which is the kind of signal the cited paper's title (measuring shear and slip) refers to. TacTip, one of Lecture 4's sensor families, is built entirely around tracking such markers.</p>`)}
+    <h3>Three levels of marker processing (slide 4)</h3>
+    <p>Slide 4 sorts marker methods, after a 2023 review (Li, Li &amp; Jiang, IEEE Sensors Journal), into three approaches of increasing complexity:</p>
+    <div class="levels">
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="n">2D</div><div class="t">position of each marker</div><div class="d">In-plane displacement only: the sideways field of the lab's 2D view. Enough for shear, torque and slip.</div></div><span class="x" aria-hidden="true">→</span>
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="n">2.5D</div><div class="t">position and size</div><div class="d">A marker that comes closer to the camera looks bigger, so its size change adds an estimate of the motion along the camera axis: how far the gel is pressed in at that dot.</div></div><span class="x" aria-hidden="true">→</span>
+      <div class="lv" style="border-top-color:var(--vz-s1)"><div class="n">3D</div><div class="t">position, size and shape</div><div class="d">A round dot on a tilted patch is seen at an angle and looks like an ellipse; its shape adds the local tilt of the surface. Together: a 3D displacement per marker.</div></div>
+    </div>
+    <p class="muted" style="font-size:.9rem">The slide gives the three labels; the explanations of what size and shape reveal are ours ${ctx}. The lab's 2.5D and 3D buttons show both effects, exaggerated so they are visible.</p>
+    ${ex("Worked example · how much a pressed marker grows", `<p>${ctx} The image of a dot scales with 1 / distance to the camera. Take a marker 15 mm in front of the lens (a round number of the right order for a fingertip-sized sensor; our assumption) and press it 0.3 mm towards the camera: it now sits at 14.7 mm, and its image grows by 15 / 14.7 = 1.020, so by <b>2 %</b>. A dot 20 pixels across becomes 20.4 pixels wide: 0.4 pixels of signal, measurable only by fitting each blob to sub-pixel precision, and easily swamped by noise or by the dot being squeezed. That is the price of 2.5D. The other way round, a measured growth g gives the depth change 15 · (1 − 1 / g) mm: for g = 1.020, 15 · 0.0196 = 0.29 mm. With markers 3 mm apart, that is one depth sample every 3 mm, coarse next to the per-pixel depth of the next section.</p>`)}
+
+    <h2>Depth estimation (slide 5)</h2>
+    <p>The second tool skips the dots and uses the shading itself. The slide states the model in one line: the intensity at each pixel is a function of the local slope of the gel surface,</p>
+    <div class="formula">I(x, y) = R( ∂H/∂x , ∂H/∂y )</div>
+    <p>where <b>H</b> is the height map of the deformed surface and <b>R</b> the <b>reflectance map</b>, the fixed relation between a slope and the colour it produces under the sensor's lights. The task is the inverse: <b>given an image I(x, y), estimate the deformation of the height map H</b>. The slide points to section 5 of Johnson &amp; Adelson's retrographic-sensing paper (CVPR 2009) and to sections 3.3 and 3.5 of the GelSight paper by Yuan, Dong &amp; Adelson (Sensors 2017), and it names the catch: <b>strong assumptions, a flat sensor and a calibration procedure</b>.</p>
+    ${why("the recipe behind the one-line formula", `<p>In outline, the GelSight line of work does it in two steps. <b>Invert R:</b> R has no simple closed form on a real sensor (the LEDs are close, the coating is not perfectly matte), so it is <b>measured</b>. A ball of known radius is pressed into the gel; inside its imprint the surface has the ball's shape, so the true gradient at every pixel follows from geometry. Each pixel gives one pair "this colour ↔ this gradient", and the pairs are stored in a lookup table (or fitted with a small model) that maps any colour back to (∂H/∂x, ∂H/∂y). <b>Integrate:</b> a gradient field is not yet a height map; it is integrated, usually by solving a Poisson equation ∇²H = ∂gₓ/∂x + ∂g_y/∂y with H = 0 on the flat border. Practice 4's n = L⁻¹ I was the textbook version of step one with known light directions; the lookup table replaces L⁻¹ with a measured mapping. The two assumptions of the slide come from exactly these steps: the table only fits a flat gel under fixed lights, and it only exists after calibration.</p>`)}
+    ${lab("ball", "the calibration ball")}
+    ${ex("Worked example · one press of a 2 mm ball", `<p>${ctx} Radius R = 2 mm, pressed d = 0.5 mm deep. The contact radius is a = √(2Rd − d²) = √(2 − 0.25) = <b>1.32 mm</b>. At x = 1 mm from the centre the surface follows the sphere, z = R − d − √(R² − x²) = 1.5 − √3 = −0.232 mm (0.268 mm below the flat gel), and its gradient is x / √(R² − x²) = 1 / √3 = <b>0.577</b>, a 30° slope. At the rim the gradient reaches a / (R − d) = 1.32 / 1.5 = <b>0.88</b> (41.4°). In 2D the imprint covers every slope direction from 0 to 0.88, so one press fills the table for all gradients up to that size; steeper contacts later fall outside it, which is one reason to press a little deeper during calibration than the objects you expect.</p>`)}
+    <h3>From gradients to a height map</h3>
+    <p>Integrating sums up small errors: a gradient that is slightly wrong everywhere (a calibration bias) makes the height drift linearly across the image, and random noise makes it wander. Knowing that the gel is flat outside the contact pins the height at the border and removes the drift.</p>
+    ${lab("integ", "integrating noisy gradients")}
+    ${tbl(["x (mm)", "true z (mm)", "summed from the left (mm)", "pinned at both edges (mm)"], Array.from({ length: 9 }, (_, i) => i * 20).map(k => [num(IG_X[k], 1), num(IGS.t[k], 3), num(IGS.nv[k], 3), num(IGS.cr[k], 3)]))}
+    <p class="muted" style="font-size:.9rem">The table lists the default setting (σ = 0.04, bias 0.01); the chart follows the sliders.</p>
+
+    <h2>From images to videos: the delta image (slide 6)</h2>
+    <p>A single tactile image can be <b>ambiguous</b>. It shows the gel at one instant: whether the contact is growing or shrinking, whether the object is about to slip, or whether a colour shift comes from a contact or from the gel and LEDs themselves cannot be read from one frame. <b>Several images over time</b> show how things change. The slide's simplest way to bring time in is the delta image:</p>
+    <div class="formula">Δ(t) = I(t) − I<sub>no touch</sub></div>
+    <p>It removes everything that is the same in every frame (uneven lighting, the gel's colour, marks on the coating) and leaves what the contact changed, frame after frame. The slide announces a live demo at this point. It is Practice 4's background subtraction, now applied to every frame of a stream.</p>
+    ${chart("delta", leg([[1, "difference to the no-touch frame (slide 6)", "ln"], [2, "difference to the previous frame (our addition)", "ln"], ["g", "contact threshold", "ln"]]))}<figcaption>A synthetic press, hold, slide and release at 30 frames per second, read two ways ${ctx}: the mean absolute difference per pixel to the no-touch frame and to the previous frame. The floor of 3.4 grey levels is what two frames with a noise of σ = 3 differ by on average. Hover or focus the chart.</figcaption></figure>
+    ${tbl(["phase", "vs no-touch frame", "vs previous frame"], [[0, "no contact"], [20, "press"], [38, "hold"], [56, "slide"], [70, "release"], [86, "no contact"]].map(([k, p]) => [`${p} (t = ${num(k / 30, 2)} s)`, num(dtRef(k), 1), num(dtPrev(k), 1)]))}
+    ${why("two kinds of difference, two questions", `<p>The difference to the no-touch frame answers <b>is there contact, and where?</b> It stays high for as long as something presses, including the hold, so a fixed threshold on it detects contact. The difference to the previous frame answers <b>what is changing right now?</b> It is quiet during a steady hold and lights up at the onset, during sliding and at the release, which is the information a grasp controller needs to react to slip. An event camera such as Lecture 5's Evetac produces the second kind in hardware, per pixel and only where something changes.</p>`)}
+    ${ex("Worked example · a per-pixel contact mask", `<p>${ctx} Each pixel of a 320 × 240 frame (76 800 pixels) carries noise of σ = 3 grey levels. The difference of two such frames has σ√2 = ${num(sd, 2)}; a threshold at three times that, <b>${num(3 * sd, 1)}</b> grey levels, is crossed by pure noise at about 0.27 % of pixels, so roughly <b>${num(fp, 0)}</b> false pixels per frame. A contact covering 5 % of the image (3 840 pixels) that changes them by ±40 grey levels clears the threshold almost everywhere, so the mask holds about 3 840 true pixels against about 200 false ones. Averaging 16 empty frames for the reference lowers the noise of the difference to 3 · √(1 + 1/16) = 3.09 and the threshold to 9.3, so weaker contacts become detectable (the same √(1 + 1/N) as in <a href="touch-sensing/exercise.html?n=4">Practice 4</a>).</p>`)}
+
+    <div class="tiles">
+      <div class="tile"><div class="v">2D → 2.5D → 3D</div><div class="l">marker processing: position, then size, then shape</div></div>
+      <div class="tile"><div class="v">I = R(∂H/∂x, ∂H/∂y)</div><div class="l">the image as a function of the surface slope; invert R, then integrate</div></div>
+      <div class="tile"><div class="v">flat + calibrated</div><div class="l">the two strong assumptions of analytical depth estimation</div></div>
+      <div class="tile"><div class="v">Δ = I(t) − I<sub>no touch</sub></div><div class="l">the delta image that brings time in</div></div>
+    </div>
+
+    <h2>Take-home (summary, slide 7)</h2>
+    <ul>
+      <li><b>Which two routes process VBTS data?</b> Analytical methods (today) and learning-based AI/ML methods (next lectures).</li>
+      <li><b>What do markers measure?</b> The displacement of the gel surface at each dot; the field shows shear, normal pressing, torque and the onset of slip, which the shading alone hardly shows.</li>
+      <li><b>What are 2D, 2.5D and 3D marker methods?</b> Using the markers' position; position and size; position, size and shape. Each adds information about the motion out of the image plane.</li>
+      <li><b>What does depth estimation solve?</b> Given I(x, y) = R(∂H/∂x, ∂H/∂y), recover the height map H: map colours to gradients (calibrated, e.g. with a ball of known size), then integrate the gradients.</li>
+      <li><b>What does it assume?</b> A flat sensor and a calibration procedure.</li>
+      <li><b>Why go from images to videos?</b> One image is ambiguous; changes over time carry the information. The delta image, current frame minus the frame without touch, is the simplest way in.</li>
+    </ul>
+    ${ex("Likely exam questions", `<p>Name the analytical tools for VBTS images and what each one gives. Explain the difference between 2D, 2.5D and 3D marker methods. Why do markers reveal shear when the shading does not? Write down the reflectance-map equation, say what is known and what is sought, and describe how R is obtained and how the height map follows. Which assumptions does that rest on? What is a delta image and why are single frames ambiguous? This list is our guess ${ctx}.</p>`)}
+    <h2>References named in the lecture (slides 3–5, 8)</h2>
+    <ul class="refs">
+      <li>Yuan, Li, Srinivasan &amp; Adelson (2015). Measurement of shear and slip with a GelSight tactile sensor. ICRA, 304–311.</li>
+      <li>Li, Li &amp; Jiang (2023). Marker displacement method used in vision-based tactile sensors: from 2-D to 3-D, a review. IEEE Sensors Journal 23(8), 8042–8059.</li>
+      <li>Johnson &amp; Adelson (2009). Retrographic sensing for the measurement of surface texture and shape. CVPR (section 5).</li>
+      <li>Yuan, Dong &amp; Adelson (2017). GelSight: high-resolution robot tactile sensors for estimating geometry and force. Sensors 17(12), 2762 (sections 3.3 and 3.5).</li>
+    </ul>
+    <p class="muted">Next: <a href="touch-sensing/lecture.html?n=8">Lecture 8, ML for Touch 1</a> (30 Nov), the learning-based route. The practice to this lecture's topic is <a href="touch-sensing/exercise.html?n=7">Practice 7, Perception with Touch</a> (1 Dec); the practice the day after this lecture was <a href="touch-sensing/exercise.html?n=6">Practice 6</a> (Simulating Touch, with TACTO). Home Exercise 2 opens on 1 Dec. Previous: <a href="touch-sensing/lecture.html?n=6">Lecture 6</a>. Slides and the feedback form are on the <a href="${m.links.opal}" target="_blank" rel="noopener">OPAL course page ↗</a>.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -1198,7 +1486,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, 09:20–10:50, ${esc(roomOn(l.date))}.<br>The summary appears here once the slides are on OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6 };
+const WRITEUPS = { 0: lecture0, 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6, 7: lecture7 };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
