@@ -2036,6 +2036,441 @@ function lecture6() {
     <p class="muted">No exercise sheet on CMOS logic yet: <a href="digital-circuit-design/exercise.html?n=3">exercise 3 on 19 Nov</a> is arithmetic, and sheet 4 (<a href="digital-circuit-design/exercise.html?n=4">exercise 4, 3 Dec</a>) was not in OPAL on 17 Nov. Previous: <a href="digital-circuit-design/lecture.html?n=5">lecture 5, semiconductor technology</a>. Next: <a href="digital-circuit-design/lecture.html?n=7">lecture 7, timing of CMOS logic</a> (23 Nov), the dynamic side of the same gates. Background: <a href="digital-circuit-design/basics.html">basics page</a>. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a> (password from lecture 1; not for republication).</p>`;
 }
 
+// ===== Lecture 7: timing of CMOS logic (2022/23 deck, 21 slides) =====
+// Colour roles (course palette, validated for both themes): slot 1 = output Z, the RC model, BUFX1 and the path through
+// the high fan-out gate; slot 2 = the square-law transistor, BUFX2 and the path through most gates; slot 3 = BUFX4;
+// gray = input A, clock-to-Q, setup and hold bars and other reference marks. Text stays in ink colours.
+const LN2 = Math.log(2);
+const ps7 = v => Math.abs(v) >= 1000 ? f2(v / 1000, 2) + " ns" : f2(v, Math.abs(v) < 10 ? 2 : Math.abs(v) < 100 ? 1 : 0) + " ps";
+const hz7 = ps => { const g = 1000 / ps; return g >= 1 ? f2(g, 1) + " GHz" : f2(g * 1000, 0) + " MHz"; };
+const r2_7 = v => Math.round(v * 100) / 100;
+const sl7 = v => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(1) + " ns";
+const fC7 = c => c >= 1000 ? f2(c / 1000, 2) + " pF" : f2(c, c < 10 ? 1 : 0) + " fF";
+const rng7 = (k, lab, min, max, step, val) => `<label><span>${lab}</span> <input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${val}"> <output data-o="${k}"></output></label>`;
+const sb7 = s => `<tspan baseline-shift="sub" font-size="8">${s}</tspan>`;
+const gkey7 = `<span class="key" style="--c:var(--vz-gray)"></span>`;
+
+// Explorer and chart (slides 4 and 13): an ideal input step through the RC model, transition times in three
+// conventions. τ in ps = R in kΩ × C in fF.
+const RC7 = { rn: 4, rp: 4, lc: +Math.log10(3.3).toFixed(3), conv: 0 };
+const CONV7 = [[0.1, 0.9, "10–90 %", "slide 4"], [0.2, 0.8, "20–80 %", "also in use"], [0.3, 0.7, "30–70 %", "slide 13"]];
+const RC7_PRESETS = [["slide 10's inverter driving one copy of itself", 4, 4, 3.3], ["the same inverter driving 1 pF", 4, 4, 1001.3], ["PMOS twice as resistive", 4, 8, 3.3]];
+const rcT7 = () => { const c = 10 ** RC7.lc; return { c, tf: RC7.rn * c, tr: RC7.rp * c }; };
+const conv7 = ([lo, hi]) => Math.log(hi / lo);   // transition time of an RC edge between lo and hi, in units of τ
+CHARTS.rcw = narrow => {
+  const { tf, tr } = rcT7(), [lo, hi, cname] = CONV7[RC7.conv];
+  const W = narrow ? 340 : 600, L = narrow ? 40 : 52, R = 12, T = 12, PH = narrow ? 130 : 150, B = 50, H = T + PH + B, PW = W - L - R;
+  const seg = 6 * Math.max(tf, tr), pad = 0.12 * seg, ta = pad, tb = ta + seg, tEnd = tb + seg;
+  const x = t => L + t / tEnd * PW, y = v => T + (1 - v) * PH, v0 = Math.exp(-(tb - ta) / tf);
+  const z = t => t < ta ? 1 : t < tb ? Math.exp(-(t - ta) / tf) : 1 - (1 - v0) * Math.exp(-(t - tb) / tr);
+  const ts = [...Array.from({ length: 241 }, (_, i) => i / 240 * tEnd), ta, tb].sort((a, b) => a - b);
+  const zp = "M" + ts.map(t => `${x(t).toFixed(1)},${y(z(t)).toFixed(1)}`).join(" L");
+  const ap = `M${x(0)},${y(0)} H${x(ta)} V${y(1)} H${x(tb)} V${y(0)} H${x(tEnd)}`;
+  const thr = [lo, hi].map(v => `<line class="l7thr" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)} %</text>`).join("");
+  const rails = `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>` + (narrow ? "" : `<text class="tick" x="${L - 6}" y="${y(1) + 4}" text-anchor="end">V${sb7("DD")}</text><text class="tick" x="${L - 6}" y="${y(0) + 4}" text-anchor="end">V${sb7("SS")}</text>`);
+  const t1 = ta + tf * Math.log(1 / hi), t2 = ta + tf * Math.log(1 / lo), t3 = tb + tr * Math.log((1 - v0) / (1 - lo)), t4 = tb + tr * Math.log((1 - v0) / (1 - hi));
+  const yb = T + PH + 12;
+  const br = (a, b, va, vb, name, tau) => `<line class="ann" x1="${x(a)}" x2="${x(a)}" y1="${y(va)}" y2="${yb + 4}" stroke-dasharray="2 2"/><line class="ann" x1="${x(b)}" x2="${x(b)}" y1="${y(vb)}" y2="${yb + 4}" stroke-dasharray="2 2"/>
+    <line class="l7br" x1="${x(a)}" x2="${x(b)}" y1="${yb}" y2="${yb}"/><text class="lbl" x="${(x(a) + x(b)) / 2}" y="${yb + 14}" text-anchor="middle">t${sb7(name)} = ${ps7(b - a)}</text>
+    <circle class="dot" cx="${x(a)}" cy="${y(va)}" r="3.5"/><circle class="dot" cx="${x(b)}" cy="${y(vb)}" r="3.5"/>`;
+  const step = nice(tEnd / (narrow ? 3 : 5)), xt = [];
+  for (let v = 0; v <= tEnd * 1.0001; v += step) xt.push(`<text class="tick" x="${x(v)}" y="${H - 4}" text-anchor="middle">${v ? ps7(v) : "0"}</text>`);
+  const N = 30, cw = PW / N;
+  const cols = Array.from({ length: N + 1 }, (_, i) => { const t = i / N * tEnd, vz = z(t), va = t >= ta && t < tb;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>t = ${ps7(t)}</b>input A at V<sub>${va ? "DD" : "SS"}</sub><br>output Z at ${f2(vz * 100, 0)} % of V<sub>DD</sub>`)}"><rect class="hit" x="${x(t) - cw / 2}" y="${T}" width="${cw}" height="${PH}"/><line class="xcol" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + PH}"/><circle class="dot xd" cx="${x(t)}" cy="${y(vz)}" r="4"/></g>`; }).join("");
+  const names = `<text class="lbl" x="${x(ta / 2)}" y="${y(1) - 5}" text-anchor="middle">Z</text><text class="lbl" x="${x(ta / 2)}" y="${y(0) - 5}" text-anchor="middle">A</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Input A steps from VSS to VDD and back; output Z falls with time constant ${ps7(tf)} and rises with ${ps7(tr)}. Measured between ${cname.replace(/–/, " and ")}, the fall takes ${ps7(t2 - t1)} and the rise ${ps7(t4 - t3)}">${rails}${thr}<path class="line gray" d="${ap}"/><path class="line thick" d="${zp}"/>${names}${br(t1, t2, hi, lo, "f", tf)}${br(t3, t4, lo, hi, "r", tr)}${xt.join("")}${cols}</svg>`;
+};
+function rcOut() {
+  const { c, tf, tr } = rcT7(), f10 = tf * Math.log(9), r10 = tr * Math.log(9);
+  return `<dt>Time constants</dt><dd>τ<sub>f</sub> = R<sub>n</sub>·C = ${f2(RC7.rn, 1)} kΩ · ${fC7(c)} = <b>${ps7(tf)}</b>; τ<sub>r</sub> = R<sub>p</sub>·C = <b>${ps7(tr)}</b></dd>
+    <dt>Slide 4, 10–90 %</dt><dd>t<sub>f</sub> = 2.2·τ<sub>f</sub> = <b>${ps7(f10)}</b>, t<sub>r</sub> = 2.2·τ<sub>r</sub> = <b>${ps7(r10)}</b>, so f<sub>max</sub> = 1/(t<sub>f</sub> + t<sub>r</sub>) = <b>${hz7(f10 + r10)}</b></dd>
+    <dt>Same edge, 3 rulers</dt><dd>${CONV7.map(k => `${k[2]}: ${ps7(tf * conv7(k))} (${f2(conv7(k), 2)}·τ)`).join(" · ")}</dd>
+    <dt>50 % delay</dt><dd>t<sub>d</sub> = ln 2·τ = ${ps7(LN2 * tf)} falling, ${ps7(LN2 * tr)} rising</dd>`;
+}
+function initRc(body) {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Examples">${RC7_PRESETS.map(([t], i) => `<button type="button" class="preset" data-p="${i}">${t}</button>`).join("")}</div>
+    <div class="ctl">${rng7("rn", "R<sub>n</sub>", 1, 20, 0.5, RC7.rn)}${rng7("rp", "R<sub>p</sub>", 1, 20, 0.5, RC7.rp)}${rng7("lc", "C<sub>out</sub> + C<sub>load</sub>", 0, 3.01, 0.01, RC7.lc)}</div>
+    <div class="presets" role="group" aria-label="Measurement convention">${CONV7.map((k, i) => `<button type="button" class="preset" data-c="${i}">${k[2]} (${k[3]})</button>`).join("")}</div>
+    <dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), o = k => body.querySelector(`[data-o="${k}"]`);
+  const sync = () => { o("rn").textContent = f2(RC7.rn, 1) + " kΩ"; o("rp").textContent = f2(RC7.rp, 1) + " kΩ"; o("lc").textContent = fC7(10 ** RC7.lc);
+    body.querySelectorAll("[data-p]").forEach(b => { const p = RC7_PRESETS[+b.dataset.p]; b.setAttribute("aria-pressed", p[1] === RC7.rn && p[2] === RC7.rp && Math.abs(Math.log10(p[3]) - RC7.lc) < 0.006); });
+    body.querySelectorAll("[data-c]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.c === RC7.conv));
+    ro.innerHTML = rcOut(); };
+  body.addEventListener("input", e => { const k = e.target.dataset.k; if (!k) return; RC7[k] = +e.target.value; sync(); mountCharts(); });
+  body.addEventListener("click", e => { const p = e.target.closest("[data-p]"), c = e.target.closest("[data-c]");
+    if (p) { const [, rn, rp, cc] = RC7_PRESETS[+p.dataset.p]; Object.assign(RC7, { rn, rp, lc: +Math.log10(cc).toFixed(3) }); ["rn", "rp", "lc"].forEach(k => { body.querySelector(`[data-k="${k}"]`).value = RC7[k]; }); }
+    else if (c) RC7.conv = +c.dataset.c; else return;
+    sync(); mountCharts(); });
+  sync();
+}
+
+// Chart (slide 3, context): the RC model against the square-law NMOS of lecture 5 (β = 0.6 mA/V², V_th = 0.4 V,
+// λ = 0.1 /V) discharging 10 fF from 1.2 V. mA / fF = V/ps, so the Euler step needs no unit factors.
+const SQ7 = (() => {
+  const VDD = 1.2, vth = 0.4, beta = 0.6, lam = 0.1, C = 10, vov = VDD - vth;
+  const id = v => v >= vov ? beta / 2 * vov * vov * (1 + lam * (v - vov)) : beta * (vov * v - v * v / 2);
+  const rn = VDD / id(VDD), tau = rn * C, pts = [VDD];
+  let v = VDD; for (let i = 1; i <= 250; i++) { for (let k = 0; k < 20; k++) v -= id(v) / C * 0.05; pts.push(v); }
+  const sq = t => pts[Math.round(t)], rc = t => VDD * Math.exp(-t / tau);
+  const cross = (f, lvl) => { for (let t = 0; t < 250; t++) if (f(t + 1) <= lvl) { const a = f(t), b = f(t + 1); return t + (a - lvl) / (a - b); } return NaN; };
+  const m = f => ({ t50: cross(f, 0.5 * VDD), tf: cross(f, 0.1 * VDD) - cross(f, 0.9 * VDD) });
+  return { VDD, rn, tau, sq, rc, RC: m(rc), SQ: m(sq) };
+})();
+CHARTS.rcsq = narrow => {
+  const { VDD, sq, rc, RC, SQ, tau } = SQ7, W = narrow ? 340 : 600, L = narrow ? 40 : 48, R = 14, T = 12, H = 220, B = 30, PW = W - L - R, PH = H - T - B, TM = 250;
+  const x = t => L + t / TM * PW, y = v => T + (1 - v / VDD) * PH;
+  const grid = [0, 0.3, 0.6, 0.9, 1.2].map(v => `<line class="${v ? "grid" : "axis"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${f2(v, 1)} V</text>`).join("");
+  const xt = (narrow ? [0, 100, 200] : [0, 50, 100, 150, 200, 250]).map(v => `<text class="tick" x="${x(v)}" y="${H - 10}" text-anchor="middle">${v} ps</text>`).join("");
+  const path = f => "M" + Array.from({ length: TM + 1 }, (_, t) => `${x(t).toFixed(1)},${y(f(t)).toFixed(1)}`).join(" L");
+  const half = `<line class="l7thr" x1="${L}" x2="${W - R}" y1="${y(VDD / 2)}" y2="${y(VDD / 2)}"/>`;
+  const marks = `<circle class="dot" cx="${x(RC.t50)}" cy="${y(VDD / 2)}" r="4.5"/><circle class="dot k2" cx="${x(SQ.t50)}" cy="${y(VDD / 2)}" r="4.5"/>`;
+  const lab = `<text class="lbl" x="${x(RC.t50) + 8}" y="${y(VDD / 2) - 8}">${f2(RC.t50, 0)} ps</text><text class="lbl" x="${x(SQ.t50) - 8}" y="${y(VDD / 2) + 18}" text-anchor="end">${f2(SQ.t50, 0)} ps</text>`;
+  const cw = PW / 25;
+  const cols = Array.from({ length: 26 }, (_, i) => { const t = i * 10;
+    const row = (k, nm, v) => `<span class="trow"><i style="--c:var(--vz-s${k})"></i>${nm}: <strong>${f2(v, 2)} V</strong></span>`;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>t = ${t} ps</b>${row(1, "RC model", rc(t))}${row(2, "square law", sq(t))}`)}"><rect class="hit" x="${x(t) - cw / 2}" y="${T}" width="${cw}" height="${PH}"/><line class="xcol" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + PH}"/><circle class="dot xd" cx="${x(t)}" cy="${y(rc(t))}" r="4"/><circle class="dot k2 xd" cx="${x(t)}" cy="${y(sq(t))}" r="4"/></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Output voltage over time as one NMOS discharges 10 femtofarads from 1.2 volts. The RC model with the effective resistance of slide 3 (time constant ${f2(tau, 0)} ps) reaches half the supply after ${f2(RC.t50, 0)} ps; the square-law transistor gets there after ${f2(SQ.t50, 0)} ps and is below the RC curve all the way">${grid}${half}${xt}<path class="line" d="${path(rc)}"/><path class="line k2" d="${path(sq)}"/>${marks}${lab}${cols}</svg>`;
+};
+
+// Explorer and chart (slides 7-10): an N-stage inverter chain, each stage A times wider than the one before, driving
+// C_load. Slide 10's first inverter: R_n,1 = R_p,1 = 4 kΩ, C_in,1 = 2.0 fF, C_out,1 = 1.3 fF.
+const CH7 = { lcl: 3, r: 0.65, n: 6 };   // log10(C_load in fF), C_out,1 / C_in,1, number of stages
+const CH7_RS = 8, CH7_CIN = 2, NMAX7 = 12;
+const chainT7 = (N, cl = 10 ** CH7.lcl, r = CH7.r) => { const A = (cl / CH7_CIN) ** (1 / N), st = LN2 * CH7_RS * (r * CH7_CIN + A * CH7_CIN); return { n: N, A, st, t: N * st }; };
+const aOpt7 = r => { if (r <= 0) return Math.E; let lo = Math.E, hi = 60; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (m * (Math.log(m) - 1) > r) hi = m; else lo = m; } return lo; };
+const chainAll7 = () => Array.from({ length: NMAX7 }, (_, i) => chainT7(i + 1));
+CHARTS.chain = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 50 : 60, R = 14, T = 24, H = 240, B = 30, PW = W - L - R, PH = H - T - B;
+  const d = chainAll7(), best = d.reduce((a, b) => b.t < a.t ? b : a);
+  let lo = Math.floor(Math.log10(Math.min(...d.map(q => q.t)))), hi = Math.ceil(Math.log10(Math.max(...d.map(q => q.t)))); if (hi === lo) hi++;
+  const x = n => L + (n - 0.5) / NMAX7 * PW, y = t => T + (hi - Math.log10(t)) / (hi - lo) * PH;
+  const ticks = []; for (let e = lo; e <= hi; e++) [1, 2, 5].forEach(m => { const v = m * 10 ** e; if (v <= 10 ** hi && (m === 1 || hi - lo <= 2)) ticks.push(v); });
+  const grid = ticks.map(v => `<line class="${v === 10 ** lo ? "axis" : "grid"}" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${ps7(v)}</text>`).join("");
+  const xt = d.map(q => `<text class="tick" x="${x(q.n)}" y="${H - 10}" text-anchor="middle">${q.n}</text>`).join("") + (narrow ? "" : `<text class="tick" x="${L}" y="${H - 10}" text-anchor="end">N =</text>`);
+  const path = "M" + d.map(q => `${x(q.n).toFixed(1)},${y(q.t).toFixed(1)}`).join(" L");
+  const pts = d.map(q => `<g class="pt" tabindex="0" data-tip="${esc(`<b>N = ${q.n} stage${q.n > 1 ? "s" : ""}</b>A = ${f2(q.A, 2)} per stage<br>${q.n} × ${ps7(q.st)} = ${ps7(q.t)}`)}"><circle class="hit" cx="${x(q.n)}" cy="${y(q.t)}" r="14"/><circle class="dot" cx="${x(q.n)}" cy="${y(q.t)}" r="${q.n === CH7.n ? 5.5 : 3.5}"/></g>`).join("");
+  const ring = d.filter(q => q.n === CH7.n).map(q => `<circle class="l7ring" cx="${x(q.n)}" cy="${y(q.t)}" r="9"/>`).join("");
+  const lbl = `<text class="lbl" x="${x(best.n)}" y="${y(best.t) - 14}" text-anchor="middle">fastest</text>` + (narrow ? "" : `<text class="note" x="${x(1) + 10}" y="${y(d[0].t) + 4}">one inverter</text>`);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Total delay of an inverter chain driving ${fC7(10 ** CH7.lcl)} over the number of stages, logarithmic axis: ${ps7(d[0].t)} with one inverter, lowest at ${best.n} stages with ${ps7(best.t)}, ${ps7(d[NMAX7 - 1].t)} at ${NMAX7} stages">${grid}${xt}<path class="line" d="${path}"/>${ring}${pts}${lbl}</svg>`;
+};
+function chainOut() {
+  const cl = 10 ** CH7.lcl, c = chainT7(CH7.n), one = chainT7(1), d = chainAll7(), best = d.reduce((a, b) => b.t < a.t ? b : a);
+  const nE = Math.log(cl / CH7_CIN), ao = aOpt7(CH7.r), no = nE / Math.log(ao);
+  return `<dt>Per stage</dt><dd>A = (C<sub>load</sub>/C<sub>in,1</sub>)<sup>1/N</sup> = (${f2(cl, 0)}/2)<sup>1/${CH7.n}</sup> = <b>${f2(c.A, 2)}</b>; each stage takes ln 2 · 8 kΩ · (${f2(CH7.r * CH7_CIN, 2)} + ${f2(c.A, 2)} · 2) fF = ${ps7(c.st)}</dd>
+    <dt>Whole chain</dt><dd>${CH7.n} × ${ps7(c.st)} = <b>${ps7(c.t)}</b>; one inverter alone: ${ps7(one.t)}${CH7.n > 1 ? `, so the chain is ${one.t >= c.t ? `${f2(one.t / c.t, 1)} times faster` : `${f2(c.t / one.t, 1)} times slower`}` : ""}</dd>
+    <dt>Fastest</dt><dd>${best.n} stage${best.n > 1 ? "s" : ""}: ${ps7(best.t)} with A = ${f2(best.A, 2)}</dd>
+    <dt>The two rules</dt><dd>neglecting C<sub>out,1</sub>: A = e and N = ln(C<sub>load</sub>/C<sub>in,1</sub>) = ${f2(nE, 2)}; with C<sub>out,1</sub>/C<sub>in,1</sub> = ${f2(CH7.r, 2)}: A·(ln A − 1) = ${f2(CH7.r, 2)}, so A = ${f2(ao, 2)} and N = ${f2(no, 2)}</dd>`;
+}
+function initChain(body) {
+  body.innerHTML = `<div class="presets"><button type="button" class="preset" data-p="0">slide 10: 1 pF, 6 stages</button></div>
+    <div class="ctl">${rng7("lcl", "C<sub>load</sub>", 1, 4, 0.05, CH7.lcl)}${rng7("r", "C<sub>out,1</sub>/C<sub>in,1</sub>", 0, 2, 0.05, CH7.r)}${rng7("n", "stages N", 1, NMAX7, 1, CH7.n)}</div>
+    <dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), o = k => body.querySelector(`[data-o="${k}"]`);
+  const sync = () => { o("lcl").textContent = fC7(10 ** CH7.lcl); o("r").textContent = f2(CH7.r, 2); o("n").textContent = CH7.n;
+    body.querySelector("[data-p]").setAttribute("aria-pressed", CH7.lcl === 3 && CH7.r === 0.65 && CH7.n === 6); ro.innerHTML = chainOut(); };
+  body.addEventListener("input", e => { const k = e.target.dataset.k; if (!k) return; CH7[k] = +e.target.value; sync(); mountCharts(); });
+  body.addEventListener("click", e => { if (!e.target.closest("[data-p]")) return; Object.assign(CH7, { lcl: 3, r: 0.65, n: 6 }); ["lcl", "r", "n"].forEach(k => { body.querySelector(`[data-k="${k}"]`).value = CH7[k]; }); sync(); mountCharts(); });
+  sync();
+}
+
+// Explorer and chart (slides 14-15): one change of D near a rising clock edge, against DFFX1's maximum setup (0.4 ns),
+// hold (0.3 ns) and clock-to-Q (0.3 ns) from slide 18. Clock period 2 ns, rising edges at 0 and 2 ns.
+const WIN7 = { td: -0.8 };
+const WIN7_P = { su: 0.4, ho: 0.3, cq: 0.3 };
+const WIN7_PRESETS = [["well before the edge", -0.8], ["inside the setup time", -0.2], ["inside the hold time", 0.15], ["after the hold time", 0.6]];
+const winCase7 = td => td <= -WIN7_P.su ? "early" : td < 0 ? "setup" : td < WIN7_P.ho ? "hold" : "late";
+CHARTS.win = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 26 : 84, R = 10, T = 24, RH = 40, H = T + 3 * RH + 26, PW = W - L - R, t0 = -1.2, t1 = 3.2;
+  const x = t => L + (t - t0) / (t1 - t0) * PW, cs = winCase7(WIN7.td), { su, ho, cq } = WIN7_P, td = WIN7.td;
+  const lv = (r, v) => T + r * RH + (v ? 6 : RH - 10);
+  const wave = (r, segs) => { let d = `M${x(t0)},${lv(r, segs[0][1])}`; segs.slice(1).forEach(([t, v]) => { d += ` H${x(t)} V${lv(r, v)}`; }); return d + ` H${x(t1)}`; };
+  const clk = wave(0, [[t0, 1], [-1, 0], [0, 1], [1, 0], [2, 1], [3, 0]]), dat = wave(1, [[t0, 0], [td, 1]]);
+  const bad = cs === "setup" || cs === "hold";
+  const q = cs === "early" ? `<path class="l7wv" d="${wave(2, [[t0, 0], [cq, 1]])}"/>` : cs === "late" ? `<path class="l7wv" d="${wave(2, [[t0, 0], [2 + cq, 1]])}"/>`
+    : `<path class="l7wv" d="M${x(t0)},${lv(2, 0)} H${x(cq)}"/><rect class="l7unk" x="${x(cq)}" y="${lv(2, 1)}" width="${x(2 + cq) - x(cq)}" height="${lv(2, 0) - lv(2, 1)}"/><path class="l7wv" d="M${x(2 + cq)},${lv(2, 1)} H${x(t1)}"/>`;
+  const wins = [0, 2].map(e => `<g class="pt" tabindex="0" data-tip="${esc(`<b>Edge at ${e} ns</b>D must not change from ${f2(e - su, 1)} to ${f2(e + ho, 1)} ns<br>setup 0.4 ns before, hold 0.3 ns after`)}"><rect class="l7win" x="${x(e - su)}" y="${T - 6}" width="${x(e + ho) - x(e - su)}" height="${3 * RH}"/></g><line class="l7edge" x1="${x(e)}" x2="${x(e)}" y1="${T - 6}" y2="${T + 3 * RH - 6}"/>`).join("");
+  const wl = narrow ? "" : `<text class="note" x="${x(-su / 2)}" y="${T - 10}" text-anchor="middle">setup</text><text class="note" x="${x(ho / 2)}" y="${T - 10}" text-anchor="middle">hold</text>`;
+  const rl = (narrow ? ["C", "D", "Q"] : ["clock C", "data D", "flip-flop Q"]).map((t, r) => `<text class="cat" x="${L - 8}" y="${T + r * RH + RH / 2}" text-anchor="end">${t}</text>`).join("");
+  const xt = [-1, 0, 1, 2, 3].map(v => `<text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v === 3 ? "3 ns" : v === -1 ? "−1" : v}</text>`).join("");
+  const dm = `<g class="pt" tabindex="0" data-tip="${esc(`<b>D changes at ${td < 0 ? "−" : ""}${f2(Math.abs(td), 2)} ns</b>${td < 0 ? "before" : "after"} the rising edge at 0`)}"><circle class="hit" cx="${x(td)}" cy="${T + RH + RH / 2 - 2}" r="14"/><circle class="dot" cx="${x(td)}" cy="${T + RH + RH / 2 - 2}" r="5"/></g>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Clock, data and flip-flop output over two clock periods. Shaded around each rising edge: the window from 0.4 ns before to 0.3 ns after it. D changes ${f2(Math.abs(td), 2)} ns ${td < 0 ? "before" : "after"} the first edge: ${bad ? "inside the window, so the stored value is unreliable until the next edge" : cs === "early" ? "early enough, so Q takes the new value after this edge" : "after the window, so Q keeps the old value until the next edge"}">
+    <defs><pattern id="l7hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line class="l7hl" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>
+    ${wins}${wl}${rl}<path class="l7wv" d="${clk}"/><path class="l7wv d" d="${dat}"/>${q}${dm}${xt}</svg>`;
+};
+function winOut() {
+  const td = WIN7.td, a = f2(Math.abs(td), 2);
+  const [fl, why] = { early: [flag("ok", "new value stored"), `D changed ${a} ns before the edge, at least t<sub>setup</sub> = 0.4 ns: the new value had settled in the master's loop when the master closed. Q shows 1 from 0.3 ns after the edge (clock-to-Q).`],
+    setup: [flag("bad", "setup violation"), `D changed only ${a} ns before the edge, less than t<sub>setup</sub> = 0.4 ns: the new value had not settled in the master when it closed. What Q shows until the next edge is not reliable (hatched).`],
+    hold: [flag("bad", "hold violation"), `D changed ${a} ns after the edge, before t<sub>hold</sub> = 0.3 ns had passed: the master's input transfer gate was still closing (t<sub>hold</sub> = t<sub>tgate_C</sub>, slide 15), so the new value leaks into the stored one. Q is not reliable until the next edge.`],
+    late: [flag("ok", "old value kept"), `D changed ${a} ns after the edge, after the hold time: this edge stores the old 0, and the new 1 is taken at the next edge (2 ns), one period later.`] }[winCase7(td)];
+  return `<dt>Verdict</dt><dd>${fl}</dd><dt>Why</dt><dd>${why}</dd>`;
+}
+function initWin(body) {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Examples">${WIN7_PRESETS.map(([t], i) => `<button type="button" class="preset" data-p="${i}">${t}</button>`).join("")}</div>
+    <div class="ctl">${rng7("td", "D changes at", -1, 1, 0.05, WIN7.td)}</div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]");
+  const sync = () => { body.querySelector('[data-o="td"]').textContent = (WIN7.td < 0 ? "−" : WIN7.td > 0 ? "+" : "") + Math.abs(WIN7.td).toFixed(2) + " ns";
+    body.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", WIN7_PRESETS[+b.dataset.p][1] === WIN7.td)); ro.innerHTML = winOut(); };
+  body.addEventListener("input", e => { if (e.target.dataset.k !== "td") return; WIN7.td = r2_7(+e.target.value); sync(); mountCharts(); });
+  body.addEventListener("click", e => { const p = e.target.closest("[data-p]"); if (!p) return; WIN7.td = WIN7_PRESETS[+p.dataset.p][1]; body.querySelector('[data-k="td"]').value = WIN7.td; sync(); mountCharts(); });
+  sync();
+}
+
+// Explorer and chart (slides 16-19): DFFX1 → four buffers → DFFX1 with the cell table of slide 18 (min and max in ns).
+// The setup check uses the max values (as the slides do), the hold check the min path against the max hold time.
+const LIB7 = { setup: [0.2, 0.4], hold: [0.2, 0.3], cq: [0.2, 0.3], X1: [0.3, 0.4], X2: [0.2, 0.3], X4: [0.1, 0.2] };
+const STA7 = { b: ["X1", "X1", "X1", "X1"], T: 2, sk: 0 };   // buffers, clock period, capture clock later than launch clock by sk
+const STA7_PRESETS = [["slide 18: 4 × BUFX1", ["X1", "X1", "X1", "X1"]], ["slide 19: BUFX4 + 3 × BUFX2", ["X4", "X2", "X2", "X2"]]];
+const BUF7_SLOT = { X1: 1, X2: 2, X4: 3 };
+const sum7 = a => a.reduce((s, v) => s + v, 0);
+const sta7 = () => { const mx = STA7.b.map(k => LIB7[k][1]), mn = STA7.b.map(k => LIB7[k][0]);
+  const arr = r2_7(LIB7.cq[1] + sum7(mx)), req = r2_7(STA7.T + STA7.sk - LIB7.setup[1]), amin = r2_7(LIB7.cq[0] + sum7(mn)), hreq = r2_7(STA7.sk + LIB7.hold[1]);
+  return { mx, mn, arr, req, slack: r2_7(req - arr), amin, hreq, hslack: r2_7(amin - hreq), tmin: r2_7(arr + LIB7.setup[1] - STA7.sk) }; };
+CHARTS.sta = narrow => {
+  const s = sta7(), W = narrow ? 340 : 600, L = narrow ? 10 : 150, R = 14, T = 6, RH = narrow ? 62 : 54, BH = 20, H = T + 3 * RH + 24, PW = W - L - R;
+  const xMax = Math.max(2.5, Math.ceil((Math.max(STA7.T + STA7.sk, s.arr) + 0.3) * 2) / 2), x = t => L + t / xMax * PW;
+  const by = r => T + r * RH + 20, top = r => T + r * RH + 12;
+  const lab = (r, t) => narrow ? `<text class="note" x="${L}" y="${top(r)}">${t}</text>` : `<text class="cat" x="${L - 10}" y="${by(r) + 14}" text-anchor="end">${t}</text>`;
+  const seg = (r, a, b, cls, tip) => `<g class="pt" tabindex="0" data-tip="${esc(tip)}"><rect class="bar ${cls}" x="${x(a) + 1}" y="${by(r)}" width="${Math.max(1, x(b) - x(a) - 2)}" height="${BH}" rx="2"/></g>`;
+  const chain = (r, cq, ds, kind) => { let t = 0, out = seg(r, 0, cq, "fg0", `<b>DFFX1 clock-to-Q (${kind})</b>${cq.toFixed(1)} ns · data leaves the flip-flop at ${cq.toFixed(1)} ns`); t = cq;
+    ds.forEach((v, i) => { const a = t; t = r2_7(t + v); out += seg(r, a, t, "f" + BUF7_SLOT[STA7.b[i]], `<b>BUF${STA7.b[i]}, stage ${i + 1} (${kind})</b>${v.toFixed(1)} ns · arrival after it ${t.toFixed(1)} ns`); });
+    return out; };
+  const status = (r, ok, txt) => `<text class="lbl" x="${narrow ? W - R : L - 10}" y="${narrow ? top(r) : by(r) + 32}" text-anchor="end">${ok ? "✓" : "⚠"} ${txt}</text>`;
+  const sr = [Math.min(s.arr, s.req), Math.max(s.arr, s.req)], hr = [Math.min(s.amin, s.hreq), Math.max(s.amin, s.hreq)];
+  const row0 = lab(0, "setup check, max") + chain(0, LIB7.cq[1], s.mx, "max") + (s.slack ? `<rect class="${s.slack > 0 ? "l7ok" : "l7bad"}" x="${x(sr[0])}" y="${by(0) - 3}" width="${x(sr[1]) - x(sr[0])}" height="${BH + 6}"/>` : "") + status(0, s.slack >= 0, `slack ${sl7(s.slack)}`);
+  const capE = r2_7(STA7.T + STA7.sk);
+  const row1 = lab(1, "capture flip-flop") + seg(1, s.req, capE, "fg0 l7su", `<b>DFFX1 setup (max)</b>0.4 ns before the capture edge<br>data required by ${s.req.toFixed(1)} ns`)
+    + `<line class="l7cap" x1="${x(capE)}" x2="${x(capE)}" y1="${by(0) - 6}" y2="${by(1) + BH + 4}"/><text class="note" x="${x(capE) + 4}" y="${by(1) + BH + 14}">${narrow ? "edge" : "capture edge"} ${capE.toFixed(1)}</text>`
+    + `<line class="l7req" x1="${x(s.req)}" x2="${x(s.req)}" y1="${by(0) - 6}" y2="${by(1) + BH + 4}"/><text class="note" x="${x(s.req) - 4}" y="${by(1) + BH + 14}" text-anchor="end">required ${s.req.toFixed(1)}</text>`;
+  const row2 = lab(2, "hold check, min") + chain(2, LIB7.cq[0], s.mn, "min") + `<line class="l7req" x1="${x(s.hreq)}" x2="${x(s.hreq)}" y1="${by(2) - 6}" y2="${by(2) + BH + 6}"/>`
+    + (s.hslack < 0 ? `<rect class="l7bad" x="${x(hr[0])}" y="${by(2) - 3}" width="${x(hr[1]) - x(hr[0])}" height="${BH + 6}"/>` : "") + status(2, s.hslack >= 0, `slack ${sl7(s.hslack)}`);
+  const xt = []; for (let v = 0; v <= xMax + 1e-9; v += 0.5) xt.push(`<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="${T + 8}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v === 0 ? "0" : f2(v, 1)}${v + 0.5 > xMax ? " ns" : ""}</text>`);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Timeline of the path from the launch clock edge at 0. Setup check with maximum delays: data arrives at ${s.arr.toFixed(1)} ns, required by ${s.req.toFixed(1)} ns, slack ${sl7(s.slack)}. Hold check with minimum delays: earliest arrival ${s.amin.toFixed(1)} ns against a hold limit of ${s.hreq.toFixed(1)} ns, slack ${sl7(s.hslack)}">${xt.join("")}<line class="axis" x1="${x(0)}" x2="${x(0)}" y1="${T + 8}" y2="${H - 22}"/>${row0}${row1}${row2}</svg>`;
+};
+function staOut() {
+  const s = sta7(), sk = STA7.sk, skt = sk ? ` ${sk > 0 ? "+" : "−"} ${Math.abs(sk).toFixed(1)} (capture clock ${sk > 0 ? "later" : "earlier"})` : "";
+  return `<dt>Arrival</dt><dd>0.3 (clock-to-Q) + ${s.mx.map(v => v.toFixed(1)).join(" + ")} = <b>${s.arr.toFixed(1)} ns</b></dd>
+    <dt>Required</dt><dd>${STA7.T.toFixed(1)} (period)${skt} − 0.4 (setup) = <b>${s.req.toFixed(1)} ns</b></dd>
+    <dt>Setup slack</dt><dd>${s.slack >= 0 ? flag("ok", "met") : flag("bad", "missed")} ${s.req.toFixed(1)} − ${s.arr.toFixed(1)} = ${sl7(s.slack)}; this path needs a period of at least ${s.tmin.toFixed(1)} ns (${f2(1000 / s.tmin, 0)} MHz)</dd>
+    <dt>Hold check</dt><dd>${s.hslack >= 0 ? flag("ok", "met") : flag("bad", "violated")} earliest arrival 0.2 + ${s.mn.map(v => v.toFixed(1)).join(" + ")} = ${s.amin.toFixed(1)} ns, hold limit${sk ? ` ${sk.toFixed(1)} +` : ""} 0.3 = ${s.hreq.toFixed(1)} ns: slack ${sl7(s.hslack)}</dd>`;
+}
+function initSta(body) {
+  body.innerHTML = `<div class="presets" role="group" aria-label="Slide examples">${STA7_PRESETS.map(([t], i) => `<button type="button" class="preset" data-p="${i}">${t}</button>`).join("")}</div>
+    <div class="l7stages">${[0, 1, 2, 3].map(i => `<span class="l7st" role="group" aria-label="Buffer in stage ${i + 1}"><small>stage ${i + 1}</small>${["X1", "X2", "X4"].map(k => `<button type="button" class="preset" data-s="${i}" data-b="${k}">${k}</button>`).join("")}</span>`).join("")}</div>
+    <div class="ctl">${rng7("T", "clock period", 1, 3, 0.1, STA7.T)}${rng7("sk", "capture clock later by", -0.5, 0.5, 0.1, STA7.sk)}</div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]");
+  const sync = () => { body.querySelector('[data-o="T"]').textContent = STA7.T.toFixed(1) + " ns"; body.querySelector('[data-o="sk"]').textContent = (STA7.sk < 0 ? "−" : "") + Math.abs(STA7.sk).toFixed(1) + " ns";
+    body.querySelectorAll("[data-s]").forEach(b => b.setAttribute("aria-pressed", STA7.b[+b.dataset.s] === b.dataset.b));
+    body.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", STA7_PRESETS[+b.dataset.p][1].join() === STA7.b.join() && STA7.T === 2 && STA7.sk === 0));
+    ro.innerHTML = staOut(); };
+  body.addEventListener("input", e => { const k = e.target.dataset.k; if (!k) return; STA7[k] = r2_7(+e.target.value); sync(); mountCharts(); });
+  body.addEventListener("click", e => { const p = e.target.closest("[data-p]"), st = e.target.closest("[data-s]");
+    if (p) { Object.assign(STA7, { b: STA7_PRESETS[+p.dataset.p][1].slice(), T: 2, sk: 0 }); body.querySelector('[data-k="T"]').value = 2; body.querySelector('[data-k="sk"]').value = 0; }
+    else if (st) STA7.b[+st.dataset.s] = st.dataset.b; else return;
+    sync(); mountCharts(); });
+  sync();
+}
+
+// Explorer and chart (slide 20): five gates between two flip-flops. The delays are ours; G5's grows with its fan-out
+// (0.04 ns plus 0.04 ns per driven input), the way the RC model slows a gate down with every input it has to charge.
+const CP7 = { fo: 6 };
+const CP7_ORDER = ["G1", "G2", "G5", "G3", "G4"];
+const cp7 = () => {
+  const G = { G1: { d: 0.10, in: ["I1"] }, G2: { d: 0.12, in: ["G1", "I2"] }, G5: { d: r2_7(0.04 + 0.04 * CP7.fo), in: ["I2"] }, G3: { d: 0.10, in: ["G2", "G5"] }, G4: { d: 0.15, in: ["I3", "G3"] } };
+  const at = { I1: 0, I2: 0, I3: 0 }, from = {};
+  CP7_ORDER.forEach(k => { const g = G[k]; from[k] = g.in.reduce((b, i) => at[i] > at[b] ? i : b); at[k] = r2_7(at[from[k]] + g.d); });
+  const crit = []; for (let k = "G4"; k; k = from[k]) crit.unshift(k);
+  return { G, at, crit, viaG5: crit.includes("G5"), pA: r2_7(0.10 + 0.12 + 0.10 + 0.15), pB: r2_7(G.G5.d + 0.10 + 0.15) };
+};
+CHARTS.cp = narrow => {
+  const s = cp7(), W = narrow ? 340 : 600, H = 220, bw = narrow ? 44 : 64, bh = narrow ? 34 : 40, my = 84, ly = 164, sx = narrow ? 18 : 26;
+  const P = narrow ? { G1: [66, my], G2: [136, my], G5: [136, ly], G3: [214, my], G4: [288, my] } : { G1: [120, my], G2: [240, my], G5: [240, ly], G3: [370, my], G4: [490, my] };
+  const pin = (k, i) => { const [cx, cy] = P[k], n = s.G[k].in.length; return [cx - bw / 2, n === 1 ? cy : cy - 10 + 20 * i]; };
+  const outp = k => [P[k][0] + bw / 2, P[k][1]];
+  const src = { I1: [sx, my], I2: [sx, ly], I3: [sx, 30] };
+  const wire = (from, k, i) => { const [ax, ay] = from in src ? src[from] : outp(from), [px, py] = pin(k, i);
+    return ay === py ? `M${ax},${ay} H${px}` : `M${ax},${ay} H${px - (i ? 10 : 20)} V${py} H${px}`; };
+  const all = CP7_ORDER.flatMap(k => s.G[k].in.map((f, i) => `<path class="l7w" d="${wire(f, k, i)}"/>`)).join("") + `<path class="l7w" d="M${outp("G4")[0]},${my} H${W - 8}"/>`;
+  const crA = !s.viaG5, pa = `<path class="l7pa${crA ? " crit" : ""}" d="${wire("I1", "G1", 0)} ${wire("G1", "G2", 0)} ${wire("G2", "G3", 0)}"/>`;
+  const pb = `<path class="l7pb${crA ? "" : " crit"}" d="${wire("I2", "G5", 0)} ${wire("G5", "G3", 1)}"/>`;
+  const tail = `<path class="l7pt" d="${wire("G3", "G4", 1)} M${outp("G4")[0]},${my} H${W - 8}"/>`;
+  const fo = Array.from({ length: CP7.fo - 1 }, (_, j) => `<path class="l7w" d="M${outp("G5")[0] + 6},${ly} L${outp("G5")[0] + 26},${ly + 10 + j * 4}"/>`).join("")
+    + `<text class="note" x="${P.G5[0]}" y="${ly + bh / 2 + 14}" text-anchor="middle">fan-out ${CP7.fo}</text>`;
+  const gates = CP7_ORDER.map(k => { const [cx, cy] = P[k], g = s.G[k], ins = g.in.map(i => `${s.at[i].toFixed(2)} (${i})`).join(" and ");
+    return `<g class="pt${s.crit.includes(k) ? " crit" : ""}" tabindex="0" data-tip="${esc(`<b>${k}: delay ${g.d.toFixed(2)} ns</b>input${g.in.length > 1 ? "s arrive" : " arrives"} at ${ins}<br>output at ${Math.max(...g.in.map(i => s.at[i])).toFixed(2)} + ${g.d.toFixed(2)} = ${s.at[k].toFixed(2)} ns`)}">
+      <rect class="l7box" x="${cx - bw / 2}" y="${cy - bh / 2}" width="${bw}" height="${bh}" rx="4"/><text class="l7gn" x="${cx}" y="${cy - (narrow ? 1 : 3)}" text-anchor="middle">${k}</text><text class="l7gd" x="${cx}" y="${cy + (narrow ? 11 : 12)}" text-anchor="middle">${g.d.toFixed(2)}${narrow ? "" : " ns"}</text></g>
+      <text class="note" x="${cx}" y="${k === "G5" ? cy - bh / 2 - 6 : cy + bh / 2 + 13}" text-anchor="middle">${narrow ? "" : "out at "}${s.at[k].toFixed(2)}</text>`; }).join("");
+  const ins = Object.entries(src).map(([k, [ax, ay]]) => `<text class="note" x="${ax - 4}" y="${ay + 4}" text-anchor="end">${k.replace("I", narrow ? "" : "in ")}</text>`).join("");
+  const outl = narrow ? "" : `<text class="note" x="${W - 8}" y="${my - 6}" text-anchor="end">to flip-flop</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Five gates between two flip-flops. The path through gates 1, 2, 3 and 4 takes ${s.pA.toFixed(2)} ns; the path through gate 5 with fan-out ${CP7.fo}, then gates 3 and 4, takes ${s.pB.toFixed(2)} ns. Critical: ${s.viaG5 ? "the path through gate 5, although it has fewer gates" : "the path through most gates"}">${all}${fo}${pa}${pb}${tail}${gates}${ins}${outl}</svg>`;
+};
+function cpOut() {
+  const s = cp7();
+  return `<dt>Most gates</dt><dd>G1 → G2 → G3 → G4: 0.10 + 0.12 + 0.10 + 0.15 = <b>${s.pA.toFixed(2)} ns</b></dd>
+    <dt>Fewer gates</dt><dd>G5 → G3 → G4: ${s.G.G5.d.toFixed(2)} + 0.10 + 0.15 = <b>${s.pB.toFixed(2)} ns</b>, with G5 = 0.04 + 0.04 · ${CP7.fo} ns</dd>
+    <dt>Critical path</dt><dd>${s.viaG5 ? "the one with fewer gates: G5's fan-out makes it slower than the path through four gates" : "the path through most gates"}; the clock period must cover ${Math.max(s.pA, s.pB).toFixed(2)} ns plus clock-to-Q and setup</dd>`;
+}
+function initCp(body) {
+  body.innerHTML = `<div class="ctl">${rng7("fo", "fan-out of G5", 1, 10, 1, CP7.fo)}</div><dl class="ro" data-ro></dl>`;
+  const ro = body.querySelector("[data-ro]"), sync = () => { body.querySelector('[data-o="fo"]').textContent = CP7.fo; ro.innerHTML = cpOut(); };
+  body.addEventListener("input", e => { if (e.target.dataset.k !== "fo") return; CP7.fo = +e.target.value; sync(); mountCharts(); });
+  sync();
+}
+Object.assign(LABS, { rc: initRc, chain: initChain, win: initWin, sta: initSta, cp: initCp });
+
+function lecture7() {
+  const sw = (h, b) => `<div class="tile"><div class="v">${h}</div><div class="l">${b}</div></div>`;
+  const capRows = [
+    ["C<sub>GS</sub>", "gate – source", "gate oxide over the channel, plus the gate's overlap with the source diffusion", "part of the input capacitance C<sub>in</sub> that the driving gate sees"],
+    ["C<sub>GD</sub>", "gate – drain", "gate oxide and the gate–drain overlap", "input capacitance; it also couples the output back to the input (the overshoot on slide 13)"],
+    ["C<sub>GB</sub>", "gate – bulk", "gate oxide over the substrate, mainly while no channel has formed", "input capacitance"],
+    ["C<sub>SB</sub>", "source – bulk", "the pn junction of the source diffusion against the substrate or well", "C<sub>S</sub> from source to V<sub>SS</sub>"],
+    ["C<sub>DB</sub>", "drain – bulk", "the pn junction of the drain diffusion", "C<sub>D</sub> from drain to V<sub>SS</sub>: the transistor's share of C<sub>out</sub>"],
+  ];
+  const libRows = [["DFFX1", "setup", 0.2, 0.4], ["DFFX1", "hold", 0.2, 0.3], ["DFFX1", "clock-to-Q", 0.2, 0.3], ["BUFX1", "delay", 0.3, 0.4], ["BUFX2", "delay", 0.2, 0.3], ["BUFX4", "delay", 0.1, 0.2]];
+  return `${head(l)}
+    <p class="l5-start">This lecture puts numbers on the gates of <a href="digital-circuit-design/lecture.html?n=6">lecture 6</a> using the transistor model of <a href="digital-circuit-design/lecture.html?n=5">lecture 5</a> (V<sub>GS</sub>, V<sub>th</sub> and V<sub>DS</sub> are explained in the symbol table there). New to transistors? Start with the <a href="digital-circuit-design/basics.html">basics page</a>.</p>
+    <p class="lead">Lecture 6 asked which network conducts; this one asks how long it takes. It works on three levels. First a hand model: every conducting transistor becomes a resistor that charges or discharges a capacitor, which gives rise and fall times, a maximum frequency, and the best way to size a chain of inverters that drives a large load. Then how the real numbers for a cell library are obtained: by circuit simulation of every cell. Finally how those numbers are used: setup and hold times of flip-flops, timing paths with arrival and required times, slack, and the critical path that sets the clock. Slides: the chair's 2022/23 deck, 21 slides.</p>
+
+    <h2>Capacitances of a MOS transistor (slide 2)</h2>
+    <p>Every MOS transistor carries capacitances between its four terminals gate G, source S, drain D and bulk B. Slide 2 marks five of them on the transistor symbol, next to a cross section of an NMOS and its substrate contact:</p>
+    <table class="wcw"><thead><tr><th>Capacitance</th><th>Between</th><th>Where it comes from</th><th>In the RC model</th></tr></thead><tbody>
+      ${capRows.map(r => `<tr><td data-l="Capacitance">${r[0]}</td><td data-l="Between">${r[1]}</td><td data-l="Where it comes from">${r[2]}</td><td data-l="In the RC model">${r[3]}</td></tr>`).join("")}</tbody></table>
+    <p class="muted">The slide draws the five capacitances; the "where it comes from" column is standard device physics added here.</p>
+    <p>For timing, slide 2 then reduces the transistor to an <b>RC model</b>: a switch controlled by the gate, a series resistance R<sub>n</sub>, and the two capacitances C<sub>S</sub> and C<sub>D</sub> from source and drain to V<sub>SS</sub>. The gate capacitances do not appear in the transistor's own model: they are load for whatever gate drives G.</p>
+    ${l5box("ex", "Worked example: what one gate input costs", `<p>Slide 10 gives numbers for a small inverter: input capacitance C<sub>in,1</sub> = 2.0 fF, output capacitance C<sub>out,1</sub> = 1.3 fF. Driving one copy of itself, its output node carries 1.3 + 2.0 = <b>3.3 fF</b>, and 61 % of that is the next gate's input. Driving four copies (a fan-out of 4): 1.3 + 4 · 2.0 = <b>9.3 fF</b>, 86 % load. A 1 pF load, as on slide 10, equals the inputs of 1000 / 2 = <b>500</b> such inverters. That is the point slide 6 makes: the output capacitance is dominated by C<sub>load</sub> (wires and the next inputs), not by the transistor's own capacitances.</p>`)}
+
+    <h2>Effective switch resistance (slide 3)</h2>
+    <p>Take an inverter whose input A jumps from 0 to 1, and assume the jump is <b>instantaneous</b>. At that moment the PMOS is off and the NMOS fully on (V<sub>GS</sub> = V<sub>DD</sub>), and it discharges the output Z from V<sub>DD</sub> towards 0. Slide 3 replaces the NMOS by a resistor R<sub>n</sub>: the straight line from the origin of the output characteristic (I<sub>D</sub> over V<sub>DS</sub> at V<sub>GS</sub> = V<sub>DD</sub>) to the point where the discharge starts, V<sub>DS</sub> = V<sub>DD</sub>. Its slope is 1/R<sub>n</sub>:</p>
+    <div class="formula">R<sub>n</sub> = V<sub>DD</sub> / I<sub>D</sub>(V<sub>GS</sub> = V<sub>DS</sub> = V<sub>DD</sub>) = V<sub>DD</sub> / ( KP<sub>N</sub>/2 · W/L · (V<sub>DD</sub> − V<sub>th,N</sub>)² · (1 + λ<sub>N</sub>·V<sub>th,N</sub>) ) = R'<sub>n</sub> · L/W</div>
+    <p>The current is the saturation current of lecture 5 at V<sub>DS</sub> = V<sub>DD</sub>, so the channel-length term becomes 1 + λ<sub>N</sub>·(V<sub>DD</sub> − V<sub>DD</sub> + V<sub>th,N</sub>) = 1 + λ<sub>N</sub>·V<sub>th,N</sub>. Everything except the shape factor is a property of the process, collected in R'<sub>n</sub>, the resistance of a square transistor (W = L). A transistor twice as wide has half the resistance. The PMOS charging Z from 0 to 1 gets R<sub>p</sub> the same way, with its own parameters.</p>
+    ${l5box("ex", "Worked example: R<sub>n</sub> of the lecture-5 transistor", `<p>KP<sub>N</sub> = 0.3 mA/V², W/L = 2, V<sub>th,N</sub> = 0.4 V, λ<sub>N</sub> = 0.1 /V (the explorer defaults on the <a href="digital-circuit-design/lecture.html?n=5">lecture 5 page</a>), V<sub>DD</sub> = 1.2 V. Current: 0.3/2 · 2 · (1.2 − 0.4)² · (1 + 0.1 · 0.4) = 0.3 · 0.64 · 1.04 = <b>0.200 mA</b>. Resistance: R<sub>n</sub> = 1.2 V / 0.200 mA = <b>6.0 kΩ</b>, so R'<sub>n</sub> = 6.0 · 2 = 12 kΩ. Slide 10 assumes 4 kΩ; this process gets there with W/L = 12 / 4 = 3. A PMOS with half the KP needs twice that width for the same R<sub>p</sub>.</p>`)}
+    ${l5box("why", "Context, not on the slides: the straight line is on the safe side", `<p>The real curve lies above the line everywhere between 0 and V<sub>DD</sub> (slide 3 draws it that way): while V<sub>DS</sub> is still high the transistor is in saturation and keeps delivering nearly its full current, whereas the resistor's current falls with the voltage at once. So the real transistor discharges faster than the RC model says. The chart below shows how much faster for the lecture-5 transistor and 10 fF. Textbooks such as Rabaey's <i>Digital Integrated Circuits</i> average the resistance over the swing instead, which gives about 3/4 of V<sub>DD</sub>/I<sub>D,sat</sub>; with that value the 50 % delays of model and transistor agree.</p>`)}
+    ${chart("rcsq", leg([[1, "RC model with R<sub>n</sub> from slide 3", "ln"], [2, "square-law transistor (lecture 5)", "ln"], [0, "<span class=\"l5dash\"></span> half of V<sub>DD</sub>"]]))}
+      <figcaption>Our calculation: the lecture-5 NMOS (β = 0.6 mA/V², V<sub>th</sub> = 0.4 V, λ = 0.1 /V, V<sub>DD</sub> = 1.2 V) discharging 10 fF, solved step by step, against V<sub>DD</sub>·e<sup>−t/τ</sup> with τ = R<sub>n</sub>·10 fF = ${f2(SQ7.tau, 0)} ps. Dots: the 50 % points. Hover a column for both voltages.</figcaption>
+    </figure>
+    <details class="tbl"><summary>Table view</summary><table><tr><th></th><th>50 % delay</th><th>90 % → 10 % fall time</th></tr><tr><td>RC model</td><td class="n">${f2(SQ7.RC.t50, 1)} ps</td><td class="n">${f2(SQ7.RC.tf, 1)} ps</td></tr><tr><td>square-law transistor</td><td class="n">${f2(SQ7.SQ.t50, 1)} ps</td><td class="n">${f2(SQ7.SQ.tf, 1)} ps</td></tr><tr><td>ratio</td><td class="n">${f2(SQ7.SQ.t50 / SQ7.RC.t50, 2)}</td><td class="n">${f2(SQ7.SQ.tf / SQ7.RC.tf, 2)}</td></tr></table></details>
+
+    <h2>Rise and fall times (slide 4)</h2>
+    <p>With the transistor replaced by a resistor, the output is a first-order RC circuit. Falling, it starts at V<sub>DD</sub> and decays as V<sub>Z</sub>(t) = V<sub>DD</sub>·e<sup>−t/τ</sup> with τ = R<sub>n</sub>·(C<sub>out</sub> + C<sub>load</sub>). The <b>fall time</b> t<sub>f</sub> is the time between 90 % and 10 % of V<sub>DD</sub>. The output passes 90 % at t = τ·ln(1/0.9) and 10 % at t = τ·ln(1/0.1), so</p>
+    <div class="formula">t<sub>f</sub> = R<sub>n</sub>(C<sub>out</sub> + C<sub>load</sub>) · [ ln(V<sub>DD</sub>/0.1V<sub>DD</sub>) − ln(V<sub>DD</sub>/0.9V<sub>DD</sub>) ]<br>&nbsp;&nbsp;&nbsp;= R<sub>n</sub>(C<sub>out</sub> + C<sub>load</sub>) · ln 9 ≈ 2.2 · R<sub>n</sub>(C<sub>out</sub> + C<sub>load</sub>)<br>t<sub>r</sub> ≈ 2.2 · R<sub>p</sub>(C<sub>out</sub> + C<sub>load</sub>) &nbsp;&nbsp;&nbsp; f<sub>max</sub> = 1/(t<sub>f</sub> + t<sub>r</sub>)</div>
+    <p>f<sub>max</sub> is the fastest the gate can toggle: one fall and one rise per period. Clock it faster and the output never settles at either level.</p>
+    ${lab("rc", "an RC edge: pick R and C, read the times")}
+    ${chart("rcw", leg([[0, "<span class=\"l5gray\"></span> input A, an ideal step (slide 3's assumption)"], [1, "output Z", "ln"], [0, "<span class=\"l5dash\"></span> measurement thresholds"]]))}
+      <figcaption>Slide 4's picture, computed: the output of the RC model for the chosen R<sub>n</sub>, R<sub>p</sub> and C. The convention buttons move the two thresholds; the edge itself does not change, only the ruler. Hover a column for the voltages.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: the same inverter, two loads", `<p>Slide 10's inverter (R<sub>n</sub> = R<sub>p</sub> = 4 kΩ) driving one copy of itself: C = 1.3 + 2.0 = 3.3 fF, so τ = 4 kΩ · 3.3 fF = 13.2 ps (kΩ times fF gives ps). t<sub>f</sub> = t<sub>r</sub> = 2.197 · 13.2 = <b>29.0 ps</b>, f<sub>max</sub> = 1/58.0 ps = <b>17.2 GHz</b>. The same inverter driving 1 pF: τ = 4 kΩ · 1001.3 fF = 4.0 ns, t<sub>f</sub> = t<sub>r</sub> = 8.8 ns, f<sub>max</sub> = 1/17.6 ns = <b>57 MHz</b>, about 300 times slower. Slides 7–10 are about avoiding exactly this.</p>`)}
+    ${l5box("why", "Context, not on the slides: transition time versus delay", `<p>Two different times hide in these slides. The <b>transition time</b> (t<sub>f</sub>, t<sub>r</sub>, slide 4) says how steep an edge is. The <b>propagation delay</b> t<sub>d</sub> says how long after the input the output crosses 50 %; for an RC step response that is ln 2 · τ ≈ 0.69 τ, the ln 2 in the fan-out equations of slide 9. Delays add up along a path; the transition time matters because a slow edge makes the next gate slower and keeps both of its transistors on longer (the short-circuit current of lecture 5). The thresholds are a convention: slide 4 uses 10–90 %, the simulation on slide 13 uses 30–70 %. For an RC edge the factors are 2.20 τ, 1.39 τ (20–80 %) and 0.85 τ, so a transition time is only meaningful together with its thresholds.</p>`)}
+
+    <h2>Transfer gates in the path (slide 5)</h2>
+    <p>Put a transfer gate behind an inverter, as in the latch of <a href="digital-circuit-design/lecture.html?n=6">lecture 6</a>, and the RC picture grows. The slide's equivalent circuit: the inverter is a switch that connects its internal output either through R<sub>p</sub> to V<sub>DD</sub> or through R<sub>n</sub> to V<sub>SS</sub>, with its output capacitances to both rails and the input capacitances of its own transistors at A. Behind it, the transfer gate adds a series resistance R<sub>n/p</sub> (its NMOS and PMOS in parallel) and its own capacitances C<sub>S</sub> and C<sub>D</sub> on both sides, before C<sub>load</sub>. The extra resistance and capacitances can be lumped into one RC time constant, which is correspondingly larger: <b>transfer gates slow down logic gates</b>.</p>
+    ${l5box("ex", "Worked example: an inverter behind a transfer gate", `<p>Values ours: inverter R = 4 kΩ and C<sub>out</sub> = 1.3 fF as on slide 10, transfer gate R<sub>n/p</sub> = 4 kΩ with C<sub>S</sub> = C<sub>D</sub> = 0.5 fF, load 2.0 fF. Without the transfer gate: τ = 4 kΩ · (1.3 + 2.0) fF = <b>13.2 ps</b>. With it, lumped as on the slide (all resistance times all capacitance): τ = (4 + 4) kΩ · (1.3 + 0.5 + 0.5 + 2.0) fF = 8 · 4.3 = <b>34.4 ps</b>, 2.6 times slower. The finer Elmore estimate (each resistor times the capacitance behind it): 4 · 4.3 + 4 · (0.5 + 2.0) = 17.2 + 10.0 = <b>27.2 ps</b>. Either way the transfer gate about doubles the delay.</p>`)}
+    ${l5box("why", "Context, not on the slides: why lumping overestimates", "<p>The capacitance right at the inverter output (C<sub>out</sub>, and C<sub>S</sub> of the transfer gate) is charged through the inverter's resistance only; it does not wait for the transfer gate. Lumping multiplies it by both resistances anyway. The Elmore delay of an RC chain, the sum over each resistor of its resistance times all capacitance downstream of it, is the standard first-order estimate for such chains and is what simple timing tools use for wires as well.</p>")}
+
+    <h2>Interim conclusion (slide 6)</h2>
+    <ul>
+      <li>All of the above is an <b>approximate</b> derivation of delays, on purpose: good for reasoning and comparing, not for the numbers a library ships (that is slide 12).</li>
+      <li>The pull-up and pull-down networks present a mostly <b>capacitive load</b> at their inputs.</li>
+      <li>The output capacitance is usually dominated by <b>C<sub>load</sub></b>, the wiring and the inputs of the next gates, not by the transistors' own capacitances.</li>
+      <li><b>Series transistors reduce the drive strength</b>: the PMOS stack of a NOR, the NMOS stack of a NAND. Larger W and smaller L increase it.</li>
+      <li>The catch: <b>lower R means higher C<sub>in</sub></b>. A stronger gate is faster at its output but a heavier load at its input. Hence the question of the next slides: which output capacitance can be driven with which input capacitance, over a whole chain of gates?</li>
+    </ul>
+
+    <h2>Optimal fan-out: driving a large load (slides 7–10)</h2>
+    <p>The task: drive a large capacitance C<sub>load</sub>, for example a clock tree or an output pad, through a chain of N inverters, and find the size ratio between neighbouring stages that gives the minimum total delay from A to Z. Each stage is A times wider than the one before, so stage i has the widths A<sup>i−1</sup>·W<sub>P</sub> and A<sup>i−1</sup>·W<sub>n</sub>. Then:</p>
+    <ul>
+      <li>its resistances shrink: R<sub>n,i</sub> = R<sub>n,1</sub>/A<sup>i−1</sup>, R<sub>p,i</sub> = R<sub>p,1</sub>/A<sup>i−1</sup>;</li>
+      <li>its own output capacitance grows to A<sup>i−1</sup>·C<sub>out,1</sub>, and it drives the next stage's input A<sup>i</sup>·C<sub>in,1</sub> (slide 8 writes this load as C<sub>in,i</sub>);</li>
+      <li>the last stage drives C<sub>load</sub> = A<sup>N</sup>·C<sub>in,1</sub>, which fixes A = (C<sub>load</sub>/C<sub>in,1</sub>)<sup>1/N</sup>.</li>
+    </ul>
+    <p>Slide 9 writes the rise plus fall delay of stage i, and the factor A<sup>i−1</sup> cancels:</p>
+    <div class="formula">(t<sub>d,r</sub> + t<sub>d,f</sub>)<sub>i</sub> = ln 2 · (R<sub>p,1</sub> + R<sub>n,1</sub>)/A<sup>i−1</sup> · (A<sup>i−1</sup>·C<sub>out,1</sub> + A<sup>i</sup>·C<sub>in,1</sub>) = ln 2 · (R<sub>p,1</sub> + R<sub>n,1</sub>) · (C<sub>out,1</sub> + A·C<sub>in,1</sub>)<br>(t<sub>d,r</sub> + t<sub>d,f</sub>)<sub>total</sub> = ln 2 · N · (R<sub>p,1</sub> + R<sub>n,1</sub>) · (C<sub>out,1</sub> + (C<sub>load</sub>/C<sub>in,1</sub>)<sup>1/N</sup> · C<sub>in,1</sub>)</div>
+    <p>Every stage is equally fast as long as the scaling factor stays the same. The trade-off is in N: few stages need big steps A and each is slow; many small steps are each fast but add up.</p>
+    ${lab("chain", "an inverter chain: load, self-loading, number of stages")}
+    ${chart("chain", leg([[1, "total delay for N stages, logarithmic axis", "ln"], [0, "<span class=\"key\" style=\"--c:transparent;box-shadow:inset 0 0 0 1.5px var(--ink);border-radius:50%\"></span> chosen N"]]))}
+      <figcaption>Slide 9's total delay for N = 1 … 12 with the first inverter of slide 10 (R<sub>n,1</sub> = R<sub>p,1</sub> = 4 kΩ, C<sub>in,1</sub> = 2.0 fF); the slider defaults are slide 10's values (C<sub>out,1</sub> = 1.3 fF, C<sub>load</sub> = 1 pF). Exact ln 2 throughout. Hover a point for A and the delay.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: slide 10, step by step", `<p>R<sub>n,1</sub> = R<sub>p,1</sub> = 4 kΩ, C<sub>in,1</sub> = 2.0 fF, C<sub>out,1</sub> = 1.3 fF, C<sub>load</sub> = 1 pF, a ratio of 1000 / 2 = 500. The optimum (box below) is N = ln 500 = <b>6.21</b>, so <b>6 stages</b> with A = e: ln 2 · 6 · 8 kΩ · (1.3 + 2.718 · 2.0) fF = 0.693 · 48 kΩ · 6.74 fF = <b>224 ps</b>. The slide's ≈ 226 ps comes from rounding ln 2 to 0.7. For comparison one inverter alone: 0.7 · 8 kΩ · (1.3 + 1000) fF ≈ <b>5607 ps</b> (5552 ps with the exact ln 2), 25 times slower. Strictly, six steps of e only reach e<sup>6</sup> · 2 fF = 807 fF; six stages that end at exactly 1 pF need A = 500<sup>1/6</sup> = 2.82 and take 231 ps, the explorer's value. Five stages are even a little faster, 228 ps: the self-loading C<sub>out,1</sub> pushes the optimum towards bigger steps.</p>`)}
+    ${l5box("why", "Context, not on the slides: where A = e comes from, and why real buffers use 3–4", `<p>Neglect C<sub>out,1</sub> and the delay is proportional to N·A = N·(C<sub>load</sub>/C<sub>in,1</sub>)<sup>1/N</sup>. With x = ln(C<sub>load</sub>/C<sub>in,1</sub>) that is N·e<sup>x/N</sup>; its derivative in N, e<sup>x/N</sup>·(1 − x/N), is zero at N = x, where A = e<sup>x/N</sup> = e. With C<sub>out,1</sub> kept, write N = x/ln A: the delay is proportional to (C<sub>out,1</sub>/C<sub>in,1</sub> + A)/ln A, minimal where A·(ln A − 1) = C<sub>out,1</sub>/C<sub>in,1</sub>. For slide 10's 0.65 that is A ≈ 3.3 and N ≈ 5.2. Near the optimum the curve is flat (228, 231 and 239 ps for 5, 6 and 7 stages), so designers use a fan-out of about 3–4 per stage: the "FO4" delay, an inverter driving four copies of itself, is the usual yardstick for a process's speed. The clock buffer on the next slide steps up by 3.</p>`)}
+
+    <h2>A real clock buffer (slide 11)</h2>
+    <p>Slide 11 shows the standard cell <b>CBUFX8</b>, a clock buffer: two inverters in a row, drive strength 8, all transistors at minimum length. The first stage has PMOS width 2 · 0.74 µm and NMOS width 2 · 0.37 µm, the second stage 4 · 1.1 µm and 4 · 0.55 µm (read here as parallel fingers, which the layout shows as separate poly lines). Both stages keep the PMOS twice as wide as the NMOS, the mobility compensation of lecture 5.</p>
+    ${l5box("ex", "Worked example: the fan-out inside CBUFX8", `<p>Gate width of stage 1: 2 · 0.74 + 2 · 0.37 = 1.48 + 0.74 = 2.22 µm. Stage 2: 4 · 1.1 + 4 · 0.55 = 4.4 + 2.2 = 6.6 µm. Input capacitance scales with gate width, so stage 1 drives 6.6 / 2.22 = <b>2.97</b> times its own input: the slide's "fan-out of A ≈ 3". The cell input (stage 1) loads the clock net lightly, and the output stage is three times stronger, close to the optimum of the previous section.</p>`)}
+    ${l5box("why", "Context, not on the slides: what X1, X2, X4, X8 mean", "<p>Libraries offer each function in several drive strengths, named by a multiple of the smallest version. An X4 cell has about a quarter of the X1 resistance and about four times its input capacitance. That is the choice the timing example on slides 18–19 makes between BUFX1, BUFX2 and BUFX4. Clock buffers are usually built symmetric (equal rise and fall times), because any difference between rising and falling clock edges eats into the timing budget of every flip-flop.</p>")}
+
+    <h2>Timing from circuit simulation (slides 12–13)</h2>
+    <p>The hand model gives insight, not sign-off numbers. A cell library gets its timing from <b>circuit simulation</b> of every cell for every transition:</p>
+    <ol>
+      <li><b>Model parameter sets</b> from the process, one per corner: typical, slow and fast, separately for NMOS and PMOS (typN/typP, slowN/slowP, fastN/fastP).</li>
+      <li><b>Compact transistor models</b> such as BSIM or PSP, which capture the transistor's behaviour far more precisely than the square law.</li>
+      <li><b>Parasitic extraction</b> from the cell layout: the wiring capacitances and resistances, added to the transistor netlist.</li>
+      <li>A <b>circuit simulator</b> such as Spectre or HSPICE computes the waveforms.</li>
+      <li><b>Delay extraction</b> measures delays and transition times from the waveforms.</li>
+    </ol>
+    <p>Slide 13 shows such a simulation of an inverter with a 1.2 V supply. The <b>delay</b> t<sub>d</sub>(A rise → Z fall) is measured between the moments input and output cross 0.5 · V<sub>DD</sub>; the <b>transition time</b> Tt30/70 of the rising output (at a falling input) between 0.3 · V<sub>DD</sub> and 0.7 · V<sub>DD</sub>. The input edges themselves take a few tens of picoseconds, not zero as slide 3 assumed.</p>
+    ${l5box("why", "Context, not on the slides: the overshoot, and where these numbers end up", "<p>In the simulated waveform the output first moves the wrong way: it rises slightly above 1.2 V as the input rises, and dips below 0 V as the input falls. That is C<sub>GD</sub> of slide 2 at work: the input edge pushes charge through the gate–drain capacitance into the output before the transistor has taken over (the Miller effect). The measured delays and transition times, simulated for a grid of input transitions and output loads and for every process, voltage and temperature corner, are what fills the delay tables of the standard-cell library (the table on the <a href=\"digital-circuit-design/lecture.html?n=5\">lecture 5 page</a>). Timing tools then look values up instead of simulating.</p>")}
+
+    <h2>Setup and hold of a flip-flop (slides 14–15)</h2>
+    <p>In a synchronous circuit, the data input D and the clock input C of a flip-flop come from different sources: data from logic, the clock from the clock tree. The latches inside the flip-flop have delays of their own, and those decide how it stores. What matters is when D arrives relative to the clock edge at C: if D changes inside a <b>critical window around the edge</b>, the value is not stored reliably. The window has two sides:</p>
+    <ul>
+      <li><b>Setup time</b>: D must be stable for t<sub>setup</sub> <i>before</i> the clock edge.</li>
+      <li><b>Hold time</b>: D must stay stable for t<sub>hold</sub> <i>after</i> the clock edge.</li>
+    </ul>
+    <p>Only the <b>master latch</b> matters for both: it is the one that closes at the rising edge (lecture 6's master-slave flip-flop). Slide 15 derives the hold time from the master's circuit: an input transfer gate controlled by C and CN, two inverters, and a feedback transfer gate. While C = 0 the master is transparent; at the rising edge its input transfer gate has to switch off, and that takes the time t<sub>tgate_C</sub> from the clock edge. Until the gate is closed, a change at D still gets in. So data may change at the earliest t<sub>hold</sub> after the rising edge, with</p>
+    <div class="formula">t<sub>hold</sub> = t<sub>tgate_C</sub></div>
+    <p>The slide's waveform shows both cases: a change of D shortly after one edge but outside t<sub>hold</sub> is harmless; the same change inside t<sub>hold</sub> after another edge corrupts Q<sub>M</sub>, a hold problem.</p>
+    ${lab("win", "move the moment D changes")}
+    ${chart("win", leg([[0, "<span class=\"key\" style=\"--c:color-mix(in srgb, var(--vz-s2) 40%, transparent)\"></span> forbidden window: setup before, hold after the edge"], [1, "data D", "ln"], [0, "<span class=\"key ln\" style=\"--c:var(--ink)\"></span> clock C and output Q; hatched: unreliable"]]))}
+      <figcaption>DFFX1's maximum setup (0.4 ns), hold (0.3 ns) and clock-to-Q (0.3 ns) from the table on slide 18; clock period 2 ns. Q starts at the old value 0 and D changes once, from 0 to 1. Dashed lines: rising edges.</figcaption>
+    </figure>
+    ${l5box("why", "Context, not on the slides: where the setup time comes from, and what “not reliable” means", "<p>Slide 15 derives only the hold side. The setup side follows from the same circuit: a new D has to pass the input transfer gate and both inverters and come back around the loop before the master closes, otherwise the feedback transfer gate closes on a half-written node. So t<sub>setup</sub> is roughly the delay of the transfer gate plus the inverter loop. A node caught halfway can sit near the switching threshold of the inverters for a while before the feedback pulls it to 0 or 1, the state called <b>metastability</b>; which value it ends up at is not predictable. That is why a violated window is drawn hatched in the explorer and not as a wrong value.</p>")}
+    ${l5box("ex", "Worked example: how much of the period is forbidden", `<p>With slide 18's DFFX1 values the window is t<sub>setup</sub> + t<sub>hold</sub> = 0.4 + 0.3 = <b>0.7 ns</b> around every rising edge. At the slide's 2.0 ns clock period, D may change only during the remaining 1.3 ns of each period, 65 %. D changing 0.2 ns before the edge is a setup violation, 0.15 ns after it a hold violation, 0.6 ns after it is fine: that edge stores the old value, and the new one is taken one period later.</p>`)}
+
+    <h2>Timing paths, arrival and slack (slides 16–17)</h2>
+    <p>Timing is checked for <b>paths</b>: a chain of gates between two <b>timing endpoints</b> with a synchronous clock relation. Endpoints are sequential cells, the inputs and outputs of the block, and endpoints the designer defines. The standard case: a launching flip-flop, a cloud of combinational logic, and a capturing flip-flop. Both flip-flops get the clock through their own clock net, with the delays t<sub>clknet1</sub> and t<sub>clknet2</sub>. Slide 17's three equations:</p>
+    <div class="formula">t<sub>arrival</sub> = t<sub>clknet1</sub> + t<sub>path</sub><br>t<sub>required</sub> = t<sub>clkperiod</sub> + t<sub>clknet2</sub> − t<sub>setup</sub><br>t<sub>slack</sub> = t<sub>required</sub> − t<sub>arrival</sub> &gt; 0 &nbsp;&nbsp;(t<sub>slack</sub> &lt; 0 → violation)</div>
+    <p>t<sub>path</sub> includes the clock-to-Q delay of the launching flip-flop (slide 18 counts it as the first entry). The data launched at one clock edge must arrive at the capturing flip-flop one setup time before the next edge reaches it.</p>
+    ${l5box("why", "Context, not on the slides: the hold check and clock skew", "<p>The same picture gives a second check that the slides list values for but do not work out. Data launched at an edge must not reach the capturing flip-flop so early that it overwrites the value captured at the <i>same</i> edge: t<sub>clknet1</sub> + t<sub>path,min</sub> ≥ t<sub>clknet2</sub> + t<sub>hold</sub>, checked with the minimum delays. It does not contain the clock period, so a hold violation cannot be fixed by slowing the clock, only by adding delay to the path. The difference t<sub>clknet2</sub> − t<sub>clknet1</sub> is the <b>clock skew</b>: a capture clock that arrives later gives the setup check more time and takes the same amount from the hold check. The explorer below has a slider for it.</p>")}
+
+    <h2>One path, two sizings (slides 18–19)</h2>
+    <p>Slides 18 and 19 work through the path DFFX1 → four buffers → DFFX1 with a clock period of 2.0 ns and this cell table (values in ns):</p>
+    <table class="tt"><tr><th>Cell</th><th>Timing</th><th>min</th><th>max</th></tr>${libRows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2].toFixed(1)}</td><td>${r[3].toFixed(1)}</td></tr>`).join("")}</table>
+    ${lab("sta", "a timing path: swap the buffers, change the clock")}
+    ${chart("sta", leg([[0, `${gkey7} clock-to-Q, setup`], [1, "BUFX1"], [2, "BUFX2"], [3, "BUFX4"], [0, "<span class=\"l5dash\" style=\"border-color:var(--ink)\"></span> required time / hold limit"]]))}
+      <figcaption>Top row: slide 17's arrival with the maximum delays, from the launch edge at 0, against the required time. Middle: the capture flip-flop's setup time before its clock edge. Bottom: the hold check with the minimum delays (our addition, see the box above). Hover a segment for its value.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: slide 18 misses, slide 19 meets", `<p><b>Slide 18</b>, four BUFX1, maximum values throughout (the worst case for setup): clock edge 0, clock-to-Q 0.3 → 0.3; each BUFX1 adds 0.4 → 0.7, 1.1, 1.5, <b>1.9 ns</b> arrival. Required: next clock edge 2.0 minus setup 0.4 = <b>1.6 ns</b>. Slack 1.6 − 1.9 = <b>−0.3 ns</b>: missed. <b>Slide 19</b> replaces the buffers by one BUFX4 (0.2) and three BUFX2 (0.3 each): 0.3 + 0.2 + 0.9 = <b>1.4 ns</b>, slack 1.6 − 1.4 = <b>+0.2 ns</b>: met. Turned around: the first path needs a period of at least 1.9 + 0.4 = 2.3 ns (435 MHz), the second 1.8 ns (556 MHz). The hold check of the first path with the minimum values: 0.2 + 4 · 0.3 = 1.4 ns earliest arrival against a hold limit of 0.3 ns, slack +1.1 ns.</p>`)}
+    ${l5box("why", "Context, not on the slides: why bigger buffers are faster here, and the catch", "<p>The slide's table gives every cell one fixed delay. In a real library the delay of each cell depends on the load it drives and the transition time at its input (the 2-D tables of lecture 5). An X4 buffer is faster because its resistance is a quarter, but its input capacitance is four times larger, so it slows down whatever drives it: here the flip-flop's clock-to-Q. That is slide 6's trade-off again, and the reason a timing tool recomputes every delay from the tables with the actual loads instead of using one number per cell.</p>")}
+
+    <h2>The critical path (slide 20)</h2>
+    <p>A real design contains many such paths between its flip-flops. In a given block, one of them is the <b>critical path</b>: the one with the longest delay, the largest sum of delays from input to output. It determines the speed of the whole block, its clock frequency. There are far too many paths to check by hand. The intuitive guess, the path through the most gates, is not always right: a path through fewer gates can be slower, for example because one of its gates has a bad fan-out.</p>
+    ${lab("cp", "which path is critical?")}
+    ${chart("cp", leg([[2, "path through most gates (G1–G4)", "ln"], [1, "path through the high fan-out gate G5", "ln"], [0, "<span class=\"key ln\" style=\"--c:var(--ink)\"></span> shared by both; thick = critical"]]))}
+      <figcaption>Gate delays are ours, in ns; G5's delay grows with its fan-out (0.04 + 0.04 per driven input). The number under each gate is when its output settles: the latest input arrival plus the gate's delay. Hover a gate for the calculation.</figcaption>
+    </figure>
+    ${l5box("ex", "Worked example: four gates against three", `<p>Path through most gates: G1 → G2 → G3 → G4 = 0.10 + 0.12 + 0.10 + 0.15 = <b>0.47 ns</b>. Path through G5 with a fan-out of 6: G5 = 0.04 + 0.04 · 6 = 0.28 ns, then G3 and G4: 0.28 + 0.10 + 0.15 = <b>0.53 ns</b>. Three gates, and still the critical path. At G3 the two paths meet: one input arrives at 0.22 ns (from G2), the other at 0.28 ns (from G5); G3 can only switch after the later one, so its output settles at 0.28 + 0.10 = 0.38 ns. With a fan-out of 4, G5 takes 0.20 ns, its path 0.45 ns, and the four-gate path is critical again. The usual fixes for the fan-out case: split the load over a buffer tree (slides 7–11) or upsize G5.</p>`)}
+    ${l5box("why", "Context, not on the slides: how a timing tool avoids counting paths", "<p>The number of paths grows exponentially with the size of the logic, but static timing analysis never lists them. It walks through the gates once in signal order and keeps one number per node: the arrival time, the latest input arrival plus the gate's delay, exactly what the numbers under the gates show. The critical path is then traced backwards from the worst endpoint by following, at each gate, the input that arrived last. The work grows only linearly with the number of gates, which is how a tool checks a chip with billions of transistors in hours.</p>")}
+
+    <div class="tiles">
+      ${sw("2.2 · RC", "10–90 % transition time of an RC edge (slide 4)")}
+      ${sw("ln 2 · RC", "50 % propagation delay, the factor in slides 9–10")}
+      ${sw("A ≈ e … 4", "size step per stage of a fast inverter chain; CBUFX8 uses 3")}
+      ${sw("slack ≥ 0", "t<sub>required</sub> − t<sub>arrival</sub>, checked for every path (slide 17)")}
+    </div>
+    <h2>Take-home message (slide 21)</h2>
+    <ul>
+      <li><b>What decides how fast a gate switches?</b> The resistance of its conducting network times the capacitance it has to charge, mostly C<sub>load</sub>: wires and the next inputs. Edges take about 2.2 RC (10–90 %), delays ln 2 · RC.</li>
+      <li><b>What is the maximum frequency of a cell, and the minimum delay across it?</b> f<sub>max</sub> = 1/(t<sub>f</sub> + t<sub>r</sub>) for one gate; the delay grows with the load it drives.</li>
+      <li><b>How is a large load driven quickly?</b> Through a chain of inverters that grow by about e to 4 per stage: 226 ps instead of 5.6 ns on slide 10. That is how clock trees and output drivers are built, and why standard cells come in several drive strengths.</li>
+      <li><b>What must the data at a flip-flop respect?</b> Setup before and hold after the clock edge; the hold time is the closing time of the master's input transfer gate.</li>
+      <li><b>What sets the clock of a block?</b> Its critical path, the largest arrival over all paths, checked as slack = required − arrival; with clock distribution counted in through t<sub>clknet</sub>.</li>
+      <li><b>Hand model or simulation?</b> Coarse RC and switch models for understanding and comparing; finer, realistic numbers from circuit simulation with compact models and extracted parasitics.</li>
+    </ul>
+    <p class="muted">Exercise: sheet 4 for <a href="digital-circuit-design/exercise.html?n=4">exercise 4 on 3 Dec</a> is in OPAL (English and German task sheets, no solution yet) and is not written up here yet. Previous: <a href="digital-circuit-design/lecture.html?n=6">lecture 6, CMOS logic 1</a>. Next: <a href="digital-circuit-design/lecture.html?n=8">lecture 8, power and energy</a> (30 Nov). Background: <a href="digital-circuit-design/basics.html">basics page</a>. Slides: <a href="${c.materials}" target="_blank" rel="noopener">materials page ↗</a> (2022/23 deck, password from lecture 1; the slides may not be republished).</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(l.date);
   return `${head(l)}
@@ -2045,7 +2480,7 @@ function placeholder() {
       <p class="muted">This lecture is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its slides are not read yet"}: ${fmt(l.date)}, ${lec.start}–${lec.end}, ${esc(lec.room)}.<br>Planned topic from the chair's slide list: ${esc(l.blurb)}<br>The summary appears here once the lecture has been held.</p>
     </div>`;
 }
-const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6 };
+const WRITEUPS = { 1: lecture1, 2: lecture2, 3: lecture3, 4: lecture4, 5: lecture5, 6: lecture6, 7: lecture7 };
 if (!l) {
   page.innerHTML = `${back}<h1>Lecture not found</h1><p>There is no lecture ${esc(n)}.</p>`;
 } else {
