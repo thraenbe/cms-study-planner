@@ -1022,9 +1022,16 @@ window.CMS = {
       "title": "Variance and variance reduction",
       "date": "2026-11-23",
       "icon": "📉",
-      "covered": false,
-      "blurb": "Not held yet. Planned topic (OPAL course overview): Monitoring the variance of a Monte Carlo estimate and the techniques that reduce it.",
-      "planned": true
+      "covered": true,
+      "blurb": "Why variance means work (N = σ²/ε²); covariance and the variance of a sum with dice; antithetic variates (u and its mirror 1 − u) by hand for x², 31× for eˣ and twice the variance for a symmetric hump; joint, marginal and conditional probability and conditional expectation; Rao–Blackwellization for two dice, two bags and π, and why it never hurts (law of total variance).",
+      "files": [
+       {
+        "kind": "slides",
+        "name": "SMS5.pdf",
+        "where": "OPAL · Lecture2026",
+        "note": "30-page summary deck, posted 23 Nov"
+       }
+      ]
      },
      {
       "n": 6,
@@ -1165,13 +1172,22 @@ window.CMS = {
      },
      {
       "n": 4,
-      "title": null,
+      "title": "Monte Carlo methods",
       "date": "2026-11-19",
-      "icon": "🧩",
-      "covered": false,
-      "lecture": null,
+      "published": "2026-11-19",
+      "icon": "❄️",
+      "covered": true,
+      "lecture": 4,
       "points": null,
-      "blurb": "Not held yet. A Pluto notebook per tutorial appears in OPAL (Exercises2026) around the session."
+      "blurb": "A Pluto notebook (Julia) on lecture 4: areas from random points (Koch snowflake, Mandelbrot set), the weak and strong law of large numbers, the Planck integral by box hits, by heights and by importance sampling with four densities, the estimator θ_N and its variance σ_W²/N, and the unit ball and grids against random points in up to 20 dimensions; fifteen questions, thirteen practice questions and three programming exercises.",
+      "files": [
+       {
+        "kind": "notebook",
+        "name": "SMS_T04.jl",
+        "where": "OPAL · Exercises2026",
+        "note": "Pluto notebook, posted 19 Nov"
+       }
+      ]
      },
      {
       "n": 5,
