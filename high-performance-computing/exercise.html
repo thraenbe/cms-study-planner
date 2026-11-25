@@ -763,6 +763,277 @@ function exercise4() {
     <p class="muted">Next: Exercise 05 on <a href="high-performance-computing/lecture.html?n=4">lecture 4</a> (threads, OpenMP, loop scheduling), <a href="high-performance-computing/exercise.html?n=5">25 Nov</a>. Sheet and test: OPAL → Exercises / Übungen and Exercise Sheets and Tutorials; they may not be republished, so the tasks above are restated in our own words.</p>`;
 }
 
+// ---------------- Exercise 05: Thread Parallelism ----------------
+// Tasks 1–3: 10 s of initialisation, a loop of 100 iterations where iteration i (1 … 100) takes 101 − i s, 5 s of finalisation.
+const X5_SEQ = 10 + 5050 + 5;   // 5,065 s
+const x5cost = i => 101 - i;
+// Compute load per thread. "even" is the task's idealisation (the work spreads evenly); the others hand out whole iterations.
+function x5loads(p, kind) {
+  const L = Array(p).fill(0);
+  if (kind === "even") return L.map(() => 5050 / p);
+  for (let i = 1; i <= 100; i++) {
+    const t = kind === "static" ? Math.floor((i - 1) / Math.ceil(100 / p)) : kind === "static1" ? (i - 1) % p : L.indexOf(Math.min(...L));
+    L[t] += x5cost(i);
+  }
+  return L;
+}
+const x5time = (p, kind) => { const L = x5loads(p, kind); return 15 + Math.max(...L, kind === "even" ? 100 : 0); };
+const X5_KINDS = { even: "even (tasks 1–2)", static: "static, default chunk", static1: "static, chunk 1", dynamic: "dynamic, chunk 1" };
+const X5 = { p: 5, kind: "even" };
+CHARTS.x5load = narrow => {
+  const { p, kind } = X5, L = x5loads(p, kind), mx = Math.max(...L), mean = 5050 / p;
+  const W = narrow ? 340 : 600, Lm = 44, R = narrow ? 12 : 96, T = 28, B = 30, H = 252, PW = W - Lm - R, PH = H - T - B;
+  const step = [100, 200, 250, 500, 1000, 2000].find(s => mx / s <= 5) || 1000, top = Math.ceil(Math.max(mx, 100) / step) * step;
+  const y = v => T + PH - v / top * PH, cw = PW / p, bw = Math.max(1.5, cw - (cw > 6 ? 2 : 1));
+  const yt = Array.from({ length: top / step + 1 }, (_, k) => k * step).map(v => `<line class="${v ? "grid" : "axis"}" x1="${Lm}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${Lm - 6}" y="${y(v) + 4}" text-anchor="end">${num(v, 0)}</text>`).join("");
+  const desc = t => kind === "even" ? "an even share of all iterations" : kind === "static" ? (() => { const c = Math.ceil(100 / p), a = t * c + 1, b = Math.min(100, a + c - 1); return a > 100 ? "no iterations" : `iterations ${a}–${b}`; })()
+    : kind === "static1" ? `iterations ${t + 1}, ${t + 1 + p}, ${t + 1 + 2 * p}, …` : "whichever iteration is next when it becomes free";
+  const bars = L.map((v, t) => { const x0 = Lm + t * cw + (cw - bw) / 2, r = Math.min(3, bw / 2), y0 = y(v), yb = y(0);
+    const d = v > 0 ? `M${x0},${yb} V${y0 + r} Q${x0},${y0} ${x0 + r},${y0} H${x0 + bw - r} Q${x0 + bw},${y0} ${x0 + bw},${y0 + r} V${yb} Z` : "";
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>Thread ${t}: ${num(v, 1)} s</b>${desc(t)}`)}"><rect class="hit" x="${Lm + t * cw}" y="${T}" width="${cw}" height="${PH}"/>${d ? `<path class="bar s1" d="${d}"/>` : ""}</g>`; }).join("");
+  const xl = (narrow ? [0, p - 1] : p <= 16 ? L.map((_, t) => t) : [0, Math.floor((p - 1) / 2), p - 1]).map(t => `<text class="tick" x="${Lm + (t + 0.5) * cw}" y="${H - 12}" text-anchor="middle">${t}</text>`).join("");
+  const ref = (v, cls, t) => `<line class="ann ${cls}" x1="${Lm}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>${narrow ? "" : `<text class="note" x="${W - R + 6}" y="${y(v) + 4}">${t}</text>`}`;
+  const longest = kind === "even" && mean < 100 ? ref(100, "dash", "longest: 100 s") : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Column chart of compute seconds per thread, ${p} thread${p > 1 ? "s" : ""}, ${X5_KINDS[kind]}: slowest thread ${num(mx, 1)} s, average ${num(mean, 1)} s.`)}">
+    ${yt}<text class="note" x="${Lm - 40}" y="12">seconds</text>${bars}${ref(mx, "dash", `slowest: ${num(mx, 0)} s`)}${Math.abs(mx - mean) > 0.5 ? ref(mean, "", `average: ${num(mean, 0)} s`) : ""}${longest}${xl}<text class="note" x="${Lm + PW / 2}" y="${H - 1}" text-anchor="middle">thread</text></svg>`;
+};
+function x5Out() {
+  const { p, kind } = X5, L = x5loads(p, kind), mx = Math.max(...L), T = x5time(p, kind), S = X5_SEQ / T;
+  const imp = kind === "even" && 5050 / p < 100;
+  return `<dl class="ro">
+      <dt>Runtime</dt><dd>10 + ${num(imp ? 100 : mx, 2)} + 5 = <b>${num(T, 2)} s</b>${imp ? ` ${flag("bad", "an even share would be below 100 s, but iteration 1 alone takes 100 s")}` : ""}</dd>
+      <dt>Speedup</dt><dd>5,065 / ${num(T, 2)} = <b>${S.toFixed(2)}</b></dd>
+      <dt>Efficiency</dt><dd>whole program ${S.toFixed(2)} / ${p} = ${(S / p * 100).toFixed(1)} % · compute phase ${(5050 / (imp ? 100 : mx)).toFixed(2)} / ${p} = ${(5050 / (imp ? 100 : mx) / p * 100).toFixed(1)} %</dd>
+    </dl>`;
+}
+function initX5(body) {
+  const P = [[1, "even", "1 thread (task 1)"], [5, "even", "5, even"], [50, "even", "50, even"], [51, "dynamic", "51, longest first"], [5, "static", "5, static (task 3)"], [5, "static1", "5, static chunk 1"]];
+  body.innerHTML = `<div class="presets">${P.map(([p, k, t]) => `<button class="preset" data-p="${p}" data-k="${k}">${t}</button>`).join("")}</div>
+    <div class="presets">${Object.entries(X5_KINDS).map(([k, t]) => `<button class="preset" data-kind="${k}">${t}</button>`).join("")}</div>
+    <div class="ctl"><label>Threads <input type="range" min="1" max="64" step="1" value="${X5.p}"> <output>${X5.p}</output></label></div>
+    <figure class="viz lab-viz"><div class="chart-wrap"><div data-chart="x5load"></div><div class="tip" role="tooltip"></div></div></figure><div class="out"></div>`;
+  const rng = body.querySelector("input"), o = body.querySelector("output"), out = body.querySelector(".out");
+  const draw = () => { rng.value = X5.p; o.textContent = X5.p; mountCharts(); out.innerHTML = x5Out();
+    body.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.p === X5.p && b.dataset.k === X5.kind));
+    body.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === X5.kind)); };
+  rng.addEventListener("input", () => { X5.p = +rng.value; draw(); });
+  body.addEventListener("click", e => { const b = e.target.closest("[data-p],[data-kind]"); if (!b) return; if (b.dataset.p) { X5.p = +b.dataset.p; X5.kind = b.dataset.k; } else X5.kind = b.dataset.kind; draw(); });
+  draw();
+}
+// Speedup over thread count for three of the schedules (whole program, 5,065 s sequential).
+line("x5sp", {
+  x: [1, 64], y: [0, 50], yTicks: [0, 10, 20, 30, 40, 50], xTicks: [1, 2, 4, 8, 16, 32, 64], xTicksN: [1, 4, 16, 64], yTitle: "speedup",
+  series: [{ slot: 1, name: "even (ideal)", short: "even", f: v => X5_SEQ / x5time(Math.max(1, Math.round(v)), "even") },
+    { slot: 3, name: "static, chunk 1", short: "chunk 1", f: v => X5_SEQ / x5time(Math.max(1, Math.round(v)), "static1") },
+    { slot: 2, name: "static, default chunk", short: "static", f: v => X5_SEQ / x5time(Math.max(1, Math.round(v)), "static") }],
+  tipHead: v => `${v} thread${v > 1 ? "s" : ""}`, fmtY: v => v.toFixed(2), focusAt: 5, labelW: 70,
+  hitLabel: "Read the speedups: arrow keys double or halve the number of threads",
+  aria: "Line chart: speedup of the whole program over 1 to 64 threads. Even distribution rises to 44.04 at 51 threads and stays there; static scheduling with chunk 1 follows it closely up to about 16 threads; static with the default chunk stays far below, 2.78 at 5 threads.",
+});
+// Task 9: how often a parallel region starts per run, depending on which loop gets the pragma (N = 1000, NSTEPS = 1000).
+const FORKS = [{ k: "time loop n", v: null, t: "not allowed: step n + 1 needs step n" }, { k: "row loop i", v: 1000, t: "one parallel region per time step" }, { k: "column loop j", v: 998000, t: "one per row and time step: 998 × 1,000" }];
+CHARTS.forks = narrow => {
+  const W = narrow ? 340 : 600, L = narrow ? 96 : 116, R = narrow ? 64 : 90, T = 8, RH = 40, H = T + FORKS.length * RH + 26, PW = W - L - R, x = v => L + Math.log10(v) / 6 * PW;
+  const ticks = [1, 10, 100, 1e3, 1e4, 1e5, 1e6].filter((v, k) => !narrow || k % 2 === 0).map(v => `<line class="${v === 1 ? "axis" : "grid"}" x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - 22}"/><text class="tick" x="${x(v)}" y="${H - 6}" text-anchor="middle">${v >= 1e3 ? `10${["³", "⁴", "⁵", "⁶"][Math.log10(v) - 3]}` : v}</text>`).join("");
+  const rows = FORKS.map((d, i) => { const y0 = T + i * RH + 10, bh = 18;
+    return `<g class="pt" tabindex="0" data-tip="${esc(`<b>${d.k}</b>${d.v ? `${num(d.v, 0)} parallel regions per run` : ""}${d.v ? "<br>" : ""}${d.t}`)}"><rect class="hit" x="0" y="${y0 - 10}" width="${W}" height="${RH}"/>
+      ${d.v ? `<path class="bar s1" d="${hbar(x(1), x(d.v), y0, bh)}"/><text class="val" x="${x(d.v) + 6}" y="${y0 + 13}">${num(d.v, 0)}</text>` : `<text class="note" x="${L + 4}" y="${y0 + 13}">✗ not allowed</text>`}
+      <text class="cat" x="${L - 8}" y="${y0 + 13}" text-anchor="end">${d.k}</text></g>`; }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart on a logarithmic axis: parallel regions started per run. Time loop: not allowed. Row loop i: 1,000. Column loop j: 998,000.">${ticks}${rows}</svg>`;
+};
+// Task 15: what the private copies hold in programs 1–3 (4 threads, 4 iterations, one each).
+const PRV = { k: 0 };
+const PRV_P = [
+  { t: "program 1: firstprivate(x)", code: "int i, x = 10;\n#pragma omp parallel for firstprivate(x)\nfor (i = 0; i < 4; ++i)\n  x = i;\nprintf(\"%d\\n\", x);", start: () => "10", end: t => `${t}`, after: "10", why: "Each copy starts with the 10 from before the loop and is set to its iteration's i; firstprivate does not copy anything back, so the original x still holds 10." },
+  { t: "program 2: lastprivate(x)", code: "int i, x = 10;\n#pragma omp parallel for lastprivate(x)\nfor (i = 0; i < 4; ++i)\n  x = i;\nprintf(\"%d\\n\", x);", start: () => "?", end: t => `${t}`, after: "3", why: "The copies start uninitialised; after the loop x gets the value of the sequentially last iteration, i = 3, whichever thread ran it." },
+  { t: "program 3: reduction(+:s)", code: "int i, s = 5;\n#pragma omp parallel for reduction(+:s)\nfor (i = 0; i < 4; ++i)\n  s += i;\nprintf(\"%d\\n\", s);", start: () => "0", end: t => `${t}`, after: "11", why: "Each copy starts at 0, the identity of +, and adds its i. At the end the copies are added to the original: 5 + 0 + 1 + 2 + 3 = 11." },
+];
+const vcell = (v, cls = "") => `<span class="cell ${cls}">${v}</span>`;
+function prvOut() {
+  const P = PRV_P[PRV.k], rows = [0, 1, 2, 3].map(t => `<div class="rl">thread ${t} (i = ${t})</div>${vcell(P.start(t), P.start(t) === "?" ? "dim" : "")}${vcell(P.end(t), "t1 one")}`).join("");
+  return `${codeBlock(P.code)}<div class="vgrid" style="--n:2;--cw:104px"><div></div><div class="h">copy at start</div><div class="h">copy at end</div>${rows}</div>
+    <div class="ans"><div class="a"><div class="v">${P.after}</div><div class="l">printed</div></div></div><p class="lab-note">${P.why}</p>`;
+}
+function initPrv(body) {
+  body.innerHTML = `<div class="presets">${PRV_P.map((p, k) => `<button class="preset" data-k="${k}">${p.t}</button>`).join("")}</div><div class="out"></div>`;
+  const out = body.querySelector(".out"), draw = () => { out.innerHTML = prvOut(); body.querySelectorAll("[data-k]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.k === PRV.k)); };
+  body.addEventListener("click", e => { const b = e.target.closest("[data-k]"); if (!b) return; PRV.k = +b.dataset.k; draw(); });
+  draw();
+}
+
+function exercise5() {
+  const tbl = (h, rows) => `<details class="tbl"><summary>Table view</summary><table><tr>${h.map(x => `<th>${x}</th>`).join("")}</tr>${rows.map(r => `<tr>${r.map((x, i) => `<td${i ? ' class="n"' : ""}>${x}</td>`).join("")}</tr>`).join("")}</table></details>`;
+  const sp = [1, 2, 4, 5, 8, 10, 16, 20, 32, 50, 51, 64].map(p => [p, ...["even", "static1", "static"].map(k => (X5_SEQ / x5time(p, k)).toFixed(2))]);
+  const tf = (ok, t, why) => `<tr><td>${ok}</td><td>${t}</td><td>${why}</td></tr>`;
+  return `${head(e)}
+    <p class="lead">The exercise on <a href="high-performance-computing/lecture.html?n=4">lecture 4</a>, with a look back at lecture 3: how a loop whose iterations get shorter and shorter balances over threads under ideal, static and chunk-1 scheduling; which scheduler sits where; vector processors against SIMD units; the pipelining speedup as a line of Python; OpenMP reductions, including a user-defined one; data-sharing clauses; where the parallel loop goes in the heat equation and what OS noise does to static scheduling; and timing runs on Romeo with OpenMP tasks, parallel loops, SIMD and two compilers. Eighteen auto-checked items worth 47 points, plus a PThreads task for the session. The sheet in OPAL is a printout of the online test, so everything below comes from it; the answers are our own, and the Romeo timings can only come from your own runs.</p>
+    <div class="tiles" aria-label="The results at a glance">
+      <div class="tile"><div class="v">5,065 s</div><div class="l">sequential: 10 + 5,050 + 5</div></div>
+      <div class="tile"><div class="v">1,025 s · 4.94</div><div class="l">5 threads, work spread evenly</div></div>
+      <div class="tile"><div class="v">1,825 vs 1,065 s</div><div class="l">5 threads, static with the default chunk vs chunk 1</div></div>
+      <div class="tile"><div class="v">44.04</div><div class="l">the largest possible speedup, reached with 51 threads</div></div>
+    </div>
+
+    <h2>The loop of tasks 1–3</h2>
+    <p>An OpenMP program with three parts: 10 s of initialisation, a loop of 100 iterations in which iteration i (i = 1 … 100) takes 101 − i seconds, and 5 s of finalisation. Only the loop runs in parallel, and creating, synchronising and ending threads costs nothing. The loop alone is 100 + 99 + … + 1 = 100 · 101 / 2 = 5,050 s, and its longest iteration, the first, takes 100 s. Those two numbers decide everything below.</p>
+    ${lab("x5", "100 iterations of 100 … 1 s on p threads")}
+
+    ${task("1", 1, "Sequential runtime", `
+      <p>How long does the program take on one thread?</p>
+      ${ans([["5,065 s", "10 + 5,050 + 5"]])}`)}
+
+    ${task("2", 8, "Perfect scheduling", `
+      <p>With a perfect schedule (100 % load balance, the work spread evenly over the threads): runtime and speedup with 5 and with 50 threads; the largest number of threads that can still get exactly equal shares; the largest possible speedup and the fewest threads that reach it; and for that case the parallel efficiency of the compute phase and of the whole run, in whole percent.</p>
+      ${ans([["1,025 s", "5 threads: 10 + 5,050 / 5 + 5"], ["4.94", "5,065 / 1,025 = 4.9415"], ["116 s", "50 threads: 10 + 101 + 5"], ["43.66", "5,065 / 116 = 43.664"], ["50", "threads with equal shares"], ["44.04", "maximal speedup: 5,065 / 115"], ["51", "fewest threads for it"], ["99 %", "compute phase: 50.5 / 51"], ["86 %", "whole run: 44.04 / 51"]])}
+      ${ex("Worked answer", `<p><b>5 and 50 threads.</b> Spread evenly, each thread computes 5,050 / 5 = 1,010 s, so the run takes 10 + 1,010 + 5 = <b>1,025 s</b>, speedup 5,065 / 1,025 = <b>4.94</b>. With 50 threads each computes 5,050 / 50 = 101 s: <b>116 s</b>, speedup <b>43.66</b>. Both shares can be built from whole iterations: for 50 threads pair the iterations as (100 s, 1 s), (99 s, 2 s), …, (51 s, 50 s), every pair 101 s.</p>
+        <p><b>Equal shares.</b> No thread can finish before the 100 s of iteration 1, so equal shares need 5,050 / p ≥ 100, that is p ≤ 50.5: at most <b>50</b> threads, with the pairing above.</p>
+        <p><b>Maximal speedup.</b> However many threads there are, the loop cannot finish before iteration 1, so the best run is 10 + 100 + 5 = 115 s and the speedup 5,065 / 115 = <b>44.04</b>. To finish the loop in 100 s, every thread may get at most 100 s of work: 5,050 / 100 = 50.5, so at least <b>51</b> threads. 51 suffice: iteration 1 alone, the pairs (99, 1), (98, 2), …, (51, 49) make 49 threads of 100 s each, and iteration 50 alone on the last one.</p>
+        <p><b>Efficiency with 51 threads.</b> Compute phase: speedup 5,050 / 100 = 50.5, efficiency 50.5 / 51 = 99.0 %, so <b>99 %</b>. Whole run: 44.04 / 51 = 86.4 %, so <b>86 %</b>; the 15 s of serial work are what pulls it down.</p>`)}
+      ${why("Context, not on the sheet: two readings to keep in mind", `<p>“Maximal speedup” is meant for the whole program here, which is why it is 44.04 and not the 50.5 of the loop alone. And “the maximal amount of threads with a balanced execution time” could be misread as “threads that get any work at all” (100); with “balanced” the 50 equal shares of 101 s are meant. If the checker rejects a value, the other reading is the one to try.</p>`)}`)}
+
+    ${task("3", 4, "Static scheduling", `
+      <p>Runtime and speedup with 5 threads and <code>schedule(static)</code> with the default chunk size, and with a chunk size of 1.</p>
+      ${ans([["1,825 s", "default chunk: thread 0 computes 1,810 s"], ["2.78", "5,065 / 1,825 = 2.775"], ["1,065 s", "chunk 1: thread 0 computes 1,050 s"], ["4.76", "5,065 / 1,065 = 4.756"]])}
+      ${ex("Worked answer", `<p><b>Default chunk.</b> Without a chunk size, static scheduling gives each thread one block of about 100 / 5 = 20 consecutive iterations. Thread 0 gets i = 1 … 20, the longest ones: 100 + 99 + … + 81 = 20 · (100 + 81) / 2 = <b>1,810 s</b>. The others get 1,410, 1,010, 610 and 210 s. The slowest thread decides: 10 + 1,810 + 5 = <b>1,825 s</b>, speedup <b>2.78</b>.</p>
+        <p><b>Chunk 1.</b> Round robin: thread 0 gets i = 1, 6, 11, …, 96 with 100, 95, …, 5 s, together 20 · (100 + 5) / 2 = <b>1,050 s</b>; thread 4 gets i = 5, 10, …, 100 with 970 s. 10 + 1,050 + 5 = <b>1,065 s</b>, speedup <b>4.76</b>, close to the perfect 4.94 because every thread gets long and short iterations alike.</p>`)}
+      ${chart("x5sp", leg([[1, "even (ideal)"], [3, "static, chunk 1"], [2, "static, default chunk"]]))}
+        <figcaption>Speedup of the whole program from 1 to 64 threads, computed from the loop above. Even distribution reaches its ceiling of 44.04 at 51 threads. Chunk 1 tracks it closely while every thread still gets many iterations; the default chunk always hands thread 0 the longest block. Hover the chart or use the arrow keys.</figcaption>
+      </figure>
+      ${tbl(["Threads", "even", "static, chunk 1", "static, default"], sp)}`)}
+
+    ${task("4", 1, "Types of schedulers", `
+      <p>Match three schedulers to where they live: the loop scheduler (loop iterations onto threads), the thread scheduler (threads onto hardware) and the job scheduler (jobs onto hardware). Two of the five offered places are distractors.</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Schedulers and their places">
+        <tr><th>Scheduler</th><th>Lives in</th><th>Seen in</th></tr>
+        <tr><td>Loop scheduler</td><td><b>the runtime of the parallelisation library</b> (OpenMP's runtime)</td><td>lecture 4: <code>schedule(static | dynamic | guided)</code></td></tr>
+        <tr><td>Thread scheduler</td><td><b>the operating system</b></td><td>lecture 4: the OS decides when a thread runs and preempts it</td></tr>
+        <tr><td>Job scheduler</td><td><b>the batch system</b></td><td>lecture 2: Slurm</td></tr>
+      </table></div>
+      <p>“Processor core” and “process” are left over: a core executes what it is given, and a process is what the OS and the batch system schedule, not a scheduler.</p>`)}
+
+    ${task("5", 1, "Pipelined SIMD (vector processor) vs concurrent SIMD (standard processor)", `
+      <p>Assign seven properties to the architecture they belong to most likely (lecture 3, slides 20 and 25–34).</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Vector processor or SIMD on a standard processor">
+        <tr><th>Property</th><th>Belongs to</th><th>Why</th></tr>
+        ${tf("Caches", "SIMD on a standard processor", "vector processors usually have no cache, but very high memory bandwidth")}
+        ${tf("Concurrent computation of the elements in a vector register", "SIMD on a standard processor", "one unit per element computes the whole register at once")}
+        ${tf("Vector registers larger than 128 bytes", "vector processor", "long vector registers; AVX-512 has 64 bytes")}
+        ${tf("Out-of-order execution", "SIMD on a standard processor", "general-purpose cores")}
+        ${tf("Chaining", "vector processor", "results stream from one pipelined unit into the next")}
+        ${tf("High memory bandwidth from many memory modules", "vector processor", "1.2 TB/s on the SX-Aurora TSUBASA of lecture 3")}
+        ${tf("Efficient processing of sequential code", "SIMD on a standard processor", "the standard core runs ordinary code well")}
+      </table></div>`)}
+
+    ${task("6", 1, "The pipelining speedup in Python", `
+      <p>Write Python that stores in <code>Sk</code> the largest possible speedup of a k-stage pipeline executing n instructions, given <code>n</code> and <code>k</code>.</p>
+      ${codeBlock("Sk = (n * k) / (n + k - 1)")}
+      <p>Unpipelined, n instructions take n · k cycles; pipelined, the first result comes after k cycles and then one per cycle, n + k − 1 in all (the formula of the <a href="high-performance-computing/lecture.html?n=0">preparation page</a>). For n = 100, k = 5: 500 / 104 = 4.81. Use <code>/</code>, not <code>//</code>, so the result is not truncated.</p>`)}
+
+    ${task("7", 12, "Reductions in code", `
+      <p>Fill the gaps in three programs: a sum over 0 … 99, the minimum and maximum of an array of eight integers (4, 8, 2, 15, 3, 9, 1, 12), and a user-defined reduction that finds the smallest and largest number of loop iterations one thread ran (1,000 iterations, <code>schedule(dynamic, 5)</code>).</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Gaps in the three programs">
+        <tr><th>Program</th><th>Gap</th><th>Fill in</th></tr>
+        <tr><td>1: sum</td><td><code>reduction( _ : _ )</code></td><td><code>+</code> and <code>sum</code>; prints 4950</td></tr>
+        <tr><td>2: min and max</td><td>start value of <code>max_value</code></td><td><code>std::numeric_limits&lt;int&gt;::min()</code> (or <code>lowest()</code>, the same for int)</td></tr>
+        <tr><td></td><td><code>reduction(min: _)</code>, <code>reduction(max: _)</code></td><td><code>min_value</code>, <code>max_value</code></td></tr>
+        <tr><td></td><td>second arguments of <code>std::min</code>, <code>std::max</code></td><td><code>values[i]</code> both times; prints Min 1, Max 15</td></tr>
+        <tr><td>3: user-defined</td><td>left-hand sides in the combiner</td><td><code>omp_out</code> (<code>omp_out.min = …</code>, <code>omp_out.max = …</code>)</td></tr>
+        <tr><td></td><td>type of <code>result</code></td><td><code>MinMax</code></td></tr>
+        <tr><td></td><td><code>reduction( _ : _ )</code> of the parallel region</td><td><code>minmax</code> and <code>result</code></td></tr>
+      </table></div>
+      ${ex("How the user-defined reduction works", `<p><code>#pragma omp declare reduction(minmax : MinMax : combiner) initializer(…)</code> defines a new reduction operator for the struct. Every thread gets a private <code>result</code> initialised by <code>omp_priv</code> = {largest int, smallest int}, counts its iterations in <code>count</code> and stores the count in both fields. When the region ends, the runtime combines the copies pairwise with the combiner, where <code>omp_in</code> is the copy being merged in and <code>omp_out</code> the accumulated one, and finally merges the original. Output with 4 threads: the smallest and the largest per-thread count, both near 250 (the four counts add up to 1,000); with dynamic chunks of 5 they change from run to run.</p>`)}`)}
+
+    ${task("8", 1, "A practical reduction: π by Monte Carlo", `
+      <p>Parallelise a loop that draws 10⁹ random points in the unit square and counts how many land inside the quarter circle (π ≈ 4 · counter / samples).</p>
+      ${codeBlock("#pragma omp parallel for reduction(+:counter)")}
+      ${why("Context, not on the sheet: the random numbers", `<p>The pragma is what the checker wants, but the sample code draws with <code>rand()</code>, which keeps one hidden state for the whole process. Called from several threads it is not thread-safe, and where the C library protects it with a lock, the threads take turns and the loop gets slower rather than faster. The usual fix is one generator per thread, for example <code>rand_r(&amp;seed)</code> with a seed per thread, or a C++ <code>std::mt19937</code> created inside the parallel region.</p>`)}`)}
+
+    ${task("9", 1, "Which loop of the heat equation?", `
+      <p>In the double-buffered heat equation from Exercise 02 (N = 1,000, 1,000 time steps), choose the loop on which <code>#pragma omp parallel for</code> is easiest to apply; if several work, the one with the least synchronisation between threads.</p>
+      ${ans([["row loop i", "the middle loop, over the rows"]])}
+      ${chart("forks")}
+        <figcaption>Parallel regions started per run, depending on which loop gets the pragma (each one ends with a barrier). Logarithmic axis.</figcaption>
+      </figure>
+      <p>The time loop is out: step n + 1 reads the field step n wrote, and the buffer swap after every step is sequential by nature. The row loop and the column loop both have independent iterations, since every point of <code>u_new</code> is written once and only <code>u</code> is read. On the row loop the threads fork and join once per time step; on the column loop once per row and step, 998 times as often. So the row loop.</p>`)}
+
+    ${task("10", 1, "Static or dynamic under OS noise", `
+      <p>The rows of the heat equation all cost the same, but on a shared node the operating system occasionally interrupts a thread for a few milliseconds. Which statement describes the trade-off between <code>schedule(static)</code> and <code>schedule(dynamic)</code>?</p>
+      ${ans([["the first one", "dynamic removes the imbalance, at the cost of synchronisation per hand-out and the contiguous block per thread"]])}
+      <p>The other three are wrong: static is not better in every respect (an interrupted thread delays the whole step, since nothing redistributes its rows); dynamic has a cost (every hand-out synchronises, and rows land on whichever thread is free, so a thread no longer reads one contiguous block and its caches help less); and dynamic does help against noise, because the other threads take over the remaining rows. How much the costs weigh depends on the row length and on whether the field fits into the last-level cache, as the correct option says. Lecture 4's scheduling explorer has a “CPU 1 interrupted” case that shows the same effect.</p>`)}
+
+    ${task("11", 1, "Statistics for the heat equation", `
+      <p>Extend the heat equation so it reports the minimal, average and maximal amount of work (processed elements) per thread, then answer whether you managed (yes or no).</p>
+      <p>One way: inside the parallel region each thread counts its processed points in a private variable, and <code>reduction(min: …) reduction(max: …) reduction(+: …)</code> collects them; the average is the sum divided by <code>omp_get_num_threads()</code>. With <code>schedule(static)</code> and 4 threads, the 998 interior rows split 250, 250, 249, 249 (GCC hands the two extra rows to the first threads), so per time step: minimum 249 · 998 = 248,502, maximum 250 · 998 = 249,500, average 998 · 998 / 4 = 249,001 points.</p>`)}
+
+    ${task("12", 1, "Data-sharing attributes", `
+      <p>A loop scales an array in place and collects statistics: <code>v = a[i] * factor; a[i] = v; sum += v; last = v;</code>. After the loop, <code>sum</code> must hold the total and <code>last</code> the value of the sequentially last iteration; <code>n</code> and <code>factor</code> are set before and only read. Match every variable to its clause.</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Variables and clauses">
+        <tr><th>Variable</th><th>Clause</th><th>Why</th></tr>
+        <tr><td><code>factor</code></td><td><b>firstprivate</b></td><td>each thread needs a copy initialised with the value from before the loop</td></tr>
+        <tr><td><code>v</code></td><td><b>private</b></td><td>declared inside the body, so every iteration has its own anyway</td></tr>
+        <tr><td><code>i</code></td><td><b>private</b></td><td>the loop variable must not be shared</td></tr>
+        <tr><td><code>sum</code></td><td><b>reduction(+:…)</b></td><td>the copies are added at the end</td></tr>
+        <tr><td><code>last</code></td><td><b>lastprivate</b></td><td>keeps the value of the sequentially last iteration</td></tr>
+      </table></div>`)}
+
+    ${task("13", 1, "Complete the clauses", `
+      <p>The same loop, one gap after <code>#pragma omp parallel for</code>: write the full clause list in the order private, firstprivate, lastprivate, reduction. One point only for a fully correct answer.</p>
+      ${codeBlock("private(i) firstprivate(factor) lastprivate(last) reduction(+:sum)")}
+      <p>The sheet allows <code>shared(factor)</code> instead of <code>firstprivate(factor)</code>, since factor is only read, and allows leaving out what OpenMP does implicitly (the loop variable of a parallel for is private by default). The full list above is the safe choice.</p>`)}
+
+    ${task("14", 1, "Which directives are correct?", `
+      <p>Six candidate directives for the same loop; select every one with which the parallel version computes the same <code>sum</code> and <code>last</code> as the sequential one.</p>
+      <div class="tt-wrap"><table class="tt syn" aria-label="Six directives">
+        <tr><th></th><th>Clauses after <code>parallel for</code></th><th>Why</th></tr>
+        ${tf(flag("ok", "correct"), "<code>private(i) firstprivate(factor) lastprivate(last) reduction(+:sum)</code>", "the answer of task 13")}
+        ${tf(flag("bad", "wrong"), "<code>private(i, last) firstprivate(factor) reduction(+:sum)</code>", "private copies are thrown away: last still holds 0.0 afterwards")}
+        ${tf(flag("bad", "wrong"), "<code>private(i) lastprivate(last)</code>", "sum is shared and updated without protection: a race")}
+        ${tf(flag("ok", "correct"), "<code>private(i) shared(factor) lastprivate(last) reduction(+:sum)</code>", "factor is only read, so sharing it is fine")}
+        ${tf(flag("ok", "correct"), "the first one plus <code>num_threads(4)</code>", "the team size does not change the result")}
+        ${tf(flag("ok", "correct"), "<code>private(i) lastprivate(last) reduction(+:sum)</code>", "factor is shared by default, which is fine for a value that is only read")}
+      </table></div>
+      ${why("Context, not on the sheet: “exactly the same” and floating point", `<p>A reduction adds the partial sums in a different order than the sequential loop, and floating-point addition is not associative, so <code>sum</code> can differ in the last digits. The task means “correct by OpenMP's rules”; bit-identical results would need a fixed reduction order, which OpenMP does not promise.</p>`)}`)}
+
+    ${task("15", 3, "firstprivate, lastprivate, reduction", `
+      <p>What do three short programs print, with 4 threads and a loop of exactly 4 iterations?</p>
+      ${lab("prv", "the private copies of each thread")}
+      ${ans([["10", "program 1, firstprivate(x)"], ["3", "program 2, lastprivate(x)"], ["11", "program 3, reduction(+:s) with s = 5"]])}`)}
+
+    <h2>On Romeo: OpenMP min/max (tasks 16–18)</h2>
+    <p>Add thread parallelism to <code>src/omp/omp_find_min_max.c</code> in the hpc-exercises folder copied in Exercise 03, once as function parallelism with OpenMP tasks (only <code>parallel</code>, <code>single</code>, <code>task</code>, <code>taskwait</code>) and once as data parallelism with a parallel loop and reductions (<code>parallel</code>, <code>for</code>, <code>reduction</code>), not both at once. Build with <code>module load GCC/14.2.0</code> (after <code>module load release/25.06</code> if needed) and <code>make omp_find_min_max</code> in <code>src/omp</code>; the binary lands in <code>../build/</code>. Then a Slurm batch script runs it with 1, 2 and 4 threads as job steps (<code>-c</code>), with <code>--exclusive</code>.</p>
+    ${codeBlock("#!/bin/bash\n#SBATCH --exclusive\n#SBATCH -c 4\n#SBATCH --time=00:10:00\nmodule load release/25.06 GCC/14.2.0\nfor t in 1 2 4; do\n  OMP_NUM_THREADS=$t srun -c $t ../build/omp_find_min_max\ndone")}
+    <p class="muted">A sketch: add the partition and account options you used in Exercise 03.</p>
+
+    ${task("16", 7, "Varying thread numbers", `
+      <p>From the output, rounded to integers: the size of the allocated array in MB (1 MB = 10⁶ B), and the computation time in ms with 1, 2 and 4 threads, for the task version and for the loop version.</p>
+      ${ans([["your output", "array size: bytes / 10⁶"], ["your output", "times: if printed in µs, divide by 1,000"]])}
+      <p>The numbers come from your own run; there is nothing to derive. OPAL's code folder has PThreads versions of the same program, which print the array size in bytes and the time per repetition in microseconds; if the OpenMP version prints the same way, both conversions above apply.</p>
+      ${why("Context, not on the sheet: what to expect", `<p>The PThreads versions in OPAL split the work into three functions (minimum, maximum, sum). If the task version does the same, 2 threads can at best get the time down to about two thirds (one thread does two of the three functions), and 4 threads cannot beat 3, since there are only three tasks. The loop version splits the array itself and can approach 1/2 and 1/4, until all threads together saturate the memory bandwidth: finding a minimum does one comparison per element loaded, so it is memory-bound early (the roofline of Exercise 04).</p>`)}`)}
+
+    ${task("17", 1, "SIMD parallelism", `
+      <p>Add SIMD to the thread-parallel version (lecture 5: <code>#pragma omp parallel for simd</code> with the same reductions, or <code>#pragma omp simd</code> on the inner loop of the task version), rerun the batch script: does the time change?</p>
+      ${ans([["your run", "yes or no from the timings"]])}
+      <p>Either answer can be right. If the Makefile already optimises with <code>-O3</code> (or <code>-O2</code> on GCC 12 and later), the compiler may have vectorised the integer loop already, and the pragma changes little; and once the loop is memory-bound, wider arithmetic does not move more data.</p>`)}
+
+    ${task("18", 1, "Varying the compiler", `
+      <p>Swap GCC for Intel's compiler (<code>module load release/2026 intel-compilers/2025.2.0</code> instead of GCC, <code>module unload GCC/14.2.0</code> first; <code>CC = icx</code> in <code>src/common.mk</code>), rebuild and rerun: is there a difference?</p>
+      ${ans([["your run", "yes or no from the timings"]])}
+      <p>Compare the same thread counts, and run each configuration more than once before calling a few percent a difference; a shared login node or another job on the same switch can move timings by that much.</p>`)}
+
+    ${task("19", 0, "PThreads min/max on Romeo", `
+      <p>Not in the auto-checked part: add thread parallelism to <code>src/pthread/exercises/pthread_find_min_max.c</code>, once function-parallel and once data-parallel, build with <code>make pthread_find_min_max</code> in <code>src/pthread/exercises/</code> (GCC/14.2.0, <code>release/25.06</code> on the compute nodes), and submit with 1, 2 and 3 cores per process (<code>-c</code>), exclusive. What does it print? Results are discussed in the session if there is time.</p>
+      <p>Why 1, 2 and 3: the function-parallel version has three threads (minimum and maximum in two children, the sum in the main thread, as in OPAL's reference version), so with fewer cores they share. The data-parallel reference version reads its thread count from the environment variable <code>NR_THREADS</code>, so set it in the job step to match <code>-c</code>. Lecture 4's “maximum with two threads” worked example is the same idea with one child.</p>`)}
+
+    <h2>Before and after the session</h2>
+    <ul>
+      <li><b>Enter the answers in the OPAL test</b>: speedups with two decimals, efficiencies in whole percent; tasks 16–18 from your own Romeo runs.</li>
+      <li><b>Reread</b> data scope, reductions and loop scheduling in <a href="high-performance-computing/lecture.html?n=4">lecture 4</a> (its “what does sum print” explorer is task 15 in another form), and the SIMD part of <a href="high-performance-computing/lecture.html?n=5">lecture 5</a> for task 17.</li>
+      <li><b>Code in OPAL</b>: the code folder got three heat-equation versions on 23 Nov (sequential, parallel for, tasks) to compare with your own task 9–11 changes.</li>
+      <li><b>Context, not on the sheet.</b> Runtime, speedup and efficiency of a loop with uneven iterations under a given schedule, worked out by hand as in tasks 1–3, is typical written-exam material for a course like this.</li>
+    </ul>
+    <p class="muted">Next: Exercise 06 on <a href="high-performance-computing/lecture.html?n=5">lecture 5</a> (SIMD and dependences), <a href="high-performance-computing/exercise.html?n=6">2 Dec</a>. Sheet and test: OPAL → Exercises / Übungen and Exercise Sheets and Tutorials; they may not be republished, so the tasks above are restated in our own words.</p>`;
+}
+
 function placeholder() {
   const d = daysUntil(e.date), prev = c.lectures.find(x => x.n === e.lecture);
   return `${head(e)}
@@ -772,8 +1043,8 @@ function placeholder() {
       <p class="muted">This exercise session is ${d > 0 ? `in ${d} day${d > 1 ? "s" : ""}` : d === 0 ? "today" : "over, but its sheet is not read yet"}: ${fmt(e.date)}, ${exe.start}–${exe.end}, ${esc(exe.room)}.<br>${esc(e.blurb)}${prev ? ` <a href="high-performance-computing/lecture.html?n=${prev.n}">Lecture ${prev.n}</a> is the material it will draw on.` : ""}<br>The write-up appears here once the online exercise is in OPAL.</p>
     </div>`;
 }
-const WRITEUPS = { 2: exercise2, 3: exercise3, 4: exercise4 };
-const LABS = { tree: initTree, loop: initLoop, aging: initAging, romeo: initRomeo };
+const WRITEUPS = { 2: exercise2, 3: exercise3, 4: exercise4, 5: exercise5 };
+const LABS = { tree: initTree, loop: initLoop, aging: initAging, romeo: initRomeo, x5: initX5, prv: initPrv };
 const mountLabs = () => document.querySelectorAll("[data-lab]").forEach(el => LABS[el.dataset.lab](el.querySelector(".lab-body")));
 if (!e) {
   page.innerHTML = `${back}<h1>Exercise not found</h1><p>There is no exercise ${esc(q)}.</p>`;

@@ -549,8 +549,8 @@ window.CMS = {
       "date": "2026-11-25",
       "icon": "➡️",
       "type": "software",
-      "covered": false,
-      "blurb": "Vectorization and the data dependencies that allow or forbid it.",
+      "covered": true,
+      "blurb": "SIMD loops with #pragma omp simd and when they are safe: data, anti and output dependences and their direction, dependence graphs and index sets, loop and subscript normalisation, why statements on a dependence cycle stay scalar, and four ways to vectorise an if (mask, merge, compress, gather/scatter).",
       "files": [
        {
         "kind": "slides",
@@ -709,14 +709,33 @@ window.CMS = {
      },
      {
       "n": 5,
-      "title": null,
+      "title": "Thread Parallelism",
       "date": "2026-11-25",
-      "published": null,
+      "published": "2026-11-19",
       "icon": "📐",
-      "covered": false,
+      "covered": true,
       "lecture": 4,
-      "points": null,
-      "blurb": "Expected to follow lecture 4 (Shared Memory Programming 1: Threads); the online exercise usually appears in OPAL about a week before the session."
+      "points": 47,
+      "blurb": "A loop of 100 iterations taking 100 … 1 s: 5,065 s sequential, 1,025 s on 5 threads when spread evenly, 1,825 s with static and 1,065 s with chunk-1 scheduling, at most 44.04× from 51 threads; scheduler levels, vector vs SIMD processors, OpenMP reductions (one user-defined), data-sharing clauses, the heat equation's parallel loop under OS noise, and timing runs on Romeo.",
+      "files": [
+       {
+        "kind": "sheet",
+        "name": "Exercise_05_Thread_Parallelism_1.pdf",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "printout of the online test, posted 19 Nov"
+       },
+       {
+        "kind": "other",
+        "name": "Exercise 05 – Thread Parallelism (online test)",
+        "where": "OPAL · Exercises / Übungen"
+       },
+       {
+        "kind": "code",
+        "name": "heat_sim_sequential.zip, heat_sim_parallel_for.zip, heat_sim_parallel_tasks.zip",
+        "where": "OPAL · Exercise Sheets and Tutorials",
+        "note": "code folder, posted 23 Nov"
+       }
+      ]
      },
      {
       "n": 6,
